@@ -1,0 +1,21 @@
+@import com.smule.smg.SMGPlugin
+@import com.smule.smg.GrapherApi
+@import com.smule.smg.SMGAutoIndex
+
+@(topLevel: SMGAutoIndex, periods: Seq[String], expandLevels: Int, plugins: Seq[SMGPlugin])
+
+@main("SMG - Auto Index " + topLevel.id, plugins) {
+
+  <h4>Automatically discovered indexes</h4>
+
+  <hr>
+  <h5>Parent: <a href='/autoindex/@{topLevel.parentId.getOrElse("")}'><span class="btn btn-primary btn-xs"> ^ </span>
+    @if( topLevel.parentId.isEmpty || topLevel.parentId.get == "" ){
+      Top Level
+    } else {
+      @{topLevel.parentId.get}
+    }</a></h5>
+
+  @autoindexItem(topLevel, periods, expandLevels, true)
+
+}

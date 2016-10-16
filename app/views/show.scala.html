@@ -1,0 +1,98 @@
+@import com.smule.smg.SMGImageView
+@import com.smule.smg.SMGObjectView
+@import com.smule.smg.SMGPlugin
+@import com.smule.smg.GraphOptions
+@import com.smule.smg.SMGMonStateObjVar
+
+
+@(plugins: Seq[SMGPlugin], obj: SMGObjectView, lst: Seq[SMGImageView], cols: Int, cwidth: Int, gopts: GraphOptions, showMs: Boolean, ms: Seq[SMGMonStateObjVar])
+
+  @main("SMG - " + obj.title, plugins) {
+
+  <script>
+  function mySubmitOnChange(elem) {
+    var baseUrl = '@obj.showUrl';
+    if (baseUrl.indexOf('?') == -1) {
+      baseUrl += '?';
+    } else {
+      baseUrl += '&';
+    }
+    var dppVal = "";
+    if (document.getElementById('dpp_cb').checked) {
+      dppVal = "on"
+    }
+    var d95pVal = "";
+    if (document.getElementById('d95p_cb').checked) {
+      d95pVal = "on"
+    }
+    var maxYVal = document.getElementById('maxy_inp').value;
+
+    var myUrl = baseUrl + "dpp=" + dppVal +
+        "&d95p=" + d95pVal + "&maxy=" + maxYVal;
+    window.location = myUrl;
+  }
+  </script>
+  <div class="panel panel-primary">
+    <div class="panel-heading">
+      <h2 class="panel-title">Display Object: @obj.title</h2>
+    </div>
+    <div class="panel-body">
+      <div class="form-group">
+
+        <label class="autosubmit-lbl"
+                 title="Requested graphs Y scale (max).
+Changing this reloads the page.">MaxY:</label>
+        <input id="maxy_inp" size="12" type="text" name="maxy" value="@gopts.maxY" onchange="mySubmitOnChange(this);">
+
+        <label class="autosubmit-lbl" title="Disable the dotted line(s) representing the previous period value(s).
+Changing this reloads the page.">Disable Period-Over-Period:</label>
+        <input type="checkbox" id="dpp_cb"
+               onchange="mySubmitOnChange(this);" @if(gopts.disablePop){ checked } />
+
+        <label class="autosubmit-lbl" title="Disable the straight dotted line(s) representing the 95%-ile value(s).
+Changing this reloads the page.">Disable 95%-ile line:</label>
+        <input type="checkbox" id="d95p_cb"
+               onchange="mySubmitOnChange(this);" @if(gopts.disable95pRule){ checked } />
+        [<a href="@{obj.dashUrl}">View on dashboard</a>]
+        @if(obj.parentDashUrl.isDefined) {
+        | [<a href="@{obj.parentDashUrl.get}">Parent dashboard</a>]
+        }
+        @if(obj.inspectUrl.isDefined) {
+        | [<a href="@{obj.inspectUrl.get}">Inspect</a>]
+        }
+      </div>
+    </div>
+  </div>
+
+  @if(showMs) {
+  <div>
+    @monitorSvgObjects(ms)
+  </div>
+  }
+
+  <!-- @obj -->
+  <div class="smgraphcontainer">
+      <div class="smgrow">
+        @for( (g, ix) <- lst.zipWithIndex) {
+        <div class="smgcell" style="max-width: @{cwidth}px;">
+          <a name="@g.obj.id" ></a> <a name="@g.period" ></a> <a name="@g.obj.id-@g.period" ></a>
+          <div class="smgraph">
+            <h5>Period: @g.period, @g.resolution(None)
+              @if(g.obj.stack) {
+                (stacked)
+              }
+              [<a href="@g.fetchUrl">csv</a>,<a href="@g.fetchUrl&d=1">dl</a>]
+              @for(pa <- plugins.flatMap(_.actions)){
+              [<a href="@{pa.actionUrl(g.obj, g.period)}">@{pa.name}</a>]
+              }
+            </h5>
+            <a href="@g.fetchUrl"><img src="@g.imageUrl" alt="@g.imageUrl" /></a>
+          </div>
+        </div>
+        @if(((ix + 1) % cols) == 0) {
+      </div><hr/><div class="smgrow">
+        }
+      }
+      </div>
+  </div>
+  }

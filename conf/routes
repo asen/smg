@@ -1,0 +1,59 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET     /               controllers.Application.index(remote :String ?= "*", lvls: Option[Int])
+GET     /s              controllers.Application.search(q: Option[String], lmt: Option[Int])
+GET     /ci             controllers.Application.index(remote :String ?= "*", lvls: Option[Int])
+GET     /autoindex      controllers.Application.autoindex(rt: String ?= "", el: Int ?= 1)
+GET     /autoindex/     controllers.Application.autoindex(rt: String ?= "", el: Int ?= 1)
+GET     /autoindex/:rt  controllers.Application.autoindex(rt: String, el: Int ?= 1)
+GET     /dash           controllers.Application.dashboard(ix: Option[String], px: Option[String], sx: Option[String], rx: Option[String], rxx: Option[String], trx: Option[String], remote: Option[String], agg: Option[String], period: String ?= "24h", pl: Option[String], step: Option[String], cols: Int ?= 6, rows: Int ?= 10, pg: Int ?= 0, xagg: String ?= "", xsort: Int ?= 0, dpp: String ?= "", d95p: String ?= "", maxy: Option[String])
+GET     /show/:oid      controllers.Application.show(oid: String, cols: Int ?= 6, dpp: String ?= "", d95p: String ?= "", maxy: Option[String])
+GET     /fetch/:oid     controllers.Application.fetch(oid: String, r: Option[Int], s: Option[String], e: Option[String], d: Boolean ?= false)
+GET     /showAgg        controllers.Application.showAgg(ids:String, op:String, title:Option[String], cols: Int ?= 6, dpp: String ?= "", d95p: String ?= "", maxy: Option[String])
+GET     /fetchAgg       controllers.Application.fetchAgg(ids:String, op:String, r:Option[Int], s: Option[String], e: Option[String], d:Boolean ?= false)
+POST    /run/:interval  controllers.Application.runJob(interval: Int)
+POST    /reload         controllers.Application.reloadConf
+GET     /reload         controllers.Application.reloadConf
+GET     /user/settings       controllers.Application.userSettings()
+POST    /user/settings       controllers.Application.userSettings()
+GET     /monitor             controllers.Application.monitorIssues(soft: Option[String], ackd: Option[String], slncd: Option[String], action:Option[String], oid:Option[String], until:Option[String])
+GET     /monitor/heatmap     controllers.Application.monitorHeatmap
+GET     /monitor/log         controllers.Application.monitorLog(p: Option[String], l: Option[Int], soft: Option[String])
+
+GET     /proxy/:remote/*path  controllers.Application.proxy(remote: String, path: String)
+
+GET     /inspect/:id       controllers.Application.inspect(id: String)
+
+# SVG response
+GET     /monitor/indexSvg    controllers.Application.monitorIndexSvg(ixid: String)
+
+
+# plugin routes
+GET     /plugin/:pluginId  controllers.Application.pluginIndex(pluginId: String)
+
+# API (json response) calls
+GET     /api/config      controllers.Api.config
+GET     /api/fetch/:oid  controllers.Api.fetch(oid: String, r: Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
+GET     /api/fetchAgg    controllers.Api.fetchAgg(ids: String, op: String, r:Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
+POST    /api/reloadLocal controllers.Api.reloadLocal
+GET     /api/reloadLocal controllers.Api.reloadLocal
+POST    /api/graph       controllers.Api.graph
+POST    /api/agg         controllers.Api.agg
+GET     /api/rrd/:oid    controllers.Api.downloadRrd(oid: String)
+
+GET     /api/monitor/issues    controllers.Api.monitorIssues(soft: Option[String], ack: Option[String], slc: Option[String])
+GET     /api/monitor/log       controllers.Api.monitorLog(p: Option[String], l: Option[Int], soft: Option[String])
+GET     /api/monitor/heatmap   controllers.Api.monitorHeatmap
+GET     /api/monitor/ovstates   controllers.Api.monitorObjectViewsGet(ids: String)
+POST    /api/monitor/ovstates   controllers.Api.monitorObjectViewsPost
+GET     /api/monitor/silence/:oid   controllers.Api.monitorSilence(oid: String, act: String, slnc: Option[String], unt: Option[Int])
+
+GET     /api/plugin/:pluginId  controllers.Api.pluginData(pluginId: String)
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/smg/:file           controllers.Images.at(path="public/smg", file)
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+

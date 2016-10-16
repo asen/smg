@@ -1,0 +1,17 @@
+logs
+target
+/.idea
+/.idea_modules
+/.classpath
+/.project
+/.settings
+/RUNNING_PID
+/smgrrd/*
+/monlog/*
+/monstate/*
+/test-out/*
+/public/smg/*
+/public/docs/*
+.DS_Store
+
+

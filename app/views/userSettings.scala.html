@@ -1,0 +1,18 @@
+@import com.smule.smg.SMGPlugin
+@(plugins: Seq[SMGPlugin], msg: Option[String], showMs: Boolean)
+
+@main("SMG - User settings", plugins) {
+
+<h3>Available configuration</h3>
+<p><i>Note: these are stored as cookies in your browser</i></p>
+@if(msg.isDefined){
+  <p><font color="green">@msg.get</font></p>
+}
+<div class="user-settings-form">
+  <form method="POST" action="/user/settings">
+    <p><label for="cbMsToggle" title="Turn on/off monitoring state display across SMG">Monitoring state display</label>
+    <input id="cbMsToggle" type="checkbox" name="ms" @if(showMs){ checked }></p>
+    <p><input type="submit" name="Update" /></p>
+  </form>
+</div>
+}

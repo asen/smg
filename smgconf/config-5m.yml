@@ -1,0 +1,33 @@
+- ^someotherhost:
+  title: "someotherhost graphs"
+  px: "someotherhost."
+  cols: 2
+#  rows: 50
+#  sx: ""
+#  rx: ""
+
+
+- someotherhost.dummy:
+  title: "A dummy graph for other host"
+  command: "echo 1 && echo 2"
+#  options:
+  interval: 300
+  rrdType: GAUGE
+  vars:
+    - label: val1
+    - label: val2
+
+
+- someotherhost.dummy5:
+  command: "smgscripts/echo4.sh"
+  title: "A dummy graph with 3 vals"
+  rra: mrtg_5m
+#  options:
+  interval: 300
+#  rrdType: COUNTER
+  vars:
+    - label: val31
+      min: 0
+      max: 10
+    - label: val32
+    - label: val33

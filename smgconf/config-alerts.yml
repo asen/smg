@@ -1,0 +1,54 @@
+
+- $notify-command:
+  id: mail-asen
+  command: "smgscripts/notif-dummy.sh asen@smule.com"
+
+- $notify-command:
+  id: pd
+  command: "smgscripts/notif-pagerduty.sh"
+
+- $notify-warn: mail-asen
+- $notify-crit: mail-asen
+#,pd
+- $notify-spike: mail-asen
+- $notify-global: mail-asen
+
+
+- $notify-throttle-count: 60
+- $notify-throttle-interval: 3600
+
+- ~localhost-alert:
+  title: "localhost graphs for alerts"
+  px: "localhost."
+#  cols: 2
+#  rows: 1
+  parent: hosts
+#  rows: 50
+#  sx: ""
+#  rx: ""
+  alerts:
+   - label: val32
+#    label: 2
+     alert-warn-gt: 3
+     notify-warn: mail-asen
+     alert-crit-gt: 8
+     notify-crit: mail-asen
+
+
+
+
+
+- ~all.alert.spikes:
+#  rxx: "(sysload)$"
+  alerts:
+    - label: 0
+      alert-spike: ""
+    - label: 1
+      alert-spike: ""
+    - label: 2
+      alert-spike: ""
+    - label: 3
+      alert-spike: ""
+    - label: 4
+      alert-spike: ""
+

@@ -1,0 +1,11 @@
+
+calc:
+  expressions:
+    - netext:
+      title: "Test expression"
+      expr: "localhost.sysload + localhost.dummy"
+#      period: 24h
+#      step: 60
+#      maxy: 1000
+#      dpp: off
+#      d95p: off

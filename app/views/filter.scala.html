@@ -1,0 +1,197 @@
+@import com.smule.smg.SMGFilter
+@import com.smule.smg.SMGRemote
+@import com.smule.smg.GraphOptions
+
+@(flt: SMGFilter, period: String, cols: Int, rows: Int, predefPeriods: Seq[String],
+        availRemotes: Seq[SMGRemote], aggOp: Option[String], showXagg: Boolean, xagg: Boolean,
+        gopts: GraphOptions)
+
+
+<form id="smgFilterForm" method="GET" action="/dash" class="filter-form">
+
+  <div class="panel panel-primary">
+    <div class="panel-heading">
+      <h3 class="panel-title">Filter: @flt.humanText</h3>
+    </div>
+    <div class="panel-body">
+      <datalist id='periodsList'>
+      @for( p <- predefPeriods) {
+        <option value='@p'>
+        }
+      </datalist>
+
+      @if(availRemotes.nonEmpty) {
+      <div class="form-group form-group-rmt">
+        <label class="manualsubmit-lbl"
+               title="Display only objects from the specifed remote. Use * to match all remotes.">Remote filter:</label>
+        <br />
+        <select name="remote" class="select-remote">
+          @for( r <- availRemotes) {
+          <option value='@r.id' @if(r.id == flt.remote.getOrElse("")){ selected } >@if(r.id == ""){Local}else{@r.id}</option>
+          }
+        </select>
+      </div>
+      }
+
+      <div class="form-group">
+        <label class="manualsubmit-lbl"
+               title="Display only objects which have graph object id, title, graph labels or units
+matching all of the provided space separated case insensitive regular expressions">Text regex filters:</label>
+        <input class="form-control" type="text" name="trx" size="30" value='@flt.trx' >
+      </div>
+
+      <div class="form-group">
+        <label class="manualsubmit-lbl"
+               title="Display only objects which have ids having the specified prefix (NOT regex)">Prefix filter:</label>
+        <input class="form-control" type="text" name="px" value='@flt.px' >
+      </div>
+      <div class="form-group">
+        <label class="manualsubmit-lbl"
+               title="Display only objects which have ids having the specified suffix (NOT regex)">Suffix filter:</label>
+        <input class="form-control" type="text" name="sx" value='@flt.sx' >
+      </div>
+      <div class="form-group">
+        <label class="manualsubmit-lbl"
+               title="Display only objects which have ids matching the specified case insensitive regular expression">Regex filter:</label>
+        <input class="form-control" type="text" name="rx" value='@flt.rx' >
+      </div>
+      <div class="form-group">
+        <label class="manualsubmit-lbl"
+               title="Filter out objects which have ids matching the specified case insensitive regular expression">Regex exclude filter:</label>
+        <input class="form-control" type="text" name="rxx" value='@flt.rxx' >
+      </div>
+
+      <div class="form-group">
+        <label class="manualsubmit-lbl"
+            title="Reload the page using updated filters.">Apply filters</label>
+        <input title="Reload the page using updated filters" id="btn_GET"
+               class="form-control btn-submit-manual" type="submit" value="Apply">
+      </div>
+
+      <!-- separator -->
+
+      <div class="form-group" style="width: 5px;">
+        &nbsp;
+      </div>
+
+
+      <div class="form-group">
+        <label class="autosubmit-lbl"
+               title="Period (time since) to cover in the graphs.
+Changing this reloads the page.">Period since:</label>
+        <input class="form-control" size="9" type="text" name="period" value="@period" list="periodsList"
+               onchange="mySubmitOnChange(this);">
+      </div>
+
+      <div class="form-group">
+        <label class="autosubmit-lbl"
+               title="Optional period range (length) to cover in the graphs. Default is the entire range until current time.
+Changing this reloads the page.">Period len:</label>
+        <input class="form-control" size="9" type="text" name="pl" value="@gopts.pl" list="periodsList"
+               onchange="mySubmitOnChange(this);">
+      </div>
+
+      <div class="form-group">
+        <label class="autosubmit-lbl"
+               title="Requested graphs step (resolution). Specified in seconds (as number), minutes (e.g. 5m) or hours (e.g. 5h).
+Changing this reloads the page.">Step:</label>
+        <input class="form-control" size="9" type="text" name="step" value="@gopts.step" onchange="mySubmitOnChange(this);">
+      </div>
+
+      <div class="form-group">
+        <label class="autosubmit-lbl"
+               title="Requested graphs Y scale (max).
+Changing this reloads the page.">MaxY:</label>
+        <input class="form-control" size="12" type="text" name="maxy" value="@gopts.maxY" onchange="mySubmitOnChange(this);">
+      </div>
+
+      <div class="form-group">
+        <label class="autosubmit-lbl" title="How many graphs per row to display on the page.
+Changing this reloads the page.">Columns:</label>
+        <input class="form-control colsInput" type="number" step="1" name="cols" value='@cols'
+               onchange="mySubmitOnChange(this);" />
+      </div>
+      <div class="form-group">
+        <label class="autosubmit-lbl" title="Max rows of graphs to display on the page.
+Changing this reloads the page.">Rows:</label>
+        <input class="form-control rowsInput" type="number" step="1" name="rows" value='@rows'
+               onchange="mySubmitOnChange(this);" />
+      </div>
+
+      <div class="form-group">
+        <label class="autosubmit-lbl"
+            title="Sort the DISPLAYED on the page graphs to be grouped by graphed variables and then within each group -
+sort by the average value with specified 1-based index.0 means default order.
+Changing this reloads the page.">X-Sort:</label>
+        <input class="form-control" style="width: 4em" type="number" step="1" name="xsort" value='@{gopts.xsort.getOrElse(0)}'
+               onchange="mySubmitOnChange(this);" />
+      </div>
+
+      <div class="form-group form-group-cbs">
+        <label for="dpp_cb" class="autosubmit-lbl" title="Disable the dotted line(s) representing the previous period value(s).
+Changing this reloads the page.">Disable Period-Over-Period:</label>
+        <input type="checkbox" id="dpp_cb" name="dpp"
+               onchange="mySubmitOnChange(this);" @if(gopts.disablePop){ checked } />
+        <label for="d95p_cb" class="autosubmit-lbl" title="Disable the straight dotted line(s) representing the 95%-ile value(s).
+Changing this reloads the page.">Disable 95%-ile line:</label>
+        <input type="checkbox" id="d95p_cb" name="d95p"
+               onchange="mySubmitOnChange(this);" @if(gopts.disable95pRule){ checked } />
+      </div>
+
+      <br/>
+
+      @if(aggOp.isEmpty) {
+      <div class="form-group">
+        <label class="autosubmit-lbl"
+               title="Apply aggregate function to the set of DISPLAYED graphs, grouping them by graphed variables">Aggregate functions:</label>
+        <input class="btn btn-default btn-submit" type="submit" name="agg" value="GROUP">
+        <input class="btn btn-default btn-submit" type="submit" name="agg" value="STACK">
+        <input class="btn btn-default btn-submit" type="submit" name="agg" value="SUM">
+        <input class="btn btn-default btn-submit" type="submit" name="agg" value="SUMN">
+        <input class="btn btn-default btn-submit" type="submit" name="agg" value="AVG">
+        @if(showXagg){
+        <label for="xagg_cb" class="manualsubmit-lbl"
+            title="Toggle whether to group aggregate objects across all remote instances.
+By default aggregation happens per-remote instance">Cross-Remote:</label>
+            <input type="checkbox" id="xagg_cb" name="xagg" @if(xagg){ checked } />
+        }
+      </div>
+      } else {
+      @if(xagg) {
+      <input type="hidden" name="xagg" value="on" />
+      }
+      }
+
+    </div>
+  </div>
+</form>
+
+<input type="hidden" id="inp_aggOp" name="aggOp" value='@aggOp.getOrElse("")' />
+
+<!-- strip empty params from the form so that urls are less cluttered -->
+<script language="JavaScript">
+  function disableEmptyInputs() {
+      $(':input', this).each(function() {
+          this.disabled = !($(this).val()) || ((this.name == "xsort") && ($(this).val() == 0));
+      });
+  };
+
+  function mySubmitOnChange(elem) {
+      disableEmptyInputs();
+      var jsAggOp = $('#inp_aggOp')[0].value;
+      if (jsAggOp) {
+        var input = document.createElement("input");
+        input.setAttribute("type", "hidden");
+        input.setAttribute("name", "agg");
+        input.setAttribute("value", jsAggOp);
+        document.getElementById("smgFilterForm").appendChild(input);
+      }
+      setTimeout(0, $('#btn_GET').click());
+  }
+
+  $('form#smgFilterForm').submit(disableEmptyInputs);
+</script>
+
+
+
+

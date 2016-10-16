@@ -1,0 +1,39 @@
+@import com.smule.smg.SMGMonStateObjVar
+@(monStates: Seq[SMGMonStateObjVar])
+@SVG_WIDTH = @{ 600 }
+@CELL_HEIGHT = @{ 8 }
+@CELL_WIDTH = @{ 9 }
+@CELL_PADDING = @{ 1 }
+@CELL_SPACE = @{ CELL_WIDTH + CELL_PADDING }
+@ROW_HEIGHT = @{ CELL_HEIGHT * 3 }
+@ROW_PADDING = @{ 1 }
+@ROW_SPACE = @{ ROW_HEIGHT + ROW_PADDING }
+@objsPerRow = @{ SVG_WIDTH / CELL_SPACE }
+@len = @{ monStates.size }
+@svgRows = @{  (len / objsPerRow) + (if (len % objsPerRow != 0) 1 else 0) }
+@svgHeight = @{ if (len>0) svgRows * ROW_SPACE else ROW_SPACE }
+<svg class="msc"
+     width="@SVG_WIDTH" height="@svgHeight"
+     xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
+  @if(monStates.nonEmpty){
+    @for((msvc, rowi) <- monStates.grouped(objsPerRow).zipWithIndex){
+      @for((mso,ix) <- msvc.zipWithIndex){
+      <a xlink:href= "@mso.showUrl" target="_parent" >
+        @for((ms,ixx) <- mso.recentStates.zipWithIndex){
+        <rect data-ixx="@ixx" fill="@{ms.stateColor}" width="@CELL_WIDTH" height="@CELL_HEIGHT"
+              x="@{ix * CELL_SPACE}" y="@{(rowi * ROW_SPACE) + (ixx * CELL_HEIGHT)}" >
+          <title>@mso.longDesc(ms)</title>
+        </rect>
+        <text font-size="@{CELL_WIDTH - 1}" fill="@ms.textColor"
+              x="@{ix * CELL_SPACE + 2}" y="@{(rowi * ROW_SPACE) + ((ixx + 1) * CELL_HEIGHT) - 1}">
+          <title>@mso.longDesc(ms)</title>
+          @ms.charRep
+        </text>
+        }
+      </a>
+      }
+    }
+  } else {
+    <text  x="5" y="18" fill="red">No monitoring data available</text>
+  }
+</svg>

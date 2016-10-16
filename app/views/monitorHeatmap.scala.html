@@ -1,0 +1,32 @@
+@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGRemote
+@import com.smule.smg.SMGMonHeatmap
+
+@(plugins: Seq[SMGPlugin], monitorStates: Seq[(SMGRemote, SMGMonHeatmap)])
+
+@main("SMG - Monitor overview", plugins) {
+<div>
+  <h6>
+    <a href="/monitor">Monitor Issues</a> |
+    <a href="/monitor/log">Monitor Log</a>
+  </h6>
+</div>
+
+<h3>Monitoring overview</h3>
+
+<!--
+  <form method="GET" action="/monitor">
+    <label for="cbShowAll">Toggle show all states</label>
+    <input id="cbShowAll" type="checkbox" name="all" checked>
+  </form>
+-->
+  <hr/>
+
+  @for((r, ms) <- monitorStates) {
+     @remoteDisplay(r)
+
+    <div>
+      @monitorSvgHeatmap(ms)
+    </div>
+  }
+}

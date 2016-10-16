@@ -1,0 +1,48 @@
+
+- $img_dir: "public/smg"
+- $rrd_dir: "smgrrd"
+- $rrd_cache_dir: "smgrrd"
+- $rrd_graph_width: 607
+- $rrd_graph_height: 152
+- $rrd_graph_font: "DEFAULT:0:monospace"
+#- $rrd_tool: rrdtool
+#- $rrd_socket: /path/to/socket.fn
+
+- $monlog_dir: "monlog"
+
+- ^hosts:
+   title: "All Hosts Index"
+   rows: 0
+
+- ^test:
+   rx: dummy
+   title: "Test"
+   remote: "*"
+   agg_op: "STACK"
+   xagg: "true"
+   period: "1w"
+   step: 3600
+
+- ^test2:
+   rx: dummy
+   title: "Test 2"
+   remote: "*"
+   xsort: 1
+   desc: "an index desc"
+
+- $include: "smgconf/rra_def.yml"
+
+- $include: "smgconf/config-*m.yml"
+#- $include: "/etc/smg/hosts/*.yml"
+
+- $include: "smgconf/config-alerts.yml"
+
+
+- $pre_fetch:
+  id: do_something
+#  interval: 60
+  command: "sleep 2"
+
+#- $remote:
+#  id: "rlocal"
+#  url: "http://localhost:9000"

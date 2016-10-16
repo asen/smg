@@ -1,0 +1,53 @@
+@import com.smule.smg.SMGObjectView
+@import com.smule.smg.SMGMonObjAlertConf
+@import com.smule.smg.SMGMonObjNotifyConf
+@import com.smule.smg.SMGMonNotifyCmd
+@import com.smule.smg.SMGObjectHealth
+@import com.smule.smg.SMGMonNotifySeverity
+@(ov:SMGObjectView, acs: Option[SMGMonObjAlertConf], ncs: Option[SMGMonObjNotifyConf], ncmds: Seq[(SMGMonNotifySeverity.Value, Seq[SMGMonNotifyCmd], Int)] , hstate: Option[String])
+
+<h3>Object View</h3>
+<p>@ov</p>
+
+<h3>Ref Object Update</h3>
+<p>@if(ov.refObj.isDefined){
+  @ov.refObj.get
+  } else {
+    No ref object defined
+  }</p>
+
+<h3>Alert Confs</h3>
+<p>
+@if(acs.isEmpty){
+  No alert confs defined
+} else {
+  @acs.get
+}
+</p>
+
+<h3>Object Notify Confs</h3>
+<p>
+  @if(ncs.isEmpty){
+  No notification confs defined
+  } else {
+  @ncs.get
+  }
+</p>
+<p>
+  Notify commands:<br/>
+  @for((v, cs, backoff) <- ncmds){
+    @if(cs.nonEmpty){
+     @v: @{cs.mkString(", ")} (backoff=@backoff)<br/>
+    }
+  }
+</p>
+
+
+<h3>Health State</h3>
+<p>
+  @if(hstate.isEmpty){
+  No health state available
+  } else {
+  @hstate.get
+  }
+</p>

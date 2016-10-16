@@ -1,0 +1,58 @@
+@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGSearchResult
+
+@(q: String, res: Seq[SMGSearchResult], hasMore: Boolean, lmt:Int, defaultLmt:Int, plugins: Seq[SMGPlugin])
+
+@main("SMG - Search", plugins, 0) {
+
+
+<div align="center">
+<form id="searchForm" method="GET">
+  <h3>Enter search terms below to find indexes and objects</h3>
+  <input id="inpQ" type="text" name="q" size="100" value="@q" autofocus />
+  (Limit: <input id="inpL" type="text" name="lmt" size="4" value="@lmt" />)
+  <input type="submit" value="Search"/>
+</form>
+
+<!-- strip empty/default params from the form so that urls are less cluttered -->
+<script language="JavaScript">
+function disableEmptyInputs() {
+      $(':input', this).each(function() {
+         // !($(this).val()) ||
+         this.disabled = ((this.name == "lmt") && ($(this).val() == @defaultLmt))
+      });
+  };
+
+  $('form#searchForm').submit(disableEmptyInputs);
+</script>
+
+
+  <h4>or use the quick regex filter below to display matching graphs directly.</h4>
+  <form method="GET" action="/dash">
+    <input type="hidden" name="remote" value="*" />
+    <p><input id="trxQ" type="text" name="trx" size="50"
+              title="Enter one or more regular expressions separated by space.
+These will be matched against graph object ids, titles, graph labels or units."/>
+    <input type="submit" value="Go to graphs"/></p>
+  </form>
+
+  <h4>or check the <a href="/ci">Configured indexes</a></h4>
+</div>
+
+@if(res.nonEmpty) {
+<hr/>
+<h4 align="center">Displaying @{res.size} results @if(hasMore){ (truncated) } else { (all) } </h4>
+<ul>
+  @for(sr <- res){
+    <li>
+      <p><a href="@{sr.showUrl}"><b>@{sr.title}</b></a><br/>@{sr.desc}</p>
+    </li>
+  }
+</ul>
+} else {
+  @if(q != ""){
+  <h4 align="center">No results to display</h4>
+  }
+}
+
+}

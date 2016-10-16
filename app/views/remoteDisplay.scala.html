@@ -1,0 +1,12 @@
+@import com.smule.smg.SMGRemote
+@(rt: SMGRemote)
+<a name="rt_@{rt.id}"></a>
+<h4>
+  @if(rt.id == "") {
+  Local
+  } else {
+  @rt.id
+  [<a href="@rt.url"><small>Direct</small></a>]
+  }
+  [<a href="#rt_@{rt.id}">#</a>]
+</h4>

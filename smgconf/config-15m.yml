@@ -1,0 +1,14 @@
+
+- someotherhost.dummy3:
+    command: "smgscripts/echo4.sh"
+    timeout: 600
+    title: "A dummy graph with 3 vals"
+  #  options:
+    interval: 900
+  #  rrdType: COUNTER
+    vars:
+      - label: val31
+        min: 0
+        max: 10
+      - label: val32
+      - label: val33

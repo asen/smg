@@ -1,0 +1,34 @@
+- Smule Grapher (SMG) -
+=================================
+
+-- What it its --
+
+* play 2.4/scala app using rrdtool to maintain many databases and display graphs from them
+
+-- Install --
+
+1. Unpack tgz (presumably already done since you are reading this)
+2. Point JAVA_HOME to a Java 8 installation
+3. Start SMG using the start-smg.sh script:
+# ./start-smg.sh
+4. Point your browser to localhost:9000/assets/docs/index.html for documentation (replace localhost
+with the host where SMG was installed.
+
+
+-- Development setup --
+
+1. Install JDK 8.
+2. Install from brew:
+
+    $ brew install rrdtool coreutils
+
+2. Run:
+
+    $ cd smg
+    $ JAVA_HOME=$(/usr/libexec/java_home -v 1.8) ./activator run
+
+3. Install coreutils for gtimeout (brew install coreutils) and change application.conf:
+
+    # Use smg.timeoutCommand to override the timeout command executable (e.g. gtimeout on mac with homebrew)
+    smg.timeoutCommand = "gtimeout"
+

@@ -1,0 +1,118 @@
+
+.colsInput {
+    width: 4em;
+}
+
+.rowsInput {
+    width: 4em;
+}
+
+.twoCol {
+  columns: 2;
+  -webkit-columns: 2;
+  -moz-columns: 2;
+}
+
+.filter-form .form-group {
+    display: inline-block;
+}
+
+.form-group-cbs {
+    vertical-align: bottom;
+}
+
+.form-group-rmt {
+    vertical-align: top;
+}
+
+.select-remote {
+    width: 6em;
+}
+
+.smgrow {
+    display: inline-block;
+    vertical-align: top;
+}
+
+.smgcell {
+    min-height: 400px;
+    display: inline-block;
+    vertical-align: top;
+    padding-right: 2px;
+    padding-left: 0px;
+    margin: auto;
+    word-break: break-all;
+}
+
+.autosubmit-lbl {
+    color : blue;
+}
+
+.manualsubmit-lbl {
+    color : green;
+}
+
+.btn-submit {
+    color : blue;
+}
+
+.btn-submit-manual {
+    color : green;
+}
+
+/* Sub-title line formatting */
+
+.subtitle-div {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Monitor state */
+
+.svgwrapper {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.msc {
+    display: inline-block;
+}
+
+/* Monitor logs */
+
+.ml-type-RECOVERY {
+  color: #009900;
+}
+
+.ml-type-CNTROVRF {
+  color: #33cccc;
+}
+
+.ml-type-ANOMALY {
+  color: #33cccc;
+}
+
+.ml-type-WARNING {
+  color: #e6e600;
+}
+
+.ml-type-FETCHERR {
+  color: #ff9900;
+}
+
+.ml-type-CRITICAL {
+  color: #ff3300;
+}
+
+.ml-type-OVERLAP {
+  color: #993300;
+}
+
+.ml-type-SMGERR {
+  color: #993333;
+}
+
+.ml-msg {
+   font-style: italic;
+}
+

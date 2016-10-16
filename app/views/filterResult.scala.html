@@ -1,0 +1,115 @@
+@import com.smule.smg.SMGImageView
+@import com.smule.smg.SMGFilter
+@import com.smule.smg.GrapherApi ; val predefPeriods = GrapherApi.detailPeriods
+@import com.smule.smg.SMGRemote
+@import com.smule.smg.SMGIndex
+@import com.smule.smg.SMGPlugin
+@import com.smule.smg.GraphOptions
+@import com.smule.smg.SMGMonStateObjVar
+
+@(plugins: Seq[SMGPlugin], idx: Option[SMGIndex], parentIdx: Option[SMGIndex], byRemote: Seq[(String, Seq[SMGImageView])], flt: SMGFilter,
+  period: String, cols: Int, rows: Int, pg: Int, maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int,
+  availRemotes: Seq[SMGRemote], aggOp: Option[String], xagg: Boolean, cwidth: Int, gopts: GraphOptions,
+  showMs:Boolean, monData: Map[String, Seq[SMGMonStateObjVar]], monOverview: Seq[SMGMonStateObjVar])
+
+@main("SMG - " + (if (idx.isDefined) idx.get.title else flt.humanText), plugins) {
+
+  @if(idx.nonEmpty) {
+    <h3>Index: @idx.get.title
+    @if(idx.get.desc.isDefined) {
+      (@idx.get.desc.get)
+    }
+    </h3>
+    @if(showMs){ @monitorIndexSvgRef(idx.get.id) }
+    @if(parentIdx.isDefined) {
+      <h4>
+        Parent: <a href="/dash?@parentIdx.get.asUrl">@parentIdx.get.title</a>
+        @if(parentIdx.get.rows.isEmpty || parentIdx.get.rows.get > 0){
+          @for( p <- predefPeriods) {
+          <a href="/dash?@parentIdx.get.asUrlForPeriod(p)">(@p)</a>
+          }
+        }
+        @if(parentIdx.get.desc.isDefined) {
+        (@parentIdx.get.desc.get)
+        }
+      </h4>
+    }
+    <ul>
+    @for( cix <- idx.get.children) {
+      <li>
+        <a name="ix_@cix.id"></a>
+        <a href="/dash?@cix.asUrl"><strong>@cix.title</strong></a>
+        @for( p <- predefPeriods) {
+          <a href="/dash?@cix.asUrlForPeriod(p)">(@p)</a>
+        }
+        @if(cix.desc.isDefined) {
+        (@cix.desc.get)
+        }
+        [<a href="#ix_@cix.id">#</a>]
+      </li>
+    }
+    </ul>
+    <hr>
+  }
+
+@if(rows > 0) {
+  @filter(flt, period, cols, rows, predefPeriods, availRemotes, aggOp,
+          byRemote.nonEmpty && byRemote.tail.nonEmpty, xagg, gopts)
+
+  <div class="alert alert-success">
+    Displaying @dispCount @if(aggOp.isDefined){ aggregate (@aggOp.get) } graphs (using @slicedCount out of @tlCount matching objects) in max @cols columns and max @rows rows.
+  </div>
+
+  @if(showMs){
+    @monitorSvgObjects(monOverview)
+  }
+
+  @if(aggOp.isEmpty){
+    @pages(period, flt, cols, rows, pg, maxPg)
+  }
+
+  @for( (remoteId, lst) <- byRemote) {
+    <h3>@if(remoteId == "") { Local } else { Remote: @remoteId}</h3>
+    <div class="smgraphcontainer">
+      <div class="smgrow">
+      @for( (g, ix) <- lst.zipWithIndex) {
+        <div class="smgcell" style="max-width: @{cwidth}px;">
+          <!-- @g.obj -->
+          <a name="@g.obj.id" ></a> <a name="@g.period"></a> <a name="@g.obj.id-@g.period"></a>
+          <div class="smgraph">
+            <h4>@g.obj.title (@g.period, @g.resolution(gopts.step))
+              @if(g.obj.stack) {
+                (stacked)
+              }
+              [<a href="@g.fetchUrl">csv</a>,<a href="@g.fetchUrl&d=1">dl</a>]
+            </h4>
+            <div class="subtitle-div">
+              <div class="subtitle-div">
+                @{g.obj.id} [<a href="#@g.obj.id" >#</a>]
+                @for(pa <- plugins.flatMap(_.actions)){
+                [<a href="@{pa.actionUrl(g.obj, period)}">@{pa.name}</a>]
+                }
+              </div>
+              @if(showMs && monData.contains(g.obj.id)){
+              <div class="subtitle-div">
+                @monitorSvgObjects(monData(g.obj.id))
+              </div>
+              }
+            </div>
+            <a href="@g.obj.showUrl"><img src="@g.imageUrl" alt="@g.imageUrl" /></a>
+          </div>
+        </div>
+        @if(((ix + 1) % cols) == 0) {
+        </div><hr/><div class="smgrow">
+        }
+      }
+      </div>
+    </div>
+  }
+
+  @if(aggOp.isEmpty){
+    @pages(period, flt, cols, rows, pg, maxPg)
+  }
+}
+
+}

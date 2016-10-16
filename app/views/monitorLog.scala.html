@@ -1,0 +1,50 @@
+@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGRemote
+@import com.smule.smg.SMGMonitorLogMsg
+
+@(plugins: Seq[SMGPlugin], period:String, limit:Int, hardOnly: Boolean, logMsgs: Seq[SMGMonitorLogMsg])
+
+@main("SMG - Monitor log", plugins) {
+<div>
+  <h6>
+    <a href="/monitor">Monitor Issues</a> |
+    <a href="/monitor/heatmap">Monitor Heatmap</a>
+  </h6>
+</div>
+
+<h3>Monitoring log</h3>
+
+<h4>Filter:</h4>
+<div>
+<form method="GET" action="/monitor/log" class="filter-form">
+  <div class="form-group">
+  <label class="manualsubmit-lbl">Limit since</label> <input class="form-control" type="text" name="p" value="@period" />
+  </div>
+  <div class="form-group">
+    <label class="manualsubmit-lbl">Limit number</label> <input class="form-control" type="number" name="l" value="@limit" />
+  </div>
+  <div class="form-group form-group-cbs">
+    <label class="manualsubmit-lbl" for="cbSoft">Display Soft errors</label> <input id="cbSoft" type="checkbox" name="soft" @if(!hardOnly){ checked } />
+  </div>
+  <div class="form-group">
+    <input class="form-control btn-submit-manual" type="submit" name="submit" value="Apply" />
+  </div>
+</form>
+</div>
+
+<hr/>
+
+<ul class="monlog">
+@for(ms <- logMsgs) {
+  <li>
+    [@{ if(ms.remote.id == "") "local" else ms.remote.id }]
+    [@{ms.tsFmt}]: <span class="ml-type-@{ms.mltype}">@{ms.mltype}</span>
+    @if(ms.ouids.nonEmpty) {
+      <a href="/dash?@{ms.objectsFilterWithRemote}">@{ms.ouids.mkString(",")}</a> [@if(ms.vix.isDefined){@{ms.vix.get}} else {-}]
+    } else { - [-] }
+    (n=@{ms.repeat}, @if(ms.isHard){ <strong>HARD</strong> } else { SOFT })
+    <span class="ml-msg">@{ms.msg}</span>
+  </li>
+}
+</ul>
+}

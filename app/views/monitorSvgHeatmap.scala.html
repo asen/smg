@@ -1,0 +1,46 @@
+@import com.smule.smg.SMGMonHeatmap
+@(mh: SMGMonHeatmap)
+@SVG_WIDTH = @{ 600 }
+@CELL_HEIGHT = @{ 8 }
+@CELL_WIDTH = @{ 9 }
+@CELL_PADDING = @{ 1 }
+@CELL_SPACE = @{ CELL_WIDTH + CELL_PADDING }
+@ROW_HEIGHT = @{ CELL_HEIGHT }
+@ROW_PADDING = @{ 1 }
+@ROW_SPACE = @{ ROW_HEIGHT + ROW_PADDING }
+@objsPerRow = @{ SVG_WIDTH / CELL_SPACE }
+@mss = @{ mh.lst }
+@len = @{ mss.size }
+@svgRows = @{  (len / objsPerRow) + (if (len % objsPerRow != 0) 1 else 0) }
+@svgHeight = @{ if (len>0) svgRows * ROW_SPACE else ROW_SPACE * 2 }
+<svg class="msc"
+     width="@SVG_WIDTH" height="@svgHeight"
+     xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">
+  <style type="text/css">
+  <![CDATA[
+  .msc {
+    display: inline-block;
+  }
+  ]]>
+  </style>
+  @if(mss.nonEmpty){
+    @for((msvc, rowi) <- mss.grouped(objsPerRow).zipWithIndex){
+      @for((ms,ix) <- msvc.zipWithIndex){
+        <a xlink:href= "@ms.showUrl" target="_parent" >
+        <rect fill="@{ms.severityColor}" width="@CELL_WIDTH" height="@CELL_HEIGHT"
+              x="@{ix * CELL_SPACE}" y="@{rowi * ROW_SPACE}" >
+          <title>@ms.text@ms.hardStr</title>
+        </rect>
+        <text font-size="@{CELL_WIDTH}" fill="@ms.textColor"
+              x="@{ix * CELL_SPACE + 2}" y="@{(rowi * ROW_SPACE) + CELL_HEIGHT - 1}">
+          <title>@ms.text@ms.hardStr</title>
+          @ms.severityStr
+        </text>
+
+        </a>
+      }
+    }
+  } else {
+  <text  x="5" y="15" fill="red">No monitoring data available</text>
+  }
+</svg>

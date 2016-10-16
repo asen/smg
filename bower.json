@@ -1,0 +1,21 @@
+{
+  "name": "SMG",
+  "version": "0.0.1",
+  "authors": [
+    "Asen Lazarov (asen@smule.com)"
+  ],
+  "description": "Smule Grapher",
+  "license": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "jquery": "~2.1.4",
+    "bootstrap": "~3.3.6"
+  }
+}

@@ -1,0 +1,29 @@
+@import com.smule.smg.SMGAutoIndex  ; var childDisp = "none"
+
+@(tlix: SMGAutoIndex, periods: Seq[String], expandLevels: Int, first: Boolean)
+<p>
+  @if(tlix.id == "") {
+    <h5>Top Level</h5>
+  } else {
+    @if(tlix.children.nonEmpty) {
+      @if(!first){
+        <a href="/autoindex/@tlix.id" name="a_@tlix.id" class="btn btn-primary btn-xs">
+        +
+        </a>
+      }
+      <a href="/dash?@tlix.asUrlForPeriod(periods.head)"><strong>@tlix.title</strong></a> @for(p <- periods.tail) { <a href="/dash?@tlix.asUrlForPeriod(p)">(@p)</a> }
+    } else {
+      <a href="/show/@tlix.id"><strong>@tlix.title</strong></a>
+    }
+  }
+</p>
+@if(expandLevels > 0) {
+<div id="chl_@tlix.id">
+<ul>
+  @for(ix <- tlix.children) {
+  <li>@views.html.autoindexItem(ix, periods, expandLevels - 1, false)</li>
+  }
+</ul>
+</div>
+}
+

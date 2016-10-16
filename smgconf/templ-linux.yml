@@ -1,0 +1,134 @@
+- ^localhost:
+  title: "localhost"
+  px: "host.localhost."
+  parent: hosts
+  cols: 2
+#  rows: 50
+#  sx: ""
+#  rx: ""
+
+- host.localhost.sysload:
+  command: "smgscripts/snmp_vals.sh localhost.localdomain laLoad.1 laLoad.2"
+  title: "localhost - Load average over 1/5 min periods"
+  vars:
+    - label: sl1min
+    - label: sl5min
+
+- host.localhost.cpu:
+  title: "localhost - CPU usage"
+  command: "smgscripts/snmp_vals.sh localhost.localdomain ssCpuRawSystem.0 ssCpuRawWait.0 ssCpuRawUser.0 ssCpuRawNice.0"
+  rrdType: COUNTER
+  stack: true
+  vars:
+    - label: sys
+      mu: "%"
+    - label: wait
+      mu: "%"
+    - label: user
+      mu: "%"
+    - label: nice
+      mu: "%"
+
+- host.localhost.cpu0:
+  title: "localhost - User and System CPU usage"
+  command: "smgscripts/snmp_vals.sh localhost.localdomain ssCpuRawUser.0 ssCpuRawSystem.0"
+  rrdType: COUNTER
+  vars:
+    - label: user
+      mu: "%"
+    - label: sys
+      mu: "%"
+
+- host.localhost.cpu1:
+  title: "localhost - Nice and Wait CPU usage"
+  command: "smgscripts/snmp_vals.sh localhost.localdomain ssCpuRawNice.0 ssCpuRawWait.0"
+  rrdType: COUNTER
+  vars:
+    - label: nice
+      mu: "%"
+    - label: wait
+      mu: "%"
+
+- host.localhost.intctx:
+  command: "smgscripts/snmp_vals.sh localhost.localdomain ssRawInterrupts.0 ssRawContexts.0"
+  title: "localhost - Interrupts/context switches"
+  rrdType: COUNTER
+  vars:
+    - label: ints
+    - label: ctxs
+
+- host.localhost.mempercent:
+  command: "smgscripts/snmp_mem.sh localhost.localdomain"
+  title: "localhost - Memory Used"
+  rrdType: GAUGE
+  vars:
+    - label: total used
+      mu: "%"
+    - label: used w/o buf/cache
+      mu: "%"
+
+- host.localhost.swappercent:
+  command: "smgscripts/snmp_swap.sh localhost.localdomain"
+  title: "localhost - Swap Used"
+  rrdType: GAUGE
+  vars:
+    - label: perc
+      mu: "%"
+
+- host.localhost.blkio:
+  command: "smgscripts/snmp_vals.sh localhost.localdomain ssIORawSent.0 ssIORawReceived.0"
+  title: "localhost - Block Device I/O"
+  rrdType: COUNTER
+  vars:
+    - label: sent
+      mu: "blk/s"
+    - label: rcvd
+      mu: "blk/s"
+
+- host.localhost.swpio:
+  command: "smgscripts/snmp_vals.sh localhost.localdomain ssSwapIn.0 ssSwapOut.0"
+  title: "localhost - Swap I/O"
+  rrdType: COUNTER
+  vars:
+    - label: in
+      mu: "KB/s"
+    - label: out
+      mu: "KB/s"
+
+- host.localhost.netio:
+  command: "smgscripts/snmp_vals.sh localhost.localdomain ifHCInOctets.2 ifHCOutOctets.2"
+  title: "localhost - Network I/O Octets"
+  rrdType: COUNTER
+  vars:
+    - label: in
+      mu: "B/s"
+    - label: out
+      mu: "B/s"
+
+- host.localhost.newconn:
+  command: "smgscripts/snmp_vals.sh localhost.localdomain tcpPassiveOpens.0 tcpActiveOpens.0"
+  title: "localhost - Network New Connections"
+  rrdType: COUNTER
+  vars:
+    - label: in
+    - label: out
+
+- host.localhost.estconn:
+  command: "smgscripts/snmp_vals.sh localhost.localdomain tcpCurrEstab.0"
+  title: "localhost - Network Established Connections"
+  vars:
+    - label: conns
+
+- host.localhost.disk_:
+  command: "smgscripts/du_by_snmp.pl -C ops -H localhost.localdomain -m '^/$'"
+  title: "localhost - Disk usage / partition"
+  vars:
+    - label: perc
+      mu: "%"
+
+- host.localhost.disk_var:
+  command: "smgscripts/du_by_snmp.pl -C ops -H localhost.localdomain -m '^/var$'"
+  title: "localhost - Disk usage /var partition"
+  vars:
+    - label: perc
+      mu: "%"

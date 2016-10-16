@@ -1,0 +1,110 @@
+- ^localhost:
+  title: "localhost graphs"
+  px: "localhost."
+#  cols: 2
+#  rows: 1
+  parent: hosts
+#  rows: 50
+#  sx: ""
+#  rx: ""
+
+
+- $pre_fetch:
+  id: fail_randomly
+  command: 'bash -c "exit $(($RANDOM%2))"'
+#  command: 'echo 0'
+
+- localhost.sysload:
+  command: "smgscripts/mac_localhost_sysload.sh"
+  interval: 60
+  rrdType: GAUGE
+  vars:
+    - label: 1min
+      cdef: "$ds,100,*"
+#      alert-spike: ""
+      #"1.5:15m:2h:0"
+    - label: 5min
+      cdef: "$ds,100,*"
+    - label: 15min
+      cdef: "$ds,100,*"
+
+- localhost.sysload2:
+  pre_fetch: fail_randomly
+  command: "smgscripts/mac_localhost_sysload.sh"
+  interval: 60
+  rrdType: GAUGE
+  vars:
+    - label: 1min
+      cdef: "$ds,100,*"
+    - label: 5min
+      cdef: "$ds,100,*"
+    - label: 15min
+      cdef: "$ds,100,*"
+
+- localhost.dummy:
+  title: "A dummy graph for this host"
+  command: "echo 2 && echo 1"
+#  options:
+  interval: 60
+  rrdType: GAUGE
+  vars:
+    - label: val1
+    - label: val2
+
+- localhost.dummy3:
+  pre_fetch: fail_randomly
+  command: "smgscripts/echo4.sh"
+  title: "A dummy graph with 3 vals"
+#  options:
+  interval: 60
+#  rrdType: COUNTER
+  vars:
+    - label: val31
+      min: 0
+      max: 10
+      alert-warn-gt: 3
+      alert-crit-gt: 8
+    - label: val32
+    - label: val33
+
+- localhost.dummy3-21:
+  title:  "A dummy graph with 3 vals and 2 selected"
+  ref: localhost.dummy3
+#  gv:
+#   - 2
+#   - 1
+  cdef_vars:
+    - label: sumv1v2
+      cdef: "$ds1,$ds2,+"
+
+
+- localhost.dummy1:
+  title: "A dummy graph for this host 1"
+  pre_fetch: fail_randomly
+  command: "echo 2 && echo 1"
+#  options:
+  interval: 60
+  rrdType: GAUGE
+  vars:
+    - label: val1
+
+- localhost.time.counter:
+  title: "Test time counter"
+  command: "date +%s"
+#  options:
+  interval: 60
+  rrdType: COUNTER
+  vars:
+    - label: sec/sec
+      max: 1.01
+
+- localhost.spike.check:
+  title: "Test spike"
+  command: "smgscripts/print-series.rb smgscripts/print-series-test.txt"
+#  options:
+  interval: 60
+  rrdType: GAUGE
+  vars:
+    - label: num
+      alert-spike: ""
+

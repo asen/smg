@@ -1,0 +1,10 @@
+v 0.4+
+
+== Monitor ==
+
+* (?) apply cdefs to thresholds/var for display
+
+== Search ==
+
+* smart (?) search
+
