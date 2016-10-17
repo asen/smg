@@ -20,7 +20,7 @@ class Images  @Inject() () extends Controller {
     } else {
       val fileToServe = new File(Play.application.getFile(rootPath), file)
       if (fileToServe.exists) {
-        Ok.sendFile(fileToServe, inline = true).withHeaders(CACHE_CONTROL -> "max-age=3600")
+        Ok.sendFile(fileToServe, inline = true).withHeaders(CACHE_CONTROL -> "max-age=30")
       } else {
         NotFound
       }
