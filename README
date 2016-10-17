@@ -3,13 +3,14 @@
 
 -- What is this --
 
-* Play 2.4/scala (https://www.playframework.com/) app using external scripts to fetch numbers from
-services and rrdtool (http://oss.oetiker.ch/rrdtool/) to maintain many databases and display graphs
-from them. It can also do a lot more than that - like checking the fetched valules against pre-configured
-thresholds and/or anomalies and sending alerts. It is also possible to extend it via plugins (scala extensions).
+* Play 2.4/scala (https://www.playframework.com/) app using external scripts to fetch
+numbers from services and rrdtool (http://oss.oetiker.ch/rrdtool/) to maintain many
+databases and display graphs from them. It can also do a lot more than that - like
+checking the fetched valules against pre-configured thresholds and/or anomalies and
+sending alerts. It is also possible to extend it via plugins (scala extensions).
 
-Intended to be a simple to maintain but scalable monitoring system for people who prefer to generate their
-configs over clicking on UI to set it up.
+Intended to be a simple to maintain but scalable monitoring system for people who
+prefer to generate their configs over clicking on UI to set it up.
 
 Check the docs for more information.
 
@@ -27,8 +28,8 @@ Check the docs for more information.
 2. Point JAVA_HOME to a Java 8 installation
 3. Start SMG using the start-smg.sh script:
 # ./start-smg.sh
-4. Point your browser to localhost:9000/assets/docs/index.html for documentation (replace localhost
-with the host where SMG was installed.
+4. Point your browser to localhost:9000/assets/docs/index.html for documentation (replace
+localhost with the host where SMG was installed.
 
 
 -- Development setup --
@@ -45,6 +46,7 @@ with the host where SMG was installed.
 
 3. Install coreutils for gtimeout (brew install coreutils) and change application.conf:
 
-    # Use smg.timeoutCommand to override the timeout command executable (e.g. gtimeout on mac with homebrew)
+    # Use smg.timeoutCommand to override the timeout command
+    # executable (e.g. gtimeout on mac with homebrew)
     smg.timeoutCommand = "gtimeout"
 
