@@ -12,9 +12,23 @@ function unpack(rows, key) {
     return rows.map(function(row) { return row[key]; });
 }
 
+function wrapText(txt, max) {
+  var ret = [];
+  var cur = "";
+  txt.split(" ").forEach(function(word){
+     cur += word + " "
+     if (cur.length > max) {
+        ret.push(cur)
+        cur = ""
+     }
+  });
+  ret.push(cur)
+  return ret.join("<br>\n");
+}
+
 function plotlyChart(data) {
   var layout = {
-       title: gl_smgObjectView.title,
+       title: wrapText(gl_smgObjectView.title, 120),
      };
 
   console.log(data);
