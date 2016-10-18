@@ -16,9 +16,8 @@ spiker:
     - rx: "localhost.*"
       sample_size: 12
       data_period: "46h"
-    - "agg.live-jamon.*am$"
   ignore:
-    - "smuleadmin"
+    - "admin"
   alert:
     - ""
   ignore_labels:
