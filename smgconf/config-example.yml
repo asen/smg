@@ -1,0 +1,22 @@
+
+- $rrd_graph_width: 607
+- $rrd_graph_height: 152
+- $rrd_graph_font: "DEFAULT:0:monospace"
+#- $rrd_tool: rrdtool
+#- $rrd_socket: /path/to/socket.fn
+
+- $img_dir: "public/smg"
+- $rrd_dir: "smgrrd"
+- $rrd_cache_dir: "smgrrd"
+
+- $monlog_dir: "monlog"
+- $monstate_dir: "monstate"
+
+# - $include: "smgconf/rra_def.yml"
+
+- $include: "smgconf/templ-linux-pf.yml"
+# - $include: "smgconf/templ-linux-naive.yml"
+
+# - $include: "smgconf/config-*m.yml"
+
+#- $include: "smgconf/config-alerts.yml"

@@ -1,0 +1,209 @@
+
+- $pre_fetch:
+  id: cache_snmp_linux_stats_localhost
+  # May have to edit the specific oids, these are good for centos 6
+  command: "/opt/smg/scripts/snmp_pf.sh public localhost /tmp/smg-snmp-pf-localhost.out laLoad.1 laLoad.2 \
+    ssCpuRawUser.0 ssCpuRawNice.0 ssCpuRawSystem.0 ssCpuRawIdle.0 ssCpuRawWait.0 ssCpuRawInterrupt.0 \
+    ssCpuRawSoftIRQ.0 ssRawInterrupts.0 ssRawContexts.0 ssIORawSent.0 ssIORawReceived.0 \
+    ssSwapIn.0 ssSwapOut.0 ifHCInOctets.2 ifHCOutOctets.2 tcpPassiveOpens.0 tcpActiveOpens.0 tcpCurrEstab.0"
+  timeout: 10
+
+
+- ^localhost:
+  title: "localhost"
+  px: "host.localhost."
+  parent: hosts
+  desc: "localhost graphs"
+
+- host.localhost.sysload:
+  pre_fetch: cache_snmp_linux_stats_localhost
+  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out laLoad.1 laLoad.2"
+  title: "localhost - Load average over 1/5 min periods"
+  interval: 60
+  vars:
+    - label: sl1min
+    - label: sl5min
+
+- host.localhost.cpu:
+  title: "localhost - CPU usage"
+  pre_fetch: cache_snmp_linux_stats_localhost
+  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssCpuRawUser.0 ssCpuRawNice.0 \
+  ssCpuRawSystem.0 ssCpuRawIdle.0 ssCpuRawWait.0 ssCpuRawInterrupt.0 ssCpuRawSoftIRQ.0"
+  rrdType: COUNTER
+  stack: true
+  interval: 60
+  vars:
+    - label: user
+      mu: "%"
+      max: 10000
+      lt: "AREA"
+    - label: nice
+      mu: "%"
+      max: 10000
+      lt: "AREA"
+    - label: system
+      mu: "%"
+      max: 10000
+      lt: "AREA"
+    - label: idle
+      mu: "%"
+      max: 10000
+<% if check_cpu_idle %>
+      alert-warn-lt: 1
+      alert-crit-lt: 0
+<% end %>
+      lt: "AREA"
+    - label: iowait
+      mu: "%"
+      max: 10000
+      lt: "AREA"
+    - label: irq
+      mu: "%"
+      max: 10000
+      lt: "AREA"
+    - label: softirq
+      mu: "%"
+      max: 10000
+      lt: "AREA"
+
+
+- host.localhost.cpu0:
+  title: "localhost - User and System CPU usage"
+  pre_fetch: cache_snmp_linux_stats_localhost
+  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssCpuRawUser.0 ssCpuRawSystem.0"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: user
+      mu: "%"
+      max: 10000
+    - label: sys
+      mu: "%"
+      max: 10000
+
+- host.localhost.cpu1:
+  title: "localhost - Nice and Wait CPU usage"
+  pre_fetch: cache_snmp_linux_stats_localhost
+  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssCpuRawNice.0 ssCpuRawWait.0"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: nice
+      mu: "%"
+      max: 10000
+    - label: wait
+      mu: "%"
+      max: 10000
+
+- host.localhost.intctx:
+  pre_fetch: cache_snmp_linux_stats_localhost
+  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssRawInterrupts.0 ssRawContexts.0"
+  title: "localhost - Interrupts/context switches"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: ints
+      max: 10000000000
+    - label: ctxs
+      max: 10000000000
+
+- host.localhost.blkio:
+  pre_fetch: cache_snmp_linux_stats_localhost
+  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssIORawSent.0 ssIORawReceived.0"
+  title: "localhost - Block Device I/O"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: wrtn
+      mu: "blk/s"
+      max: 10000000000
+    - label: read
+      mu: "blk/s"
+      max: 10000000000
+
+- host.localhost.swpio:
+  pre_fetch: cache_snmp_linux_stats_localhost
+  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssSwapIn.0 ssSwapOut.0"
+  title: "localhost - Swap I/O"
+  rrdType: GAUGE
+  interval: 60
+  vars:
+    - label: in
+      mu: "B"
+    - label: out
+      mu: "B"
+      alert-warn-gt: 1000000 
+      alert-crit-gt: 100000000
+
+- host.localhost.netio:
+  pre_fetch: cache_snmp_linux_stats_localhost
+  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ifHCInOctets.2 ifHCOutOctets.2"
+  title: "localhost - Network I/O Octets"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: in
+      mu: "b/s"
+      cdef: "$ds,8,*"
+      max: 12500000000
+      # 750000000 * 8 = 6Gbps, 1000000000 * 8 = 8Gbps
+      alert-warn-gt: 750000000 
+      alert-crit-gt: 1000000000
+    - label: out
+      mu: "b/s"
+      cdef: "$ds,8,*"
+      max: 12500000000
+      # 750000000 * 8 = 6Gbps, 1000000000 * 8 = 8Gbps
+      alert-warn-gt: 750000000 
+      alert-crit-gt: 1000000000
+
+
+- host.localhost.newconn:
+  pre_fetch: cache_snmp_linux_stats_localhost
+  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out tcpPassiveOpens.0 tcpActiveOpens.0"
+  title: "localhost - Network New Connections"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: in
+      mu: "c/s"
+      max: 10000000000
+    - label: out
+      max: 10000000000
+      mu: "c/s"
+
+- host.localhost.estconn:
+  pre_fetch: cache_snmp_linux_stats_localhost
+  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out tcpCurrEstab.0"
+  title: "localhost - Network Established Connections"
+  interval: 60
+  vars:
+    - label: conns
+
+- host.localhost.mempercent:
+  command: "smgscripts/snmp_mem.sh localhost"
+  timeout: 5
+  title: "localhost - Memory Used"
+  rrdType: GAUGE
+  interval: 300
+  rra: mrtg_5m
+  vars:
+    - label: total used
+      mu: "%"
+    - label: used w/o buf/cache
+      mu: "%"
+      alert-warn-gt: 90
+      alert-crit-gt: 95
+
+
+- host.localhost.swappercent:
+  command: "smgscripts/snmp_swap.sh localhost"
+  timeout: 5
+  title: "localhost - Swap Used"
+  rrdType: GAUGE
+  interval: 300
+  rra: mrtg_5m
+  vars:
+    - label: perc
+      mu: "%"
+

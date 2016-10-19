@@ -3,10 +3,6 @@
   id: mail-asen
   command: "smgscripts/notif-dummy.sh asen@smule.com"
 
-- $notify-command:
-  id: pd
-  command: "smgscripts/notif-pagerduty.sh"
-
 - $notify-warn: mail-asen
 - $notify-crit: mail-asen
 #,pd
