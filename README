@@ -28,10 +28,13 @@ Check the docs for more information.
 
   # yum install rrdtool
 
-(these below are for the default conf to work on linux against localhost)
+These below are for the default conf to work on linux against localhost,
+be warned that the example wipes the default snmpd.conf (after backing it up)
+so make sure you know what you are doing (it obviously requires root access)
 
   # yum install net-snmp net-snmp-util
-  # cp /etc/snmp/snmpd.conf /etc/snmp/snmpd.conf.bck && echo "rocommunity public localhost" > /etc/snmp/snmpd.conf
+  # cp /etc/snmp/snmpd.conf /etc/snmp/snmpd.conf.bck
+  # echo "rocommunity public localhost" > /etc/snmp/snmpd.conf
   # /etc/init.d/snmpd start
 
 1. Unpack tgz
@@ -40,14 +43,18 @@ Check the docs for more information.
 
    # mkdir /etc/smg && cp smg-0.3/smgconf/config-example.yml /etc/smg/config.yml
 
+Also check smgconf/templ-linux-pf.yml which is included by config-example.yml.
+Replace localhost with another hostname in a copy of that file and include that
+in /etc/smg/config.yml to add other hosts (these would need snmpd configured too).
+
 3. Point JAVA_HOME to a Java 8 installation
 
 4. Start SMG using the start-smg.sh script:
 
    # ./start-smg.sh
 
-5. Point your browser to localhost:9000 (localhost:9000/assets/docs/index.html for documentation (replace
-localhost with the host where SMG was installed).
+5. Point your browser to localhost:9000 (localhost:9000/assets/docs/index.html for
+documentation, replace localhost with the host where SMG was installed if different).
 
 
 -- Development setup (Mac) --
