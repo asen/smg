@@ -48,10 +48,8 @@
     - label: idle
       mu: "%"
       max: 10000
-<% if check_cpu_idle %>
       alert-warn-lt: 1
       alert-crit-lt: 0
-<% end %>
       lt: "AREA"
     - label: iowait
       mu: "%"
