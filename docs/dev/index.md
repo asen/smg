@@ -1,6 +1,6 @@
 # Developers documentation
 
-[Back to main index page](../index.html) | [Admin documentation](../admin/index.html)
+[Back to main index page](../index.md) | [Admin documentation](../admin/index.md)
 
 
 <a name="dev-setup">

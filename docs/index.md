@@ -30,8 +30,8 @@
         1. [Plugins](#plugins)
         1. [Monitoring](#monitoring)
             1. [Anomaly detection](#anomaly)
-1. [Admin documentation](admin/index.html)
-1. [Developer documentation](dev/index.html)
+1. [Admin documentation](admin/index.md)
+1. [Developer documentation](dev/index.md)
 
 <a name="introduction" />
 ## Introduction
@@ -134,7 +134,7 @@ and older data gets averaged over longer period and kept like that
 Every graph in SMG corresponds to one or more (check aggregate 
 functions below) RRD objects. These are configured in the yaml config
 and have a bunch of properties (described in detail in the [config 
-section](admin/index.html#rrd-objects) of these docs).
+section](admin/index.md#rrd-objects) of these docs).
  
 The object id is a string (unique across object ids namespace),
 should be descriptive and must only contain alpha numeric 
@@ -163,7 +163,7 @@ be executed and its output (numbers) recorded in the RRD file.
 The default interval if not specified in the config is 300 seconds 
 (or every-5 minutes).
 
-Check [Rrd Objects configuration](admin/index.html#rrd-objects) for more 
+Check [Rrd Objects configuration](admin/index.md#rrd-objects) for more 
 details on what properties are supported for given rrd object.
 
 <a name="intervals" />
@@ -180,7 +180,7 @@ There are two ways this can work:
 
 - By default SMG will use its internal scheduler to trigger the 
 regular runs. Without getting into too much detail here (check 
-[Developers documentation](dev/index.html) for more info) it will 
+[Developers documentation](dev/index.md) for more info) it will 
 group all objects by their interval value (e.g. every-1min, every-5min,
 etc.) and trigger (separate) runs for every discovered unique interval 
 value, whenever the applicable time comes.
@@ -243,7 +243,7 @@ use a different end point in the graphs than "now". This can be
 requested using the **Period Len** UI param, specifying how long period
 the graphs should cover (starting at the point defined with Period
 Since). Both parameters and their format are described in detail 
-[here](admin/index.html#period)
+[here](admin/index.md#period)
 
 
 <a name="filters" />
@@ -260,7 +260,7 @@ objects to display together.
 Currently one can filter by object id, object title and [remote 
 instance](#remotes). Below are the currently supported filter fields 
 as present in the UI. These match the [index filter 
-configuration](admin/index.html#filters) options and if any filter
+configuration](admin/index.md#filters) options and if any filter
 turns out to be useful it can be converted to a named index and
 configured in the yaml for quick access. Also any filter result
 can be shared by just sharing its SMG URL - the filter fields
@@ -325,8 +325,8 @@ indexes with good object ids structure. Indexes can be structured in a
 hierarchy where each index can specify a parent index id. The main SMG
 page currently displays all top-level indexes (ones which don't have 
 a parent) and also the a configurable number of levels after that 
-(using the [$index-tree-levels](admin/index.html#index-tree-levels) 
-global var). Check [the index config section](admin/index.html#indexes) 
+(using the [$index-tree-levels](admin/index.md#index-tree-levels) 
+global var). Check [the index config section](admin/index.md#indexes) 
 for more details on indexes.
 
 
@@ -405,7 +405,7 @@ This feature is subject to future improvements too.
 #### Aggregate functions
 
 SMG supports "aggregating" graphs for objects which have identical set 
-of [variables definitions](admin/index.html#obj-vars) using one of 
+of [variables definitions](admin/index.md#obj-vars) using one of 
 the currently available functions (these are available as buttons on 
 the graphs display page): 
 
@@ -448,7 +448,7 @@ below.
 
 View objects are useful to display a subset of an existing RRD object 
 vars (lines) and/or re-order them via the [gv ("graph 
-vars")](admin/index.html#gv) config value. 
+vars")](admin/index.md#gv) config value. 
  
 The other use case of View objects is that these support special 
 *cdef variables*. rrdtool supports complex arithmetic expressions
@@ -463,7 +463,7 @@ variable in SMG which divides the "cache hit" rate (x 100) by the total
 "requests" and we effectively get an average "cache hit percentage" for
 the given period.
 
-Check the [Cdef variables](admin/index.html#cdef-vars) section in the 
+Check the [Cdef variables](admin/index.md#cdef-vars) section in the 
 Admin documentation for more details.
 
 
@@ -516,7 +516,7 @@ is mostly a convenience to get all monitoring in a single UI
 SMG supports plugins (configured in application.conf) which are just
 Scala classes implementing a specific interface (trait in Scala terms).
 
-Check the [Developers documentation](dev/index.html#plugins) for more
+Check the [Developers documentation](dev/index.md#plugins) for more
 detail but at a high level plugins can do a bunch of things:
 
 - each plugins has an *interval* associated with it. Its run() method
@@ -636,7 +636,7 @@ including target host or service down.
 
 - **E\_SMGERR** - global SMG error (usually - overlapping runs).
 
-Check [monitoring configuration](admin/index.html#monitoring) for more
+Check [monitoring configuration](admin/index.md#monitoring) for more
 details on how the thresholds are defined in the yaml configuration.
 
 These states come in two flavors - "**HARD**" (at least consecutive 3 
@@ -735,7 +735,7 @@ There are some additional checks to see whether it is a spike or drop
 but overall the approach is to focus on finding patterns proving that
 the current state is NOT an anomaly.
 
-## [Admin documentation](admin/index.html)
+## [Admin documentation](admin/index.md)
 
-## [Developer documentation](dev/index.html)
+## [Developer documentation](dev/index.md)
 

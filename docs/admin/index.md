@@ -1,6 +1,6 @@
 # Admin documentation
 
-[Back to main index page](../index.html) | [Developer documentation](../dev/index.html)
+[Back to main index page](../index.md) | [Developer documentation](../dev/index.md)
 
 
 ## Table of Contents
@@ -137,7 +137,7 @@ section for more details.
 #### Installation from sources
 
 - This is mostly meant for development purposes - check [the 
-developer documentation](../dev/index.html#dev-setup) for setup 
+developer documentation](../dev/index.md#dev-setup) for setup 
 instructions.
 
 
@@ -257,7 +257,7 @@ execute, together with an optional **timeout** for the command
 </pre>
 </blockquote>
 
-> As explained in the [concepts overview](../index.html#pre_fetch) SMG
+> As explained in the [concepts overview](../index.md#pre_fetch) SMG
 RRD objects can specify a pre\_fetch command to execute before their
 own command gets executed (for the current interval run). That way multiple
 objects can be updated from given source (host) while hitting it only
@@ -569,7 +569,7 @@ for this object. By default SMG will pick one based on object interval.
 
 ### View objects
 
-As mentioned in the [concepts overview](../index.html#view-objects)
+As mentioned in the [concepts overview](../index.md#view-objects)
 every RRD object is implicitly also a View object. Additional View 
 objects can be defined in the configuration by referencing existing 
 RRD objects too. These have two main purposes: 
@@ -751,7 +751,7 @@ The end point of the graph can be set to be different than
 - **agg\_op**: (default - None) - A SMG aggregate operation string (one
 of _GROUP_, _STACK_, _SUM_, _SUMN_ or _AVG_ ). If that is specified
 SMG will directly apply the respective 
-[aggregate operation](../index.html#aggregate-functions) to the
+[aggregate operation](../index.md#aggregate-functions) to the
 graphs resulting from the filter, before display.
 
 - **xagg**: (default - false) - By default, when SMG is executing
@@ -868,7 +868,7 @@ by the average value of the var which (1-based) index is equal to
 xsort. E.g set to 1 to sort by the first variable, 2 for the second 
 etc. Graphs which have less variables than the requested xsort index
 will remain unsorted. Sorting is also described 
-[here](../index.html#sorting).
+[here](../index.md#sorting).
 
 
 <a name="hindexes" />
@@ -914,7 +914,7 @@ alert keywords are defined:
                          #   in the last 30 minutes period compared to the previous 
                          #   30h period.
 
-Check [here](../index.html#anomaly) for more details on how 
+Check [here](../index.md#anomaly) for more details on how 
 alert-spike/anomaly detection works. 
 
 In addition to alert-\* properties one can also define the following

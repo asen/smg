@@ -18,6 +18,6 @@ for fn in `find $SRCDIR -type f -name "*.md" | sed "s/$SRCDIR\///g"` ; do
     outfn=`basename $fn | sed 's/\.md$/.html/g'`
     dn=$OUTDIR/`dirname $fn`
     mkdir -p $dn
-    $MARKDOWN $SRCDIR/$fn > $dn/$outfn
+    $MARKDOWN $SRCDIR/$fn | sed 's/index.md/index.html/g' > $dn/$outfn
 done
 
