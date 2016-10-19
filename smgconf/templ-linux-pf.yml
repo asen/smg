@@ -184,7 +184,6 @@
   title: "localhost - Memory Used"
   rrdType: GAUGE
   interval: 300
-  rra: mrtg_5m
   vars:
     - label: total used
       mu: "%"
@@ -200,7 +199,6 @@
   title: "localhost - Swap Used"
   rrdType: GAUGE
   interval: 300
-  rra: mrtg_5m
   vars:
     - label: perc
       mu: "%"

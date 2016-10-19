@@ -22,21 +22,35 @@ Check the docs for more information.
     ...
     *** Done. Output in target/universal/smg-0.3.tgz
 
--- Install --
+-- Install and configure --
+
+0. Install prerequisites (e.g on linux):
+
+  # yum install rrdtool
+
+(these below are for the default conf to work on linux against localhost)
+
+  # yum install net-snmp net-snmp-util
+  # cp /etc/snmp/snmpd.conf /etc/snmp/snmpd.conf.bck && echo "rocommunity public localhost" > /etc/snmp/snmpd.conf
+  # /etc/init.d/snmpd start
 
 1. Unpack tgz
-2. Copy example config into /etc/smg/config.yml
+
+2. Copy example config (good for linux) into /etc/smg/config.yml
 
    # mkdir /etc/smg && cp smg-0.3/smgconf/config-example.yml /etc/smg/config.yml
 
 3. Point JAVA_HOME to a Java 8 installation
+
 4. Start SMG using the start-smg.sh script:
-# ./start-smg.sh
+
+   # ./start-smg.sh
+
 5. Point your browser to localhost:9000 (localhost:9000/assets/docs/index.html for documentation (replace
 localhost with the host where SMG was installed).
 
 
--- Development setup --
+-- Development setup (Mac) --
 
 1. Install JDK 8.
 2. Install from brew:

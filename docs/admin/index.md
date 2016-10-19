@@ -35,7 +35,7 @@ available on pretty much any unix installation and gnu timeout may
 have to be installed (on e.g. Mac). It should be possible to run under 
 Windows using cygwin but never tried.
 
-> Note: The "bash" ant "timeout" commands are actually
+> Note: The "bash" and "timeout" commands are actually
 configurable in application.conf and can be replaced with other
 commands with similar functionality. E.g. in theory it should be 
 possible to replace bash with cmd.exe.
