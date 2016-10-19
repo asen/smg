@@ -2,7 +2,7 @@
 - $pre_fetch:
   id: cache_snmp_linux_stats_localhost
   # May have to edit the specific oids, these are good for centos 6
-  command: "/opt/smg/scripts/snmp_pf.sh public localhost /tmp/smg-snmp-pf-localhost.out laLoad.1 laLoad.2 \
+  command: "smgscripts/snmp_pf.sh public localhost /tmp/smg-snmp-pf-localhost.out laLoad.1 laLoad.2 \
     ssCpuRawUser.0 ssCpuRawNice.0 ssCpuRawSystem.0 ssCpuRawIdle.0 ssCpuRawWait.0 ssCpuRawInterrupt.0 \
     ssCpuRawSoftIRQ.0 ssRawInterrupts.0 ssRawContexts.0 ssIORawSent.0 ssIORawReceived.0 \
     ssSwapIn.0 ssSwapOut.0 ifHCInOctets.2 ifHCOutOctets.2 tcpPassiveOpens.0 tcpActiveOpens.0 tcpCurrEstab.0"
