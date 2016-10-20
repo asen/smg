@@ -556,7 +556,7 @@ time series.
 - spiker - this plugin runs periodically (as configured) and tries to 
 detect anomalies (like sudden spikes and drops) in the graphs. It is 
 deprecated (the monitoring functionality does the same, better)
-and is provided more liek for an example.
+and is provided more like an example.
 
 <a name="monitoring" />
 #### Monitoring
