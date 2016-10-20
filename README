@@ -42,7 +42,7 @@ config-example.yml. One needs to enable SNMP to make this work for localhost
 that file and include the file in /etc/smg/config.yml to add another host
 (these would need snmpd configured too).
 
-    2.1. Prepare SNMP to work with the default config (or create your own config)
+    2.1. Prepare SNMP to work with the default config
 
     These below are for the default conf to work on linux against localhost,
     be warned that the example wipes the default snmpd.conf (after backing it up)
@@ -59,11 +59,24 @@ that file and include the file in /etc/smg/config.yml to add another host
       UCD-SNMP-MIB::laLoad.1 = STRING: 0.00
 
 
-3. Point JAVA_HOME to a Java 8 installation
+3. Edit conf/application.conf if needed.
 
-4. Start SMG using the start-smg.sh script:
+E.g. can tweak the number of threads to use per interval etc. One can also copy
+that file under /etc/smg/app.conf and edit there, the start-smg.sh script will
+use it if found.
 
-   # ./start-smg.sh
+4. Point JAVA_HOME to a Java 8 installation and start SMG using the start-smg.sh
+script:
+
+   # ./start-smg.sh 256m
+
+(the 256m argument tells SMG how much heap memory to use, the default of 8g is
+tuned for large setups)
+
+Check logs/nohup.out for startup errors and logs/application.log for SMG/config
+issues.
+
+There is also a ./stop-smg.sh script.
 
 5. Point your browser to localhost:9000 (localhost:9000/assets/docs/index.html for
 documentation, replace localhost with the host where SMG was installed if different).
