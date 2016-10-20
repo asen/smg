@@ -40,7 +40,8 @@ Also check smgconf/templ-linux-pf.yml which is included by the distributed
 config-example.yml. One needs to enable SNMP to make this work for localhost
 (see 2.1. below). Then replace localhost with another hostname in a copy of
 that file and include the file in /etc/smg/config.yml to add another host
-(these would need snmpd configured too).
+(these would need snmpd configured too). Check smgscripts/gen-conf.sh for a helper
+script
 
     2.1. Prepare SNMP to work with the default config
 
