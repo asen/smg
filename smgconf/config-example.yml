@@ -32,6 +32,8 @@
 
 ## Include the default linux localhost sytem stats template
 - $include: "smgconf/templ-linux-pf.yml"
+## Replace the above with this on Mac
+#- $include: "smgconf/templ-mac-localhost.yml"
 
 ## Other includes as needed
 #- $include: "smgconf/templ-linux-naive.yml"

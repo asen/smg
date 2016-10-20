@@ -1,0 +1,26 @@
+
+- ^localhost:
+  title: "localhost"
+  px: "host.localhost."
+  desc: "localhost graphs"
+
+- host.localhost.sysload:
+  title: "loclahost sysload"
+  command: "smgscripts/mac_localhost_sysload.sh"
+  interval: 60
+  rrdType: GAUGE
+  vars:
+    - label: 1min
+    - label: 5min
+    - label: 15min
+
+- host.localhost.disk_usage:
+  title: "loclahost disk / usage"
+  command: "df -k | grep ' /$' | awk '{print $3 * 1024, $4 * 1024}' | xargs -n 1 echo"
+  interval: 60
+  rrdType: GAUGE
+  vars:
+    - label: used
+      mu: B
+    - label: avail
+      mu: B
