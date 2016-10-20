@@ -1,6 +1,7 @@
 package com.smule.smgplugins.jsgraph
 
 import com.smule.smg._
+import play.api.{Mode, Play}
 import play.api.libs.json.Json
 
 /**
@@ -87,9 +88,14 @@ class SMGJsGraphPlugin(val pluginId: String,
 
   import SMGRemoteClient._  // needed to serialize the SMGObjectView to json
 
+  private def plotlyRef = if (Play.current.mode == Mode.Dev){
+    <script src="https://cdn.plot.ly/plotly-1.18.0.min.js"></script>
+  } else {
+    <script src="/assets/plugins/jsgraph/pl/plotly-1.18.0.min.js"></script>
+  }
   private def renderChart(actionId:String, ov:SMGObjectView, furl: String): String = {
     <div id="jsgraphDiv">
-      <script src="/assets/plugins/jsgraph/pl/plotly-1.18.0.min.js"></script>
+      { plotlyRef }
       <script>
         var gl_smgAction = { scala.xml.Unparsed("\"" + actionId + "\"") }
         var gl_smgObjectView = { scala.xml.Unparsed(Json.toJson(ov).toString) }

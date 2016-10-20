@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 #./activator universal:packageZipTarball
 
 VERSION=0.3
@@ -7,6 +9,15 @@ VERSION=0.3
 echo "*** Building docs"
 
 ./build-docs.sh
+
+echo "*** Downloading deps"
+
+if [ ! -f public/plugins/jsgraph/pl/plotly-1.18.0.min.js ] ; then
+  echo "plotly is not there - downloading"
+  wget --no-check-certificate -O public/plugins/jsgraph/pl/plotly-1.18.0.min.js https://cdn.plot.ly/plotly-1.18.0.min.js
+else
+  echo "plotly is already there"
+fi
 
 echo "*** Building version $VERSION"
 

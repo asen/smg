@@ -12,6 +12,7 @@ target
 /test-out/*
 /public/smg/*
 /public/docs/*
+/public/plugins/jsgraph/pl/plotly-1.18.0.min.js
 .DS_Store
 
 
