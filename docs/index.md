@@ -530,8 +530,7 @@ SMG model of run-this-command-every-X-minutes-to-get-data-points and
 we have plugin(s) which can do this kind of stuff. Also, there may 
 be some cases where you don't even know all the objects you want to 
 graph upfront (so that you could configure them). A custom SMG plugin
-can dynamically discover objects as they appear. (e.g. **Jamon** 
-plugins).
+can dynamically discover objects as they appear.
 
 - provide custom indexes - similar to custom objects, plugin can provide
 relevant indexes too (normally - grouping the custom plugin objects 
@@ -542,44 +541,22 @@ in some way which makes sense)
 data specific to an object (e.g. the **jsgraph** plugin providing 
 "Zoom" and "Historam" actions)
 
-- plugins can also provide some monitoring functionality. E.g. we have
-a plugin which can detect "anomalies" (spikes) in selected graphs 
-(**spiker**). Also it is possible to write a plugin which monitors
-another plugin data (e.g. our **api-resp-time-check** plugin monitoring
-**jamon-live** data. 
-
 ##### Currently available plugins
 
-- Jamon (Smule specific) - these are actually several plugins 
-  - jamon-live - this provides a close to real-time (1 minte delay)
-  graphs for small selected jamon stats
-  - api-resp-time-check - this is actually built on top of jamon-live
-  and helps us get alerts whenever some API becomes slower than its
-  configured threshold (250ms by default with expetions for known 
-  slower APIs)
-  - jamon-rrd - this provides graphs for all available in SNP logs
-  jamon stats but come with one hour delay (after hourly log rotation). 
-  These are hundreds of thousands objects so we have multiple dedicated 
-  to jamon-rrd instances (currently 4), each processing subset of the 
-  SNP servers, according to their functional roles (api, renderer, etc).
-
-- spiker - this plugin runs periodically (as configured) and tries to 
-detect anomalies (like sudden spikes and drops) in the graphs. Details
-TBD (check the source)
-
-- jsgraph - this plugin provides a JavaScript (highcharts.com) graphing
+- jsgraph - this plugin provides a JavaScript graphing
 capabilities for objects exports two actions ("Zoom" and "Histogram").
 It works by using the existing API to fetch raw csv data from the rrd 
-object(s) and using highcharts to display fancier graphs client-side.
+object(s) and using the [plot.ly](http://plot.ly/) library to display 
+fancier graphs client-side.
 
 - calc - this plugin provides to plot arbitrary graph from SMG object 
 time series by applying comples arithmetic expressions involving these
 time series.
 
-- monitor (Deprecated, to be gone) - used to provide general monitoring
-functionality (also covering spiker) but this functionality is now
-rolled out into the new and more scalable [Monitoring](#monitoring) 
-functionality.
+- spiker - this plugin runs periodically (as configured) and tries to 
+detect anomalies (like sudden spikes and drops) in the graphs. It is 
+deprecated (the monitoring functionality does the same, better)
+and is provided more liek for an example.
 
 <a name="monitoring" />
 #### Monitoring
@@ -594,10 +571,9 @@ the double-hit on the target servers.
 
 The original idea for SMG monitoring was to be implemented as plugins
 fetching the data from the rrd files and determining whether values
-are within thresholds (this is what the now deprecated monitor plugin 
-does). This also allows one to check data at arbitrary (as available
-in the RRD files) resolution for desired periods (can be useful 
-for anomaly detection, e.g. what the spiker plugin does). 
+are within thresholds. This also allows one to check data at arbitrary 
+(as available in the RRD files) resolution for desired periods (can be 
+useful for anomaly detection, e.g. what the spiker plugin does). 
 
 Unfortunately there is one significant issue with that approach - 
 it is too heavy to apply on all objects (based on experience it can 
