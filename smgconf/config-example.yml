@@ -1,22 +1,38 @@
+## This is an example SMG configuration file.
+## Note: all paths below are relative to the SMG install dir (use absolute paths to be sure)
+## Make sure you create any dirs before configuring them.
 
-- $rrd_graph_width: 607
-- $rrd_graph_height: 152
-- $rrd_graph_font: "DEFAULT:0:monospace"
+## The commented out global values are all optional and show their default values
+
+## Graph properties
+#- $rrd_graph_width: 607
+#- $rrd_graph_height: 152
+#- $rrd_graph_font: "DEFAULT:0:monospace"
+
+## rrdtool executable
 #- $rrd_tool: rrdtool
+
+## path to rrdcached socket, if used.
 #- $rrd_socket: /path/to/socket.fn
 
-- $img_dir: "public/smg"
-- $rrd_dir: "smgrrd"
-- $rrd_cache_dir: "smgrrd"
+## Don't change img_dir unless you setup a http reverse proxy + web server to serve them
+#- $img_dir: "public/smg"
 
-- $monlog_dir: "monlog"
-- $monstate_dir: "monstate"
+## Directory where to store rrd files. Recommended to point outside SMG dir and do regular backups.
+#- $rrd_dir: "smgrrd"
 
-# - $include: "smgconf/rra_def.yml"
+## Monitor logs outpt dir. May want to point outside SMG install dir if one cares about these and upgrades
+#- $monlog_dir: "monlog"
 
+## Monitor state outout dir. May want to point outside SMG install dir if one cares about these and upgrades
+#- $monstate_dir: "monstate"
+
+## Directory where to store cached remote rrd files. Leave alone if uncertain.
+#- $rrd_cache_dir: "smgrrd"
+
+## Include the default linux localhost sytem stats template
 - $include: "smgconf/templ-linux-pf.yml"
-# - $include: "smgconf/templ-linux-naive.yml"
 
-# - $include: "smgconf/config-*m.yml"
-
+## Other includes as needed
+#- $include: "smgconf/templ-linux-naive.yml"
 #- $include: "smgconf/config-alerts.yml"

@@ -3,7 +3,7 @@
 
 -- What is this --
 
-* Play 2.4/scala (https://www.playframework.com/) app using external scripts to fetch
+Play 2.4/scala (https://www.playframework.com/) app using external scripts to fetch
 numbers from services and rrdtool (http://oss.oetiker.ch/rrdtool/) to maintain many
 databases and display graphs from them. It can also do a lot more than that - like
 checking the fetched valules against pre-configured thresholds and/or anomalies and
@@ -12,7 +12,9 @@ sending alerts. It is also possible to extend it via plugins (scala extensions).
 Intended to be a simple to maintain but scalable monitoring system for people who
 prefer to generate their configs over clicking on UI to set it up.
 
-Check the [docs](docs/index.md) for more information.
+Check the docs/ dir (or Docs link in a running SMG instance) for more information.
+
+Docs on github: https://github.com/asen/smg/blob/master/docs/index.md
 
 -- Build --
 
@@ -28,24 +30,34 @@ Check the [docs](docs/index.md) for more information.
 
   # yum install rrdtool
 
-These below are for the default conf to work on linux against localhost,
-be warned that the example wipes the default snmpd.conf (after backing it up)
-so make sure you know what you are doing (it obviously requires root access)
-
-  # yum install net-snmp net-snmp-util
-  # cp /etc/snmp/snmpd.conf /etc/snmp/snmpd.conf.bck
-  # echo "rocommunity public localhost" > /etc/snmp/snmpd.conf
-  # /etc/init.d/snmpd start
-
 1. Unpack tgz
 
-2. Copy example config (good for linux) into /etc/smg/config.yml
+2. Copy the example config into /etc/smg/config.yml
 
    # mkdir /etc/smg && cp smg-0.3/smgconf/config-example.yml /etc/smg/config.yml
 
-Also check smgconf/templ-linux-pf.yml which is included by config-example.yml.
-Replace localhost with another hostname in a copy of that file and include that
-in /etc/smg/config.yml to add other hosts (these would need snmpd configured too).
+Also check smgconf/templ-linux-pf.yml which is included by the distributed
+config-example.yml. One needs to enable SNMP to make this work for localhost
+(see 2.1. below). Then replace localhost with another hostname in a copy of
+that file and include the file in /etc/smg/config.yml to add another host
+(these would need snmpd configured too).
+
+    2.1. Prepare SNMP to work with the default config (or create your own config)
+
+    These below are for the default conf to work on linux against localhost,
+    be warned that the example wipes the default snmpd.conf (after backing it up)
+    so make sure you know what you are doing (it obviously requires root access)
+
+      # yum install net-snmp net-snmp-util
+      # cp /etc/snmp/snmpd.conf /etc/snmp/snmpd.conf.bck
+      # echo "rocommunity public localhost" > /etc/snmp/snmpd.conf
+      # /etc/init.d/snmpd start
+
+    To verify that SNMP is working:
+
+      # snmpget -v2c -c public localhost laLoad.1
+      UCD-SNMP-MIB::laLoad.1 = STRING: 0.00
+
 
 3. Point JAVA_HOME to a Java 8 installation
 
