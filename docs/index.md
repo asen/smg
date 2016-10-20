@@ -549,9 +549,9 @@ It works by using the existing API to fetch raw csv data from the rrd
 object(s) and using the [plot.ly](http://plot.ly/) library to display 
 fancier graphs client-side.
 
-- calc - this plugin provides to plot arbitrary graph from SMG object 
-time series by applying comples arithmetic expressions involving these
-time series.
+- calc - this plugin provides ability to plot arbitrary graph from SMG 
+object time-series by applying complex arithmetic expressions involving
+these time-series.
 
 - spiker - this plugin runs periodically (as configured) and tries to 
 detect anomalies (like sudden spikes and drops) in the graphs. It is 

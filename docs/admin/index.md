@@ -77,15 +77,15 @@ option](#img_dir)):
 ### Installation from .tgz bundle
 
 SMG comes as a pre-built tgz archive named like _smg-$VERSION.tgz_ 
-(e.g. smg-0.2.tgz). You can unpack that anywhere which will be
+(e.g. smg-0.3.tgz). You can unpack that anywhere which will be
 the SMG installation dir. Here are example commands to unpack SMG in
 /opt/smg:
 
 <pre>
 # cd /opt
-# wget sfw:8080/sfw/smg-0.2.tgz
-# tar -xf smg-0.2.tgz
-# mv smg-0.2 smg
+# wget sfw:8080/sfw/smg-0.3.tgz
+# tar -xf smg-0.3.tgz
+# mv smg-0.3 smg
 </pre>
 
 SMG comes with start and stop and scripts which in the above example 
