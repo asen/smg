@@ -12,7 +12,7 @@ sending alerts. It is also possible to extend it via plugins (scala extensions).
 Intended to be a simple to maintain but scalable monitoring system for people who
 prefer to generate their configs over clicking on UI to set it up.
 
-Check the docs for more information.
+Check the [docs](docs/index.md) for more information.
 
 -- Build --
 
