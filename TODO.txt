@@ -1,10 +1,38 @@
 v 0.4+
 
+== General Enhancements ==
+
+* Remove period(=24h), cols(=6) and rows(=10) from /dash form params/URL
+when same as default
+
+* support "tags", be able to filter by tag.
+
+* (?) support (optional) "host" concept with up/down status (e.g. ping check).
+Do not run commands against services belonging to it and alert for individual
+services if host is down.
+
+== Remotes ==
+
+* remote master/slave to support one-way config propagation,
+also refresh only changed remote on the master side.
+
 == Monitor ==
 
-* (?) apply cdefs to thresholds/var for display
+* indicate silenced/acknowledged in monitor state display next to graphs
+* add silence/acknowledge actions in monitor state display next to graphs
+* add "silence all" action in dash view
+* list all currently silenced objects (incl ones with OK state)
+
+* (?) apply cdefs to thresholds/var for display (currently displaying raw
+values)
 
 == Search ==
 
 * smart (?) search
+
+== Known Bugs ==
+
+* Aggregation of stacked graphs throws an error
+
+* Monitor state display on aggregate graphs
 

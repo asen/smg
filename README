@@ -16,10 +16,13 @@ Check the docs/ dir (or Docs link in a running SMG instance) for more informatio
 
 Docs on github: https://github.com/asen/smg/blob/master/docs/index.md
 
+Binary releases available here: https://github.com/asen/smg/releases
+
 -- Build --
 
     $ git clone git@github.com:asen/smg.git
     $ cd smg
+    $ git checkout release # recommended, to get on a stable branch
     $ ./build-smg.sh
     ...
     *** Done. Output in target/universal/smg-0.3.tgz
