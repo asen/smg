@@ -328,7 +328,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
     val hiddenIndexConfs = mutable.Map[String, SMGConfIndex]()
     val objectAlertConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonVarAlertConf]]]()
     val objectNotifyConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonVarNotifyConf]]]()
-    val rrdDir = "smgrrd"
+    var rrdDir = "smgrrd"
     val rrdTool = "rrdtool"
     val imgDir = "public/smg"
     val urlPrefix: String = "/assets/smg"
@@ -415,10 +415,17 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
     }
 
     def processGlobal( t: (String,Object) , confFile: String ): Unit = {
-      if (globalConf.contains(t._1)) {
-        log.warn("SMGConfigServiceImpl.processGlobal(" + confFile + "): CONFIG_ERROR: Overwriting duplicate global value: key=" + t._1 + " oldval=" + globalConf(t._1) + " newval=" + t._2)
+      val key = t._1
+      val sval = t._2.toString
+      if (globalConf.contains(key)) {
+        log.warn(s"SMGConfigServiceImpl.processGlobal($confFile): CONFIG_ERROR: Overwriting duplicate global " +
+          s"value: key=$key oldval=${globalConf(key)} newval=$sval")
       }
-      globalConf(t._1) = t._2.toString
+      if (key == "$rrd_dir") {
+        rrdDir = sval
+        new File(rrdDir).mkdirs()
+      }
+      globalConf(key) = sval
     }
 
     def processIndex( t: (String,Object), isHidden: Boolean, confFile: String ): Unit = {
@@ -512,8 +519,6 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
                   None
                 }
               } else None
-            // TODO move rrdDir to application.conf?
-            val myRrdDir = if (globalConf.contains("$rrd_dir")) globalConf("$rrd_dir") else rrdDir
 
             val ymapVars = ymap("vars").asInstanceOf[java.util.ArrayList[java.util.Map[String, Object]]].toList.map(
               (m: java.util.Map[String,Object]) => m.map { t => (t._1, t._2.toString) }.toMap
@@ -548,7 +553,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
                 ymap.getOrElse("interval", 300).asInstanceOf[Int], // TODO get 300 from a val
                 ymap.getOrElse("stack", false).asInstanceOf[Boolean],
                 if (ymap.contains("pre_fetch")) Some(ymap.get("pre_fetch").toString) else None,
-                Some(myRrdDir + "/" + oid + ".rrd"),
+                Some(rrdDir + "/" + oid + ".rrd"),
                 rraDef
               )
             objectIds(oid) = obj

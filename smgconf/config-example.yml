@@ -1,6 +1,5 @@
 ## This is an example SMG configuration file.
 ## Note: all paths below are relative to the SMG install dir (use absolute paths to be sure)
-## Make sure you create any dirs before configuring them.
 
 ## The commented out global values are all optional and show their default values
 
@@ -38,3 +37,6 @@
 ## Other includes as needed
 #- $include: "smgconf/templ-linux-naive.yml"
 #- $include: "smgconf/config-alerts.yml"
+
+# drop-in dir to add more confs - create a yml there and run smgscripts/reload-conf.sh.
+- $include: "/etc/smg/cust/*.yml"

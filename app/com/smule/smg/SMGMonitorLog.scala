@@ -118,6 +118,9 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
   val log = SMGLogger
 
   private def monlogBaseDir = configSvc.config.globals.getOrElse("$monlog_dir", "monlog")
+
+  new File(monlogBaseDir).mkdirs()
+
   private val dateDirFmt = new SimpleDateFormat("/yyyy-MM-dd")
 
   private val RECENTS_MAX_SIZE = 2000
