@@ -297,8 +297,12 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   /**
     *  Asynchronous call to POST /api/reloadLocal to request from the remote instance to reload its configuration
     */
-  def reloadConf(): Unit = {
-    ws.url(remote.url + API_PREFIX + "reloadLocal").post("")
+  def notifyReloadConf(): Unit = {
+    if (remote.slaveId.isDefined) {
+      ws.url(remote.url + API_PREFIX + "reloadSlave/" + remote.slaveId.get).post("")
+    } else {
+      ws.url(remote.url + API_PREFIX + "reloadLocal").post("")
+    }
   }
 
   /**

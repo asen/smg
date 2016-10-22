@@ -46,3 +46,4 @@
 #- $remote:
 #  id: "rlocal"
 #  url: "http://localhost:9000"
+##  slave_id: "rrlocal"

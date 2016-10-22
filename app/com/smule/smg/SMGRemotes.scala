@@ -7,6 +7,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.ws.WSClient
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 
 /**
@@ -19,14 +20,26 @@ import scala.concurrent.Future
 trait SMGRemotesApi {
 
   /**
-    * Invoke a remote API call to all configured remotes, asking them to reload their configs
-    */
-  def reloadRemotes(): Unit
-
-  /**
     * Reload the local representation of all remote configs and cache them locally
     */
-  def reload(): Unit
+  def fetchConfigs(): Unit
+
+  /**
+    * Reload the local representation of specific remote config and cache locally
+    * @param slaveId
+    */
+  def fetchSlaveConfig(slaveId: String): Unit
+
+  /**
+    * Invoke a remote API call to all slave remotes, asking them to reload their configs
+    * This may be deprecated in teh future
+    */
+  def notifySlaves(): Unit
+
+  /**
+    * Notify all master configs to refresh this instance config
+    */
+  def notifyMasters(): Unit
 
   /**
     * Get all currently cached remote configs
@@ -155,6 +168,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
   private val log = SMGLogger
 
   private val remoteClients = TrieMap[String,SMGRemoteClient]()
+  private val remoteMasterClients = TrieMap[String,SMGRemoteClient]()
 
   private val cachedConfigs = TrieMap[String,Option[SMGRemoteConfig]]()
 
@@ -162,54 +176,99 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     configSvc.config.globals.getOrElse("$rrd_cache_dir", "smgrrd")
   }
 
-  override def reloadRemotes() = {
+  override def notifySlaves() = {
     remoteClients.foreach { kv =>
-      kv._2.reloadConf()
+      kv._2.notifyReloadConf()
     }
+  }
+
+  private def initClients(remotes: Seq[SMGRemote], tgt: TrieMap[String,SMGRemoteClient], logType: String) = {
+    remotes.foreach { rmt =>
+      val oldCliOpt = tgt.get(rmt.id)
+      if (oldCliOpt.isEmpty || (oldCliOpt.get.remote != rmt)) //second part is to cover changed url
+        tgt(rmt.id) = new SMGRemoteClient(rmt, ws, configSvc)
+    }
+    //also remove obsolete clients
+    tgt.keys.toList.foreach { k =>
+      if (!remotes.exists(_.id == k)) {
+        log.warn(s"Removing obsolete client for remote $k")
+        tgt.remove(k)
+      }
+    }
+    log.info(s"SMGRemotes.initClients($logType): clients.size=${tgt.size}")
+  }
+
+  private def initRemoteClients(): Unit = {
+    initClients(configSvc.config.remotes, remoteClients, "slaves")
   }
 
   /**
     * @inheritdoc
     */
-  override def reload() = {
+  override def fetchConfigs() = {
     val configRemotes = configSvc.config.remotes
-    configRemotes.foreach { rmt =>
-      val oldCliOpt = remoteClients.get(rmt.id)
-      if (oldCliOpt.isEmpty || (oldCliOpt.get.remote != rmt)) //second part is to cover changed url
-        remoteClients(rmt.id) = new SMGRemoteClient(rmt, ws, configSvc)
-    }
-    //also remove obsolete clients
-    remoteClients.keys.toList.foreach { k =>
-      if (!configRemotes.exists(_.id == k)) {
-        log.warn(s"Removing obsolete client for remote $k")
-        remoteClients.remove(k)
-      }
-    }
-    log.info("SMGRemotes.reload: remoteClients.size=" + remoteClients.size )
+    initRemoteClients()
     cachedConfigs.keys.toList.foreach { k =>
       if (!configRemotes.exists(_.id == k)) {
         log.warn(s"Removing obsolete config for remote $k")
         cachedConfigs.remove(k)
       }
     }
+    val futs = ListBuffer[Future[Boolean]]()
     remoteClients.toMap.foreach { t =>
       val rmtId = t._1
       val cli = t._2
-      cli.fetchConfig.map { orc =>
+      futs += cli.fetchConfig.map { orc =>
         orc match {
-          case Some(rc) => log.info("SMGRemotes.reload: received config from " + rc.remote.id)
-          case None => log.warn("SMGRemotes.reload: failed to receive config from " + cli.remote.id)
+          case Some(rc) => log.info("SMGRemotes.fetchConfigs: received config from " + rc.remote.id)
+          case None => log.warn("SMGRemotes.fetchConfigs: failed to receive config from " + cli.remote.id)
         }
         cachedConfigs(t._1) = orc
+        true
       }
+    }
+    Future.sequence(futs.toList).map { bools =>
+      callSystemGc("fetchConfigs")
     }
   }
 
   // don't forget to reload initially
-  reload()
+  fetchConfigs()
 
   // TODO need to rethink dependencies (who creates the plugins) to get rid of this
   configSvc.plugins.foreach(_.setRemotesApi(this))
+
+  override def fetchSlaveConfig(slaveId: String): Unit = {
+    initRemoteClients()
+    val cli = remoteClients.get(slaveId)
+    if (cli.isDefined){
+      cli.get.fetchConfig.map { copt =>
+        if(copt.isDefined) cachedConfigs(slaveId) = copt
+        callSystemGc(s"fetchConfigs($slaveId)")
+      }
+    } else {
+      log.warn(s"SMGRemotes.fetchSlaveConfig($slaveId) - client not defined")
+    }
+  }
+
+  private def initRemoteMasterClients(): Unit = {
+    initClients(configSvc.config.remoteMasters, remoteMasterClients, "masters")
+  }
+
+  override def notifyMasters(): Unit = {
+    initRemoteMasterClients()
+    remoteMasterClients.values.foreach(_.notifyReloadConf())
+  }
+
+  private def callSystemGc(ctx: String): Unit = {
+    // XXX looks like java is leaking direct memory buffers (or possibly - just slowing
+    // down external commands when reclaiming these on the fly) when reloading conf.
+    // This is an attempt to fix that after realizing that a "manual gc" via jconsole clears overlap issues
+    // TODO make this configurable?
+    log.info(s"SMGRemotes ($ctx) calling System.gc() ... START")
+    System.gc()
+    log.info(s"SMGRemotes ($ctx) calling System.gc() ... DONE")
+  }
 
   /**
     * @inheritdoc

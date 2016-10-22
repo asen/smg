@@ -35,14 +35,16 @@ GET     /monitor/indexSvg    controllers.Application.monitorIndexSvg(ixid: Strin
 GET     /plugin/:pluginId  controllers.Application.pluginIndex(pluginId: String)
 
 # API (json response) calls
-GET     /api/config      controllers.Api.config
-GET     /api/fetch/:oid  controllers.Api.fetch(oid: String, r: Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
-GET     /api/fetchAgg    controllers.Api.fetchAgg(ids: String, op: String, r:Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
-POST    /api/reloadLocal controllers.Api.reloadLocal
-GET     /api/reloadLocal controllers.Api.reloadLocal
-POST    /api/graph       controllers.Api.graph
-POST    /api/agg         controllers.Api.agg
-GET     /api/rrd/:oid    controllers.Api.downloadRrd(oid: String)
+GET     /api/config         controllers.Api.config
+GET     /api/fetch/:oid     controllers.Api.fetch(oid: String, r: Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
+GET     /api/fetchAgg       controllers.Api.fetchAgg(ids: String, op: String, r:Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
+POST    /api/reloadLocal    controllers.Api.reloadLocal
+GET     /api/reloadLocal    controllers.Api.reloadLocal
+POST    /api/reloadSlave/:slaveId   controllers.Api.reloadSlave(slaveId: String)
+GET     /api/reloadSlave/:slaveId   controllers.Api.reloadSlave(slaveId: String)
+POST    /api/graph          controllers.Api.graph
+POST    /api/agg            controllers.Api.agg
+GET     /api/rrd/:oid       controllers.Api.downloadRrd(oid: String)
 
 GET     /api/monitor/issues    controllers.Api.monitorIssues(soft: Option[String], ack: Option[String], slc: Option[String])
 GET     /api/monitor/log       controllers.Api.monitorLog(p: Option[String], l: Option[Int], soft: Option[String])

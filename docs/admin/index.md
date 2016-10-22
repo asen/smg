@@ -267,7 +267,7 @@ once per interval.
 
 - **$remote**: similar to $pre\_fetch $remote is special and is not
 a simple name -> value pair. A $remote defines an unique remote **id**
-and an **url** at which the remote SMG instance is accessible. 
+and an **url** at which the remote SMG instance is accessible.
 Here is an example remote definition:
 
 <blockquote>
@@ -275,18 +275,27 @@ Here is an example remote definition:
 - $remote:
   id: another-dc
   url: "http://smg.dc2.company.com:9080"
+# slave_id: dc1   
 </pre>
 </blockquote>
 
-> One can specify multiple remotes and also can cross-point remotes -
-each to the other. That helps to keep config updates propagate across
-remotes. E.g. we run a setup where our "main" instance has multiple
-remotes configured where the remote instance only have the "main" one
-as configured (for them) remote. With such setup one only needs a 
-single "beefy" (more mem) "main" instance which will hold all available
-across the remotes objects and the other ones will only keep theirs
-(technically - and the local for "main" instance objects, though thats 
-not a concern compared to having 6 other remote instances)
+> If the optional **slave_id** parameter is provided it indicates that 
+this instance is a "slave" in the context of that remote. Its value must
+be the id under this instance is configured on the "master". A slave
+instance will not load and display the relevant remote instance config 
+and graphs but will only notify it on its own config changes.
+
+> One can run a setup where the "main" instance (can be two of them,
+for redundancy) has multiple remotes configured where the remote 
+instances only have  the "main" one as configured (for them) remote
+(with slave_id set). With such setup one only needs a  single "beefy" 
+(more mem) "main" instance which will hold all available across the 
+remotes objects and the other ones will only keep theirs.
+
+- **$reload-slave-remotes**: _"false"_ - By default SMG will only 
+notify "master" remote instances (ones defined with slave_id property).
+One can override this behavior and make it notify slave instances too
+by setting this to "true".
 
 - **$proxy-disable**: _"false"_ - by default SMG will link to remote
 images via its /proxy/\<remote-id>/\<path-to-image>.png URL which in 

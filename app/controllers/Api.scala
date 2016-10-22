@@ -35,7 +35,12 @@ class Api  @Inject() (actorSystem: ActorSystem,
     */
   def reloadLocal = Action {
     configSvc.reload()
-    remotes.reload()
+    remotes.fetchConfigs()
+    Ok("OK")
+  }
+
+  def reloadSlave(slaveId: String) = Action {
+    remotes.fetchSlaveConfig(slaveId)
     Ok("OK")
   }
 

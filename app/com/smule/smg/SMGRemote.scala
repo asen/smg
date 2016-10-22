@@ -9,7 +9,7 @@ package com.smule.smg
   * @param id - unique remote id
   * @param url - HTTP URL where the remote is accessible
   */
-case class SMGRemote(id:String, url:String)
+case class SMGRemote(id: String, url:String, slaveId: Option[String] = None)
 
 /**
   * Singleton defining helpers for dealing with remotes and their ids.

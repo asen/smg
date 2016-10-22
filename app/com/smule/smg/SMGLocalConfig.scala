@@ -30,6 +30,7 @@ case class SMGLocalConfig(
                            intervals: Set[Int],
                            preFetches: Map[String, SMGPreFetchCmd],
                            remotes: Seq[SMGRemote],
+                           remoteMasters: Seq[SMGRemote],
                            pluginObjects: Map[String, Seq[SMGObjectView]],
                            objectAlertConfs: Map[String, SMGMonObjAlertConf],
                            notifyCommands: Map[String,SMGMonNotifyCmd],
@@ -78,5 +79,8 @@ case class SMGLocalConfig(
   val proxyTimeout = globals.getOrElse("$proxy-timeout","30000").toLong
 
   val indexTreeLevels = globals.getOrElse("$index-tree-levels", "1").toInt
+
+  // option to notify slaves on reload conf, this may be removed in the future
+  val reloadSlaveRemotes = globals.getOrElse("$reload-slave-remotes", "false") == "true"
 
 }

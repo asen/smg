@@ -402,8 +402,12 @@ class Application  @Inject() (actorSystem: ActorSystem,
     */
   def reloadConf = Action {
     configSvc.reload
-    remotes.reloadRemotes()
-    remotes.reload()
+    //TODO XXX up to now SMG would notify all (slave) remotes, now - only masters
+    remotes.notifyMasters()
+    if (configSvc.config.reloadSlaveRemotes) {
+      remotes.notifySlaves()
+    }
+    remotes.fetchConfigs()
     Ok("OK")
   }
 

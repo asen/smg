@@ -260,9 +260,9 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
         // down external commands when reclaiming these on the fly) when reloading conf.
         // This is an attempt to fix that after realizing that a "manual gc" via jconsole clears overlap issues
         // TODO make this configurable?
-        log.info("Calling System.gc() ... START")
+        log.info("ConfifService calling System.gc() ... START")
         System.gc()
-        log.info("Calling System.gc() ... DONE")
+        log.info("ConfifService calling System.gc() ... DONE")
 
       } finally {
         reloadIsRunning.set(false)
@@ -336,6 +336,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
     val preFetches = mutable.Map[String, SMGPreFetchCmd]()
     val notifyCommands = mutable.Map[String, SMGMonNotifyCmd]()
     val remotes = ListBuffer[SMGRemote]()
+    val remoteMasters = ListBuffer[SMGRemote]()
     val rraDefs = mutable.Map[String, SMGRraDef]()
 
     def addAlertConf(oid: String, ix: Int, ac: SMGMonVarAlertConf) = {
@@ -389,7 +390,10 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
     def processRemote(t: (String,Object), confFile: String ): Unit = {
       val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]]
       if (yamlMap.contains("id") && yamlMap.contains("url")) {
-        remotes += SMGRemote(yamlMap.get("id").toString, yamlMap.get("url").toString)
+        if (yamlMap.contains("slave_id")) {
+          remoteMasters += SMGRemote(yamlMap.get("id").toString, yamlMap.get("url").toString, Some(yamlMap.get("slave_id").toString))
+        } else
+          remotes += SMGRemote(yamlMap.get("id").toString, yamlMap.get("url").toString)
       } else {
         log.error("SMGConfigServiceImpl.processRemote(" + confFile + "): CONFIG_ERROR: $remote yamlMap does not have id and url: " + yamlMap.toString)
       }
@@ -726,6 +730,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       intervals.toSet,
       preFetches.toMap,
       remotes.toList,
+      remoteMasters.toList,
       plugins.map( p => (p.pluginId, p.objects) ).toMap,
       objectAlertConfs.toMap,
       notifyCommands.toMap,
