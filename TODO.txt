@@ -8,13 +8,8 @@ when same as default
 * support "tags", be able to filter by tag.
 
 * (?) support (optional) "host" concept with up/down status (e.g. ping check).
-Do not run commands against services belonging to it and alert for individual
-services if host is down.
-
-== Remotes ==
-
-* remote master/slave to support one-way config propagation,
-also refresh only changed remote on the master side.
+Do not run commands against services belonging to it and do not alert for
+individual services if host is down.
 
 == Monitor ==
 
