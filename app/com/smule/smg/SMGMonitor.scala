@@ -883,10 +883,10 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
     // get all object errors but group common pre-fetch errors together
     val objectErrs = objectsState.values.filter(_.getStates.head._2.exists(_.stateVal != SMGState.OK)).flatMap { hso =>
       hso.monVarStates(None).filter { ms =>
-        (ms.currentStateVal != SMGState.OK) &&
+        ( (ms.currentStateVal != SMGState.OK) &&
           (includeSoft || ms.isHard) &&
           (includeAcked || !ms.isAcked) &&
-          (includeSilenced || !ms.isSilenced)
+          (includeSilenced || !ms.isSilenced) ) || ( includeSilenced && (ms.currentStateVal == SMGState.OK))
       }.map(ms => (ms, hso.getObju.preFetch.getOrElse("")))
     }.toList
     val byPf = objectErrs.groupBy { _._2 }.map(t => (t._1, t._2.map(_._1))).filter(_._1 != "")
