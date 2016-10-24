@@ -228,7 +228,8 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
       }
     }
     Future.sequence(futs.toList).map { bools =>
-      callSystemGc("fetchConfigs")
+      if (bools.exists(x => x))
+        callSystemGc("fetchConfigs")
     }
   }
 
