@@ -100,7 +100,8 @@ of 8g is tuned for large setups)
     Check logs/nohup.out for startup errors and logs/application.log for 
 SMG/config issues.
 
-    There is also a ./stop-smg.sh script.
+    There is also a ./stop-smg.sh script which can be used ti gracefully 
+stop SMG.
 
 * Point your browser to localhost:9000 (localhost:9000/assets/docs/index.html 
 for documentation, replace localhost with the host where SMG was 
@@ -108,25 +109,35 @@ installed if different).
 
 ## Development setup (Mac)
 
-1. Install JDK 8.
-2. Install rrdtool and coreutils (for gtimeout) from brew:
+* Install JDK 8.
+
+* Install rrdtool and coreutils (for gtimeout) from brew:
+
     ```
     $ brew install rrdtool coreutils
     ```
-3. Get sources
+
+* Get sources
+
     ```
     $ git clone git@github.com:asen/smg.git
     ```
-4. Change smg/conf/application.conf (or alias timeout to gtimeout in 
-your env):
+
+* Create /etc/smg/config.yml by using e.g. smgconf/config-dev.yml or
+smgconf/config-example.yml as examples.
+
+* Change smg/conf/application.conf uncommenting the timeoutCommand line:
+
     ```
     # Use smg.timeoutCommand to override the timeout command
     # executable (e.g. gtimeout on mac with homebrew)
     smg.timeoutCommand = "gtimeout"
     ```
-5. Run:
+
+    (or alias timeout to gtimeout in your environment)
+
+* Run:
     ```
     $ cd smg
     $ JAVA_HOME=$(/usr/libexec/java_home -v 1.8) ./activator run
     ```
-
