@@ -809,9 +809,9 @@ regular expressions will be matched by the filter.
 - **rxx** (Regex Exclude) - when set, only object ids NOT matching the 
 specified regular expressions will be matched by the filter. 
 
-- **trx** (Title Regex) - when set, only objects with titles 
-matching the specified regular expressions will be matched by the 
-filter. 
+- **trx** (Text Regex) - when set, only objects with titles, object ids,
+graph labels or measurement units matching the specified regular 
+expressions will be matched by the filter. 
 
 - **remote** (Remote instance, by default - None, meaning local). 
 This should be either set to "\*" (quoted in the yaml as the asterisk 

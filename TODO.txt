@@ -16,7 +16,6 @@ individual services if host is down.
 * indicate silenced/acknowledged in monitor state display next to graphs
 * add silence/acknowledge actions in monitor state display next to graphs
 * add "silence all" action in dash view
-* list all currently silenced objects (incl ones with OK state)
 
 * (?) apply cdefs to thresholds/var for display (currently displaying raw
 values)

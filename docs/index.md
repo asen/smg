@@ -283,6 +283,12 @@ search in or to search in all remotes via the special
 asterisk _\*_ remote id. Note that this filter is not visible
 unless there is at least one configured remote.
 
+<a name="flt-titlerx" />
+##### Text Regex filter
+- when set, only objects where any of object id, title, var labels
+ or measurement units is matched by the specified regular expressions 
+ will be matched by the filter. 
+
 <a name="flt-prefix" />
 ##### Prefix filter
 
@@ -309,11 +315,6 @@ regular expressions will be matched by the filter.
 
 - when set, only object ids NOT matching the 
 specified regular expressions will be matched by the filter. 
-
-<a name="flt-titlerx" />
-##### Title Regex filter
-- when set, only objects with titles matching the specified 
-regular expressions will be matched by the filter. 
 
 
 <a name="indexes" />
