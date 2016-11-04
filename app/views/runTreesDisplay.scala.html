@@ -3,7 +3,7 @@
 @(seq: Seq[SMGFetchCommandTree], levelOffs: Int, maxLevels: Int, rootId: String, rootMonState: Option[SMGMonState], curUrl: String)
 
 <ul xmlns="http://www.w3.org/1999/html">
-  @for(t <- seq){
+  @for(t <- seq.sortBy(_.node.id)){
     <li>
       <p>
         @if(t.node.id == rootId) {
@@ -35,6 +35,8 @@
         @if(t.node.isRrdObj) {
         [<a href="inspect/@t.node.id">Inspect</a>]
         }
+      <br/>
+      <i>(@{t.node.command.timeoutSec}s) @t.node.command.str</i>
       </p>
       @if(!t.isLeaf && levelOffs > 0){
         @views.html.runTreesDisplay(t.children, levelOffs - 1, maxLevels, rootId, rootMonState, curUrl)
