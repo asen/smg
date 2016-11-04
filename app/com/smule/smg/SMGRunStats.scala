@@ -51,7 +51,7 @@ object SMGRunStats {
     }
     val tl = totalsPerInterval.getOrDefault(interval, -1)
     if ((tl > 0) && (cnt == tl)) {
-      log.info("SMGRunStats: interval=" + interval + " run completed with " + tl + " objects updated")
+      log.info("SMGRunStats: interval=" + interval + " run completed with " + tl + " commands executed")
       return true
     }
     // sanity check, for now just log the condition
