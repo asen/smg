@@ -2,7 +2,6 @@
 
 [Back to main index page](../index.md) | [Developer documentation](../dev/index.md)
 
-
 ## Table of Contents
 1. [Install](#install)
     1. [Pre requisites](#pre-reqs)
@@ -18,7 +17,6 @@
 1. [Running and troubleshooting](#running)
     1. Frontend http server
     1. Tweaking SMG for performance
-
 
 <a name="install" />
 ## Install
@@ -240,28 +238,45 @@ display by default on the Configured Indexes page. The default value
 of 1 means to display only top level indexes, 2 would also display
 their children etc. Valid values are between 1 and 5.
 
-
 <a name="pre_fetch" />
 
 - **$pre\_fetch**: pre\_fetch is special and it is not a simple name ->
 value pair. A $pre_fetch defines an unique **id** and a **command** to 
 execute, together with an optional **timeout** for the command 
-(30 seconds by default). Here is an example pre_fetch definition:
+(30 seconds by default) and an optional "parent" pre_fetch id. 
+Here are two example pre_fetch definitions, one referencing the 
+other as a parent:
 
 <blockquote>
 <pre>
-- $pre_fetch:
-  id: cache_snmp_linux_stats_o1
-  command: "snmp_get.sh o1 laLoad.1 laLoad.2 ssCpuRawUser.0 ssCpuRawNice.0 ..."
-  timeout: 30
+
+    - $pre_fetch:
+      id: host.host1.up
+      command: "ping -c 1 host1 >/dev/null"
+      timeout: 5
+          
+    - $pre_fetch:
+      id: host.host1.snmp.vals
+      command: "snmp_get.sh o1 laLoad.1 laLoad.2 ssCpuRawUser.0 ssCpuRawNice.0 ..."
+      pre_fetch: host.host1.up
+      timeout: 30
+
 </pre>
 </blockquote>
 
 > As explained in the [concepts overview](../index.md#pre_fetch) SMG
 RRD objects can specify a pre\_fetch command to execute before their
-own command gets executed (for the current interval run). That way multiple
-objects can be updated from given source (host) while hitting it only
-once per interval.
+own command gets executed (for the current interval run). That way 
+multiple objects can be updated from given source (e.g. host/service) 
+while hitting it only once per interval. Pre\_fetch itself can have 
+another pre\_fetch defined as a parent and one can form command trees 
+to be run top-to-bottom (stopping on failure).
+
+<a name="run-tree-levels">
+
+- **$run-tree-levels**: _1_ - How many levels of fetch commands to 
+display by default on the Run trees page.
+
 
 <a name="remote" />
 
@@ -436,9 +451,6 @@ Int.MaxValue which effectively disables throttling.
 - **$notify-throttle-interval**: Alert notifications support throttling, 
  you can set the max messages sent during given interval (in seconds). 
  This sets the interval (default is 3600 or 1h).
-
-
-
 
 <a name="rrd-objects" />
 ### RRD objects

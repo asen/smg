@@ -7,11 +7,9 @@ when same as default
 
 * support "tags", be able to filter by tag.
 
-* (?) support (optional) "host" concept with up/down status (e.g. ping check).
-Do not run commands against services belonging to it and do not alert for
-individual services if host is down.
-
 == Monitor ==
+
+* pass alert properties/text via environment (vs cmd line) to avoid escape issues
 
 * indicate silenced/acknowledged in monitor state display next to graphs
 * add silence/acknowledge actions in monitor state display next to graphs

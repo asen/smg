@@ -208,12 +208,13 @@ values we want from a given host and then possibly produce many
 rrd objects and graphs from these. 
 
 This is where SMG's pre\_fetch simplifies things - it is a special 
-config object defining only an id and a command to execute. Then RRD 
+config object defining an id and a command to execute. Then RRD 
 objects can have a pre\_fetch attribute specified with a value - the 
-mentioned pre\_fetch id. During every regular commands/rrd updates run 
-SMG will group the objects by their pre\_fetch id and the ones which have 
-such specified will wait fo the pre\_fetch command to complete before 
-their commands are executed.
+mentioned pre\_fetch id. A pre\_fetch can also specify parent
+pre_\fetch effectively forming a set of trees. During every regular 
+commands/rrd updates run SMG will run the commands specified 
+by traversing that tree and child commands will only be run
+after the parent one was executed and succeeded (exit code 0).
  
 This allows the pre\_fetch command to store its ouput data cached 
 somehere locally on the SMG host and then the actual RRD object
