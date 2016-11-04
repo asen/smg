@@ -3,7 +3,7 @@
 @(seq: Seq[SMGFetchCommandTree], levelOffs: Int, maxLevels: Int, rootId: String, rootMonState: Option[SMGMonState], curUrl: String)
 
 <ul xmlns="http://www.w3.org/1999/html">
-  @for(t <- seq.sortBy(_.node.id)){
+  @for(t <- seq){
     <li>
       <p>
         @if(t.node.id == rootId) {

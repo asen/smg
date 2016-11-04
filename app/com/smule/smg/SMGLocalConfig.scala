@@ -118,12 +118,12 @@ case class SMGLocalConfig(
         if (recLevel > maxRecLevel) {
           throw new RuntimeException(s"SMGLocalConfig.fetchCommandsTree: Configuration error - recursion ($recLevel) exceeded $maxRecLevel")
         }
-        buildTree(myParents.toList)
+        buildTree(myParents.toList.sortBy(_.node.id))
         recLevel -= 1
       }
     }
-    buildTree(rrdObjs.map(o => SMGFetchCommandTree(o, Seq())))
-    ret.toList
+    buildTree(rrdObjs.sortBy(_.id).map(o => SMGFetchCommandTree(o, Seq())))
+    ret.toList.sortBy(_.node.id)
   }
 
 
