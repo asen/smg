@@ -43,7 +43,7 @@ object SMGCmd {
     * @param c - SMGCmd object representing the comand
     * @return - a list of strings each representing a command output line
     */
-  def run(c:SMGCmd) = runCommand(c.str, c.timeoutSec)
+  def run(c:SMGCmd, myEnv: Map[String,String] = Map()) = runCommand(c.str, c.timeoutSec, myEnv)
 
   /**
     * Execute a system command (string) using a provided timeout and collect its standard output
@@ -51,8 +51,8 @@ object SMGCmd {
     * @param timeoutSecs - time in seconds to wait for the command to finish before terminating
     * @return - a list of strings each representing a command output line
     */
-  def runCommand(cmd: String, timeoutSecs: Int): List[String] = {
-    val (exit, out, err) = system(cmd, timeoutSecs)
+  def runCommand(cmd: String, timeoutSecs: Int, myEnv: Map[String,String] = Map()): List[String] = {
+    val (exit, out, err) = system(cmd, timeoutSecs, myEnv)
     if (exit != 0) {
       log.error("Bad exit value from command (" + exit + "): " + cmd)
       out.foreach( (x) => log.error( "STDOUT: " + x) )
@@ -62,10 +62,10 @@ object SMGCmd {
     out
   }
 
-  private def system(cmd: String, timeout: Int): (Int, List[String], List[String]) = {
+  private def system(cmd: String, timeout: Int, myEnv: Map[String,String]): (Int, List[String], List[String]) = {
     val cmdSeq = Seq(timeoutCommand, timeout.toString) ++ executorCommand ++ Seq(cmd)
     log.debug("RUN_COMMAND: tms=" + timeout + " : " + cmdSeq)
-    val qb = Process(cmdSeq)
+    val qb = Process(cmdSeq, None, myEnv.toSeq:_*)
     var out = List[String]()
     var err = List[String]()
 

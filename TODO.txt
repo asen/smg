@@ -9,8 +9,6 @@ when same as default
 
 == Monitor ==
 
-* pass alert properties/text via environment (vs cmd line) to avoid escape issues
-
 * indicate silenced/acknowledged in monitor state display next to graphs
 * add silence/acknowledge actions in monitor state display next to graphs
 * add "silence all" action in dash view
