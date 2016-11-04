@@ -8,9 +8,13 @@
 #  sx: ""
 #  rx: ""
 
+- $pre_fetch:
+  id: host_localhost_up
+  command: "ping -c 1 localhost >/dev/null"
 
 - $pre_fetch:
   id: fail_randomly
+  pre_fetch: host_localhost_up
   command: 'bash -c "exit $(($RANDOM%2))"'
 #  command: 'echo 0'
 

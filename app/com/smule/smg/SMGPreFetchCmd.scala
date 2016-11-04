@@ -7,7 +7,11 @@ package com.smule.smg
 /**
   * A common for multiple rrdObjects command to be executed before the respective object fetches
   * @param id - unique identifier of the command (specified as pre_fetch in object conf)
-  * @param cmd - system command to execute
+  * @param command - system command to execute
+  * @param preFetch - optional "parent" pre fetch command, this command will wait for its parent
+  *                 to succeed before being executed
   */
-case class SMGPreFetchCmd(id: String, cmd: SMGCmd)
+case class SMGPreFetchCmd(id: String, command: SMGCmd, preFetch: Option[String]) extends SMGFetchCommand {
+  val isRrdObj = false
+}
 

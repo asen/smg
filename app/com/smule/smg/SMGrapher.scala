@@ -38,10 +38,6 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   private val graphActor = actorSystem.actorOf(SMGraphActor.props)
   private val updateActor = actorSystem.actorOf(Props(new SMGUpdateActor(configSvc)))
 
-  private def objectsToUpdate(interval: Int): Seq[SMGRrdObject] = {
-    configSvc.config.rrdObjects.filter{ (o:SMGRrdObject) => o.interval == interval }
-  }
-
   implicit private val messagingEc = ExecutionContexts.defaultCtx
 
   /**
@@ -49,8 +45,8 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     */
   override def run(interval: Int):Unit = {
     val conf = configSvc.config
-    val objs = objectsToUpdate(interval)
-    val sz = objs.size
+    val commandTrees = conf.fetchCommandsTree(interval)
+    val sz = if (commandTrees.isEmpty) 0 else commandTrees.map(_.size).sum
     if (!SMGRunStats.resetInterval(interval, sz)) {
       log.error("SMGrapher.run(interval=" + interval + "): Overlapping runs detected - aborting")
       configSvc.sendRunMsg(SMGDFRunMsg(interval, List("Overlapping runs detected")))
@@ -59,25 +55,11 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       configSvc.sendRunMsg(SMGDFRunMsg(interval, List()))
     }
     Future {
-      val byPrefetch = objs.groupBy( o => o.preFetch )
-      byPrefetch.foreach { tpl =>
-        val pf = tpl._1
-        val pfobjs = tpl._2
-        if (pf.isEmpty) {
-          pfobjs.foreach { (o:SMGRrdObject) =>
-            updateActor ! SMGUpdateActor.SMGUpdateMessage(conf.rrdConf, o, None)
-            log.debug("SMGrapher.run(interval=" + interval + "): Sent update message for: " + o.id)
-          }
-        } else {
-          if (conf.preFetches.get(pf.get).isEmpty) {
-            log.error("SMGrapher.run(interval=" + interval + "): Command specifies non existing pre_fetch: " + pf.get + " conf=" + conf.preFetches)
-          } else {
-            updateActor ! SMGUpdateActor.SMGUpdatePreFetchedMessage(conf.rrdConf, conf.preFetches(pf.get), pfobjs)
-            log.debug("SMGrapher.run(interval=" + interval + "): Sent pre fetch update message for: " + pf.get)
-          }
-        }
+      commandTrees.foreach { fRoot =>
+        updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(conf.rrdConf, interval, fRoot, None)
+        log.debug("SMGrapher.run(interval=" + interval + "): Sent fetch update message for: " + fRoot.node)
       }
-      log.info("SMGrapher.run(interval=" + interval + "): sent messages for " + sz + " rrdObjects")
+      log.info("SMGrapher.run(interval=" + interval + "): sent messages for " + sz + " fetch commands")
       configSvc.plugins.foreach { p =>
         if (p.interval == interval) p.run()
       }
@@ -96,7 +78,6 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       case None => Seq(Tuple2(SMGRemote.local, filterTopLevel(configSvc.config.indexes))) ++
         (for(c <- remotes.configs) yield (c.remote, filterTopLevel(c.indexes)))
     }
-
   }
 
   /**

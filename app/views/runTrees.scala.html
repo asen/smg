@@ -1,0 +1,66 @@
+@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGFetchCommandTree
+@import com.smule.smg.SMGMonState
+@(plugins: Seq[SMGPlugin], trees: Map[Int,Seq[SMGFetchCommandTree]], rootId: String, rootMonState: Option[SMGMonState], parentId: Option[String], maxLevels: Int, defaultLevels: Int, curUrl: String)
+
+@main("SMG - Run trees", plugins) {
+
+  <h3>Run trees</h3>
+
+  <div>
+    <form id="runTreeFilterForm" method="GET">
+      <label class="autosubmit-lbl">Levels:</label>
+      <input type="hidden" id="runTreeRoot" name="root" value="@rootId">
+      <input type="number" name="lvls" value="@maxLevels" min="1" max="5" onchange="mySubmitOnChange(this);" >
+      <input style="display: none" id="btn_GET" type="submit" value="Filter">
+    </form>
+  </div>
+
+  <!-- strip empty params from the form so that urls are less cluttered -->
+  <script language="JavaScript">
+    function disableEmptyInputs() {
+        $(':input', this).each(function() {
+           // !($(this).val()) ||
+           this.disabled = ((this.name == "lvls") && ($(this).val() == @defaultLevels)) ||
+             ((this.name == "remote") && ($(this).val() == "*"));
+        });
+    };
+
+    function realSubmit() {
+        setTimeout(0, $('#btn_GET').click());
+    }
+
+    function mySubmitOnChange(elem) {
+        disableEmptyInputs();
+        realSubmit();
+    }
+
+    function goToRoot(rootId) {
+      document.getElementById("runTreeRoot").value = rootId
+      realSubmit();
+    }
+
+    $('form#runTreeFilterForm').submit(disableEmptyInputs);
+  </script>
+
+
+@for(iv <- trees.keys.toList.sorted) {
+  <hr />
+
+  <a name="interval_@iv"></a>
+  <h4>Interval: @iv seconds</h4>
+
+    @if(parentId.isDefined){
+     <p>Parent: <a href="?root=@parentId.get" onclick="goToRoot('@parentId.get'); return false">@parentId.get</a></p>
+    } else {
+     <p><a href="?lvls=@maxLevels#interval_@iv">Top level</a></p>
+    }
+
+    @runTreesDisplay(trees(iv), if (rootId == "") maxLevels - 1 else maxLevels, maxLevels, rootId, rootMonState, curUrl)
+
+  }
+
+  <hr />
+
+}
+

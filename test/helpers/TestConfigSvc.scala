@@ -43,8 +43,9 @@ class TestConfigSvc() extends SMGConfigService {
     imgDir = "test-out",
     urlPrefix = "",
     intervals = Set(60),
-    preFetches = Map("test.prefetch" -> SMGPreFetchCmd("test.prefetch", SMGCmd("echo 0"))),
+    preFetches = Map("test.prefetch" -> SMGPreFetchCmd("test.prefetch", SMGCmd("echo 0"), None)),
     remotes = Seq(),
+    remoteMasters = Seq(),
     pluginObjects = Map(),
     objectAlertConfs = Map(
       "test.object.1" -> SMGMonObjAlertConf(

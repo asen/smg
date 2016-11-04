@@ -232,6 +232,10 @@ object SMGMonStateAgg {
     val rx = s"^(${oids.map(oid => SMGRemote.localId(oid)).distinct.mkString("|")})$$"
     "rx=" + java.net.URLEncoder.encode(rx, "UTF-8") // TODO, better showUrl?
   }
+
+  def buildMonState(lst: Seq[SMGMonStateObjVar]): SMGMonStateAgg = {
+    SMGMonStateAgg(lst, objectsUrlFilter(lst.map(_.ouid)))
+  }
 }
 
 case class SMGMonStatePreFetch(lst: Seq[SMGMonStateObjVar],
@@ -382,6 +386,14 @@ trait SMGMonitorApi {
     * @return list of tuples (remote, list of problem mon states) one for each remote
     */
   def problems(includeSoft: Boolean, includeAcked: Boolean, includeSilenced: Boolean): Future[Seq[(SMGRemote, Seq[SMGMonState])]]
+
+  /**
+    * Get the combined state for all rrd objects sharing the same parent pre_fetch
+    * @param cmdId
+    * @return
+    */
+  def localFetchState(cmdId: String): Option[SMGMonState]
+
 
   /**
     * silence/unsilence an object problem

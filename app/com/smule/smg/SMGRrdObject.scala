@@ -26,7 +26,7 @@ case class SMGRrdObject(id: String,
                         preFetch: Option[String],
                         rrdFile: Option[String],
                         rraDef: Option[SMGRraDef]
-                       ) extends SMGObjectView with SMGObjectUpdate {
+                       ) extends SMGObjectView with SMGObjectUpdate with SMGFetchCommand {
 
 
   def showUrl:String = "/show/" + id
@@ -57,4 +57,5 @@ case class SMGRrdObject(id: String,
 
   override val refObj: Option[SMGObjectUpdate] = Some(this)
 
+  val isRrdObj = true
 }

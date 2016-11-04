@@ -22,10 +22,13 @@ POST    /user/settings       controllers.Application.userSettings()
 GET     /monitor             controllers.Application.monitorIssues(soft: Option[String], ackd: Option[String], slncd: Option[String], action:Option[String], oid:Option[String], until:Option[String])
 GET     /monitor/heatmap     controllers.Application.monitorHeatmap
 GET     /monitor/log         controllers.Application.monitorLog(p: Option[String], l: Option[Int], soft: Option[String])
+GET     /monitor/runtree     controllers.Application.monitorRunTree(root: String ?= "", lvls: Option[Int])
+GET     /monitor/silenceFetch  controllers.Application.monitorSilenceFetch(cmd: String, until: Option[String], rdr: String)
 
 GET     /proxy/:remote/*path  controllers.Application.proxy(remote: String, path: String)
 
 GET     /inspect/:id       controllers.Application.inspect(id: String)
+
 
 # SVG response
 GET     /monitor/indexSvg    controllers.Application.monitorIndexSvg(ixid: String)

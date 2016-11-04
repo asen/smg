@@ -533,7 +533,6 @@ object SMGMonFetchErrorState {
   }
 
   val unknown = SMGMonFetchErrorState(-1, List(), 0)
-
 }
 
 @Singleton
@@ -558,50 +557,6 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
 
   private val MAX_STATES_PER_CHUNK = 2500
 
-  private def serializeObjectsState: List[String] = {
-    objectsState.toList.grouped(MAX_STATES_PER_CHUNK).map { chunk =>
-      val om = chunk.map{ t =>
-        val k = t._1
-        val v = t._2
-        (k, v.serialize)
-      }
-      Json.toJson(om.toMap).toString()
-    }.toList
-  }
-
-  private def deserializeObjectsState(stateStr: String): Unit = {
-    val jsm = Json.parse(stateStr).as[Map[String, JsValue]]
-    jsm.foreach { t =>
-      val oid = t._1
-      val hobj = SMGObjectHealth.deserialize(t._2, configSvc, monLogApi, notifSvc, this)
-      if (hobj.isDefined)
-        objectsState(oid) = hobj.get
-    }
-  }
-
-  private def serializeFetchErrorStates: String = {
-    val om = fetchErrorStates.map { t =>
-      val k = t._1
-      val fes = t._2
-      (k, fes.serialize)
-    }
-    Json.toJson(om.toMap).toString()
-  }
-
-  private def deserializeFetchErrorStates(stateStr: String): Unit = {
-    try {
-      val jsm = Json.parse(stateStr).as[Map[String, JsValue]]
-      jsm.foreach { t =>
-        val eid = t._1
-        val fes = SMGMonFetchErrorState.deserialize(t._2)
-        if (configSvc.config.updateObjectsById.contains(eid) || configSvc.config.preFetches.contains(eid))
-          fetchErrorStates(eid) = fes
-      }
-    } catch {
-      case t: Throwable => log.ex(t, "Unexpected error in deserializeFetchErrorStates")
-    }
-  }
-
   private def monStateDir = configSvc.config.globals.getOrElse("$monstate_dir", "monstate")
   private val MONSTATE_META_FILENAME = "meta.json"
   private val MONSTATE_BASE_FILENAME = "hobjects"
@@ -612,79 +567,6 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
   private def monStateBaseFname = s"$monStateDir/$MONSTATE_BASE_FILENAME"
   private def fetchStatesFname = s"$monStateDir/$FETCHERR_STATES_FILENAME"
   private def notifyStatesFname = s"$monStateDir/$NOTIFY_STATES_FILENAME"
-
-  def saveStateToDisk(): Unit = {
-    try {
-      log.info("SMGMonitor.saveStateToDisk BEGIN")
-      new File(monStateDir).mkdirs()
-      val statesLst = serializeObjectsState
-      statesLst.zipWithIndex.foreach { t =>
-        val stateStr = t._1
-        val ix = t._2
-        val suffix = if (ix == 0) "" else s".$ix"
-        val monStateFname = s"$monStateBaseFname$suffix.json"
-        log.info(s"SMGMonitor.saveStateToDisk $monStateFname")
-        val fw = new FileWriter(monStateFname, false)
-        try {
-          fw.write(stateStr)
-        } finally fw.close()
-      }
-      val metaStr = Json.toJson(Map("stateFiles" -> statesLst.size.toString)).toString()
-      val fw1 = new FileWriter(monStateMetaFname, false)
-      try {
-        fw1.write(metaStr)
-      } finally fw1.close()
-      val fetchStatesStr = serializeFetchErrorStates
-      val fw2 = new FileWriter(fetchStatesFname, false)
-      try {
-        fw2.write(fetchStatesStr)
-      } finally fw2.close()
-      val notifyStatesStr = notifSvc.serializeState().toString()
-      val fw3 = new FileWriter(notifyStatesFname, false)
-      try {
-        fw3.write(notifyStatesStr)
-      } finally fw3.close()
-
-      log.info("SMGMonitor.saveStateToDisk END")
-    } catch {
-      case t: Throwable => log.ex(t, "Unexpected exception in SMGMonitor.saveStateToDisk")
-    }
-  }
-
-  def parseStateMetaData(metaStr: String): Map[String,String] = {
-    Json.parse(metaStr).as[Map[String,String]]
-  }
-
-  private def loadStateFromDisk(): Unit = {
-    log.info("SMGMonitor.loadStateFromDisk BEGIN")
-    try {
-      val metaD: Map[String,String] = if (new File(monStateMetaFname).exists()) {
-        val metaStr = Source.fromFile(monStateMetaFname).getLines().mkString
-        parseStateMetaData(metaStr)
-      } else Map()
-      val numStateFiles = metaD.getOrElse("stateFiles", "1").toInt
-      (0 until numStateFiles).foreach { ix =>
-        val suffix = if (ix == 0) "" else s".$ix"
-        val monStateFname = s"$monStateBaseFname$suffix.json"
-        if (new File(monStateFname).exists()) {
-          log.info(s"SMGMonitor.loadStateFromDisk $monStateFname")
-          val stateStr = Source.fromFile(monStateFname).getLines().mkString
-          deserializeObjectsState(stateStr)
-        }
-      }
-      if (new File(fetchStatesFname).exists()) {
-        val stateStr = Source.fromFile(fetchStatesFname).getLines().mkString
-        deserializeFetchErrorStates(stateStr)
-      }
-      if (new File(notifyStatesFname).exists()) {
-        val stateStr = Source.fromFile(notifyStatesFname).getLines().mkString
-        notifSvc.deserializeState(stateStr)
-      }
-      log.info(s"SMGMonitor.loadStateFromDisk END - ${objectsState.size} objects, ${fetchErrorStates.size} fetch error states loaded")
-    } catch {
-      case x:Throwable => log.ex(x, "SMGMonitor.loadStateFromDisk ERROR")
-    }
-  }
 
   lifecycle.addStopHook { () =>
     Future.successful {
@@ -716,7 +598,10 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
 
   override def receiveObjMsg(msg: SMGDFObjMsg): Unit = {
     log.debug("SMGMonitor: receive: " + msg)
-    val hobj = objectsState.getOrElseUpdate(msg.obj.id, { new SMGObjectHealth(msg.obj, configSvc, monLogApi, notifSvc, this) })
+    val hobj = objectsState.getOrElseUpdate(msg.obj.id, {
+      log.debug(s"Creating new SMGObjectHealth for obj id ${msg.obj.id}")
+      new SMGObjectHealth(msg.obj, configSvc, monLogApi, notifSvc, this)
+    })
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       val prevFesCnt = fetchErrorStates.get(msg.obj.id).map(_.repeat).getOrElse(0)
       fetchErrorStates(msg.obj.id) = SMGMonFetchErrorState(msg.exitCode, msg.errors, prevFesCnt + 1)
@@ -805,12 +690,23 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
     }
   }
 
-  def fetchErrorState(k: String): Option[SMGMonFetchErrorState] = fetchErrorStates.get(k)
+  def findFetchErrorState(k: String): Option[(SMGMonFetchErrorState, String)] = {
+    val ret = fetchErrorStates.get(k)
+    if (ret.isDefined)
+      return Some((ret.get,k))
+    val pf = configSvc.config.preFetches.get(k)
+    if (pf.isDefined && pf.get.preFetch.isDefined) {
+      findFetchErrorState(pf.get.preFetch.get)
+    } else None
+  }
+
+  def fetchErrorState(k: String): Option[SMGMonFetchErrorState] = {
+    findFetchErrorState(k).map(_._1)
+  }
 
   private def expandOvs(ovs: Seq[SMGObjectView]): Seq[SMGObjectView] = {
     ovs.flatMap(ov => if (ov.isAgg) ov.asInstanceOf[SMGAggObjectView].objs else Seq(ov))
   }
-
 
   private def localNonAgObjectStates(ov: SMGObjectView): Seq[SMGMonStateObjVar]= {
     val hobjOpt = objectsState.get(ov.ouId)
@@ -881,34 +777,65 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
       monStateOverlap(t._1)
     }
     // get all object errors but group common pre-fetch errors together
-    val objectErrs = objectsState.values.filter(_.getStates.head._2.exists(_.stateVal != SMGState.OK)).flatMap { hso =>
-      hso.monVarStates(None).filter { ms =>
-        ( (ms.currentStateVal != SMGState.OK) &&
-          (includeSoft || ms.isHard) &&
-          (includeAcked || !ms.isAcked) &&
-          (includeSilenced || !ms.isSilenced) ) || ( includeSilenced && (ms.currentStateVal == SMGState.OK))
-      }.map(ms => (ms, hso.getObju.preFetch.getOrElse("")))
-    }.toList
-    val byPf = objectErrs.groupBy { _._2 }.map(t => (t._1, t._2.map(_._1))).filter(_._1 != "")
-    val mutByPf = mutable.Map(byPf.toSeq: _*)
-    val ordered = ListBuffer[SMGMonState]()
-    objectErrs.foreach { t =>
-      val ms = t._1
-      val pfId = t._2
-      if ((ms.currentState.state == SMGState.E_FETCH) && (pfId != "")) {
-        if (mutByPf.contains(pfId)) {
-          val pfState = fetchErrorStates.getOrElse(pfId, SMGMonFetchErrorState.unknown)
-          val pfRepeat = scala.math.min(pfErrorMaxStrikes(pfId), pfState.repeat + mutByPf(pfId).map(_.errorRepeat).max)
-          val pfMs = SMGMonStatePreFetch(mutByPf(pfId), Some(pfId), pfState.exitCode, pfState.out, pfRepeat)
-          ordered += pfMs
-          mutByPf.remove(pfId)
+
+    val conf = configSvc.config
+    val objectVarErrs = ListBuffer[SMGMonStateObjVar]()
+    val fetchErrs = ListBuffer[SMGMonStatePreFetch]()
+    val knownFetchErrIds = mutable.Set[String]()
+
+    // helper to check whether the given mon state matches the supplied arguments criteria
+    def monStateFilter(ms: SMGMonState): Boolean = {
+      ((ms.currentStateVal != SMGState.OK) &&
+        (includeSoft || ms.isHard) &&
+        (includeAcked || !ms.isAcked) &&
+        (includeSilenced || !ms.isSilenced)) ||
+        (ms.currentStateVal == SMGState.OK && includeSilenced && ms.isSilenced)
+    }
+
+    // try to preserve ordering (as defined in conf)
+    conf.updateObjects.foreach { updObj =>
+      val hsOpt = objectsState.get(updObj.id)
+      if (hsOpt.isDefined){
+        val hso = hsOpt.get
+        if (hso.getStates.head._2.exists(_.stateVal != SMGState.OK) || (hso.isSilenced && includeSilenced)) {
+          val mvStates = hso.monVarStates(None)
+          if (mvStates.forall(ovs => ovs.currentStateVal == SMGState.E_FETCH)) { // fetch errors are special
+            // search for pre-fetch failure if preFetch is defined
+            val searchPfId = if (hso.getObju.preFetch.isDefined)
+              hso.getObju.preFetch.get
+            else
+              hso.getObju.id
+            val ferrPfIdOpt = findFetchErrorState(searchPfId)
+            val (pfState, pfId) = if (ferrPfIdOpt.isEmpty) {
+              // also check for the case where preFetch is defined but preFetch failure was not found
+              // and actual object fetch failed
+              (fetchErrorStates.getOrElse(hso.getObju.id, SMGMonFetchErrorState.unknown), hso.getObju.id)
+            } else ferrPfIdOpt.get
+            if (!knownFetchErrIds.contains(pfId)){
+              val allPfObjVarStates = conf.fetchCommandRrdObjects(pfId).map(obj => objectsState.get(obj.id)).flatMap {
+                case Some(x) => x.monVarStates(None)
+                case None => None
+              }
+              val pfRepeat = scala.math.min(pfErrorMaxStrikes(pfId), pfState.repeat + allPfObjVarStates.map(_.errorRepeat).max)
+              val pfMs = SMGMonStatePreFetch(allPfObjVarStates, Some(pfId), pfState.exitCode, pfState.out, pfRepeat)
+              if (monStateFilter(pfMs)) {
+                fetchErrs += pfMs
+              }
+              knownFetchErrIds += pfId
+            }
+          } else {
+            objectVarErrs ++= mvStates.filter(monStateFilter)
+          }
         }
-      } else {
-        ordered += ms
       }
     }
-    val orderedBySeverety = ordered.groupBy(_.severity)
-    glErrs ++ orderedBySeverety.keys.toList.sortBy(-_).flatMap(sv => orderedBySeverety(sv))
+
+    val objErrsBySeverity = objectVarErrs.toList.groupBy(_.severity)
+    val (keysBeforeFetch, keysAfterFetch) = objErrsBySeverity.keys.toList.sortBy(-_).span { sv => sv > SMGState.E_FETCH.id.toDouble }
+    val orderedBySeverity = keysBeforeFetch.flatMap(objErrsBySeverity(_)) ++
+      fetchErrs.toList ++
+      keysAfterFetch.flatMap(objErrsBySeverity(_))
+    glErrs ++ orderedBySeverity
   }
 
   override def problems(includeSoft: Boolean, includeAcked: Boolean, includeSilenced: Boolean): Future[Seq[(SMGRemote, Seq[SMGMonState])]] = {
@@ -923,24 +850,41 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
     Future.sequence(allFuts)
   }
 
-
-  private def monPrefetchState(pfId: String, monVarStates: Option[Seq[SMGMonStateObjVar]]): Option[SMGMonStatePreFetch] = {
-    fetchErrorStates.get(pfId).map { pfState =>
+  private def monPrefetchErrorState(pfId: String, monVarStates: Option[Seq[SMGMonStateObjVar]]): Option[SMGMonStatePreFetch] = {
+    fetchErrorState(pfId).map { pfState =>
       val myMonVarStates = if (monVarStates.isDefined)
         monVarStates.get
       else
-        configSvc.config.updateObjects.filter(_.preFetch.contains(pfId)).map{ o =>
+        configSvc.config.fetchCommandRrdObjects(pfId).map{ o =>
           objectsState.get(o.id).map(_.monVarStates(None))
         }.filter(_.isDefined).flatMap(_.get)
       SMGMonStatePreFetch(myMonVarStates, Some(pfId), pfState.exitCode, pfState.out, pfState.repeat)
     }
   }
 
+  override def localFetchState(cmdId: String): Option[SMGMonState] = {
+    val conf = configSvc.config
+    if (conf.preFetches.contains(cmdId)) { //preFetch id
+      val monVarStates = conf.fetchCommandRrdObjects(cmdId).map { o =>
+        objectsState.get(o.id).map(_.monVarStates(None))
+      }.filter(_.isDefined).flatMap(_.get)
+      val errorState = monPrefetchErrorState(cmdId, Some(monVarStates))
+      if (errorState.isDefined) {
+        errorState
+      } else {
+        Some(SMGMonStatePreFetch(monVarStates, Some(cmdId), 0, List(), 1))
+      }
+    } else if (conf.updateObjectsById.contains(cmdId)) { // object id
+      objectsState.get(cmdId).map { hso =>
+        SMGMonStateAgg.buildMonState(hso.monVarStates(None))
+      }
+    } else None
+  }
 
   def silenceLocalObject(ouid:String, action: SMGMonSilenceAction):Boolean = {
     val hobjs = action.action match {
       case SMGMonSilenceAction.SILENCE_PF | SMGMonSilenceAction.ACK_PF => {
-        configSvc.config.updateObjects.filter(_.preFetch.contains(ouid)).map(o => objectsState.get(o.id))
+        configSvc.config.fetchCommandRrdObjects(ouid).map(o => objectsState.get(o.id))
       }
       case _ => Seq(objectsState.get(ouid))
     }
@@ -965,7 +909,7 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
     } else if (action.action == SMGMonSilenceAction.ACK_PF && action.silence) {
       if (ret && hobjs.nonEmpty) {
         val monStates = hobjs.flatMap(_.get.monVarStates(None))
-        val monPfState = monPrefetchState(ouid, Some(monStates))
+        val monPfState = monPrefetchErrorState(ouid, Some(monStates))
         if (monPfState.isDefined) {
           notifSvc.sendAcknowledgementMessages(monPfState.get)
           monPfState.get.lst.foreach(notifSvc.sendAcknowledgementMessages)
@@ -1030,6 +974,123 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
     val ouid = ov.refObj.map(_.id).getOrElse(ov.id)
     objectsState.get(ouid).map { hobj =>
       hobj.serialize.toString()
+    }
+  }
+
+  private def serializeObjectsState: List[String] = {
+    objectsState.toList.grouped(MAX_STATES_PER_CHUNK).map { chunk =>
+      val om = chunk.map{ t =>
+        val k = t._1
+        val v = t._2
+        (k, v.serialize)
+      }
+      Json.toJson(om.toMap).toString()
+    }.toList
+  }
+
+  private def deserializeObjectsState(stateStr: String): Unit = {
+    val jsm = Json.parse(stateStr).as[Map[String, JsValue]]
+    jsm.foreach { t =>
+      val oid = t._1
+      val hobj = SMGObjectHealth.deserialize(t._2, configSvc, monLogApi, notifSvc, this)
+      if (hobj.isDefined)
+        objectsState(oid) = hobj.get
+    }
+  }
+
+  private def serializeFetchErrorStates: String = {
+    val om = fetchErrorStates.map { t =>
+      val k = t._1
+      val fes = t._2
+      (k, fes.serialize)
+    }
+    Json.toJson(om.toMap).toString()
+  }
+
+  private def deserializeFetchErrorStates(stateStr: String): Unit = {
+    try {
+      val jsm = Json.parse(stateStr).as[Map[String, JsValue]]
+      jsm.foreach { t =>
+        val eid = t._1
+        val fes = SMGMonFetchErrorState.deserialize(t._2)
+        if (configSvc.config.updateObjectsById.contains(eid) || configSvc.config.preFetches.contains(eid))
+          fetchErrorStates(eid) = fes
+      }
+    } catch {
+      case t: Throwable => log.ex(t, "Unexpected error in deserializeFetchErrorStates")
+    }
+  }
+
+  def saveStateToDisk(): Unit = {
+    try {
+      log.info("SMGMonitor.saveStateToDisk BEGIN")
+      new File(monStateDir).mkdirs()
+      val statesLst = serializeObjectsState
+      statesLst.zipWithIndex.foreach { t =>
+        val stateStr = t._1
+        val ix = t._2
+        val suffix = if (ix == 0) "" else s".$ix"
+        val monStateFname = s"$monStateBaseFname$suffix.json"
+        log.info(s"SMGMonitor.saveStateToDisk $monStateFname")
+        val fw = new FileWriter(monStateFname, false)
+        try {
+          fw.write(stateStr)
+        } finally fw.close()
+      }
+      val metaStr = Json.toJson(Map("stateFiles" -> statesLst.size.toString)).toString()
+      val fw1 = new FileWriter(monStateMetaFname, false)
+      try {
+        fw1.write(metaStr)
+      } finally fw1.close()
+      val fetchStatesStr = serializeFetchErrorStates
+      val fw2 = new FileWriter(fetchStatesFname, false)
+      try {
+        fw2.write(fetchStatesStr)
+      } finally fw2.close()
+      val notifyStatesStr = notifSvc.serializeState().toString()
+      val fw3 = new FileWriter(notifyStatesFname, false)
+      try {
+        fw3.write(notifyStatesStr)
+      } finally fw3.close()
+
+      log.info("SMGMonitor.saveStateToDisk END")
+    } catch {
+      case t: Throwable => log.ex(t, "Unexpected exception in SMGMonitor.saveStateToDisk")
+    }
+  }
+
+  def parseStateMetaData(metaStr: String): Map[String,String] = {
+    Json.parse(metaStr).as[Map[String,String]]
+  }
+
+  private def loadStateFromDisk(): Unit = {
+    log.info("SMGMonitor.loadStateFromDisk BEGIN")
+    try {
+      val metaD: Map[String,String] = if (new File(monStateMetaFname).exists()) {
+        val metaStr = Source.fromFile(monStateMetaFname).getLines().mkString
+        parseStateMetaData(metaStr)
+      } else Map()
+      val numStateFiles = metaD.getOrElse("stateFiles", "1").toInt
+      (0 until numStateFiles).foreach { ix =>
+        val suffix = if (ix == 0) "" else s".$ix"
+        val monStateFname = s"$monStateBaseFname$suffix.json"
+        if (new File(monStateFname).exists()) {
+          log.info(s"SMGMonitor.loadStateFromDisk $monStateFname")
+          val stateStr = Source.fromFile(monStateFname).getLines().mkString
+          deserializeObjectsState(stateStr)
+        }
+      }
+      if (new File(fetchStatesFname).exists()) {
+        val stateStr = Source.fromFile(fetchStatesFname).getLines().mkString
+        deserializeFetchErrorStates(stateStr)
+      }
+      if (new File(notifyStatesFname).exists()) {
+        val stateStr = Source.fromFile(notifyStatesFname).getLines().mkString
+        notifSvc.deserializeState(stateStr)
+      }
+      log.info(s"SMGMonitor.loadStateFromDisk END - ${objectsState.size} objects, ${fetchErrorStates.size} fetch error states loaded")
+    } catch {
+      case x:Throwable => log.ex(x, "SMGMonitor.loadStateFromDisk ERROR")
     }
   }
 

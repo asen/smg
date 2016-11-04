@@ -1,5 +1,7 @@
 package com.smule.smg
 
+import scala.collection.mutable.ListBuffer
+
 /**
   * Created by asen on 11/15/15.
   */
@@ -80,7 +82,71 @@ case class SMGLocalConfig(
 
   val indexTreeLevels = globals.getOrElse("$index-tree-levels", "1").toInt
 
+  val runTreeLevels = globals.getOrElse("$run-tree-levels", "1").toInt
+
   // option to notify slaves on reload conf, this may be removed in the future
   val reloadSlaveRemotes = globals.getOrElse("$reload-slave-remotes", "false") == "true"
 
+
+  private def buildCommandsTree(interval: Int, rrdObjs: Seq[SMGRrdObject]): Seq[SMGFetchCommandTree] = {
+    val ret = ListBuffer[SMGFetchCommandTree]()
+    var recLevel = 0
+    val maxRecLevel = 10
+
+    def buildTree(leafs: Seq[SMGFetchCommandTree]): Unit = {
+      //      println(leafs)
+      val byPf = leafs.groupBy(_.node.preFetch.getOrElse(""))
+      val myParents = ListBuffer[SMGFetchCommandTree]()
+      byPf.foreach { t =>
+        val pfId = t._1
+        val chldrn = t._2
+        if (pfId == "") {
+          // top level
+          ret ++= chldrn
+        } else {
+          val pf = preFetches.get(pfId)
+          if (pf.isEmpty) {
+            SMGLogger.error(s"SMGLocalConfig.fetchCommandsTree: non existing pre-fetch id: $pfId")
+            ret ++= chldrn
+          } else {
+            myParents += SMGFetchCommandTree(pf.get, chldrn)
+          }
+        }
+      }
+      if (myParents.nonEmpty) {
+        recLevel += 1
+        if (recLevel > maxRecLevel) {
+          throw new RuntimeException(s"SMGLocalConfig.fetchCommandsTree: Configuration error - recursion ($recLevel) exceeded $maxRecLevel")
+        }
+        buildTree(myParents.toList)
+        recLevel -= 1
+      }
+    }
+    buildTree(rrdObjs.map(o => SMGFetchCommandTree(o, Seq())))
+    ret.toList
+  }
+
+
+  private val fetchCommandTrees: Map[Int, Seq[SMGFetchCommandTree]] = rrdObjects.groupBy(_.interval).map { t =>
+    (t._1, buildCommandsTree(t._1, t._2))
+  }
+
+
+  def fetchCommandsTree(interval: Int): Seq[SMGFetchCommandTree] = {
+    fetchCommandTrees.getOrElse(interval, Seq())
+  }
+
+  def fetchCommandRrdObjects(cmdId: String, intervalOpt: Option[Int] = None) : Seq[SMGRrdObject] = {
+    val ret = ListBuffer[SMGRrdObject]()
+    val intvls = if (intervalOpt.isDefined) Seq(intervalOpt.get) else intervals.toSeq.sorted
+    intvls.foreach { intvl =>
+      val topLevel = fetchCommandTrees.getOrElse(intvl, Seq())
+      val root = SMGFetchCommandTree.findTreeWithRoot(cmdId, topLevel)
+      if (root.isDefined)
+        ret ++= root.get.leafNodes.map(_.asInstanceOf[SMGRrdObject])
+    }
+    ret.toList
+  }
+
+  //lazy val allFetchCommands: Map[String, SMGFetchCommand] = preFetches ++ rrdObjects.groupBy(_.id).map(t => (t._1,t._2.head))
 }

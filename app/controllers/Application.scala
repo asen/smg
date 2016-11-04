@@ -561,6 +561,49 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def monitorRunTree(root: String, lvls: Option[Int]) = Action { request =>
+    val conf = configSvc.config
+    val allTreesMap = conf.intervals.map { intvl => (intvl, conf.fetchCommandsTree(intvl)) }.filter(_._2.nonEmpty).toMap
+    val treesMap = if ( root != "" ) {
+      allTreesMap.map { t =>
+        (t._1, t._2.map(t => t.findTree(root)).filter(_.isDefined).map(_.get))
+      }.filter(_._2.nonEmpty)
+    } else allTreesMap
+    val parentId = if (root == "")
+      None
+    else if (conf.preFetches.contains(root))
+      conf.preFetches(root).preFetch
+    else
+      conf.rrdObjects.find(_.id == root).flatMap(_.preFetch)
+
+    val rootMonState = if (root == "") None else {
+      monitorApi.localFetchState(root)
+    }
+    val maxLevels = lvls.getOrElse(conf.runTreeLevels)
+    Ok(views.html.runTrees(configSvc.plugins,
+      treesMap, root, rootMonState, parentId,
+      maxLevels, conf.runTreeLevels, request.uri))
+  }
+
+  def monitorSilenceFetch(cmd: String, until: Option[String], rdr: String) = Action {
+    val conf = configSvc.config
+    val slncValOpt = if (conf.preFetches.contains(cmd)) {
+      Some(SMGMonSilenceAction.SILENCE_PF)
+    } else if (conf.updateObjectsById.contains(cmd)) {
+      Some(SMGMonSilenceAction.SILENCE)
+    } else {
+      log.error(s"Invalid fetch command id supplied to silenceFetch: $cmd")
+      None
+    }
+    if (slncValOpt.isDefined) {
+      val untilTss = until.map(s => SMGState.tssNow + SMGRrd.parsePeriod(s).getOrElse(0))
+      val slncAction = SMGMonSilenceAction(slncValOpt.get, silence = true, untilTss)
+      monitorApi.silenceObject(cmd, slncAction)
+    }
+    val redirTo = if (rdr == "") "/runtree"
+    Redirect(rdr)
+  }
+
   def proxy(remote: String, path: String) = Action.async {
     val remoteHost = configSvc.config.remotes.find(_.id == remote).map(_.url)
     if (remoteHost.isEmpty) Future { NotFound(s"remote $remote not found") }

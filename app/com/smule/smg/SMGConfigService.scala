@@ -360,12 +360,14 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]]
       if (yamlMap.contains("id") && yamlMap.contains("command")) {
         val id = yamlMap.get("id").toString
-        if (preFetches.contains(id)) {
+        if (preFetches.contains(id) || objectIds.contains(id)) {
           log.error("SMGConfigServiceImpl.processPrefetch(" + confFile + "): CONFIG_ERROR: id already defined (ignoring): " +
             id +":" + yamlMap.toString)
         } else {
           val cmd = SMGCmd(yamlMap.get("command").toString, yamlMap.getOrElse("timeout", 30).asInstanceOf[Int]) //  TODO get 30 from a val
-          preFetches(id) = SMGPreFetchCmd(id, cmd)
+          val parentPfStr = yamlMap.getOrElse("pre_fetch", "").toString
+          val parentPf = if (parentPfStr == "") None else Some(parentPfStr)
+          preFetches(id) = SMGPreFetchCmd(id, cmd, parentPf)
         }
       } else {
         log.error("SMGConfigServiceImpl.processPrefetch(" + confFile + "): CONFIG_ERROR: $pre_fetch yamlMap does not have command and id: " + yamlMap.toString)
@@ -482,7 +484,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       val oid = t._1
       if (!validateOid(oid)){
         log.error("SMGConfigServiceImpl.processObject(" + confFile + "): CONFIG_ERROR: Skipping object with invalid id: " + oid)
-      } else if (objectIds.contains(oid)) {
+      } else if (objectIds.contains(oid) || preFetches.contains(oid)) {
         log.error("SMGConfigServiceImpl.processObject(" + confFile + "): CONFIG_ERROR: Skipping duplicate object with id: " + oid)
         //throw new Exception("Duplicate object id: " + t._1)
       } else {
