@@ -11,7 +11,7 @@
     <form id="runTreeFilterForm" method="GET">
       @if(availRemotes.nonEmpty){
       <label class="autosubmit-lbl">Remote filter:</label>
-      <select name="remote" class="select-remote" onchange="mySubmitOnChange(this);" >
+      <select name="remote" class="select-remote" onchange="remoteChanged(this);" >
         @for( rid <- availRemotes ) {
         <option value='@rid' @if(rid == rmtId){ selected } >@if(rid == ""){Local}else{@rid}</option>
         }
@@ -26,6 +26,12 @@
 
   <!-- strip empty params from the form so that urls are less cluttered -->
   <script language="JavaScript">
+
+    function remoteChanged(elem) {
+      document.getElementById("runTreeRoot").value = "" ;
+      mySubmitOnChange(elem);
+    }
+
     function disableEmptyInputs() {
         $(':input', this).each(function() {
            this.disabled = !($(this).val()) ||

@@ -220,7 +220,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       ) (SMGFetchCommandView.apply _)
   }
 
-  implicit lazy val smgFetchCommandTreeReads: Reads[SMGFetchCommandTree] = {
+  implicit val smgFetchCommandTreeReads: Reads[SMGFetchCommandTree] = {
     (
       (JsPath \ "n").read[SMGFetchCommand] and
         (JsPath \ "c").read[Seq[SMGFetchCommandTree]]
