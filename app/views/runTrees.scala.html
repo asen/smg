@@ -3,7 +3,7 @@
 @import com.smule.smg.SMGMonState
 @(plugins: Seq[SMGPlugin], rmtId: String, availRemotes:Seq[String], trees: Map[Int,Seq[SMGFetchCommandTree]], rootId: String, rootMonState: Option[SMGMonState], parentId: Option[String], maxLevels: Int, defaultLevels: Int, curUrl: String)
 
-@main("SMG - Run trees", plugins) {
+@main("SMG - Run trees", plugins, 0) {
 
   <h3>Run trees</h3>
 
