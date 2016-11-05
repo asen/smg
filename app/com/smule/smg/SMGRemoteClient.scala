@@ -202,6 +202,32 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       ) (SMGMonitorLogMsg.apply _)
   }
 
+  // Runtree deserializers
+
+  implicit val smgCmdReads: Reads[SMGCmd] = {
+    (
+      (JsPath \ "str").read[String] and
+        (JsPath \ "tms").read[Int]
+      ) (SMGCmd.apply _)
+  }
+
+  implicit val smgFetchCommandReads: Reads[SMGFetchCommand] = {
+    (
+      (JsPath \ "id").read[String].map(id => prefixedId(id)) and
+        (JsPath \ "cmd").read[SMGCmd] and
+        (JsPath \ "pf").readNullable[String].map(optid => optid.map(id => prefixedId(id))) and
+        (JsPath \ "rro").readNullable[String].map(_.getOrElse("false") == "true")
+      ) (SMGFetchCommandView.apply _)
+  }
+
+  implicit lazy val smgFetchCommandTreeReads: Reads[SMGFetchCommandTree] = {
+    (
+      (JsPath \ "n").read[SMGFetchCommand] and
+        (JsPath \ "c").read[Seq[SMGFetchCommandTree]]
+      ) (SMGFetchCommandTree.apply _)
+  }
+
+
   /**
     * Asynchronous call to /api/config to retrieve the configuration of the remote instance
     *
@@ -505,6 +531,47 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       }
     }
   }
+
+  def monitorRunTree(root: Option[String]): Future[Map[Int,Seq[SMGFetchCommandTree]]] = {
+    val params = if (root.isEmpty) "" else s"?root=${SMGRemote.localId(root.get)}"
+    ws.url(remote.url + API_PREFIX + "monitor/runtree" + params).
+      withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
+      Try {
+        val jsval = Json.parse(resp.body)
+        jsval.as[Map[String,Seq[SMGFetchCommandTree]]].map(t => (t._1.toInt, t._2))
+      }.recover {
+        case x => {
+          log.ex(x, "remote monitor/runtree parse error: " + remote.id)
+          Map[Int,Seq[SMGFetchCommandTree]]()
+        }
+      }.get
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/runtree fetch error: " + remote.id)
+        Map[Int,Seq[SMGFetchCommandTree]]()
+      }
+    }
+  }
+
+  def monitorFetchCommandState(cmdId: String): Future[Option[SMGMonState]] = {
+    ws.url(remote.url + API_PREFIX + s"monitor/fcstate?cmd=${SMGRemote.localId(cmdId)}" ).
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
+      Try {
+        val jsval = Json.parse(resp.body)
+        Some(jsval.as[SMGMonStateView])
+      }.recover {
+        case x => {
+          log.ex(x, "remote monitor/fcstate parse error: " + remote.id)
+          None
+        }
+      }.get
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/fcstate fetch error: " + remote.id)
+        None
+      }
+    }
+  }
 }
 
 /**
@@ -723,6 +790,40 @@ object SMGRemoteClient {
       if (ml.vix.isDefined)  mm += ("vix" -> Json.toJson(ml.vix.get))
       Json.toJson(mm.toMap)
     }
+  }
+
+  // Remote Runtree support
+
+  implicit val smgCmdWrites = new Writes[SMGCmd] {
+    def writes(cmd: SMGCmd) = {
+      //  case class SMGMonHeatmap(lst: List[SMGMonState], statesPerSquare: Int)
+      Json.obj(
+        "str" -> cmd.str,
+        "tms" -> cmd.timeoutSec
+      )
+    }
+  }
+
+  implicit val smgFetchCommandWrites = new Writes[SMGFetchCommand] {
+    def writes(fc: SMGFetchCommand) = {
+      //  case class SMGMonHeatmap(lst: List[SMGMonState], statesPerSquare: Int)
+      val mm = mutable.Map(
+        "id" ->  Json.toJson(fc.id),
+        "cmd" ->  Json.toJson(fc.command)
+      )
+      if (fc.preFetch.isDefined) mm += ("pf" -> Json.toJson(fc.preFetch.get))
+      if (fc.isRrdObj) mm += ("rro" -> Json.toJson("true"))
+      Json.toJson(mm.toMap)
+    }
+  }
+
+//  SMGFetchCommandTree(node: SMGFetchCommand, children: Seq[SMGFetchCommandTree])
+
+  implicit lazy val smgFetchCommandTreeWrites: Writes[SMGFetchCommandTree] = new Writes[SMGFetchCommandTree] {
+    def writes(t: SMGFetchCommandTree) = Json.obj(
+        "n" -> Json.toJson(t.node),
+        "c" -> Json.toJson(t.children)
+      )
   }
 
 }

@@ -154,6 +154,21 @@ trait SMGRemotesApi {
     */
   def heatmap(remoteId: String, flt: SMGFilter, maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[SMGMonHeatmap]
 
+
+  /**
+    * TODO
+    * @param remoteId
+    * @param root
+    * @return
+    */
+  def monitorRunTree(remoteId: String, root: Option[String]): Future[Map[Int,Seq[SMGFetchCommandTree]]]
+
+  /**
+    * TODO
+    * @param cmdId
+    * @return
+    */
+  def monitorFetchCommandState(cmdId: String): Future[Option[SMGMonState]]
 }
 
 
@@ -410,5 +425,24 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     else Future { Map() }
   }
 
+  /**
+    * TODO
+    *
+    * @param remoteId
+    * @param root
+    * @return
+    */
+  override def monitorRunTree(remoteId: String, root: Option[String]): Future[Map[Int, Seq[SMGFetchCommandTree]]] = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monitorRunTree(root)
+    else Future { Map() }
+  }
+
+  override def monitorFetchCommandState(cmdId: String): Future[Option[SMGMonState]] = {
+    val remoteId = SMGRemote.remoteId(cmdId)
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monitorFetchCommandState(cmdId)
+    else Future { None }
+  }
 
 }

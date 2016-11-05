@@ -260,4 +260,18 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def monitorRunTree(root: Option[String]) = Action {
+    val trees = configSvc.config.fetchCommandTreesWithRoot(root)
+    Ok(Json.toJson(trees.map(t => (t._1.toString, Json.toJson(t._2)))))
+  }
+
+  def monitorFetchCommandState(cmd: String) = Action.async {
+    monitorApi.fetchCommandState(cmd).map { optState =>
+      if (optState.isDefined)
+        Ok(Json.toJson(optState.get))
+      else
+        NotFound("command id not found")
+    }
+  }
+
 }

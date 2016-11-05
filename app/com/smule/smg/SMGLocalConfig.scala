@@ -126,16 +126,42 @@ case class SMGLocalConfig(
     ret.toList.sortBy(_.node.id)
   }
 
-
+  // build and keep the commands trees (a sequence of trees for each interval)
   private val fetchCommandTrees: Map[Int, Seq[SMGFetchCommandTree]] = rrdObjects.groupBy(_.interval).map { t =>
     (t._1, buildCommandsTree(t._1, t._2))
   }
 
 
+  /**
+    * Get the top-level command trees for given interval
+    * @param interval - interval for which we want the run trees
+    * @return
+    */
   def fetchCommandsTree(interval: Int): Seq[SMGFetchCommandTree] = {
     fetchCommandTrees.getOrElse(interval, Seq())
   }
 
+  /**
+    * Get all fetch command trees (can be one per interval) having the provided root id
+    * if root is None - return all command trees
+    * @param root
+    * @return
+    */
+  def fetchCommandTreesWithRoot(root: Option[String]): Map[Int, Seq[SMGFetchCommandTree]] = {
+    if (root.isDefined) {
+      fetchCommandTrees.map { t =>
+        (t._1, t._2.map(t => t.findTree(root.get)).filter(_.isDefined).map(_.get))
+      }.filter(_._2.nonEmpty)
+    } else fetchCommandTrees
+  }
+
+  /**
+    * Get all rrd objects which depend (at some level) on the given cmdId. If interval is provided
+    * only objects having the specified interval will be returned.
+    * @param cmdId
+    * @param intervalOpt
+    * @return
+    */
   def fetchCommandRrdObjects(cmdId: String, intervalOpt: Option[Int] = None) : Seq[SMGRrdObject] = {
     val ret = ListBuffer[SMGRrdObject]()
     val intvls = if (intervalOpt.isDefined) Seq(intervalOpt.get) else intervals.toSeq.sorted
@@ -147,6 +173,4 @@ case class SMGLocalConfig(
     }
     ret.toList
   }
-
-  //lazy val allFetchCommands: Map[String, SMGFetchCommand] = preFetches ++ rrdObjects.groupBy(_.id).map(t => (t._1,t._2.head))
 }

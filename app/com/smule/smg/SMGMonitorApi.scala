@@ -392,7 +392,7 @@ trait SMGMonitorApi {
     * @param cmdId
     * @return
     */
-  def localFetchState(cmdId: String): Option[SMGMonState]
+  def fetchCommandState(cmdId: String): Future[Option[SMGMonState]]
 
 
   /**

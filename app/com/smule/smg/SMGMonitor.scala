@@ -862,7 +862,7 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
     }
   }
 
-  override def localFetchState(cmdId: String): Option[SMGMonState] = {
+  def localFetchState(cmdId: String): Option[SMGMonState] = {
     val conf = configSvc.config
     if (conf.preFetches.contains(cmdId)) { //preFetch id
       val monVarStates = conf.fetchCommandRrdObjects(cmdId).map { o =>
@@ -880,6 +880,16 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
       }
     } else None
   }
+
+  override def fetchCommandState(cmdId: String): Future[Option[SMGMonState]] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    if (SMGRemote.isRemoteObj(cmdId)){
+       remotes.monitorFetchCommandState(cmdId)
+    } else Future {
+      localFetchState(cmdId)
+    }
+  }
+
 
   def silenceLocalObject(ouid:String, action: SMGMonSilenceAction):Boolean = {
     val hobjs = action.action match {

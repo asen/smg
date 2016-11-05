@@ -19,6 +19,16 @@ trait SMGFetchCommand {
   val isRrdObj: Boolean
 }
 
+
+/**
+  * A (de)serializable version of SMGFetchCommand, used to keep a local copy
+  * of a remote runtree
+  */
+case class SMGFetchCommandView(id: String,
+                               command: SMGCmd,
+                               preFetch: Option[String],
+                               isRrdObj: Boolean) extends SMGFetchCommand
+
 /**
   * A class representing a tree of fetch commands to be run where children will be run only
   * if parent commands succeed.

@@ -328,10 +328,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
     *
     * @param ids
     * @param op
-    * @param r
-    * @param s
-    * @param e
-    * @param d
+    * @param r - resolution (step)
+    * @param s - start
+    * @param e - end
+    * @param d - download or inline display
     * @return
     */
   def fetchAgg(ids:String, op:String, r:Option[Int], s: Option[String], e: Option[String], d:Boolean) = Action.async {
@@ -561,28 +561,31 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorRunTree(root: String, lvls: Option[Int]) = Action { request =>
+  def monitorRunTree(remote: String, root: Option[String], lvls: Option[Int]) = Action.async { request =>
     val conf = configSvc.config
-    val allTreesMap = conf.intervals.map { intvl => (intvl, conf.fetchCommandsTree(intvl)) }.filter(_._2.nonEmpty).toMap
-    val treesMap = if ( root != "" ) {
-      allTreesMap.map { t =>
-        (t._1, t._2.map(t => t.findTree(root)).filter(_.isDefined).map(_.get))
-      }.filter(_._2.nonEmpty)
-    } else allTreesMap
-    val parentId = if (root == "")
-      None
-    else if (conf.preFetches.contains(root))
-      conf.preFetches(root).preFetch
-    else
-      conf.rrdObjects.find(_.id == root).flatMap(_.preFetch)
-
-    val rootMonState = if (root == "") None else {
-      monitorApi.localFetchState(root)
+    val rootStr = root.getOrElse("")
+    val treesMapFut = if (remote == "") {
+      Future {
+        conf.fetchCommandTreesWithRoot(root)
+      }
+    } else {
+      remotes.monitorRunTree(remote, root)
     }
-    val maxLevels = lvls.getOrElse(conf.runTreeLevels)
-    Ok(views.html.runTrees(configSvc.plugins,
-      treesMap, root, rootMonState, parentId,
-      maxLevels, conf.runTreeLevels, request.uri))
+    val rootMonStateFut = if (rootStr == "") Future { None } else {
+      monitorApi.fetchCommandState(rootStr)
+    }
+    Future.sequence(Seq(treesMapFut,rootMonStateFut)).map { seq =>
+      val treesMap = seq(0).asInstanceOf[Map[Int,Seq[SMGFetchCommandTree]]]
+      val rootMonState = seq(1).asInstanceOf[Option[SMGMonState]]
+      val parentId = if (rootStr == "") None else {
+        treesMap.values.flatten.find { t => t.node.id == rootStr }.flatMap(_.node.preFetch)
+      }
+      val maxLevels = lvls.getOrElse(conf.runTreeLevels)
+      val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
+      Ok(views.html.runTrees(configSvc.plugins, remote, remoteIds,
+        treesMap, rootStr, rootMonState, parentId,
+        maxLevels, conf.runTreeLevels, request.uri))
+    }
   }
 
   def monitorSilenceFetch(cmd: String, until: Option[String], rdr: String) = Action {
