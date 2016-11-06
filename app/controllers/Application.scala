@@ -580,11 +580,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val parentId = if (rootStr == "") None else {
         treesMap.values.flatten.find { t => t.node.id == rootStr }.flatMap(_.node.preFetch)
       }
-      val maxLevels = if (rootStr != "") conf.MAX_RUNTREE_LEVELS else lvls.getOrElse(conf.runTreeLevels)
+      val maxLevels = if (rootStr != "") conf.MAX_RUNTREE_LEVELS else lvls.getOrElse(conf.runTreeLevelsDisplay)
       val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
       Ok(views.html.runTrees(configSvc.plugins, remote, remoteIds,
         treesMap, rootStr, rootMonState, parentId,
-        maxLevels, conf.runTreeLevels, request.uri))
+        maxLevels, conf.runTreeLevelsDisplay, request.uri))
     }
   }
 

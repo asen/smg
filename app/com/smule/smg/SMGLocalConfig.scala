@@ -85,7 +85,7 @@ case class SMGLocalConfig(
 
   val MAX_RUNTREE_LEVELS = 10
 
-  val runTreeLevels = globals.getOrElse("$run-tree-levels", "1").toInt
+  val runTreeLevelsDisplay = globals.getOrElse("$run-tree-levels-display", "1").toInt
 
   // option to notify slaves on reload conf, this may be removed in the future
   val reloadSlaveRemotes = globals.getOrElse("$reload-slave-remotes", "false") == "true"

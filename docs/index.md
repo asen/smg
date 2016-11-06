@@ -9,7 +9,7 @@
     1. [Concepts overview](#concepts)
         1. [RRD objects](#rrd-objects)
         1. [Intervals, runs and scheduler](#intervals)
-        1. [pre\_fetch](#pre_fetch)
+        1. [pre\_fetch and run command trees](#pre_fetch)
         1. [Period since and period length](#period)
         1. [Filters](#filters)
             1. [Remote filter](#flt-remote)
@@ -172,7 +172,8 @@ details on what properties are supported for given rrd object.
 SMG has the concept of regular (every *interval* seconds) *runs* where 
 it will execute the commands specified in the objects configs. 
 All objects having the same interval config value will be processed 
-during the respective interval run. All per-interval runs execute in
+during the respective interval run (also see the next section on 
+pre\_fetch and run trees). All per-interval runs execute in
 their own separate thread pool, so that e.g. slow hourly commands do
 not interfere too much with fast every-minute commands.
 
@@ -181,9 +182,8 @@ There are two ways this can work:
 - By default SMG will use its internal scheduler to trigger the 
 regular runs. Without getting into too much detail here (check 
 [Developers documentation](dev/index.md) for more info) it will 
-group all objects by their interval value (e.g. every-1min, every-5min,
-etc.) and trigger (separate) runs for every discovered unique interval 
-value, whenever the applicable time comes.
+trigger (separate) runs for every discovered unique rrd object 
+(or plugin) interval value, whenever the applicable time comes.
 - If desired one can also use an external scheduler like cron. For this 
 to work one needs to set *smg.useInternalScheduler* in application.conf 
 to *false* and then schedule the smgscripts/run-job.sh script as cron 
@@ -194,7 +194,7 @@ don't see many reasons to want to use the external scheduler option.
 
 
 <a name="pre_fetch" />
-#### pre_fetch
+#### pre_fetch and run command trees
 
 One important thing when trying to get and update RRDs for tens of 
 thousands of values from remote servers every minute is to reduce 
@@ -210,29 +210,28 @@ rrd objects and graphs from these.
 This is where SMG's pre\_fetch simplifies things - it is a special 
 config object defining an id and a command to execute. Then RRD 
 objects can have a pre\_fetch attribute specified with a value - the 
-mentioned pre\_fetch id. A pre\_fetch can also specify parent
-pre_\fetch effectively forming a set of trees. During every regular 
-commands/rrd updates run SMG will run the commands specified 
-by traversing that tree and child commands will only be run
-after the parent one was executed and succeeded (exit code 0).
- 
+mentioned pre\_fetch id.
+
 This allows the pre\_fetch command to store its ouput data cached 
 somehere locally on the SMG host and then the actual RRD object
 commands do not need to go to the target server but can use the cached
-local data. 
-
-Note that this is possible with mrtg and some clever coding too
-(inside the mrtg helper script) but that is usually subject to race 
-conditions and pain to properly synchronize if you run more than 1 mrtg
-worker. The SMG pre\_fetch commands solve the synchronization problem - 
-you know that the object command will run after the pre\_fetch has 
-been completed (and won't run at all if the pre\_fetch failed, 
-resulting in NaN value in the RRD object)
-
-For example at Smule we use a pre\_fetch command to get all SNMP values we 
-care about from a given host in a single shot (about sysload, cpu 
-usage, i/o, mem etc). Then we update many RRD objects from the 
+local data. For example we use a pre\_fetch command to get all SNMP 
+values we care about from a given host in a single shot (about sysload, 
+cpu usage, i/o, mem etc). Then we update many RRD objects from the 
 pre-fetched data.
+ 
+In addition pre\_fetch itself can specify another pre\_fetch command
+to be its parent. That way one can define a hierarchical command tree 
+structure ("run tree") where many child commands depend on a single 
+parent command and a set of parents can define a common parent of their 
+own etc. Example use case for this is to define a top-level 
+_ping -c 1 \<ip_addr\>_ pre\_fetch command for given host and then all 
+other pre\_fetches (or actual rrd objects) for that host can have the 
+ping pre\_fetch defined as parent and will not run  at all if e.g. the 
+host is down (not ping-able). Having such setup will also make SMG only
+send a single "unknown" alert if a host is down (vs alerts for each 
+individual command).
+
 
 <a name="period" />
 #### Period since and period length

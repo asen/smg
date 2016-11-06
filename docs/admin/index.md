@@ -272,10 +272,17 @@ while hitting it only once per interval. Pre\_fetch itself can have
 another pre\_fetch defined as a parent and one can form command trees 
 to be run top-to-bottom (stopping on failure).
 
+> Note that the "run tree" defined in this way must not have cycles 
+which can be created in theory by circularly pointing pre\_fetch parents 
+to each other (possibly via other ones). Currently SMG will reject 
+the config update if circular parent depenencies in the run-tree are
+detected (detection is simply having a hard limit of max 10 parent
+levels when constructing the run trees).
+
 <a name="run-tree-levels">
 
-- **$run-tree-levels**: _1_ - How many levels of fetch commands to 
-display by default on the Run trees page.
+- **$run-tree-levels-display**: _1_ - How many levels of fetch commands to 
+display by default on the top level Run trees page.
 
 
 <a name="remote" />
