@@ -66,7 +66,7 @@
     @if(parentId.isDefined){
      <p>Parent: <a href="?root=@parentId.get" onclick="goToRoot('@parentId.get'); return false">@parentId.get</a></p>
     } else {
-     <p><a href="?remote=@rmtId&lvls=@maxLevels#interval_@iv">Top level</a></p>
+     <p><a href="?remote=@rmtId#interval_@iv">Top level</a></p>
     }
 
     @runTreesDisplay(trees(iv), if (rootId == "") maxLevels - 1 else maxLevels, maxLevels, rootId, rootMonState, curUrl)
