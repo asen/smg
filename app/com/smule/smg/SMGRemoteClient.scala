@@ -1,7 +1,6 @@
 package com.smule.smg
 
 import java.io.{File, FileWriter}
-import java.net.URL
 import java.nio.file.{Files, StandardCopyOption}
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -13,7 +12,6 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.language.postfixOps
-import scala.sys.process._
 import scala.util.Try
 
 /**
@@ -177,12 +175,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   }
 
   implicit val smgMonHeatmapReads: Reads[SMGMonHeatmap] = {
-    //  case class SMGMonHeatmap(lst: List[SMGMonState], statesPerSquare: Int)
-//    Json.obj(
-//      "lst" -> mh.lst,
-//      "sps" -> mh.statesPerSquare
-//    )
-    (
+     (
       (JsPath \ "lst").read[List[SMGMonStateView]] and
         (JsPath \ "sps").read[Int]
       ) (SMGMonHeatmap.apply _)
@@ -223,7 +216,12 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   implicit val smgFetchCommandTreeReads: Reads[SMGFetchCommandTree] = {
     (
       (JsPath \ "n").read[SMGFetchCommand] and
-        (JsPath \ "c").read[Seq[SMGFetchCommandTree]]
+        (JsPath \ "c").read[Seq[JsValue]].map { jsseq =>
+          jsseq.map { jsv =>
+            //println(jsv)
+            jsv.as[SMGFetchCommandTree]
+          }
+        }
       ) (SMGFetchCommandTree.apply _)
   }
 
@@ -538,7 +536,9 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
       Try {
         val jsval = Json.parse(resp.body)
-        jsval.as[Map[String,Seq[SMGFetchCommandTree]]].map(t => (t._1.toInt, t._2))
+        jsval.as[Map[String, Seq[SMGFetchCommandTree]]].map { t =>
+          (t._1.toInt, t._2)
+        }
       }.recover {
         case x => {
           log.ex(x, "remote monitor/runtree parse error: " + remote.id)
@@ -569,6 +569,19 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       case x => {
         log.ex(x, "remote monitor/fcstate fetch error: " + remote.id)
         None
+      }
+    }
+  }
+
+
+  def monitorSilenceFetchCommand(cmdId: String, until: Option[Int]): Future[Boolean] = {
+    ws.url(remote.url + API_PREFIX + s"monitor/fcsilence?cmd=${SMGRemote.localId(cmdId)}&until=${until.getOrElse(0)}" ).
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
+      resp.status == 200
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/fcsilence fetch error: " + remote.id)
+        false
       }
     }
   }

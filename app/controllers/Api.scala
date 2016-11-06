@@ -274,4 +274,12 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def monitorFetchCommandSilence(cmd: String, until: Option[Int]) = Action.async {
+    monitorApi.silenceFetchCommand(cmd, until).map( ret =>
+      if (ret)
+        Ok("")
+      else
+        NotFound("")
+    )
+  }
 }

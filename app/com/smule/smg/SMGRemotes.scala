@@ -143,6 +143,9 @@ trait SMGRemotesApi {
     */
   def monitorSilence(oid: String, act: SMGMonSilenceAction): Future[Boolean]
 
+
+  def monitorSilenceFetchCommand(cmdId: String, until: Option[Int]): Future[Boolean]
+
   /**
     * Request heatmap from the given remote. A heatmap is (possibly condensed) list of SMGMonState squares.
     * @param remoteId - id of the remote to get data from
@@ -405,8 +408,17 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
 
   def monitorSilence(oid: String, act: SMGMonSilenceAction): Future[Boolean]  = {
     val remoteId: String = SMGRemote.remoteId(oid)
+    val localId = SMGRemote.localId(oid)
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorSilence(oid, act)
+      clientForId(remoteId).get.monitorSilence(localId, act)
+    else Future { false }
+  }
+
+  def monitorSilenceFetchCommand(cmdId: String, until: Option[Int]): Future[Boolean] = {
+    val remoteId = SMGRemote.remoteId(cmdId)
+    val localId = SMGRemote.localId(cmdId)
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monitorSilenceFetchCommand(localId, until)
     else Future { false }
   }
 

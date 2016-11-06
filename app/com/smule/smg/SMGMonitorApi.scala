@@ -402,6 +402,9 @@ trait SMGMonitorApi {
     */
   def silenceObject(ouid:String, action: SMGMonSilenceAction): Future[Boolean]
 
+
+  def silenceFetchCommand(cmdId: String, until: Option[Int]): Future[Boolean]
+
   /**
     * Generate a heatmap from local for the system objects. A heatmap is (possibly condensed) list of SMGMonState squares.
     * @param flt - filter to use to get objects

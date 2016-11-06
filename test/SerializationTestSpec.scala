@@ -1,9 +1,12 @@
 import com.smule.smg._
-import helpers.TestUtil
+import helpers.{TestConfigSvc, TestUtil}
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
-import play.api.libs.json.Json
+import play.api.libs.json.{JsPath, JsValue, Json, Reads}
+import play.api.libs.ws.WSClient
+
+import scala.io.Source
 
 
 /**
@@ -36,38 +39,36 @@ class SerializationTestSpec extends Specification {
       val jsonStr = TestUtil.printTimeMs{
         Json.toJson(monStates).toString()
       }
-//      println(jsonStr)
-
-      //monStates
-
-      import akka.actor.{ ActorRef, ActorSystem }
-      import akka.serialization._
-      //import com.typesafe.config.ConfigFactory
-
-      val system = ActorSystem("example")
-
-      // Get the Serialization Extension
-      val serialization = SerializationExtension(system)
-
-
-      // Have something to serialize
-      val original = monStates
-
-      val bytes = TestUtil.printTimeMs {
-        // Find the Serializer for it
-        val serializer = serialization.findSerializerFor(original)
-        // Turn it into bytes
-        serializer.toBinary(original)
-      }
-//      println(bytes.toList)
-
-      // Turn it back into an object
-//      val back = serializer.fromBinary(bytes, manifest = None)
-
-//      back mustEqual(original)
 
       List() must have size (0)
     }
+
+    "work for runtree" in {
+
+      val cs = new TestConfigSvc()
+
+      import play.api.libs.ws.ning._
+
+      val ws = NingWSClient()
+
+      val rmcli = new SMGRemoteClient(SMGRemote("blah", "localhost", None), ws, cs)
+
+      implicit val smgCmdReads: Reads[SMGCmd] = rmcli.smgCmdReads
+
+      implicit val smgFetchCommandReads: Reads[SMGFetchCommand] = rmcli.smgFetchCommandReads
+
+      implicit val smgFetchCommandTreeReads: Reads[SMGFetchCommandTree] = rmcli.smgFetchCommandTreeReads
+
+      val str = """{"60":[{"n":{"rro":"true","cmd":{"str":"df -k | grep ' /$' | awk '{print $3 * 1024, $4 * 1024}' | xargs -n 1 echo","tms":30},"id":"host.localhost.disk_usage"},"c":[]},{"n":{"rro":"true","cmd":{"str":"smgscripts/mac_localhost_sysload.sh","tms":30},"id":"host.localhost.sysload"},"c":[]}]}"""
+//      println(str)
+      val jsval = Json.parse(str)
+      val deser = jsval.as[Map[String, Seq[SMGFetchCommandTree]]]
+//      println(deser)
+
+      deser.keys must have size 1
+    }
   }
+
+
 
 }

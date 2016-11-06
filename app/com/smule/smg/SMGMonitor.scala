@@ -944,6 +944,32 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
     }
   }
 
+  def silenceFetchCommand(cmdId: String, until: Option[Int]): Future[Boolean] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    if (SMGRemote.isRemoteObj(cmdId)) {
+      remotes.monitorSilenceFetchCommand(cmdId, until)
+    } else {
+      Future {
+        val conf = configSvc.config
+        val slncValOpt = if (conf.preFetches.contains(cmdId)) {
+          Some(SMGMonSilenceAction.SILENCE_PF)
+        } else if (conf.updateObjectsById.contains(cmdId)) {
+          Some(SMGMonSilenceAction.SILENCE)
+        } else {
+          log.error(s"SMGMonitor.silenceFetchCommand: Invalid fetch command id supplied: $cmdId")
+          None
+        }
+        if (slncValOpt.isDefined) {
+          val slncAction = SMGMonSilenceAction(slncValOpt.get, silence = true, until)
+          silenceLocalObject(cmdId, slncAction)
+        } else {
+          false
+        }
+      }
+    }
+  }
+
+
   private def condenseHeatmapStates(allStates: Seq[SMGMonStateObjVar], maxSize: Int): (List[SMGMonState], Int) = {
     val chunkSize = (allStates.size / maxSize) + (if (allStates.size % maxSize == 0) 0 else 1)
     val lst = allStates.grouped(chunkSize).map { chunk =>

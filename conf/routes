@@ -51,6 +51,7 @@ GET     /api/rrd/:oid       controllers.Api.downloadRrd(oid: String)
 GET     /api/monitor/issues    controllers.Api.monitorIssues(soft: Option[String], ack: Option[String], slc: Option[String])
 GET     /api/monitor/runtree   controllers.Api.monitorRunTree(root: Option[String])
 GET     /api/monitor/fcstate   controllers.Api.monitorFetchCommandState(cmd: String)
+GET     /api/monitor/fcsilence   controllers.Api.monitorFetchCommandSilence(cmd: String, until: Option[Int])
 GET     /api/monitor/log       controllers.Api.monitorLog(p: Option[String], l: Option[Int], soft: Option[String])
 GET     /api/monitor/heatmap   controllers.Api.monitorHeatmap
 GET     /api/monitor/ovstates   controllers.Api.monitorObjectViewsGet(ids: String)

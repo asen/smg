@@ -588,23 +588,12 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorSilenceFetch(cmd: String, until: Option[String], rdr: String) = Action {
-    val conf = configSvc.config
-    val slncValOpt = if (conf.preFetches.contains(cmd)) {
-      Some(SMGMonSilenceAction.SILENCE_PF)
-    } else if (conf.updateObjectsById.contains(cmd)) {
-      Some(SMGMonSilenceAction.SILENCE)
-    } else {
-      log.error(s"Invalid fetch command id supplied to silenceFetch: $cmd")
-      None
+  def monitorSilenceFetch(cmd: String, until: Option[String], rdr: String) = Action.async {
+    val untilTss = until.map(s => SMGState.tssNow + SMGRrd.parsePeriod(s).getOrElse(0))
+    monitorApi.silenceFetchCommand(cmd, untilTss).map { b =>
+      val redirTo = if (rdr == "") "/runtree"
+      Redirect(rdr)
     }
-    if (slncValOpt.isDefined) {
-      val untilTss = until.map(s => SMGState.tssNow + SMGRrd.parsePeriod(s).getOrElse(0))
-      val slncAction = SMGMonSilenceAction(slncValOpt.get, silence = true, untilTss)
-      monitorApi.silenceObject(cmd, slncAction)
-    }
-    val redirTo = if (rdr == "") "/runtree"
-    Redirect(rdr)
   }
 
   def proxy(remote: String, path: String) = Action.async {
