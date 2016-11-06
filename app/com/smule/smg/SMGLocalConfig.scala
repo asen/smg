@@ -82,6 +82,9 @@ case class SMGLocalConfig(
 
   val indexTreeLevels = globals.getOrElse("$index-tree-levels", "1").toInt
 
+
+  val MAX_RUNTREE_LEVELS = 10
+
   val runTreeLevels = globals.getOrElse("$run-tree-levels", "1").toInt
 
   // option to notify slaves on reload conf, this may be removed in the future
@@ -91,7 +94,6 @@ case class SMGLocalConfig(
   private def buildCommandsTree(interval: Int, rrdObjs: Seq[SMGRrdObject]): Seq[SMGFetchCommandTree] = {
     val ret = ListBuffer[SMGFetchCommandTree]()
     var recLevel = 0
-    val maxRecLevel = 10
 
     def buildTree(leafs: Seq[SMGFetchCommandTree]): Unit = {
       //      println(leafs)
@@ -115,8 +117,8 @@ case class SMGLocalConfig(
       }
       if (myParents.nonEmpty) {
         recLevel += 1
-        if (recLevel > maxRecLevel) {
-          throw new RuntimeException(s"SMGLocalConfig.fetchCommandsTree: Configuration error - recursion ($recLevel) exceeded $maxRecLevel")
+        if (recLevel > MAX_RUNTREE_LEVELS) {
+          throw new RuntimeException(s"SMGLocalConfig.fetchCommandsTree: Configuration error - recursion ($recLevel) exceeded $MAX_RUNTREE_LEVELS")
         }
         buildTree(myParents.toList.sortBy(_.node.id))
         recLevel -= 1

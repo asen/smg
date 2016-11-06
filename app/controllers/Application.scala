@@ -580,9 +580,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val parentId = if (rootStr == "") None else {
         treesMap.values.flatten.find { t => t.node.id == rootStr }.flatMap(_.node.preFetch)
       }
-      // Display one more level if root is defined
-      val maxLevels = lvls.getOrElse(conf.runTreeLevels) + rootMonState.map(_ => 1).getOrElse(0)
-
+      val maxLevels = if (rootStr != "") conf.MAX_RUNTREE_LEVELS else lvls.getOrElse(conf.runTreeLevels)
       val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
       Ok(views.html.runTrees(configSvc.plugins, remote, remoteIds,
         treesMap, rootStr, rootMonState, parentId,

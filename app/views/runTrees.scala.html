@@ -17,9 +17,11 @@
         }
       </select>
       }
-      <label class="autosubmit-lbl">Levels:</label>
       <input type="hidden" id="runTreeRoot" name="root" value="@rootId">
-      <input type="number" name="lvls" value="@maxLevels" min="1" max="5" onchange="mySubmitOnChange(this);" >
+      @if(rootId == ""){
+        <label class="autosubmit-lbl">Levels:</label>
+        <input type="number" name="lvls" value="@maxLevels" min="1" max="5" onchange="mySubmitOnChange(this);" >
+      }
       <input style="display: none" id="btn_GET" type="submit" value="Filter">
     </form>
   </div>
