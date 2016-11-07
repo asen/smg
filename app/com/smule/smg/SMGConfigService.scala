@@ -367,7 +367,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
           val cmd = SMGCmd(yamlMap.get("command").toString, yamlMap.getOrElse("timeout", 30).asInstanceOf[Int]) //  TODO get 30 from a val
           val parentPfStr = yamlMap.getOrElse("pre_fetch", "").toString
           val parentPf = if (parentPfStr == "") None else Some(parentPfStr)
-          preFetches(id) = SMGPreFetchCmd(id, cmd, parentPf)
+          val ignoreTs = yamlMap.contains("ignorets") && (yamlMap.get("ignorets").toString != "false")
+          preFetches(id) = SMGPreFetchCmd(id, cmd, parentPf, ignoreTs)
         }
       } else {
         log.error("SMGConfigServiceImpl.processPrefetch(" + confFile + "): CONFIG_ERROR: $pre_fetch yamlMap does not have command and id: " + yamlMap.toString)
