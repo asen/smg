@@ -56,7 +56,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
     Future {
       commandTrees.foreach { fRoot =>
-        updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(conf.rrdConf, interval, fRoot, None)
+        updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(conf.rrdConf, interval, Seq(fRoot), None)
         log.debug("SMGrapher.run(interval=" + interval + "): Sent fetch update message for: " + fRoot.node)
       }
       log.info("SMGrapher.run(interval=" + interval + "): sent messages for " + sz + " fetch commands")

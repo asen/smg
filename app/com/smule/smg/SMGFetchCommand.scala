@@ -17,6 +17,7 @@ trait SMGFetchCommand {
   val command: SMGCmd
   val preFetch: Option[String]
   val isRrdObj: Boolean
+  val ignoreTs = false // TODO
 }
 
 
