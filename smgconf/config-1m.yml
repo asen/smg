@@ -11,6 +11,7 @@
 - $pre_fetch:
   id: host_localhost_up
   command: "ping -c 1 localhost >/dev/null"
+  ignorets: true
 
 - $pre_fetch:
   id: fail_randomly

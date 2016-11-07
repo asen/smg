@@ -67,7 +67,9 @@ class SMGUpdateActor(configSvc: SMGConfigService) extends Actor {
                 val (childObjTrees, childPfTrees) = fRoot.children.partition(_.node.isRrdObj)
                 if (childObjTrees.nonEmpty) {
                   val childObjSeq = childObjTrees.map(_.node.asInstanceOf[SMGRrdObject])
-                  savedSelf ! SMGUpdateObjectMessage(rrdConf, childObjSeq, updTs)
+                  childObjSeq.foreach { rrdObj =>
+                    savedSelf ! SMGUpdateObjectMessage(rrdConf, Seq(rrdObj), updTs)
+                  }
                   log.debug(s"SMGUpdateActor.runPrefetched($interval): Sent update messages for [${pf.id}] object children (${childObjSeq.size})")
                 }
                 if (childPfTrees.nonEmpty) {
