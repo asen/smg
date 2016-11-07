@@ -125,7 +125,16 @@ case class SMGLocalConfig(
       }
     }
     buildTree(rrdObjs.sortBy(_.id).map(o => SMGFetchCommandTree(o, Seq())))
-    ret.toList.sortBy(_.node.id)
+    // consolidate top-level trees sharing the same root
+    val topLevelById = ret.toList.groupBy(_.node.id)
+    topLevelById.keys.toList.sorted.map { cid =>
+      val trees = topLevelById(cid)
+      if (trees.tail.isEmpty) {
+        trees.head
+      } else {
+        SMGFetchCommandTree(trees.head.node, trees.flatMap(_.children).sortBy(_.node.id))
+      }
+    }
   }
 
   // build and keep the commands trees (a sequence of trees for each interval)

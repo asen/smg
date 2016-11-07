@@ -20,18 +20,16 @@
 #  command: 'echo 0'
 
 - localhost.sysload:
+  pre_fetch: host_localhost_up
   command: "smgscripts/mac_localhost_sysload.sh"
   interval: 60
   rrdType: GAUGE
   vars:
     - label: 1min
-      cdef: "$ds,100,*"
 #      alert-spike: ""
       #"1.5:15m:2h:0"
     - label: 5min
-      cdef: "$ds,100,*"
     - label: 15min
-      cdef: "$ds,100,*"
 
 - localhost.sysload2:
   pre_fetch: fail_randomly
@@ -39,11 +37,11 @@
   interval: 60
   rrdType: GAUGE
   vars:
-    - label: 1min
+    - label: 1min_x100
       cdef: "$ds,100,*"
-    - label: 5min
+    - label: 5min_x100
       cdef: "$ds,100,*"
-    - label: 15min
+    - label: 15min_x100
       cdef: "$ds,100,*"
 
 - localhost.dummy:
