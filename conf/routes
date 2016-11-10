@@ -21,7 +21,7 @@ GET     /user/settings       controllers.Application.userSettings()
 POST    /user/settings       controllers.Application.userSettings()
 GET     /monitor             controllers.Application.monitorIssues(soft: Option[String], ackd: Option[String], slncd: Option[String], action:Option[String], oid:Option[String], until:Option[String])
 GET     /monitor/heatmap     controllers.Application.monitorHeatmap
-GET     /monitor/log         controllers.Application.monitorLog(p: Option[String], l: Option[Int], soft: Option[String])
+GET     /monitor/log         controllers.Application.monitorLog(remote: String ?= "*", p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String])
 GET     /monitor/runtree     controllers.Application.monitorRunTree(remote: String ?= "", root: Option[String], lvls: Option[Int])
 GET     /monitor/silenceFetch  controllers.Application.monitorSilenceFetch(cmd: String, until: Option[String], rdr: String)
 
@@ -52,7 +52,7 @@ GET     /api/monitor/issues    controllers.Api.monitorIssues(soft: Option[String
 GET     /api/monitor/runtree   controllers.Api.monitorRunTree(root: Option[String])
 GET     /api/monitor/fcstate   controllers.Api.monitorFetchCommandState(cmd: String)
 GET     /api/monitor/fcsilence   controllers.Api.monitorFetchCommandSilence(cmd: String, until: Option[Int])
-GET     /api/monitor/log       controllers.Api.monitorLog(p: Option[String], l: Option[Int], soft: Option[String])
+GET     /api/monitor/logs       controllers.Api.monitorLog(period: Option[String], limit: Option[Int], sev: Option[String], soft: Option[String])
 GET     /api/monitor/heatmap   controllers.Api.monitorHeatmap
 GET     /api/monitor/ovstates   controllers.Api.monitorObjectViewsGet(ids: String)
 POST    /api/monitor/ovstates   controllers.Api.monitorObjectViewsPost

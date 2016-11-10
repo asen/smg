@@ -7,7 +7,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.{Inject, Singleton}
 
 import play.api.inject.ApplicationLifecycle
-
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.io.Source
@@ -18,18 +19,16 @@ import scala.io.Source
 
 /**
   * Case class representing a monitor log message which in turn is usually a state change
-  * @param mltype - state change enum value
   * @param ts - timestamp (int, seconds)
-  * @param msg - log message text
   * @param repeat - how many times we got a non-OK state
   * @param isHard - is the tranition "hard" (exceeded max repeats threshold, default 3)
   * @param ouids - optional relevant object id (can be more than one ofr pre-fetch errors)
   * @param vix - optional relevant object variable imdex
   * @param remote - originating remote instance
   */
-case class SMGMonitorLogMsg(mltype: SMGMonitorLogMsg.Value,
-                            ts: Int,
-                            msg: String,
+case class SMGMonitorLogMsg(ts: Int,
+                            curState: SMGState,
+                            prevState: Option[SMGState],
                             repeat: Int,
                             isHard: Boolean,
                             ouids: Seq[String],
@@ -37,6 +36,10 @@ case class SMGMonitorLogMsg(mltype: SMGMonitorLogMsg.Value,
                             remote: SMGRemote
                            ) {
 
+
+  val mltype: SMGMonitorLogMsg.Value = SMGMonitorLogMsg.fromObjectState(curState.state)
+
+  val msg = s"state: ${curState.desc} (prev state: ${prevState.map(_.desc).getOrElse("UNKNOWN")})"
 
   lazy val tsFmt = SMGMonitorLogMsg.logTsFmt.format(new Date(ts.toLong * 1000))
   lazy val ouidFmt = if (ouids.isEmpty) "-" else ouids.mkString(",")
@@ -47,6 +50,11 @@ case class SMGMonitorLogMsg(mltype: SMGMonitorLogMsg.Value,
 
   def objectsFilter = SMGMonStateAgg.objectsUrlFilter(ouids)
   def objectsFilterWithRemote = s"remote=${remote.id}&$objectsFilter"
+
+  def serialize: JsValue = {
+    implicit val monLogWrites = SMGRemoteClient.smgMonitorLogWrites
+    Json.toJson(this)
+  }
 }
 
 
@@ -67,21 +75,35 @@ object SMGMonitorLogMsg extends Enumeration {
 
   val logTsFmt = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZ")
 
+  def smgMonitorLogMsgReads(remote: SMGRemote): Reads[com.smule.smg.SMGMonitorLogMsg] = {
+    implicit val smgStateReads = SMGState.smgStateReads
+
+    def myPrefixedId(s: String) = {
+      if (remote.id == "") s else SMGRemote.prefixedId(remote.id, s)
+    }
+    (
+      (JsPath \ "ts").read[Int] and
+        (JsPath \ "cs").read[SMGState] and
+        (JsPath \ "ps").readNullable[SMGState] and
+        (JsPath \ "rpt").read[Int] and
+        (JsPath \ "hard").readNullable[String].map(hopt => hopt.getOrElse("") == "true") and
+        (JsPath \ "ouids").readNullable[List[String]].map(ol => ol.getOrElse(Seq()).map(s => myPrefixedId(s))) and
+        (JsPath \ "vix").readNullable[Int] and
+        // XXX "remote" is always null ...
+        (JsPath \ "remote").readNullable[String].map(s => remote)
+      ) (SMGMonitorLogMsg.apply _)
+  }
+
+  implicit val logMsgreads = smgMonitorLogMsgReads(SMGRemote.local)
+
   def parseLogLine(ln: String): Option[com.smule.smg.SMGMonitorLogMsg] = {
-    val arr = ln.split(" ", 8)
-    if (arr.length != 8)
-      None
-    else {
-      Some(
-        SMGMonitorLogMsg(
-          SMGMonitorLogMsg.withName(arr(2)),
-          Integer.parseInt(arr(1)), arr(7),
-          Integer.parseInt(arr(5)), arr(6) == "HARD",
-          if (arr(3) == "-") Seq() else arr(3).split(",").toSeq,
-          if (arr(4) == "-") None else Some(Integer.parseInt(arr(4))),
-          SMGRemote.local
-        )
-      )
+    try {
+      Some(Json.parse(ln).as[com.smule.smg.SMGMonitorLogMsg])
+    } catch {
+      case x: Throwable => {
+        SMGLogger.ex(x, s"Unexpected error parsing log msg: $ln")
+        None
+      }
     }
   }
 }
@@ -100,7 +122,7 @@ trait SMGMonitorLogApi {
     * @param hardOnly - whether to include soft errors or hard only
     * @return
     */
-  def getLocal(periodStr: String, limit: Int, hardOnly: Boolean): Seq[SMGMonitorLogMsg]
+  def getLocal(periodStr: String, limit: Int, minSeverity: Option[SMGState.Value], hardOnly: Boolean): Seq[SMGMonitorLogMsg]
 
   /**
     * Get all logs since given period (from all remotes)
@@ -109,7 +131,7 @@ trait SMGMonitorLogApi {
     * @param hardOnly - whether to include soft errors or hard only
     * @return
     */
-  def getSince(periodStr: String, limit: Int, hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]]
+  def getSince(periodStr: String, rmtOpt:Option[String], limit: Int, minSeverity: Option[SMGState.Value], hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]]
 }
 
 @Singleton
@@ -134,7 +156,8 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
     }
   }
 
-  override def getLocal(periodStr: String, limit: Int, hardOnly: Boolean): Seq[SMGMonitorLogMsg] = {
+  override def getLocal( periodStr: String, limit: Int,
+                         minSeverity: Option[SMGState.Value], hardOnly: Boolean): Seq[SMGMonitorLogMsg] = {
     val periodSecs = SMGRrd.parsePeriod(periodStr).getOrElse(3600)
     val curTss = SMGState.tssNow
     val startTss = curTss - periodSecs
@@ -145,18 +168,26 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
       ct += 24 * 3600
     }
     lb += recentLogs.toList
-    lb.flatten.toList.reverse.filter(m => (m.ts >= startTss) && ((!hardOnly) || m.isHard)).take(limit)
+    lb.flatten.toList.reverse.filter { m =>
+      (m.ts >= startTss) &&
+        ((!hardOnly) || m.isHard) &&
+        (minSeverity.isEmpty ||
+          m.curState.state >= minSeverity.get ||
+          (m.curState.state == SMGState.OK && m.prevState.map(_.state).getOrElse(SMGState.OK) >= minSeverity.get) )
+    }.take(limit)
   }
 
 
-  override def getSince(periodStr: String, limit: Int, hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
+  override def getSince(periodStr: String, rmtOpt:Option[String], limit: Int,
+                        minSeverity: Option[SMGState.Value], hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
     implicit val myEc = ExecutionContexts.monitorCtx
-    val remoteFuts = configSvc.config.remotes.map { rmt =>
-      remotes.monitorLogs(rmt.id, periodStr, limit, hardOnly)
-    }
-    val localFut = Future {
-      getLocal(periodStr, limit, hardOnly)
-    }
+    val remoteFuts = if (rmtOpt.isEmpty || rmtOpt.get == SMGRemote.wildcard.id) configSvc.config.remotes.map { rmt =>
+      remotes.monitorLogs(rmt.id, periodStr, limit, minSeverity, hardOnly)
+    } else Seq(remotes.monitorLogs(rmtOpt.get, periodStr, limit, minSeverity, hardOnly))
+    val localFut = if (rmtOpt.getOrElse(SMGRemote.local.id) == SMGRemote.local.id ) Future {
+      getLocal(periodStr, limit, minSeverity, hardOnly)
+    } else Future { Seq() }
+
     val allFuts = Seq(localFut) ++ remoteFuts
     Future.sequence(allFuts).map { seqs =>
       seqs.flatten.sortBy(- _.ts).take(limit) // most recent first
@@ -175,14 +206,14 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
 
   private def tsToDate(ts: Int): Date = new Date(ts.toLong * 1000)
 
-  private def tsLogFn(ts: Int): String = monlogBaseDir + dateDirFmt.format(tsToDate(ts)) + ".log"
+  private def tsLogFn(ts: Int): String = monlogBaseDir + dateDirFmt.format(tsToDate(ts)) + "-json.log"
 
   private def saveChunkToFile(fname: String, chunk: List[SMGMonitorLogMsg]): Unit = {
     log.debug(s"Saving chunk to file: $fname (chunk size=${chunk.size})")
     val fw = new FileWriter(fname, true)
     try {
       chunk.foreach { msg =>
-        fw.write(msg.logLine.replaceAll("\\n", " "))
+        fw.write(msg.serialize.toString())
         fw.write("\n")
       }
     }
@@ -197,9 +228,9 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
 
   private def saveOnShutdown() = {
     recentLogs += SMGMonitorLogMsg(
-      SMGMonitorLogMsg.SMGERR,
       SMGState.tssNow,
-      "SMG shutdown", 1, true, Seq(), None, SMGRemote.local)
+      SMGState(SMGState.tssNow, SMGState.E_SMGERR, "SMG Shutdown"),
+      None, 1, true, Seq(), None, SMGRemote.local)
     saveLogChunk(recentLogs.toList)
   }
 
@@ -207,6 +238,7 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
 
   override def logMsg(msg: SMGMonitorLogMsg): Unit = {
     log.debug("MONITOR_STATE_CHANGE: " + msg)
+    // TODO synchronization?
     recentLogs += msg
     Future {
       val sz = recentLogs.size

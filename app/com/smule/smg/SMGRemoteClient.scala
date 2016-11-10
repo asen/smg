@@ -127,14 +127,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       ) (SMGRrdRow.apply _)
   }
 
-  implicit val smgStateReads: Reads[SMGState] = {
-    //SMGState(ts: Int, state: SMGState.Value, desc: String)
-    (
-      (JsPath \ "ts").read[Int] and
-        (JsPath \ "state").read[String].map(s => SMGState.withName(s)) and
-        (JsPath \ "desc").read[String]
-      ) (SMGState.apply _)
-  }
+  implicit val smgStateReads: Reads[SMGState] = SMGState.smgStateReads
 
   implicit val smgMonStateObjVarReads: Reads[SMGMonStateObjVar] = {
     (
@@ -181,19 +174,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       ) (SMGMonHeatmap.apply _)
   }
 
-  implicit val smgMonitorLogMsgReads: Reads[SMGMonitorLogMsg] = {
-    (
-      (JsPath \ "mlt").read[String].map(s => SMGMonitorLogMsg.withName(s)) and
-        (JsPath \ "ts").read[Int] and
-        (JsPath \ "msg").read[String] and
-        (JsPath \ "rpt").read[Int] and
-        (JsPath \ "hard").readNullable[String].map(hopt => hopt.getOrElse("") == "true") and
-        (JsPath \ "ouids").readNullable[List[String]].map(ol => ol.getOrElse(Seq())) and
-        (JsPath \ "vix").readNullable[Int] and
-        // XXX "remote" is always null ...
-        (JsPath \ "remote").readNullable[String].map(s => remote)
-      ) (SMGMonitorLogMsg.apply _)
-  }
+  implicit val smgMonitorLogMsgReads: Reads[SMGMonitorLogMsg] = SMGMonitorLogMsg.smgMonitorLogMsgReads(remote)
 
   // Runtree deserializers
 
@@ -422,13 +403,24 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       get().map(_.body).recover{ case e: Exception => "" }
   }
 
-  def monitorLogs(periodStr: String, limit: Int, hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
+  def monitorLogs(periodStr: String, limit: Int,
+                  minSeverity: Option[SMGState.Value], hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
     val softStr = if (hardOnly) "" else "&soft=on"
+    val sevStr = if (minSeverity.isDefined) "&sev=" + minSeverity.get.toString else ""
     lazy val errRet = Seq(
-      SMGMonitorLogMsg(SMGMonitorLogMsg.SMGERR,
-        (System.currentTimeMillis() / 1000).toInt,
-        "Remote logs fetch error", 1, isHard = true, Seq(), None, remote))
-    ws.url(remote.url + API_PREFIX + "monitor/log?p=" + SMGRrd.safePeriod(periodStr) + "&l=" + limit + softStr).
+      SMGMonitorLogMsg(
+        ts = SMGState.tssNow,
+        curState = SMGState(SMGState.tssNow, SMGState.E_SMGERR, "Remote logs fetch error"),
+        prevState = None,
+        repeat = 1,
+        isHard = true,
+        ouids = Seq(),
+        vix = None,
+        remote = remote
+      )
+    )
+    ws.url(remote.url + API_PREFIX + "monitor/logs?period=" +
+      SMGRrd.safePeriod(periodStr) + "&limit=" + limit + sevStr + softStr).
       withRequestTimeout(shortTimeoutMs).get().map { resp =>
       Try {
         val jsval = Json.parse(resp.body)
@@ -785,19 +777,12 @@ object SMGRemoteClient {
 
   implicit val smgMonitorLogWrites = new Writes[SMGMonitorLogMsg] {
     def writes(ml: SMGMonitorLogMsg) = {
-      //  SMGMonitorLogMsg(mltype: SMGMonitorLogMsg.Value,
-      //    ts: Int,
-      //    msg: String,
-      //    repeat: Int,
-      //    isHard: Boolean,
-      //    ouid: Option[String],
-      //    vix: Option[Int])
       val mm = mutable.Map(
-        "mlt" -> Json.toJson(ml.mltype.toString),
         "ts" -> Json.toJson(ml.ts),
-        "msg" -> Json.toJson(ml.msg),
+        "cs" -> Json.toJson(ml.curState),
         "rpt" -> Json.toJson(ml.repeat)
       )
+      if (ml.prevState.isDefined) mm += ("ps" -> Json.toJson(ml.prevState))
       if (ml.isHard) mm += ("hard" -> Json.toJson("true"))
       if (ml.ouids.nonEmpty) mm += ("ouids" -> Json.toJson(ml.ouids))
       if (ml.vix.isDefined)  mm += ("vix" -> Json.toJson(ml.vix.get))

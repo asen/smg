@@ -123,7 +123,8 @@ trait SMGRemotesApi {
     * @param hardOnly - whether to include soft errors or hard only
     * @return
     */
-  def monitorLogs(remoteId: String, periodStr: String, limit: Int, hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]]
+  def monitorLogs(remoteId: String, periodStr: String, limit: Int,
+                  minSeverity: Option[SMGState.Value], hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]]
 
   /**
     * get all problematic SMGMonStates from teh given remote
@@ -394,9 +395,10 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     else Future { "" }
   }
 
-  override def monitorLogs(remoteId: String, periodStr: String, limit: Int, hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
+  override def monitorLogs(remoteId: String, periodStr: String, limit: Int,
+                           minSeverity: Option[SMGState.Value], hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorLogs(periodStr, limit, hardOnly)
+      clientForId(remoteId).get.monitorLogs(periodStr, limit, minSeverity, hardOnly)
     else Future { Seq() }
   }
 

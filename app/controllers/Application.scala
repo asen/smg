@@ -36,17 +36,23 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   val MAX_INDEX_LEVELS = 5
 
-  /**
-    * List all topl-level configured indexes
-    */
-  def index(remote :String, lvls: Option[Int]) = Action { request =>
+
+  private def parseRemoteParam(remote: String): Tuple2[List[String],Option[String]] = {
     val remoteIds = SMGRemote.local.id :: configSvc.config.remotes.map(_.id).toList
     val rmtOpt = remote match {
       case "*" => None
       case rmtId => remoteIds.find(_ == rmtId)
     }
+    val availRemotes = if (configSvc.config.remotes.isEmpty) List() else "*" :: remoteIds
+    (availRemotes , rmtOpt)
+  }
+
+  /**
+    * List all topl-level configured indexes
+    */
+  def index(remote :String, lvls: Option[Int]) = Action { request =>
+    val (availRemotes, rmtOpt) = parseRemoteParam(remote)
     val tlIndexesByRemote = smg.getTopLevelIndexesByRemote(rmtOpt)
-    val availRemotes = if (configSvc.config.remotes.isEmpty) Seq() else "*" :: remoteIds
     val myLevels = lvls.getOrElse(configSvc.config.indexTreeLevels)
     val saneLevels = scala.math.min(scala.math.max(1, myLevels), MAX_INDEX_LEVELS)
     Ok(views.html.index(rmtOpt, availRemotes, saneLevels, configSvc.config.indexTreeLevels,
@@ -496,12 +502,15 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorLog(p: Option[String], l: Option[Int], soft: Option[String]) = Action.async {
+  def monitorLog(remote: String, p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String]) = Action.async {
+    val (availRemotes, rmtOpt) = parseRemoteParam(remote)
+    val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_VAL_WARN)
     val period = p.getOrElse("24h")
     val limit = l.getOrElse(100)
     val hardOnly = soft.getOrElse("off") == "off"
-    monitorApi.monLogApi.getSince(period, limit, hardOnly).map { logs =>
-      Ok(views.html.monitorLog(configSvc.plugins, period, limit, hardOnly, logs))
+    monitorApi.monLogApi.getSince(period, rmtOpt, limit, Some(minSev), hardOnly).map { logs =>
+      Ok(views.html.monitorLog(configSvc.plugins, availRemotes, rmtOpt, SMGState.values.toList.map(_.toString),
+        Some(minSev.toString), period, limit, hardOnly, logs))
     }
   }
 

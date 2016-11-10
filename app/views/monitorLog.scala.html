@@ -2,7 +2,7 @@
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.SMGMonitorLogMsg
 
-@(plugins: Seq[SMGPlugin], period:String, limit:Int, hardOnly: Boolean, logMsgs: Seq[SMGMonitorLogMsg])
+@(plugins: Seq[SMGPlugin], availRemotes:Seq[String], rmtId: Option[String], availStates:Seq[String], minSeverity: Option[String], period:String, limit:Int, hardOnly: Boolean, logMsgs: Seq[SMGMonitorLogMsg])
 
 @main("SMG - Monitor log", plugins) {
 <div>
@@ -17,20 +17,50 @@
 
 <h4>Filter:</h4>
 <div>
-<form method="GET" action="/monitor/log" class="filter-form">
-  <div class="form-group">
-  <label class="manualsubmit-lbl">Limit since</label> <input class="form-control" type="text" name="p" value="@period" />
-  </div>
-  <div class="form-group">
-    <label class="manualsubmit-lbl">Limit number</label> <input class="form-control" type="number" name="l" value="@limit" />
-  </div>
-  <div class="form-group form-group-cbs">
-    <label class="manualsubmit-lbl" for="cbSoft">Display Soft errors</label> <input id="cbSoft" type="checkbox" name="soft" @if(!hardOnly){ checked } />
-  </div>
-  <div class="form-group">
-    <input class="form-control btn-submit-manual" type="submit" name="submit" value="Apply" />
-  </div>
+<form id="monLogFilterForm" method="GET" action="/monitor/log" class="filter-form">
+  @if(availRemotes.nonEmpty){
+  <label class="autosubmit-lbl">Remote filter:</label>
+  <select name="remote" class="select-remote" onchange="mySubmitOnChange(this);" >
+    @for( rid <- availRemotes) {
+    <option value='@rid' @if(rid == rmtId.getOrElse("*")){ selected } >@if(rid == ""){Local}else{@rid}</option>
+    }
+  </select>
+  }
+  <label class="autosubmit-lbl">Minimal Severity filter:</label>
+  <select name="ms" onchange="mySubmitOnChange(this);" >
+    @for( sid <- availStates) {
+    <option value='@sid' @if(sid == minSeverity.getOrElse("OK")){ selected } >@sid</option>
+    }
+  </select>
+  <label class="autosubmit-lbl">Limit since</label>
+  <input type="text" name="p" value="@period" onchange="mySubmitOnChange(this)" />
+
+  <label class="autosubmit-lbl">Limit number</label>
+  <input type="number" name="l" value="@limit" min="1" max="100000" onchange="mySubmitOnChange(this);" />
+
+  <label class="autosubmit-lbl" for="cbSoft">Display Soft errors</label>
+  <input id="cbSoft" type="checkbox" name="soft" onchange="mySubmitOnChange(this);" @if(!hardOnly){ checked } />
+
+  <input style="display: none" id="btn_GET" type="submit" value="Filter">
 </form>
+
+  <!-- strip empty params from the form so that urls are less cluttered -->
+<script language="JavaScript">
+  function disableEmptyInputs() {
+      $(':input', this).each(function() {
+         this.disabled = !($(this).val()) ||
+           ((this.name == "remote") && ($(this).val() == "*"));
+      });
+  };
+
+  function mySubmitOnChange(elem) {
+      disableEmptyInputs();
+      setTimeout(0, $('#btn_GET').click());
+  }
+
+  $('form#monLogFilterForm').submit(disableEmptyInputs);
+</script>
+
 </div>
 
 <hr/>

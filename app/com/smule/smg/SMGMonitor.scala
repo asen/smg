@@ -19,7 +19,9 @@ import scala.io.Source
   */
 
 
-case class SMGHealthState(stateVal: SMGState.Value, desc: String)
+case class SMGHealthState(stateVal: SMGState.Value, desc: String) {
+  def asSMGState(ts: Int) = SMGState(ts, stateVal, desc)
+}
 
 // local (mutable) object health state
 class SMGObjectHealth(obju: SMGObjectUpdate,
@@ -102,9 +104,9 @@ class SMGObjectHealth(obju: SMGObjectUpdate,
     // try to keep this fast in the common case (no logs/alets)
     val curTs = recentStates.head._1
     val latestStates = recentStates.head._2  // the state which was just added
-    val histStatesLst = if (recentStates.tail.isEmpty) {
-      List(genInitialStates.head._2)
-    } else recentStates.tail.take(maxErrors).map(_._2) // states except the current one which was just added
+    val (histStatesLst, prevTs) = if (recentStates.tail.isEmpty) {
+      (List(genInitialStates.head._2), SMGState.tssNow)
+    } else (recentStates.tail.take(maxErrors).map(_._2), recentStates.tail.head._1) // states except the current one which was just added
     val prevStates = histStatesLst.head
     val latestIsOK = latestStates.forall(_.stateVal == SMGState.OK)
 
@@ -142,8 +144,9 @@ class SMGObjectHealth(obju: SMGObjectUpdate,
         if (!wasPrefetchError) { // pre-fetch recovery has been logged already
           // log a single message for the recovery
           monLog.logMsg(
-            SMGMonitorLogMsg(SMGMonitorLogMsg.fromObjectState(newAggMonState.currentStateVal), curTs,
-              stateChangeDesc(latestStates.head, prevStates.head), 1, isHard = true, Seq(getObju.id), None, SMGRemote.local)
+            SMGMonitorLogMsg(curTs, latestStates.head.asSMGState(curTs),
+              prevStates.headOption.map(_.asSMGState(prevTs)), 1,
+              isHard = true, Seq(getObju.id), None, SMGRemote.local)
           )
         }
       } else {
@@ -153,8 +156,8 @@ class SMGObjectHealth(obju: SMGObjectUpdate,
           if (latestStates(vix).stateVal != prevStates(vix).stateVal) {
             val wasHard = histErrorsRepeatCount(vix) >= maxErrors
             monLog.logMsg(
-              SMGMonitorLogMsg(SMGMonitorLogMsg.fromObjectState(mso.currentStateVal), curTs,
-                stateChangeDesc(latestStates(vix), prevStates(vix)), 1, isHard = wasHard,
+              SMGMonitorLogMsg(curTs, latestStates(vix).asSMGState(curTs),
+                Some(prevStates(vix).asSMGState(prevTs)), 1, isHard = wasHard,
                 Seq(getObju.id), Some(vix), SMGRemote.local)
             )
           }
@@ -195,8 +198,8 @@ class SMGObjectHealth(obju: SMGObjectUpdate,
       val repeat = newMonVarStates.map(mso => errorsRepeatCount(mso.ix)).max
       if (!wasHard) {
         monLog.logMsg(
-          SMGMonitorLogMsg(SMGMonitorLogMsg.fromObjectState(newAggMonState.currentStateVal), curTs,
-            stateChangeDesc(latestStates.head, prevStates.head), repeat, newAggMonState.isHard,
+          SMGMonitorLogMsg(curTs, latestStates.head.asSMGState(curTs),
+            prevStates.headOption.map(_.asSMGState(prevTs)), repeat, newAggMonState.isHard,
             Seq(getObju.id), None, SMGRemote.local)
         )
       } // else no log msg - continuous hard error
@@ -212,8 +215,8 @@ class SMGObjectHealth(obju: SMGObjectUpdate,
           notifSvc.sendRecoveryMessages(msov)
           val wasHard = histErrorsRepeatCount(vix) >= maxErrors
           monLog.logMsg(
-            SMGMonitorLogMsg(SMGMonitorLogMsg.fromObjectState(msov.currentStateVal), curTs,
-              stateChangeDesc(latestStates(vix), prevStates(vix)), 1, isHard = wasHard,
+            SMGMonitorLogMsg(curTs,latestStates(vix).asSMGState(curTs),
+              Some(prevStates(vix).asSMGState(prevTs)), 1, isHard = wasHard,
               Seq(getObju.id), Some(vix), SMGRemote.local)
           )
         } // else do nothing - continuous OK states
@@ -229,8 +232,8 @@ class SMGObjectHealth(obju: SMGObjectUpdate,
           }
           val repeat =  scala.math.min(errorsRepeatCount(vix), maxErrors)
           monLog.logMsg(
-            SMGMonitorLogMsg(SMGMonitorLogMsg.fromObjectState(msov.currentStateVal), curTs,
-              stateChangeDesc(latestStates(vix), prevStates(vix)), repeat, msov.isHard,
+            SMGMonitorLogMsg(curTs, latestStates(vix).asSMGState(curTs),
+              Some(prevStates(vix).asSMGState(prevTs)), repeat, msov.isHard,
               Seq(getObju.id), Some(vix), SMGRemote.local)
           )
         } else {
@@ -512,10 +515,10 @@ object SMGObjectHealth {
   }
 }
 
-
-case class SMGMonFetchErrorState(exitCode: Int, out: List[String], repeat: Int) {
+case class SMGMonFetchErrorState(ts: Int, exitCode: Int, out: List[String], repeat: Int) {
   def serialize: JsValue = {
     Json.toJson(Map(
+      "ts" -> Json.toJson(ts),
       "ext" -> Json.toJson(exitCode),
       "out" -> Json.toJson(out),
       "repeat" -> Json.toJson(repeat)
@@ -526,13 +529,14 @@ case class SMGMonFetchErrorState(exitCode: Int, out: List[String], repeat: Int) 
 object SMGMonFetchErrorState {
 
   def deserialize(src: JsValue): SMGMonFetchErrorState = {
-    val ts = (src \ "ext").as[Int]
+    val ts = (src \ "ts").asOpt[Int].getOrElse(SMGState.tssNow) // XXX TODO reaidng nullable for backwards comaptibility
+    val ext = (src \ "ext").as[Int]
     val out = (src \ "out").as[List[String]]
     val repeat = (src \ "repeat").as[Int]
-    SMGMonFetchErrorState(ts, out, repeat)
+    SMGMonFetchErrorState(ts, ext, out, repeat)
   }
 
-  val unknown = SMGMonFetchErrorState(-1, List(), 0)
+  val unknown = SMGMonFetchErrorState(SMGState.tssNow, -1, List(), 0)
 }
 
 @Singleton
@@ -604,7 +608,7 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
     })
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       val prevFesCnt = fetchErrorStates.get(msg.obj.id).map(_.repeat).getOrElse(0)
-      fetchErrorStates(msg.obj.id) = SMGMonFetchErrorState(msg.exitCode, msg.errors, prevFesCnt + 1)
+      fetchErrorStates(msg.obj.id) = SMGMonFetchErrorState(msg.ts, msg.exitCode, msg.errors, prevFesCnt + 1)
       hobj.processFetchError(msg.ts, msg.exitCode, msg.errors)
     }
     else {
@@ -626,8 +630,8 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
     if (msg.isOverlap) {
       val newCount = prevCount + 1
       val isHard = newCount >= runErrorMaxStrikes
-      val lmsg = SMGMonitorLogMsg(SMGMonitorLogMsg.OVERLAP,msg.ts, msgStr + msg.errors.mkString(" "),
-        newCount, isHard, Seq(), None, SMGRemote.local)
+      val lmsg = SMGMonitorLogMsg(msg.ts, SMGState(msg.ts, SMGState.E_SMGERR, msgStr + msg.errors.mkString(" ")),
+        None, newCount, isHard, Seq(), None, SMGRemote.local)
       monLogApi.logMsg(lmsg)
       runErrorStates(rsKey) = newCount
       if (isHard){
@@ -636,7 +640,7 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
       }
     } else {
       if (prevCount > 0){
-        val lmsg = SMGMonitorLogMsg(SMGMonitorLogMsg.RECOVERY,msg.ts, msgStr + " Recovery", 1, true,
+        val lmsg = SMGMonitorLogMsg(msg.ts, SMGState(msg.ts, SMGState.OK, msgStr + " Recovery"), None , 1, true,
           Seq(), None, SMGRemote.local)
         monLogApi.logMsg(lmsg)
         //if (prevCount >= runErrorMaxStrikes) // XXX no need to check if it was hard?
@@ -659,13 +663,15 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
       if (oldState.isDefined) { // recovery
         val wasHard = oldState.get.repeat >= maxRepeat
         notifSvc.sendRecoveryMessages(pfState(1))
-        val lmsg = SMGMonitorLogMsg(SMGMonitorLogMsg.RECOVERY, msg.ts,
-          s"Pre-fetch succeeded. Previous state (exitCode=${oldState.get.exitCode}): " + oldState.get.out.mkString("\n"),
+        val lmsg = SMGMonitorLogMsg(msg.ts, SMGState(msg.ts, SMGState.OK, "Pre-fetch succeeded."),
+          Some(SMGState(oldState.get.ts, SMGState.E_FETCH,
+            s"Pre-fetch error (exitCode=${oldState.get.exitCode}): " + oldState.get.out.mkString("\n"))),
           1, isHard = wasHard, msg.objs.map(_.id), None, SMGRemote.local)
         monLogApi.logMsg(lmsg)
       } // else continuos OK state, nothing to do
     } else { // error
-      val prevFesCnt = fetchErrorStates.get(msg.pfId).map(_.repeat).getOrElse(0)
+      val oldState = fetchErrorStates.get(msg.pfId)
+      val prevFesCnt = oldState.map(_.repeat).getOrElse(0)
       val repeat = scala.math.min(1 + prevFesCnt, maxRepeat)
       val isHard = repeat >= maxRepeat
       val wasHard = prevFesCnt >= maxRepeat
@@ -680,10 +686,12 @@ class SMGMonitor @Inject() (configSvc: SMGConfigService,
           notifSvc.sendAlertMessages(pfState(repeat), ncmds)
         }
       }
-      fetchErrorStates(msg.pfId) = SMGMonFetchErrorState(msg.exitCode, msg.errors, repeat)
+      fetchErrorStates(msg.pfId) = SMGMonFetchErrorState(msg.ts, msg.exitCode, msg.errors, repeat)
       if (prevFesCnt < maxRepeat) {
-        val lmsg = SMGMonitorLogMsg(SMGMonitorLogMsg.FETCHERR, msg.ts,
-          s"Pre-fetch error (exitCode=${msg.exitCode}): " + msg.errors.mkString("\n"),
+        val lmsg = SMGMonitorLogMsg(msg.ts, SMGState(msg.ts, SMGState.E_FETCH,
+          s"Pre-fetch error (exitCode=${msg.exitCode}): " + msg.errors.mkString("\n")),
+          oldState.map{os => SMGState(os.ts, SMGState.E_FETCH,
+            s"Pre-fetch error (exitCode=${os.exitCode}): " + os.out.mkString("\n"))},
           repeat, isHard, msg.objs.map(_.id), None, SMGRemote.local)
         monLogApi.logMsg(lmsg)
       }

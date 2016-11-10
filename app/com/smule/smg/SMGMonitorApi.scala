@@ -3,6 +3,9 @@ package com.smule.smg
 import java.text.SimpleDateFormat
 import java.util.Date
 
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+
 import scala.concurrent.Future
 
 
@@ -57,6 +60,15 @@ object SMGState extends Enumeration {
   def stateColor(stateIx: Int) =  colorsMap.getOrElse(stateIx.toDouble, "#000000")
 
   def tssNow = SMGRrd.tssNow //(System.currentTimeMillis() / 1000).toInt
+
+  val smgStateReads: Reads[SMGState] = {
+    //SMGState(ts: Int, state: SMGState.Value, desc: String)
+    (
+      (JsPath \ "ts").read[Int] and
+        (JsPath \ "state").read[String].map(s => SMGState.withName(s)) and
+        (JsPath \ "desc").read[String]
+      ) (SMGState.apply _)
+  }
 }
 
 case class SMGState(ts: Int, state: SMGState.Value, desc: String) {
@@ -65,7 +77,6 @@ case class SMGState(ts: Int, state: SMGState.Value, desc: String) {
   def stateColor = SMGState.stateColor(state.id)
   def textColor = SMGState.stateTextColor(state.id)
 }
-
 
 object SMGMonState {
 
@@ -403,7 +414,7 @@ trait SMGMonitorApi {
   def silenceObject(ouid:String, action: SMGMonSilenceAction): Future[Boolean]
 
 
-  def silenceFetchCommand(cmdId: String, until: Option[Int]): Future[Boolean]
+  def silenceFetchCommand(fc: String, until: Option[Int]): Future[Boolean]
 
   /**
     * Generate a heatmap from local for the system objects. A heatmap is (possibly condensed) list of SMGMonState squares.
