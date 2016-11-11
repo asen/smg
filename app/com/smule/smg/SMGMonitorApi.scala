@@ -322,7 +322,7 @@ case class SMGMonStateObjVar(ouid: String,
     else
       lastOkIdx
   }
-  def alertKey = s"$ouid:$ix"
+  def alertKey = s"$ouid:$ix:$label"
 }
 
 case class SMGMonStateGlobal(title: String,
