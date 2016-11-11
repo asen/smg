@@ -7,8 +7,8 @@
 @main("SMG - Monitor log", plugins) {
 <div>
   <h6>
-    <a href="/monitor/runtree">Run trees</a> |
     <a href="/monitor">Monitor Issues</a> |
+    <a href="/monitor/runtree">Run trees</a> |
     <a href="/monitor/heatmap">Monitor Heatmap</a>
   </h6>
 </div>
@@ -41,7 +41,7 @@
   <label class="autosubmit-lbl" for="cbSoft">Display Soft errors</label>
   <input id="cbSoft" type="checkbox" name="soft" onchange="mySubmitOnChange(this);" @if(!hardOnly){ checked } />
 
-  <input style="display: none" id="btn_GET" type="submit" value="Filter">
+  <input id="btn_GET" type="submit" value="Refresh">
 </form>
 
   <!-- strip empty params from the form so that urls are less cluttered -->
