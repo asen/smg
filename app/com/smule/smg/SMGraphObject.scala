@@ -10,7 +10,7 @@ case class SMGraphObject(
                           cdefVars: List[Map[String, String]],
                           title: String,
                           stack: Boolean,
-                          graphVarsIndexes: List[Int],
+                          gvIxes: List[Int],
                           rrdFile: Option[String],
                           refObj: Option[SMGObjectUpdate]
                         ) extends SMGObjectView {
@@ -24,4 +24,6 @@ case class SMGraphObject(
   override def fetchUrl(period: String): String = "/fetch/" + id + "?s=" + period
 
   override val isAgg: Boolean = false
+
+  override val graphVarsIndexes = if (gvIxes.isEmpty) refObj.map(_.vars.indices).getOrElse(vars.indices) else gvIxes
 }

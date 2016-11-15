@@ -236,15 +236,15 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   def localObjectViewsState(ovs: Seq[SMGObjectView]): Map[String,Seq[SMGMonState]] = {
-    expandOvs(ovs).map { ov =>
-      (ov.id, localNonAgObjectStates(ov))
+    ovs.map { ov =>
+      // TODO check for x-remote?
+      (ov.id, expandOvs(Seq(ov)).flatMap(localNonAgObjectStates))
     }.toMap
   }
 
   override def objectViewStates(ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
-    val expandedOvs = expandOvs(ovs)
-    val byRemote = expandedOvs.groupBy(ov => SMGRemote.remoteId(ov.id))
+    val byRemote = ovs.groupBy(ov => SMGRemote.remoteId(ov.id))
     val futs = byRemote.flatMap{ case (rmtId, myOvs) =>
       if (rmtId == SMGRemote.local.id) {
         Seq(Future {
