@@ -112,19 +112,22 @@ trait SMGMonInternalState extends SMGTreeNode with SMGMonState {
 
     if (curState.isOk) { // recovery
       notifSvc.sendRecoveryMessages(this)
-      monLog.logMsg(logEntry)
+      if (!prevStateWasInherited)
+        monLog.logMsg(logEntry)
     } else { // error state
       val isStateChange = curState.state != prevStates.head.state
       val isHardChanged = isHardError && !wasHardError
       lazy val (notifCmds, backoff) = notifyCmdsAndBackoff
       if (isStateChange || isHardChanged || prevStateWasInherited) {
         if (isHardError) {
-          notifSvc.sendAlertMessages(this, notifCmds)
+          if (!isSilencedOrAcked)
+            notifSvc.sendAlertMessages(this, notifCmds)
         }
         monLog.logMsg(logEntry)
       } else {
         //no log msg - continuous hard error - just resend notifications if applicable
-        notifSvc.checkAndResendAlertMessages(this, backoff)
+        if (!isSilencedOrAcked)
+          notifSvc.checkAndResendAlertMessages(this, backoff)
       }
     }
   }

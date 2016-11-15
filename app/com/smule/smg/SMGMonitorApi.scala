@@ -169,14 +169,14 @@ trait SMGMonState {
 
   def textColor = SMGMonState.textColor(severity)
 
-  lazy val hardStr = if (isOk) "" else if (isHard) " HARD" else " SOFT"
+  def hardStr = if (isOk) "" else if (isHard) " HARD" else " SOFT"
 
-  lazy val silencedUntilStr = if (silencedUntil.isEmpty) "permanently" else {
+  def silencedUntilStr = if (silencedUntil.isEmpty) "permanently" else {
     "until " + new Date(silencedUntil.get.toLong * 1000).toString
   }
 
-  lazy val isSilencedOrAcked = isSilenced || isAcked
-  lazy val shouldNotify = isHard && (!isSilencedOrAcked)
+  def isSilencedOrAcked = isSilenced || isAcked
+  //def shouldNotify = isHard && (!isSilencedOrAcked)
 
   def notifySubject(smgHost: String, smgRemoteId: Option[String], isRepeat: Boolean) = {
     val repeatStr = if (isRepeat) "(repeat) " else ""
