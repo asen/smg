@@ -31,7 +31,6 @@ trait SMGMonInternalState extends SMGTreeNode with SMGMonState {
     myIsSilencedUntil
   }
 
-  override def currentStateVal = currentState.state
   override def severity = currentStateVal.id.toDouble
   override def remote = SMGRemote.local
 

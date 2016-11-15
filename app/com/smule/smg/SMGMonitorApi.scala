@@ -124,7 +124,6 @@ trait SMGMonState {
   def isAcked: Boolean
   def isSilenced: Boolean
   def silencedUntil: Option[Int]
-  def currentStateVal: SMGState.Value
   def oid: Option[String]
   def pfId: Option[String]
   def aggShowUrlFilter: Option[String]
@@ -133,12 +132,11 @@ trait SMGMonState {
   def recentStates: Seq[SMGState]
 
   def errorRepeat: Int
-  def badSince: Option[Int]
-
-  def badSinceStr = badSince.map(bs => new Date(1000L * bs).toString)
 
   def alertKey: String
   def alertSubject = alertKey // can be overriden
+
+  def currentStateVal = recentStates.headOption.map(_.state).getOrElse(SMGState.E_SMGERR) // XXX empty recentStates is smg err
 
   private lazy val urlPx = "/dash?remote=" + remote.id + "&"
 
@@ -176,7 +174,6 @@ trait SMGMonState {
   }
 
   def isSilencedOrAcked = isSilenced || isAcked
-  //def shouldNotify = isHard && (!isSilencedOrAcked)
 
   def notifySubject(smgHost: String, smgRemoteId: Option[String], isRepeat: Boolean) = {
     val repeatStr = if (isRepeat) "(repeat) " else ""
@@ -191,8 +188,7 @@ trait SMGMonState {
   def notifyBody(smgBaseUrl: String, smgRemoteId: Option[String]) = {
       s"REMOTE: ${smgRemoteId.getOrElse("local")}\n\n" +
       s"MSG: ${text}\n\n" +
-      s"LINK: ${bodyLink(smgBaseUrl, smgRemoteId)}\n\n" +
-        (if (badSince.isDefined) s"BAD SINCE: ${badSinceStr.get}\n\n" else "")
+      s"LINK: ${bodyLink(smgBaseUrl, smgRemoteId)}\n\n"
   }
 
 }
@@ -210,12 +206,10 @@ case class SMGMonStateView(id: String,
                            aggShowUrlFilter: Option[String],
                            recentStates: Seq[SMGState],
                            errorRepeat: Int,
-                           badSince: Option[Int],
                            remote: SMGRemote
                           ) extends SMGMonState {
 
-  def alertKey = id
-  val currentStateVal = recentStates.headOption.map(_.state).getOrElse(SMGState.E_SMGERR) // XXX empty recentStates is smg err
+  override def alertKey = id
 }
 
 // local agg (condensed) mon state
@@ -239,7 +233,6 @@ case class SMGMonStateAgg(id: String, lst: Seq[SMGMonState], showUrlFilter: Stri
   override val oid = None
   override val pfId = None
   override val aggShowUrlFilter = Some(showUrlFilter)
-  lazy val currentStateVal = SMGState(severity.toInt)
 
   override val errorRepeat = lst.map(_.errorRepeat).max
 //  override lazy val hardStr = ""
@@ -255,15 +248,7 @@ case class SMGMonStateAgg(id: String, lst: Seq[SMGMonState], showUrlFilter: Stri
 
   // XXX chop off :ix portion of child alert keys to define this alert key.
   // Agg states cover entire objects in the context of alerting so var indexes are thrown away
-  def alertKey = lst.map(_.alertKey.split(":")(0)).distinct.mkString(",")
-
-  override val badSince: Option[Int] = {
-    val badlst = lst.map(_.badSince).filter(_.isDefined).map(_.get)
-    if (badlst.isEmpty)
-      None
-    else
-      Some(badlst.min)
-  }
+  override def alertKey = lst.map(_.alertKey.split(":")(0)).distinct.mkString(",")
 }
 
 object SMGMonStateAgg {
@@ -299,10 +284,8 @@ case class SMGMonStateGlobal(title: String,
   override val aggShowUrlFilter = None
   override val oid = None
   override val pfId = None
-  lazy val currentStateVal = currentState.state
-  override val remote = SMGRemote.local
 
-  override val badSince: Option[Int] = None // TODO
+  override val remote = SMGRemote.local
 
   override val errorRepeat  = 1
 

@@ -143,7 +143,6 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
         (JsPath \ "uf").readNullable[String] and
         (JsPath \ "rs").readNullable[List[SMGState]].map(opt => opt.getOrElse(List())) and // TODO temp readNullable
         (JsPath \ "er").readNullable[Int].map(oi => oi.getOrElse(0)) and // TODO temp readNullable
-        (JsPath \ "bs").readNullable[Int] and
         // XXX "remote" is always null ...
         (JsPath \ "remote").readNullable[String].map(s => remote)
       ) (SMGMonStateView.apply _)
@@ -718,7 +717,6 @@ object SMGRemoteClient {
       if (ms.oid.isDefined) mm += ("o" -> Json.toJson(ms.oid.get))
       if (ms.pfId.isDefined) mm += ("pf" -> Json.toJson(ms.pfId.get))
       if (ms.aggShowUrlFilter.isDefined) mm += ("uf" -> Json.toJson(ms.aggShowUrlFilter.get))
-      if (ms.badSince.isDefined) mm += ("bs" -> Json.toJson(ms.badSince.get))
       Json.toJson(mm.toMap)
     }
   }
