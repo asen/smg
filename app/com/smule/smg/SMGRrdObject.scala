@@ -49,13 +49,15 @@ case class SMGRrdObject(id: String,
 
   val rrdDir = None
 
-  val isAgg = false
+  override val isAgg = false
 
-  val graphVarsIndexes = (0 until vars.size).toList
+  override val graphVarsIndexes = vars.indices.toList
 
-  val cdefVars: List[Map[String, String]] = List()
+  override val cdefVars: List[Map[String, String]] = List()
 
   override val refObj: Option[SMGObjectUpdate] = Some(this)
 
-  val isRrdObj = true
+  override val isRrdObj = true
+
+  override val pluginId: Option[String] = None
 }

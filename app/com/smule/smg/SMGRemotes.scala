@@ -113,7 +113,7 @@ trait SMGRemotesApi {
     * @param ovs - sequence of object views for which to get mon states
     * @return - async sequence of mon states
     */
-  def objectViewsStates(remoteId: String, ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonStateObjVar]]]
+  def objectViewsStates(remoteId: String, ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]]
 
   /**
     * Get all monitor logs since given period from the given remote
@@ -433,7 +433,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     clientForId(remoteId).get.heatmap(flt, maxSize, offset, limit)
   }
 
-  def objectViewsStates(remoteId: String, ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonStateObjVar]]] = {
+  def objectViewsStates(remoteId: String, ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]] = {
     if (clientForId(remoteId).nonEmpty)
       clientForId(remoteId).get.objectViewsStates(ovs)
     else Future { Map() }

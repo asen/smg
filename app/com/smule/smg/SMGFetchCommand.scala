@@ -12,12 +12,14 @@ package com.smule.smg
   * a rrd object command and its main purpose is to simplify building the commands
   * tree
   */
-trait SMGFetchCommand {
-  val id: String
+trait SMGFetchCommand extends SMGTreeNode {
+  //  val id: String // in tree node
   val command: SMGCmd
   val preFetch: Option[String]
   val isRrdObj: Boolean
-  val ignoreTs = false // only meaningful in local/non-rrd obj context
+  val ignoreTs = false // only meaningful in local/non-rrd obj context, which overrides that
+
+  override def parentId = preFetch
 }
 
 
@@ -36,6 +38,7 @@ case class SMGFetchCommandView(id: String,
   * @param node - the root node of the tree
   * @param children - the first-level children of that tree (each is a tree itself)
   */
+//TODO refactor this to use SMGTree[SMGFetchCommand]
 case class SMGFetchCommandTree(node: SMGFetchCommand, children: Seq[SMGFetchCommandTree]) {
   val isLeaf = children.isEmpty
 

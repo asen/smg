@@ -236,7 +236,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     // We need both the (future) images and monitor states resolved before responding
     Future.sequence(Seq(futImages, futMonitorStates)).map { mySeq =>
       val lst = mySeq(0).asInstanceOf[List[SMGImageView]]
-      val monStatesByImgView = mySeq(1).asInstanceOf[Map[String,Seq[SMGMonStateObjVar]]]
+      val monStatesByImgView = mySeq(1).asInstanceOf[Map[String,Seq[SMGMonState]]]
       //preserve order
       val monOverview = lst.flatMap(iv => monStatesByImgView.getOrElse(iv.obj.id, List()))
       // make sure we find agg objects and their op even if not specified in url params but e.g. coming from plugin
@@ -269,7 +269,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
         val mfut =  if (showMs) monitorApi.objectViewStates(Seq(obj)) else Future { Map() }
         Future.sequence(Seq(gfut,mfut)).map { t =>
           val lst = t(0).asInstanceOf[Seq[SMGImageView]]
-          val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonStateObjVar]]].flatMap(_._2).toList
+          val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonState]]].flatMap(_._2).toList
           Ok(views.html.show(configSvc.plugins, obj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms))
         }
       }
@@ -301,7 +301,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val mfut = if (showMs) monitorApi.objectViewStates(objList) else Future { Map() }
       Future.sequence(Seq(gfut,mfut)).map { t =>
         val lst = t(0).asInstanceOf[Seq[SMGImageView]]
-        val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonStateObjVar]]].flatMap(_._2).toList
+        val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonState]]].flatMap(_._2).toList
         Ok(views.html.show(configSvc.plugins, aobj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms))
       }
     }
@@ -550,7 +550,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
           val cmdBackoff = configSvc.objectVarNotifyCmdsAndBackoff(ou.get, None, v)
           (v, cmdBackoff._1, cmdBackoff._2)
         }
-        val hstate =  monitorApi.inspect(ov.get)
+        val hstate =  monitorApi.inspectObject(ov.get)
         Ok(views.html.inspectObject(ov.get, ac, nc, ncmds, hstate))
       } else NotFound("Object not found")
     }

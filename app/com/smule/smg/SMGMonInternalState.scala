@@ -1,0 +1,476 @@
+package com.smule.smg
+
+import play.api.libs.json.{JsValue, Json}
+
+import scala.collection.mutable
+
+/**
+  * Created by asen on 11/12/16.
+  */
+
+/**
+  * The internal (mutable) representation of a SMG state which
+  * keeps all relevant state data and takes care of common processing
+  * tasks. The specific subclasses implement any differences based
+  * their type (run state, pre-fetch state, object state and var state)
+  */
+trait SMGMonInternalState extends SMGTreeNode with SMGMonState {
+  //val id: String - in SMGTreeNode
+  //val parentId: String - in SMGTreeNode
+
+  override def recentStates: Seq[SMGState] = myRecentStates
+  override def isHard: Boolean = myIsHard
+  override def isAcked: Boolean = myIsAcked
+  override def isSilenced: Boolean = silencedUntil.isDefined
+
+  override def silencedUntil: Option[Int] = {
+    val sopt = myIsSilencedUntil // copy to avoid race condition in the if clause
+    if (sopt.isDefined && sopt.get < SMGState.tssNow) {
+      myIsSilencedUntil = None
+    }
+    myIsSilencedUntil
+  }
+
+  override def currentStateVal = currentState.state
+  override def severity = currentStateVal.id.toDouble
+  override def remote = SMGRemote.local
+
+  override def alertKey = id
+
+  def errorRepeat: Int = {
+    val mylst = myRecentStates.take(maxHardErrorCount)
+    if (mylst.head.isOk)
+      return 0
+    val (nonOk, rest) = mylst.span(!_.isOk)
+    nonOk.size
+  }
+
+  def badSince: Option[Int] = if (currentState.isOk) None else Some(myLastOkStateChange)
+
+  // abstracts
+  def ouids: Seq[String]
+  protected def vixOpt: Option[Int]
+  protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int)
+
+  def currentState = myRecentStates.head
+
+  //protected val configSvc: SMGConfigService
+  protected val monLog: SMGMonitorLogApi
+  protected val notifSvc: SMGMonNotifyApi
+
+  protected var myRecentStates: List[SMGState] = List(SMGState.initialState)
+  protected var myLastOkStateChange = SMGState.tssNow
+  protected var myLastStateChange = SMGState.tssNow
+
+  protected var myIsHard: Boolean = true
+  protected var myIsAcked: Boolean = false
+  protected var myIsSilencedUntil: Option[Int] = None
+  protected var myStateIsInherited = false
+
+  // XXX these are applicable to var state only but are put here to simplify serisalization/deserialization
+  protected var myMovingStatsOpt: Option[SMGMonValueMovingStats] = None
+  protected var myCounterPrevValue = Double.NaN
+  protected var myCounterPrevTs = 0
+
+  protected def maxHardErrorCount: Int
+
+  protected def maxRecentStates: Int = maxHardErrorCount
+
+  private val log = SMGLogger
+
+  override def aggShowUrlFilter: Option[String] = {
+    if (ouids.isEmpty)
+      return None
+    if (ouids.tail.isEmpty)
+      return Some(SMGMonState.oidFilter(ouids.head))
+    val rx = s"^(${ouids.map(oid => SMGRemote.localId(oid)).distinct.mkString("|")})$$"
+    Some("rx=" + java.net.URLEncoder.encode(rx, "UTF-8")) // TODO, better showUrl?
+  }
+
+  protected def currentStateDesc = {
+    val goodBadSince = if (currentState.isOk)
+      s"good since ${SMGState.formatTss(myLastOkStateChange)}"
+    else {
+      val s = s"bad since ${SMGState.formatTss(myLastOkStateChange)}"
+      if (myLastStateChange != myLastOkStateChange) s + s", last change ${SMGState.formatTss(myLastStateChange)}" else s
+    }
+    s"${currentState.desc} (ts=${currentState.timeStr}, $goodBadSince)"
+  }
+
+  protected def logEntry = SMGMonitorLogMsg(currentState.ts, currentState, myRecentStates.tail.headOption,
+    errorRepeat, isHard, ouids, vixOpt, remote)
+
+  protected def processAlertsAndLogs(prevStateWasInherited: Boolean): Unit = {
+    val curState: SMGState = myRecentStates.head
+    val prevStates = myRecentStates.tail
+
+    if (curState.isOk && prevStates.head.isOk)
+      return // no changes to report
+
+    lazy val wasHardError = prevStates.forall(!_.isOk)
+    lazy val isHardError = !curState.isOk && prevStates.take(maxHardErrorCount - 1).forall(!_.isOk)
+
+    if (curState.isOk) { // recovery
+      notifSvc.sendRecoveryMessages(this)
+      monLog.logMsg(logEntry)
+    } else { // error state
+      val isStateChange = curState.state != prevStates.head.state
+      val isHardChanged = isHardError && !wasHardError
+      lazy val (notifCmds, backoff) = notifyCmdsAndBackoff
+      if (isStateChange || isHardChanged || prevStateWasInherited) {
+        if (isHardError) {
+          notifSvc.sendAlertMessages(this, notifCmds)
+        }
+        monLog.logMsg(logEntry)
+      } else {
+        //no log msg - continuous hard error - just resend notifications if applicable
+        notifSvc.checkAndResendAlertMessages(this, backoff)
+      }
+    }
+  }
+
+  def addState(state: SMGState,  isInherited: Boolean): Unit = {
+    if (myRecentStates.isEmpty) {
+      log.warn(s"SMGMonInternalState.addState: empty myRecentStates for $id")
+      myRecentStates = List(state)
+      return
+    }
+
+    //check if we are flipping OK/non-OK state and update myLastOkStateChange
+    if (state.isOk != myRecentStates.head.isOk)
+      myLastOkStateChange = state.ts
+
+    // update myLastStateChange if any state value change
+    if (state.state != myRecentStates.head.state) {
+      myLastStateChange = state.ts
+    }
+
+    // prepend our new state
+    myRecentStates = state :: myRecentStates
+
+    myIsHard = state.isOk || myRecentStates.take(maxHardErrorCount).forall(!_.isOk)
+
+    if (!isInherited)
+      processAlertsAndLogs(myStateIsInherited)  // before myStateIsInherited has ben updated and recentStates have been dropped
+
+    // remember if current state was eligible to trigger alert/logs
+    myStateIsInherited = isInherited
+
+    // drop obsolete state(s)
+    while (myRecentStates.size > maxRecentStates) {
+      myRecentStates = myRecentStates.dropRight(1)
+    }
+
+    // remove any acknowledgements if states is OK
+    if (state.state == SMGState.OK)
+      myIsAcked = false
+  }
+
+  // TODO deprecate this
+  def silence(action: SMGMonSilenceAction): Unit = {
+    action.action match {
+      case SMGMonSilenceAction.ACK | SMGMonSilenceAction.ACK_PF => {
+        myIsAcked = action.silence
+      }
+      case SMGMonSilenceAction.SILENCE | SMGMonSilenceAction.SILENCE_PF => {
+        myIsSilencedUntil = if (action.silence) action.until else None
+      }
+    }
+  }
+
+  def serialize: JsValue = {
+    val mm = mutable.Map[String,JsValue](
+      "sts" -> Json.toJson(SMGState.tssNow),
+      "sid" -> Json.toJson(this.id),
+      "rss" -> Json.toJson(myRecentStates.map { ss =>
+        Json.toJson(Map("t" -> Json.toJson(ss.ts), "s" -> Json.toJson(ss.state.toString), "d" -> Json.toJson(ss.desc)))
+      }),
+      "lsc" -> Json.toJson(myLastStateChange),
+      "lkc" -> Json.toJson(myLastOkStateChange),
+      "cpt" -> Json.toJson(myCounterPrevTs)
+    )
+    if (!myCounterPrevValue.isNaN) mm += ("cpv" -> Json.toJson(myCounterPrevValue))
+    if (myIsHard) mm += ("hrd" -> Json.toJson("true"))
+    if (myIsAcked) mm += ("ack" -> Json.toJson("true"))
+    if (myIsSilencedUntil.isDefined) mm += ("slc" -> Json.toJson(myIsSilencedUntil.get))
+    if (myStateIsInherited) mm += ("sih" -> Json.toJson("true"))
+    if (myMovingStatsOpt.isDefined) mm += ("mvs" -> myMovingStatsOpt.get.serialize)
+    Json.toJson(mm.toMap)
+  }
+
+  def deserialize(src: JsValue): Unit = {
+    try {
+      val sts = (src \ "sts").get.as[Int]
+      //val statsAge = SMGState.tssNow - sts
+      val sid = (src \ "sid").get.as[String]
+
+      // sanity check, should never happen
+      if (sid != id){
+        log.error(s"SMGMonInternalState.deserialize: sid != id ($sid != $id)")
+        return
+      }
+
+      myRecentStates = (src \ "rss").as[List[JsValue]].map { jsv =>
+          SMGState((jsv \ "t").as[Int],
+            SMGState.withName((jsv \ "s").as[String]),
+            (jsv \ "d").as[String])
+        }
+
+      myLastStateChange = (src \ "lsc").as[Int]
+      myLastOkStateChange = (src \ "lkc").as[Int]
+      myCounterPrevTs = (src \ "cpt").as[Int]
+
+      myCounterPrevValue = (src \ "cpv").asOpt[Double].getOrElse(Double.NaN)
+      myIsHard = (src \ "hrd").asOpt[String].contains("true")
+      myIsAcked = (src \ "ack").asOpt[String].contains("true")
+      myStateIsInherited = (src \ "sih").asOpt[String].contains("true")
+      myIsSilencedUntil = (src \ "slc").asOpt[Int]
+
+      val mvsOpt = (src \ "mvs").asOpt[JsValue]
+
+      if (mvsOpt.isDefined && myMovingStatsOpt.isDefined) {
+        SMGMonValueMovingStats.deserialize(mvsOpt.get, myMovingStatsOpt.get)
+      } else if (mvsOpt.isDefined != myMovingStatsOpt.isDefined) {
+        log.error(s"SMGMonInternalState.deserialize: unexpected moving stats state: " +
+          s"js -> ${mvsOpt.isDefined}, mine -> ${myMovingStatsOpt.isDefined}")
+      }
+    } catch {
+      case x: Throwable => log.ex(x, s"SMGMonInternalState.deserialize: Unexpected exception for $id: src=$src")
+    }
+  }
+}
+
+class SMGMonVarState(var ou: SMGObjectUpdate,
+                     vix: Int,
+                     val configSvc: SMGConfigService,
+                     val monLog: SMGMonitorLogApi,
+                     val notifSvc: SMGMonNotifyApi) extends SMGMonInternalState {
+  val log = SMGLogger
+
+  override val id: String = SMGMonVarState.stateId(ou,vix)
+  override val parentId: Option[String] = Some(ou.id)
+
+  override def ouids: Seq[String] = Seq(ou.id)
+  override def vixOpt: Option[Int] = Some(vix)
+  override def oid: Option[String] = Some(ou.id)
+  override def pfId: Option[String] = ou.preFetch
+
+  private def label =  ou.vars(vix).getOrElse("label", "ds" + vix)
+
+  override def alertSubject: String = s"${ou.id}[$vix]:$label"
+
+  override def text: String = s"${ou.id}($vix:$label): ${ou.title}: $currentStateDesc"
+
+  myMovingStatsOpt = Some(new SMGMonValueMovingStats(ou.id, vix, ou.interval))
+//  myCounterPrevValue = Double.NaN
+//  myCounterPrevTs = 0
+
+  private def movingStats = myMovingStatsOpt.get
+
+  private def processCounterUpdate(ts: Int, rawVal: Double): Option[(Double,Option[String])] = {
+    val tsDelta = ts - myCounterPrevTs
+
+    val ret = if (tsDelta > (ou.interval * 3)) {
+      if (myCounterPrevTs > 0) {
+        log.debug(s"SMGMonVarState.processCounterUpdate($id): Time delta is too big: $ts - $myCounterPrevTs = $tsDelta")
+      }
+      None
+    } else if (tsDelta <= 0) {
+      log.error(s"SMGMonVarState.processCounterUpdate($id): Non-positive time delta detected: $ts - $myCounterPrevTs = $tsDelta")
+      None
+    } else {
+      val maxr = ou.vars(vix).get("max").map(_.toDouble)
+      val r = (rawVal - myCounterPrevValue) / tsDelta
+      val tpl = if ((r < 0) || (maxr.isDefined && (maxr.get < r))){
+        log.debug(s"SMGMonVarState.processCounterUpdate($id): Counter overflow detected: p=$myCounterPrevValue/$myCounterPrevTs c=$rawVal/$ts r=$r maxr=$maxr")
+        (Double.NaN, Some(s"Counter overflow: p=$myCounterPrevValue c=$rawVal td=$tsDelta r=$r maxr=${maxr.getOrElse(Double.NaN)}"))
+      } else
+        (r, None)
+      Some(tpl)
+    }
+    myCounterPrevValue = rawVal
+    myCounterPrevTs = ts
+    ret
+  }
+
+  def processValue(ts: Int, rawVal: Double): Unit = {
+    val valOpt = if (ou.rrdType == "COUNTER") {
+      processCounterUpdate(ts, rawVal)
+    } else Some((rawVal, None))
+    if (valOpt.isEmpty) {
+      return
+    }
+    val (newVal, nanDesc) = valOpt.get
+    val alertConfs = configSvc.objectValueAlertConfs(ou, vix)
+    var ret : SMGState = null
+    if (newVal.isNaN) {
+      ret = SMGState(ts, SMGState.E_ANOMALY, s"ANOM: value=NaN (${nanDesc.getOrElse("unknown")})")
+    } else if (alertConfs.nonEmpty) {
+      val allAlertStates = alertConfs.map { alertConf =>
+        var curRet: SMGState = null
+        val warnThreshVal = alertConf.warn.map(_.value).getOrElse(Double.NaN)
+        val critThreshVal = alertConf.crit.map(_.value).getOrElse(Double.NaN)
+        val descSx = s"( $warnThreshVal / $critThreshVal )"
+
+        if (alertConf.crit.isDefined) {
+          val alertDesc = alertConf.crit.get.checkAlert(newVal)
+          if (alertDesc.isDefined)
+            curRet = SMGState(ts, SMGState.E_VAL_CRIT, s"CRIT: ${alertDesc.get} : $descSx")
+        }
+        if ((curRet == null) && alertConf.warn.isDefined ) {
+          val alertDesc = alertConf.warn.get.checkAlert(newVal)
+          if (alertDesc.isDefined)
+            curRet = SMGState(ts,SMGState.E_VAL_WARN, s"WARN: ${alertDesc.get} : $descSx")
+        }
+
+        if (alertConf.spike.isDefined) {
+          // Update short/long term averages, to be used for spike/drop detection
+          val ltMaxCounts = alertConf.spike.get.maxLtCnt(ou.interval)
+          val stMaxCounts = alertConf.spike.get.maxStCnt(ou.interval)
+          movingStats.update(ts, newVal, stMaxCounts, ltMaxCounts)
+          // check for spikes
+          if (curRet == null) {
+            val alertDesc = alertConf.spike.get.checkAlert(movingStats, stMaxCounts, ltMaxCounts)
+            if (alertDesc.isDefined)
+              curRet = SMGState(ts, SMGState.E_ANOMALY, s"ANOM: ${alertDesc.get}")
+          }
+        } else movingStats.reset()
+
+        if (curRet == null) {
+          curRet = SMGState(ts,SMGState.OK, s"OK: value=$newVal : $descSx")
+        }
+        curRet
+      }
+      ret = allAlertStates.maxBy(_.state)
+    }
+    if (ret == null) {
+      ret = SMGState(ts, SMGState.OK, s"OK: value=$newVal")
+    }
+    if (ret.state != SMGState.OK) {
+      log.debug(s"MONITOR: ${ou.id} : $vix : $ret")
+    }
+    addState(ret, isInherited = false)
+  }
+
+  override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
+    lazy val mntype = SMGMonNotifySeverity.fromStateValue(currentStateVal)
+    configSvc.objectVarNotifyCmdsAndBackoff(ou, Some(vix), mntype)
+  }
+  //protected val maxRecentStates: Int = 3
+  override protected def maxHardErrorCount = 3 // TODO read from config
+}
+
+object SMGMonVarState {
+  def stateId(ou: SMGObjectUpdate, vix: Int) = s"${ou.id}:$vix"
+}
+
+trait SMGMonBaseFetchState extends SMGMonInternalState {
+
+  def processError(ts: Int, exitCode :Int, errors: List[String], isInherited: Boolean) = {
+    val errorMsg = s"Fetch error: exit=$exitCode, OUTPUT: " + errors.mkString("\n")
+    addState(SMGState(ts, SMGState.E_FETCH, errorMsg), isInherited)
+  }
+
+  def processSuccess(ts: Int, isInherited: Boolean) = {
+    addState(SMGState(ts, SMGState.OK, "OK"), isInherited)
+  }
+}
+
+class SMGMonObjState(var ou: SMGObjectUpdate,
+                     val configSvc: SMGConfigService,
+                     val monLog: SMGMonitorLogApi,
+                     val notifSvc: SMGMonNotifyApi) extends SMGMonBaseFetchState {
+  override val id: String = SMGMonObjState.stateId(ou)
+
+  override def parentId: Option[String] = SMGMonPfState.fetchParentStateId(ou.preFetch, ou.interval, ou.pluginId)
+
+  override def ouids: Seq[String] = Seq(ou.id)
+  override def vixOpt: Option[Int] = None
+
+  override def oid: Option[String] = Some(ou.id)
+  override def pfId: Option[String] = ou.preFetch
+  override def text: String = s"${ou.id}: ${ou.title}: $currentStateDesc"
+
+  override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
+    lazy val mntype = SMGMonNotifySeverity.fromStateValue(currentStateVal)
+    configSvc.objectVarNotifyCmdsAndBackoff(ou, None, mntype)
+  }
+
+  override protected def maxHardErrorCount = 3 // TODO read from config
+}
+
+object SMGMonObjState {
+  def stateId(ou: SMGObjectUpdate) = s"${ou.id}"
+}
+
+class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
+                    interval:Int,
+                    val configSvc: SMGConfigService,
+                    val monLog: SMGMonitorLogApi,
+                    val notifSvc: SMGMonNotifyApi)  extends SMGMonBaseFetchState {
+  override val id: String = SMGMonPfState.stateId(pfCmd, interval)
+  override def parentId: Option[String] = SMGMonPfState.fetchParentStateId(pfCmd.preFetch, interval, None)
+
+  override def ouids: Seq[String] = configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval)).map(_.id)
+  override def vixOpt: Option[Int] = None
+  override def oid: Option[String] = None
+  override def pfId: Option[String] = Some(pfCmd.id)
+
+  override def text: String = s"${pfCmd.id}(intvl=$interval): $currentStateDesc"
+
+  override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
+    val tuples = configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval)).
+      map(ou => configSvc.objectVarNotifyCmdsAndBackoff(ou,None, SMGMonNotifySeverity.UNKNOWN))
+    lazy val backoff = tuples.map(_._2).max
+    lazy val ncmds = tuples.flatMap(_._1).distinct
+    (ncmds, backoff)
+  }
+
+  override protected def maxHardErrorCount = 3 // TODO read from config
+
+}
+
+object SMGMonPfState {
+  def stateId(pfCmd: SMGPreFetchCmd, interval: Int): String = stateId(pfCmd.id, interval)
+  def stateId(pfCmdId: String, interval:Int): String = s"$pfCmdId:$interval"
+  def fetchParentStateId(pfOpt: Option[String], interval: Int, pluginId: Option[String]) =
+    Some(pfOpt.map(pfid => SMGMonPfState.stateId(pfid, interval)).getOrElse(SMGMonRunState.stateId(interval, pluginId)))
+
+}
+
+class SMGMonRunState(val interval: Int,
+                     val pluginId: Option[String],
+                     val configSvc: SMGConfigService,
+                     val monLog: SMGMonitorLogApi,
+                     val notifSvc: SMGMonNotifyApi) extends SMGMonInternalState {
+
+  override val id: String = SMGMonRunState.stateId(interval, pluginId)
+  override def parentId: Option[String] = None
+
+  override def ouids: Seq[String] = Seq()
+  override def vixOpt: Option[Int] = None
+
+  override def oid: Option[String] = None
+  override def pfId: Option[String] = None
+
+  override def text: String = currentState.desc
+
+  def processOk(ts:Int) = addState(SMGState(ts, SMGState.OK, s"interval $interval - OK"), isInherited = false)
+
+  private val pluginDesc = pluginId.map(s => s" (plugin - $s)").getOrElse("")
+  def processOverlap(ts: Int) = addState(
+    SMGState(ts, SMGState.E_SMGERR, s"interval $interval$pluginDesc - overlapping runs"),
+    isInherited = false)
+
+  override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
+    val ncmds = configSvc.globalNotifyCmds(SMGMonNotifySeverity.SMGERR)
+    (ncmds, 0)
+  }
+
+  override protected def maxHardErrorCount = 2 // TODO read from config
+}
+
+object SMGMonRunState {
+  def stateId(interval: Int, pluginId: Option[String]) = "$interval_" + interval.toString +
+    pluginId.map(s => s"-$s").getOrElse("")
+}

@@ -1,5 +1,5 @@
-@import com.smule.smg.SMGMonStateObjVar
-@(monStates: Seq[SMGMonStateObjVar])
+@import com.smule.smg.SMGMonState
+@(monStates: Seq[SMGMonState])
 @SVG_WIDTH = @{ 600 }
 @CELL_HEIGHT = @{ 8 }
 @CELL_WIDTH = @{ 9 }
@@ -22,11 +22,11 @@
         @for((ms,ixx) <- mso.recentStates.zipWithIndex){
         <rect data-ixx="@ixx" fill="@{ms.stateColor}" width="@CELL_WIDTH" height="@CELL_HEIGHT"
               x="@{ix * CELL_SPACE}" y="@{(rowi * ROW_SPACE) + (ixx * CELL_HEIGHT)}" >
-          <title>@mso.longDesc(ms)</title>
+          <title>@mso.text</title>
         </rect>
         <text font-size="@{CELL_WIDTH - 1}" fill="@ms.textColor"
               x="@{ix * CELL_SPACE + 2}" y="@{(rowi * ROW_SPACE) + ((ixx + 1) * CELL_HEIGHT) - 1}">
-          <title>@mso.longDesc(ms)</title>
+          <title>@mso.text</title>
           @ms.charRep
         </text>
         }

@@ -2,7 +2,6 @@
 @import com.smule.smg.SMGMonObjAlertConf
 @import com.smule.smg.SMGMonObjNotifyConf
 @import com.smule.smg.SMGMonNotifyCmd
-@import com.smule.smg.SMGObjectHealth
 @import com.smule.smg.SMGMonNotifySeverity
 @(ov:SMGObjectView, acs: Option[SMGMonObjAlertConf], ncs: Option[SMGMonObjNotifyConf], ncmds: Seq[(SMGMonNotifySeverity.Value, Seq[SMGMonNotifyCmd], Int)] , hstate: Option[String])
 
@@ -44,10 +43,12 @@
 
 
 <h3>Health State</h3>
-<p>
+<div>
   @if(hstate.isEmpty){
-  No health state available
+    No health state available
   } else {
-  @hstate.get
+    @for(ln <- hstate.get.split("\n")){
+    <p>@ln</p>
+    }
   }
-</p>
+</div>

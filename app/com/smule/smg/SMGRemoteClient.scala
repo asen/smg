@@ -129,28 +129,10 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
   implicit val smgStateReads: Reads[SMGState] = SMGState.smgStateReads
 
-  implicit val smgMonStateObjVarReads: Reads[SMGMonStateObjVar] = {
-    (
-       (
-         JsPath \ "ouid").read[String].map(oid => prefixedId(oid) ) and
-         (JsPath \ "ix").read[Int] and
-         (JsPath \ "ovids").readNullable[List[String]].map(optLst => optLst.getOrElse(List()).map(ovid => prefixedId(ovid))) and
-         (JsPath \ "pfid").readNullable[String] and
-         (JsPath \ "title").read[String] and
-         (JsPath \ "label").read[String] and
-         (JsPath \ "ack").readNullable[Int].map(_.getOrElse(0) == 1) and
-         (JsPath \ "slc").readNullable[Int].map(_.getOrElse(0) == 1) and
-         (JsPath \ "sunt").readNullable[Int] and
-         (JsPath \ "rs").read[List[SMGState]] and
-         (JsPath \ "bs").readNullable[Int] and
-         // XXX "remote" is always null ...
-        (JsPath \ "remote").readNullable[String].map(s => remote)
-      ) (SMGMonStateObjVar.apply _)
-  }
-
   implicit val smgMonStateViewReads: Reads[SMGMonStateView] = {
     (
-      (JsPath \ "s").read[Double] and
+      (JsPath \ "id").readNullable[String].map(optid => prefixedId(optid.getOrElse("UNKNOWN"))) and //TODO temp readNullable
+        (JsPath \ "s").read[Double] and
         (JsPath \ "t").read[String] and
         (JsPath \ "h").read[Int].map(o => o == 1) and
         (JsPath \ "a").readNullable[Int].map(o => o.getOrElse(0) == 1) and
@@ -159,7 +141,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
         (JsPath \ "o").readNullable[String].map(oid => oid.map(s => prefixedId(s))) and
         (JsPath \ "pf").readNullable[String].map(pfid => pfid.map(s => prefixedId(s))) and
         (JsPath \ "uf").readNullable[String] and
-        (JsPath \ "v").read[String].map(s => SMGState.withName(s)) and
+        (JsPath \ "rs").readNullable[List[SMGState]].map(opt => opt.getOrElse(List())) and // TODO temp readNullable
         (JsPath \ "er").readNullable[Int].map(oi => oi.getOrElse(0)) and // TODO temp readNullable
         (JsPath \ "bs").readNullable[Int] and
         // XXX "remote" is always null ...
@@ -500,24 +482,24 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
-  def objectViewsStates(ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonStateObjVar]]] = {
+  def objectViewsStates(ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]] = {
     val oids: String = ovs.map(o => toLocalId(o.id)).mkString(",")
     val postMap = Map("ids" -> Seq(oids))
-    ws.url(remote.url + API_PREFIX + "monitor/ovstates").
+    ws.url(remote.url + API_PREFIX + "monitor/ostates").
       withRequestTimeout(shortTimeoutMs).post(postMap).map { resp =>
       Try {
         val jsval = Json.parse(resp.body)
-        jsval.as[Map[String,Seq[SMGMonStateObjVar]]].map(t => (prefixedId(t._1), t._2))
+        jsval.as[Map[String,Seq[SMGMonStateView]]].map(t => (prefixedId(t._1), t._2))
       }.recover {
         case x => {
           log.ex(x, "remote monitor/ovstates parse error: " + remote.id)
-          Map[String,Seq[SMGMonStateObjVar]]()
+          Map[String,Seq[SMGMonState]]()
         }
       }.get
     }.recover {
       case x => {
         log.ex(x, "remote monitor/ovstates fetch error: " + remote.id)
-        Map[String,Seq[SMGMonStateObjVar]]()
+        Map[String,Seq[SMGMonState]]()
       }
     }
   }
@@ -720,38 +702,14 @@ object SMGRemoteClient {
     }
   }
 
-  implicit val smgMonStateObjVarWrites = new Writes[SMGMonStateObjVar] {
-    def writes(ms: SMGMonStateObjVar) = {
-      val mm = mutable.Map(
-        "ouid" -> Json.toJson(ms.ouid),
-        "ix" -> Json.toJson(ms.ix),
-        "ovids" -> Json.toJson(ms.ovids),
-        "title" -> Json.toJson(ms.title),
-        "label" -> Json.toJson(ms.label),
-        "rs" -> Json.toJson(ms.recentStates)
-      )
-      if (ms.pfId.isDefined) mm += ("pfid" -> Json.toJson(ms.pfId.get))
-      if (ms.isAcked) mm += ("ack" -> Json.toJson(1))
-      if (ms.isSilenced) mm += ("slc" -> Json.toJson(1))
-      if (ms.silencedUntil.isDefined) mm += ("sunt" -> Json.toJson(ms.silencedUntil.get))
-      if (ms.badSince.isDefined) mm += ("bs" -> Json.toJson(ms.badSince.get))
-      Json.toJson(mm.toMap)
-    }
-  }
-
-  implicit val smgMonStateObjListWrites = new Writes[Seq[SMGMonStateObjVar]] {
-    def writes(mss: Seq[SMGMonStateObjVar]) = {
-      Json.toJson(mss)
-    }
-  }
-
   implicit val smgMonStateWrites = new Writes[SMGMonState] {
     def writes(ms: SMGMonState) = {
       val mm = mutable.Map(
+        "id" -> Json.toJson(ms.id),
         "s" -> Json.toJson(ms.severity),
         "t" -> Json.toJson(ms.text),
         "h" -> Json.toJson(if (ms.isHard) 1 else 0),
-        "v" -> Json.toJson(ms.currentStateVal),
+        "rs" -> Json.toJson(ms.recentStates),
         "er" -> Json.toJson(ms.errorRepeat)
       )
       if (ms.isAcked) mm += ("a" -> Json.toJson(1))

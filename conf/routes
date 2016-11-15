@@ -54,8 +54,8 @@ GET     /api/monitor/fcstate   controllers.Api.monitorFetchCommandState(cmd: Str
 GET     /api/monitor/fcsilence   controllers.Api.monitorFetchCommandSilence(cmd: String, until: Option[Int])
 GET     /api/monitor/logs       controllers.Api.monitorLog(period: Option[String], limit: Option[Int], sev: Option[String], soft: Option[String])
 GET     /api/monitor/heatmap   controllers.Api.monitorHeatmap
-GET     /api/monitor/ovstates   controllers.Api.monitorObjectViewsGet(ids: String)
-POST    /api/monitor/ovstates   controllers.Api.monitorObjectViewsPost
+GET     /api/monitor/ostates   controllers.Api.monitorObjectViewsGet(ids: String)
+POST    /api/monitor/ostates   controllers.Api.monitorObjectViewsPost
 GET     /api/monitor/silence/:oid   controllers.Api.monitorSilence(oid: String, act: String, slnc: Option[String], unt: Option[Int])
 
 GET     /api/plugin/:pluginId  controllers.Api.pluginData(pluginId: String)

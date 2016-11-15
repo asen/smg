@@ -2,10 +2,10 @@
 @import com.smule.smg.SMGObjectView
 @import com.smule.smg.SMGPlugin
 @import com.smule.smg.GraphOptions
-@import com.smule.smg.SMGMonStateObjVar
+@import com.smule.smg.SMGMonState
 
 
-@(plugins: Seq[SMGPlugin], obj: SMGObjectView, lst: Seq[SMGImageView], cols: Int, cwidth: Int, gopts: GraphOptions, showMs: Boolean, ms: Seq[SMGMonStateObjVar])
+@(plugins: Seq[SMGPlugin], obj: SMGObjectView, lst: Seq[SMGImageView], cols: Int, cwidth: Int, gopts: GraphOptions, showMs: Boolean, ms: Seq[SMGMonState])
 
   @main("SMG - " + obj.title, plugins) {
 

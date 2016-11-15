@@ -214,32 +214,29 @@ class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
 }
 
 object SMGMonValueMovingStats {
-  def deserialize(src: JsValue, ouid: String, vix: Int, interval: Int): SMGMonValueMovingStats = {
-    val ret = new SMGMonValueMovingStats(ouid, vix, interval)
+  def deserialize(src: JsValue, tgt: SMGMonValueMovingStats): Unit = {
 
     val lastUpdateTsJsv = src \ "lastUpdateTs"
 
     if (lastUpdateTsJsv.toOption.isDefined){
-      ret.lastUpdateTs = lastUpdateTsJsv.as[Int]
+      tgt.lastUpdateTs = lastUpdateTsJsv.as[Int]
       // TODO check age? (will be discarded if too old on next update anyway)
-    } else ret.lastUpdateTs = SMGRrd.tssNow //TODO temp - for backwards compatibility
+    } else tgt.lastUpdateTs = SMGRrd.tssNow //TODO temp - for backwards compatibility
 
 
     val stValsJsv = src \ "stVals"
     if (stValsJsv.toOption.isDefined) {
-      stValsJsv.as[List[Double]].foreach(v => ret.stVals += v)
+      stValsJsv.as[List[Double]].foreach(v => tgt.stVals += v)
     }
 
     val prevStValsJsv = src \ "prevStVals"
     if (prevStValsJsv.toOption.isDefined) {
-      prevStValsJsv.as[List[Double]].foreach(v => ret.prevStVals += v)
+      prevStValsJsv.as[List[Double]].foreach(v => tgt.prevStVals += v)
     }
 
     val ltStatsJsv = src \ "ltStats"
     if (ltStatsJsv.toOption.isDefined) {
-      ltStatsJsv.as[List[JsValue]].foreach(v => ret.ltStats += SMGMonValueChunkStats.deserialize(v))
+      ltStatsJsv.as[List[JsValue]].foreach(v => tgt.ltStats += SMGMonValueChunkStats.deserialize(v))
     }
-
-    ret
   }
 }

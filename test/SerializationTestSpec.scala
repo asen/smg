@@ -21,7 +21,9 @@ class SerializationTestSpec extends Specification {
       implicit val jsSer = SMGRemoteClient.smgMonStateWrites
 
       val monStates = (1 to 1000).map { i =>
-        SMGMonStateView(severity = SMGState.OK.id.toDouble,
+        SMGMonStateView(
+          id = s"some.object.id.$i",
+          severity = SMGState.OK.id.toDouble,
           text = s"test state $i",
           isHard = true, isAcked = false,
           isSilenced = false,
@@ -29,7 +31,7 @@ class SerializationTestSpec extends Specification {
           oid = Some(s"some.object.id.$i"),
           pfId = Some(s"some.pf.id.${i % 10}"),
           aggShowUrlFilter = Some(s"px=some.object.id.$i"),
-          currentStateVal = SMGState.OK,
+          recentStates = Seq(),
           errorRepeat = 0,
           badSince = None,
           remote = SMGRemote.local

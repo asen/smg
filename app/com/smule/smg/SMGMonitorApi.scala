@@ -20,6 +20,21 @@ object SMGState extends Enumeration {
 
   val hmsTimeFormat = new SimpleDateFormat("HH:mm:ss")
 
+  val shortTimeFormat = new SimpleDateFormat("MMM d HH:mm:ss")
+
+  val longTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+
+  def formatTss(ts: Int): String = {
+    val tsDiff = Math.abs(tssNow - ts)
+    val myFmt = if (tsDiff < 24 * 3600)
+      hmsTimeFormat
+    else  if (tsDiff < 365 * 24 * 3600)
+      shortTimeFormat
+    else
+      longTimeFormat
+    myFmt.format(new Date(ts.toLong * 1000))
+  }
+
   private val severityChars = Map(
     0 -> "",   //OK
     1 -> "~",  //E_ANOMALY
@@ -69,13 +84,16 @@ object SMGState extends Enumeration {
         (JsPath \ "desc").read[String]
       ) (SMGState.apply _)
   }
+
+  def initialState = SMGState(SMGState.tssNow, SMGState.OK, "Initial state")
 }
 
 case class SMGState(ts: Int, state: SMGState.Value, desc: String) {
-  def timeStr = SMGState.hmsTimeFormat.format(new Date(ts.toLong * 1000))
+  def timeStr = SMGState.formatTss(ts)
   def charRep = SMGState.stateChar(state.id)
   def stateColor = SMGState.stateColor(state.id)
   def textColor = SMGState.stateTextColor(state.id)
+  val isOk = state == SMGState.OK
 }
 
 object SMGMonState {
@@ -98,24 +116,29 @@ object SMGMonState {
 
 trait SMGMonState {
 
-  val severity: Double
-  def text: String
-  val isHard: Boolean
-  val isAcked: Boolean
-  val isSilenced: Boolean
-  val silencedUntil: Option[Int]
-  val currentStateVal: SMGState.Value
-  val oid: Option[String]
-  val pfId: Option[String]
-  val aggShowUrlFilter: Option[String]
-  val remote : SMGRemote
+  val id: String
 
-  val errorRepeat: Int
+  def severity: Double
+  def text: String
+  def isHard: Boolean
+  def isAcked: Boolean
+  def isSilenced: Boolean
+  def silencedUntil: Option[Int]
+  def currentStateVal: SMGState.Value
+  def oid: Option[String]
+  def pfId: Option[String]
+  def aggShowUrlFilter: Option[String]
+  def remote : SMGRemote
+
+  def recentStates: Seq[SMGState]
+
+  def errorRepeat: Int
   def badSince: Option[Int]
 
   def badSinceStr = badSince.map(bs => new Date(1000L * bs).toString)
 
   def alertKey: String
+  def alertSubject = alertKey // can be overriden
 
   private lazy val urlPx = "/dash?remote=" + remote.id + "&"
 
@@ -157,7 +180,7 @@ trait SMGMonState {
 
   def notifySubject(smgHost: String, smgRemoteId: Option[String], isRepeat: Boolean) = {
     val repeatStr = if (isRepeat) "(repeat) " else ""
-    s"${SMGMonNotifySeverity.fromStateValue(currentStateVal)}: ${smgRemoteId.map(rid => s"($rid) ").getOrElse("")}$repeatStr$alertKey"
+    s"${SMGMonNotifySeverity.fromStateValue(currentStateVal)}: ${smgRemoteId.map(rid => s"($rid) ").getOrElse("")}$repeatStr$alertSubject"
   }
 
   private def bodyLink(smgBaseUrl: String, smgRemoteId: Option[String]) = if (myShowUrlFilter.isEmpty)
@@ -175,7 +198,8 @@ trait SMGMonState {
 }
 
 // "generic"/remote mon state
-case class SMGMonStateView(severity: Double,
+case class SMGMonStateView(id: String,
+                           severity: Double,
                            text: String,
                            isHard: Boolean,
                            isAcked: Boolean,
@@ -184,17 +208,18 @@ case class SMGMonStateView(severity: Double,
                            oid: Option[String],
                            pfId: Option[String],
                            aggShowUrlFilter: Option[String],
-                           currentStateVal: SMGState.Value,
+                           recentStates: Seq[SMGState],
                            errorRepeat: Int,
                            badSince: Option[Int],
                            remote: SMGRemote
                           ) extends SMGMonState {
 
-  def alertKey = oid.getOrElse(pfId.getOrElse(""))
+  def alertKey = id
+  val currentStateVal = recentStates.headOption.map(_.state).getOrElse(SMGState.E_SMGERR) // XXX empty recentStates is smg err
 }
 
 // local agg (condensed) mon state
-case class SMGMonStateAgg(lst: Seq[SMGMonState], showUrlFilter: String) extends SMGMonState {
+case class SMGMonStateAgg(id: String, lst: Seq[SMGMonState], showUrlFilter: String) extends SMGMonState {
 
   lazy val lstsz = lst.size
 
@@ -220,6 +245,14 @@ case class SMGMonStateAgg(lst: Seq[SMGMonState], showUrlFilter: String) extends 
 //  override lazy val hardStr = ""
   override val remote = SMGRemote.local
 
+  override val recentStates = {
+    val longestListState = lst.maxBy(_.recentStates.size)
+    longestListState.recentStates.indices.map { i =>
+      val statesAtI = lst.map(ms => ms.recentStates.lift(i)).collect { case Some(x) => x }
+      statesAtI.maxBy(_.state)
+    }
+  }
+
   // XXX chop off :ix portion of child alert keys to define this alert key.
   // Agg states cover entire objects in the context of alerting so var indexes are thrown away
   def alertKey = lst.map(_.alertKey.split(":")(0)).distinct.mkString(",")
@@ -243,86 +276,6 @@ object SMGMonStateAgg {
     val rx = s"^(${oids.map(oid => SMGRemote.localId(oid)).distinct.mkString("|")})$$"
     "rx=" + java.net.URLEncoder.encode(rx, "UTF-8") // TODO, better showUrl?
   }
-
-  def buildMonState(lst: Seq[SMGMonStateObjVar]): SMGMonStateAgg = {
-    SMGMonStateAgg(lst, objectsUrlFilter(lst.map(_.ouid)))
-  }
-}
-
-case class SMGMonStatePreFetch(lst: Seq[SMGMonStateObjVar],
-                               pfId: Option[String],
-                               exitCode:Int,
-                               errors: List[String],
-                               errorRepeat: Int
-                              ) extends SMGMonState {
-
-  override val severity =  if (lst.isEmpty || exitCode == 0) 0 else lst.map(_.severity).max
-  override def text = s"Fetch ${if (exitCode == 0) "recovery" else "error"}: " + lst.map(ms => ms.title).distinct.mkString(", ") + s": exit=$exitCode OUTPUT: " + errors.mkString("\n")
-  override val isHard: Boolean = lst.exists(_.isHard)
-  override val isAcked: Boolean = lst.forall(_.isAcked)
-  override val isSilenced: Boolean = lst.forall(_.isSilenced)
-  private val minSilencedUntil = lst.map(ovs => ovs.silencedUntil.getOrElse(Int.MaxValue)).min
-  override val silencedUntil: Option[Int] = if (minSilencedUntil == Int.MaxValue) None else Some(minSilencedUntil)
-  override val oid = None
-  override val aggShowUrlFilter = Some(SMGMonStateAgg.objectsUrlFilter(lst.map(_.ouid)))
-  lazy val currentStateVal = if (exitCode == 0) SMGState.OK else SMGState.E_FETCH
-//  override lazy val hardStr = ""
-  override val remote = SMGRemote.local
-  def alertKey = pfId.get
-
-  override val badSince: Option[Int] = {
-    val badlst = lst.map(_.badSince).filter(_.isDefined).map(_.get)
-    if (badlst.isEmpty)
-      None
-    else
-      Some(badlst.min)
-  }
-}
-
-
-// local object variable state
-case class SMGMonStateObjVar(ouid: String,
-                             ix: Int,
-                             ovids: List[String],
-                             pfId: Option[String],
-                             title: String,
-                             label: String,
-                             isAcked: Boolean,
-                             isSilenced: Boolean,
-                             silencedUntil: Option[Int],
-                             recentStates: List[SMGState],
-                             badSince: Option[Int],
-                             remote: SMGRemote
-                         ) extends SMGMonState{
-
-  //  def currentState = recentStates.head
-
-  val desc = s"$title ($label)"
-
-  def longDesc(s: SMGState) = s"$desc: ${s.desc} (ts=${s.timeStr})"
-
-  lazy val severity = currentState.state.id.toDouble
-  def text = longDesc(currentState)
-  lazy val isHard = !recentStates.exists(_.state == SMGState.OK)
-  lazy val currentState = recentStates.head
-
-  val filterOids = (List(ouid) ++ ovids).distinct
-
-  override val aggShowUrlFilter = if (filterOids.nonEmpty && filterOids.tail.nonEmpty) {
-    Some(SMGMonStateAgg.objectsUrlFilter(filterOids))
-  } else None
-
-  override val oid = filterOids.headOption
-  lazy val currentStateVal = currentState.state
-
-  override val errorRepeat = {
-    val lastOkIdx = recentStates.indexWhere(_.state == SMGState.OK)
-    if (lastOkIdx == -1)
-      recentStates.size
-    else
-      lastOkIdx
-  }
-  def alertKey = s"$ouid:$ix:$label"
 }
 
 case class SMGMonStateGlobal(title: String,
@@ -331,6 +284,7 @@ case class SMGMonStateGlobal(title: String,
                             ) extends SMGMonState{
 
   //  def currentState = recentStates.head
+  val id = label
 
   val desc = s"$title ($label)"
 
@@ -348,11 +302,13 @@ case class SMGMonStateGlobal(title: String,
   lazy val currentStateVal = currentState.state
   override val remote = SMGRemote.local
 
-  val badSince: Option[Int] = None // TODO
+  override val badSince: Option[Int] = None // TODO
 
   override val errorRepeat  = 1
 
-  def alertKey = s"${SMGMonState.MON_STATE_GLOBAL_PX}$label"
+  override def alertKey = s"${SMGMonState.MON_STATE_GLOBAL_PX}$label"
+
+  override def recentStates: Seq[SMGState] = Seq(currentState)
 }
 
 case class SMGMonHeatmap(lst: List[SMGMonState], statesPerSquare: Int)
@@ -380,7 +336,7 @@ trait SMGMonitorApi {
     * @param ovs - sequence of object views for which to get mon states
     * @return - async sequence of mon states
     */
-  def objectViewStates(ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonStateObjVar]]]
+  def objectViewStates(ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]]
 
   /**
     * get all local problematic SMGMonStates
@@ -444,6 +400,6 @@ trait SMGMonitorApi {
   val monLogApi: SMGMonitorLogApi
 
 
-  def inspect(ov:SMGObjectView): Option[String]
+  def inspectObject(ov:SMGObjectView): Option[String]
 
 }

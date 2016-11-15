@@ -60,9 +60,9 @@ class SMGUpdateActor(configSvc: SMGConfigService) extends Actor {
               log.debug(s"Running pre_fetch command: $pf")
               try {
                 pf.command.run
-                configSvc.sendPfMsg(SMGDFPfMsg(SMGRrd.tssNow, pf.id, leafObjs, 0, List()))
-                SMGRunStats.incIntervalCount(interval)
                 //this is reached only on successfull pre-fetch
+                configSvc.sendPfMsg(SMGDFPfMsg(SMGRrd.tssNow, pf.id, interval, leafObjs, 0, List()))
+                SMGRunStats.incIntervalCount(interval)
                 val updTs = if (pf.ignoreTs) None else Some(SMGRrd.tssNow)
                 val (childObjTrees, childPfTrees) = fRoot.children.partition(_.node.isRrdObj)
                 if (childObjTrees.nonEmpty) {
@@ -82,12 +82,8 @@ class SMGUpdateActor(configSvc: SMGConfigService) extends Actor {
                   log.error(s"Failed pre_fetch command [${pf.id}]: ${ex.getMessage}")
                   val errTs = SMGRrd.tssNow
                   val errLst = List(pf.command.str + s" (${pf.command.timeoutSec})", ex.stdout, ex.stderr)
-                  configSvc.sendPfMsg(SMGDFPfMsg(errTs, pf.id, leafObjs, ex.exitCode, errLst))
-                  leafObjs.foreach { o =>
-                    configSvc.sendObjMsg(SMGDFObjMsg(errTs, o, List(), ex.exitCode, errLst))
-                  }
+                  configSvc.sendPfMsg(SMGDFPfMsg(errTs, pf.id, interval, leafObjs, ex.exitCode, errLst))
                   (1 to fRoot.size).foreach(_ => SMGRunStats.incIntervalCount(interval))
-                  //throw ex
                 }
               }
             } catch {
