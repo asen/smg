@@ -125,7 +125,7 @@ object SMGRrd {
     val s = if (ip <= 0){
       "Unk"
     } else {
-      val retSecs = if (ip < parseRrdPeriod("32h")) {
+      val retSecs = if (ip <= parseRrdPeriod("30h")) {
         rrdInterval
       } else if (ip < parseRrdPeriod("4d")) {
         Math.max(parseRrdPeriod("300"), rrdInterval)
@@ -264,8 +264,13 @@ object SMGRrd {
   }
 
   def lastUpdated(lastLabel: String) = if (lastLabel != "")
-    " 'COMMENT:\\s' 'GPRINT:" + lastLabel + "lst:last data point from %Y-%m-%d %H\\:%M\\n:strftime' "
+    " 'COMMENT:\\s' 'GPRINT:" + lastLabel + "lst:last data point from %Y-%m-%d %H\\:%M:strftime' "
   else ""
+
+  def resolutionRrdStr(interval: Int, period: String, step: Option[Int]) = {
+    val resStr = getDataResolution(interval, period, step)
+    s" 'COMMENT: resolution\\: $resStr\\n' "
+  }
 
 
 
@@ -399,6 +404,7 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
       }
     }
     c.append(lastUpdated(lastLabel))
+    c.append(resolutionRrdStr(objv.interval, period, gopts.step))
     c.toString
   }
 }
@@ -552,6 +558,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObject) {
       }
     }
     c.append(lastUpdated(lastLabel))
+    c.append(resolutionRrdStr(aggObj.interval, period, gopts.step))
     c.toString()
   }
 
@@ -623,6 +630,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObject) {
       lastLabel = lbl
     }
     c.append(lastUpdated(lastLabel))
+    c.append(resolutionRrdStr(aggObj.interval, period, gopts.step))
     c.toString
   }
 
