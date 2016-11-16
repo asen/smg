@@ -535,7 +535,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObject) {
            c.append(getCdefFn(allDefsAndLabels.map(t => t._1), "pp_" + cdefLabel, ppDefLabelMaker)._1).append(" ")
         }
         if (aggObj.cdefVars.isEmpty) {
-          val gvStr = graphVar(v, lbl, vlabel, colorMaker, first = false, stacked = false, gopts)
+          val gvStr = graphVar(v, lbl, vlabel, colorMaker, first = false, stacked = aggObj.stack, gopts)
           c.append(gvStr)
           lastLabel = lbl
         }
@@ -552,7 +552,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObject) {
           val ppCdefVarSubst = substCdef(cv("cdef"), "pp_" + cdefLabelMaker.prefix)
           c.append(" 'CDEF:pp_").append(lbl).append("=").append(ppCdefVarSubst).append("'")
         }
-        val gvStr = graphVar(cv, lbl, vlabel, colorMaker, first = false, stacked = false, gopts)
+        val gvStr = graphVar(cv, lbl, vlabel, colorMaker, first = false, stacked = aggObj.stack, gopts)
         c.append(gvStr)
         lastLabel = lbl
       }
