@@ -220,8 +220,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
-  private def expandOvs(ovs: Seq[SMGObjectView]): Seq[SMGObjectView] = {
-    ovs.flatMap(ov => if (ov.isAgg) ov.asInstanceOf[SMGAggObjectView].objs else Seq(ov))
+  private def expandOv(ov: SMGObjectView): Seq[SMGObjectView] = {
+    if (ov.isAgg) ov.asInstanceOf[SMGAggObjectView].objs else Seq(ov)
   }
 
   private def localNonAgObjectStates(ov: SMGObjectView): Seq[SMGMonInternalState]= {
@@ -235,27 +235,22 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }.collect { case Some(x) => x }
   }
 
-  def localObjectViewsState(ovs: Seq[SMGObjectView]): Map[String,Seq[SMGMonState]] = {
-    ovs.map { ov =>
-      // TODO check for x-remote?
-      (ov.id, expandOvs(Seq(ov)).flatMap(localNonAgObjectStates))
-    }.toMap
-  }
 
   override def objectViewStates(ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
-    val byRemote = ovs.groupBy(ov => SMGRemote.remoteId(ov.id))
-    val futs = byRemote.flatMap{ case (rmtId, myOvs) =>
+    val expadedObjs = ovs.map( ov => (ov.id, expandOv(ov))).toMap
+    val byRemote = expadedObjs.values.flatten.toSeq.groupBy(ov => SMGRemote.remoteId(ov.id))
+    val futs = byRemote.map{ case (rmtId, myOvs) =>
       if (rmtId == SMGRemote.local.id) {
-        Seq(Future {
-          localObjectViewsState(myOvs)
-        })
+        Future {
+          ovs.map { ov => (ov.id, localNonAgObjectStates(ov)) }.toMap
+        }
       } else {
-        Seq(remotes.objectViewsStates(rmtId, myOvs))
+        remotes.objectViewsStates(rmtId, myOvs)
       }
     }
     Future.sequence(futs).map { maps =>
-      if (maps.isEmpty) {
+      val nonAgsMap = if (maps.isEmpty) {
         log.error("objectViewStates: maps.isEmpty")
         Map[String,Seq[SMGMonState]]()
       } else if (maps.tail.isEmpty)
@@ -264,6 +259,9 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         var ret = mutable.Map[String, Seq[SMGMonState]]()
         maps.foreach(m => ret ++= m)
         ret.toMap
+      }
+      expadedObjs.map { case(ovid, seq) =>
+        (ovid, seq.filter(ov => nonAgsMap.contains(ov.id)).flatMap(ov => nonAgsMap(ov.id)))
       }
     }
   }
@@ -426,7 +424,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override  def inspectObject(oview:SMGObjectView): Option[String] = {
-    val expandedOvs = expandOvs(Seq(oview))
+    val expandedOvs = expandOv(oview)
     val strSeq = expandedOvs.map { ov =>
       if (ov.refObj.isEmpty)
         None
