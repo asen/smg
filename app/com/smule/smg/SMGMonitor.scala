@@ -233,7 +233,6 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val gvIxes = if (ov.graphVarsIndexes.nonEmpty) ov.graphVarsIndexes else ou.vars.indices
     gvIxes.map { vix =>
       val stid = SMGMonVarState.stateId(ou, vix)
-      log.info(s"ASEN: $stid")
       allMonitorStatesById.get(stid)
     }.collect { case Some(x) => x }
   }
