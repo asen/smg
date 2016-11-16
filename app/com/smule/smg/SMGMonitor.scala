@@ -243,7 +243,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val futs = byRemote.map{ case (rmtId, myOvs) =>
       if (rmtId == SMGRemote.local.id) {
         Future {
-          ovs.map { ov => (ov.id, localNonAgObjectStates(ov)) }.toMap
+          myOvs.map { ov => (ov.id, localNonAgObjectStates(ov)) }.toMap
         }
       } else {
         remotes.objectViewsStates(rmtId, myOvs)
