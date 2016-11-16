@@ -58,8 +58,8 @@ trait SMGMonInternalState extends SMGTreeNode with SMGMonState {
   protected val notifSvc: SMGMonNotifyApi
 
   protected var myRecentStates: List[SMGState] = List(SMGState.initialState)
-  protected var myLastOkStateChange = SMGState.tssNow
-  protected var myLastStateChange = SMGState.tssNow
+  protected var myLastOkStateChange = 0
+  protected var myLastStateChange = 0
 
   protected var myIsHard: Boolean = true
   protected var myIsAcked: Boolean = false
@@ -87,13 +87,14 @@ trait SMGMonInternalState extends SMGTreeNode with SMGMonState {
   }
 
   protected def currentStateDesc = {
-    val goodBadSince = if (currentState.isOk)
-      s"good since ${SMGState.formatTss(myLastOkStateChange)}"
+    val goodBadSince = if (myLastStateChange == 0 || myLastOkStateChange == 0) ""
+    else if (currentState.isOk)
+      s", good since ${SMGState.formatTss(myLastOkStateChange)}"
     else {
-      val s = s"bad since ${SMGState.formatTss(myLastOkStateChange)}"
+      val s = s", bad since ${SMGState.formatTss(myLastOkStateChange)}"
       if (myLastStateChange != myLastOkStateChange) s + s", last change ${SMGState.formatTss(myLastStateChange)}" else s
     }
-    s"${currentState.desc} (ts=${currentState.timeStr}, $goodBadSince)"
+    s"${currentState.desc} (ts=${currentState.timeStr}$goodBadSince)"
   }
 
   protected def logEntry = SMGMonitorLogMsg(currentState.ts, currentState, myRecentStates.tail.headOption,
@@ -420,6 +421,8 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
 
   override def text: String = s"${pfCmd.id}(intvl=$interval): $currentStateDesc"
 
+  override def alertSubject: String = s"${pfCmd.id}[intvl=$interval]"
+
   override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
     val tuples = configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval)).
       map(ou => configSvc.objectVarNotifyCmdsAndBackoff(ou,None, SMGMonNotifySeverity.UNKNOWN))
@@ -457,9 +460,10 @@ class SMGMonRunState(val interval: Int,
 
   override def text: String = currentState.desc
 
-  def processOk(ts:Int) = addState(SMGState(ts, SMGState.OK, s"interval $interval - OK"), isInherited = false)
-
   private val pluginDesc = pluginId.map(s => s" (plugin - $s)").getOrElse("")
+
+  def processOk(ts:Int) = addState(SMGState(ts, SMGState.OK, s"interval $interval$pluginDesc - OK"), isInherited = false)
+
   def processOverlap(ts: Int) = addState(
     SMGState(ts, SMGState.E_SMGERR, s"interval $interval$pluginDesc - overlapping runs"),
     isInherited = false)
