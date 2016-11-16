@@ -97,8 +97,8 @@ trait SMGMonInternalState extends SMGTreeNode with SMGMonState {
     s"${currentState.desc} (ts=${currentState.timeStr}$goodBadSince)"
   }
 
-  protected def logEntry = SMGMonitorLogMsg(currentState.ts, currentState, myRecentStates.tail.headOption,
-    errorRepeat, isHard, ouids, vixOpt, remote)
+  protected def logEntry(wasHard: Boolean) = SMGMonitorLogMsg(currentState.ts, currentState, myRecentStates.tail.headOption,
+    errorRepeat, isHard = wasHard, ouids , vixOpt, remote)
 
   protected def processAlertsAndLogs(prevStateWasInherited: Boolean): Unit = {
     val curState: SMGState = myRecentStates.head
@@ -113,7 +113,7 @@ trait SMGMonInternalState extends SMGTreeNode with SMGMonState {
     if (curState.isOk) { // recovery
       notifSvc.sendRecoveryMessages(this)
       if (!prevStateWasInherited)
-        monLog.logMsg(logEntry)
+        monLog.logMsg(logEntry(wasHardError))
     } else { // error state
       val isStateChange = curState.state != prevStates.head.state
       val isHardChanged = isHardError && !wasHardError
@@ -123,7 +123,7 @@ trait SMGMonInternalState extends SMGTreeNode with SMGMonState {
           if (!isSilencedOrAcked)
             notifSvc.sendAlertMessages(this, notifCmds)
         }
-        monLog.logMsg(logEntry)
+        monLog.logMsg(logEntry(isHardError))
       } else {
         //no log msg - continuous hard error - just resend notifications if applicable
         if (!isSilencedOrAcked)
