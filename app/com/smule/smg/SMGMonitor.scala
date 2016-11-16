@@ -230,11 +230,13 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       return Seq()
     }
     val ou = ov.refObj.get
-    ov.graphVarsIndexes.map { vix =>
-      allMonitorStatesById.get(SMGMonVarState.stateId(ou, vix))
+    val gvIxes = if (ov.graphVarsIndexes.nonEmpty) ov.graphVarsIndexes else ou.vars.indices
+    gvIxes.map { vix =>
+      val stid = SMGMonVarState.stateId(ou, vix)
+      log.info(s"ASEN: $stid")
+      allMonitorStatesById.get(stid)
     }.collect { case Some(x) => x }
   }
-
 
   override def objectViewStates(ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
