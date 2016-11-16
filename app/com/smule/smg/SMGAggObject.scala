@@ -94,10 +94,16 @@ object SMGAggObject {
                       cdefVars: List[Map[String, String]],
                       graphVarsIndexes: Seq[Int],
                       op: String): String = {
-    // XXX this assumes all objects in the list are from the same remote
-    val remotePx = if (objs.nonEmpty && SMGRemote.isRemoteObj(objs.head.id))
+    val byRemote = objs.groupBy(ov => SMGRemote.remoteId(ov.id))
+    val remotePx = if (byRemote.keys.size != 1) {
+      // cross-remote or empty objs slist
+      ""
+    } else { //all objects are from the same remote
+      if (SMGRemote.isRemoteObj(objs.head.id))
         SMGRemote.prefixedId(SMGRemote.remoteId(objs.head.id), "")
       else ""
+    }
+
     val md = java.security.MessageDigest.getInstance("SHA-1")
     for (o <- objs.sortBy(_.id) ) {
       md.update(SMGRemote.localId(o.id).getBytes())

@@ -225,9 +225,16 @@ class Application  @Inject() (actorSystem: ActorSystem,
         byGraphVars(curVars) += ov
       }
       val aggObjs = for (v <- orderedVars.toList) yield SMGAggObject.build(byGraphVars(v).toList, myAgg.get)
+      // if we are not graphing cross-remote, every ag object defined from a cross-remote filter can
+      // result in multiple images (one per remote) and we want the monitoring state per resulting image
+      val monObjsSeq = if (!xRemoteAgg) {
+        aggObjs.flatMap { ago =>
+          ago.splitByRemoteId.values.toList
+        }
+      } else aggObjs
       val aggFutureSeqs = for (ao <- aggObjs) yield smg.graphAggObject(ao, Seq(period), gopts, xRemoteAgg)
       (Future.sequence(aggFutureSeqs).map { sofs => sofs.flatten },
-        if (showMs) monitorApi.objectViewStates(aggObjs) else Future { Map() } )
+        if (showMs) monitorApi.objectViewStates(monObjsSeq) else Future { Map() } )
     } else {
       ( smg.graphObjects(objsSlice, Seq(period), gopts),
         if (showMs) monitorApi.objectViewStates(objsSlice) else Future { Map() } )
