@@ -237,6 +237,10 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }.collect { case Some(x) => x }
   }
 
+  def localObjectViewsState(ovs: Seq[SMGObjectView]): Map[String,Seq[SMGMonState]] = {
+    ovs.map { ov => (ov.id, localNonAgObjectStates(ov)) }.toMap
+  }
+
   override def objectViewStates(ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
     val expadedObjs = ovs.map( ov => (ov.id, expandOv(ov))).toMap
@@ -244,7 +248,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val futs = byRemote.map{ case (rmtId, myOvs) =>
       if (rmtId == SMGRemote.local.id) {
         Future {
-          myOvs.map { ov => (ov.id, localNonAgObjectStates(ov)) }.toMap
+          localObjectViewsState(myOvs)
         }
       } else {
         remotes.objectViewsStates(rmtId, myOvs)

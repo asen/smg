@@ -101,7 +101,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
   private def throttleMaxCount = configSvc.config.globals.getOrElse("$notify-throttle-count", Int.MaxValue.toString).toInt
 
 
-  val MAX_CONDENSED_SUBJECTS = 20
+  val MAX_CONDENSED_SUBJECTS = 100
 
   private def realRunStateCommands(ncmds:  Seq[SMGMonNotifyCmd],
                                    severity: SMGMonNotifySeverity.Value,
@@ -135,9 +135,10 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     else Future {
       val allRcpts = msgsToCondense.flatMap(_.cmds).distinct
       val msgSubj = s"UNTHROTTLED $remoteSubjStr - ${msgsToCondense.size} messages supressed during throttle"
-      val msgBody = s"$msgSubj. Some example subjects \n\n" +
-        msgsToCondense.map(_.subjStr).take(MAX_CONDENSED_SUBJECTS).mkString("\n\n") +
-        s"URL: ${configSvc.config.notifyBaseUrl}/monitor#${configSvc.config.notifyRemoteId.getOrElse("")}"
+      val condensedSubjects = msgsToCondense.map(_.subjStr).take(MAX_CONDENSED_SUBJECTS)
+      val msgBody = s"$msgSubj. Some example subjects (displaying ${condensedSubjects.size}/${msgsToCondense.size}):\n\n" +
+        condensedSubjects.mkString("\n") +
+        s"\n\nURL: ${configSvc.config.notifyBaseUrl}/monitor#${configSvc.config.notifyRemoteId.getOrElse("")}"
       realRunStateCommands(allRcpts,
         SMGMonNotifySeverity.UNTHROTTLED,
         SMGMonNotifySeverity.UNTHROTTLED.toString,
