@@ -1,13 +1,13 @@
 @import com.smule.smg.SMGTree
 @import com.smule.smg.SMGMonState
-@(tree: SMGTree[SMGMonState], pg:Int, maxPages:Int, curUrl: String)
+@(tree: SMGTree[SMGMonState], isRoot: Boolean, pg:Int, maxPages:Int, curUrl: String)
 
 <div>
-  @stateNodeDisplay(tree.node, curUrl)
+  @stateNodeDisplay(tree.node, isRoot, curUrl)
   <ul>
     @for(t <- tree.children){
     <li>
-      @stateNodeDisplay(t.node, curUrl)
+      @stateNodeDisplay(t.node, false, curUrl)
     </li>
     }
   </ul>

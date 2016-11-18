@@ -92,7 +92,7 @@
       @if(tree.node.parentId.isDefined){
       <p>Parent: <a href="?rid=@tree.node.parentId.get" onclick="goToRoot('@tree.node.parentId.get'); return false">@tree.node.parentId.get</a></p>
       }
-      @stateTreeDisplay(tree, pg, maxPages, curUrl)
+      @stateTreeDisplay(tree, tree.node.id == rootId.getOrElse(""), pg, maxPages, curUrl)
     </li>
   }
 </ul>

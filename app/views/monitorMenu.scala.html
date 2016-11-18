@@ -2,19 +2,31 @@
 @(cur: String)
 
 <div>
-  <h6>
+  <h6>|
     @if(cur != "issues"){
-    <a href="/monitor">Monitor Issues</a> |
+    <a href="/monitor">Current status</a>  |
+    } else {
+    Current status |
     }
     @if(cur != "trees"){
     <a href="/monitor/trees">State trees</a> |
+    }else {
+    State trees|
     }
     @if(cur != "log"){
-    <a href="/monitor/log">Monitor Log</a> |
+    <a href="/monitor/log">Logs</a> |
+    }else {
+    Logs |
     }
     @if(cur != "heatmap"){
-    <a href="/monitor/heatmap">Monitor Heatmap</a> |
+    <a href="/monitor/heatmap">Heatmap</a> |
+    }else {
+    Heatmap |
     }
-    <a href="/monitor/runtree">Run trees</a>
+    @if(cur != "runtrees"){
+    <a href="/monitor/runtree">Run trees</a> |
+    }else {
+    Run trees |
+    }
   </h6>
 </div>

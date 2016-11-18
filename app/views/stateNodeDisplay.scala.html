@@ -1,30 +1,40 @@
 @import com.smule.smg.SMGTree
 @import com.smule.smg.SMGMonState
-@(ms: SMGMonState, curUrl: String)
+@(ms: SMGMonState, isRoot: Boolean, curUrl: String)
 
-  <p><a href="?rid=@ms.id" onclick="goToRoot('@ms.id'); return false">@ms.id</a></p>
-  <div>
-    <span style="background-color: @ms.severityColor;">@{ms.currentStateVal}</span> <a href="@ms.showUrl">@ms.text</a>
-    [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ]
-    @if(!ms.isOk){
-      [
-        @if(ms.isAcked) {
-          Acknowledged
-          @stateNodeActionDisplay(ms.id, "Unack", "unack", curUrl, None)
-        } else {
-          @stateNodeActionDisplay(ms.id, "Ack", "ack", curUrl, None)
-        }
-      ]
-    }
+<p>
+<div>
+  @if(isRoot){
+      <strong>@ms.id</strong>
+  } else {
+      <a href="?rid=@ms.id" onclick="goToRoot('@ms.id'); return false">@ms.id</a>
+  }
 
-    [
-    @if(ms.isSilenced) {
-      Silenced @{ms.silencedUntilStr}
-      @stateNodeActionDisplay(ms.id, "Unsilence", "unslnc", curUrl, None)
+  [ <a href="@ms.showUrl">Graphs</a> ]
+
+
+  @if(!ms.isOk){
+  [
+    @if(ms.isAcked) {
+      Acknowledged
+      @stateNodeActionDisplay(ms.id, "Unack", "unack", curUrl, None)
     } else {
-      @stateNodeActionDisplay(ms.id, "Silence for", "slnc", curUrl, Some("slunt", "2h"))
+      @stateNodeActionDisplay(ms.id, "Ack", "ack", curUrl, None)
     }
-    ]
+  ]
+  }
 
-  </div>
+  [
+  @if(ms.isSilenced) {
+    Silenced @{ms.silencedUntilStr}
+    @stateNodeActionDisplay(ms.id, "Unsilence", "unslnc", curUrl, None)
+  }
+  @stateNodeActionDisplay(ms.id, "Silence for", "slnc", curUrl, Some("slunt", "2h"))
+  ]
+</div>
+
+<div>
+  <span style="background-color: @ms.severityColor;">@{ms.currentStateVal}</span> @ms.text [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ]
+</div>
+</p>
 
