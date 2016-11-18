@@ -5,13 +5,8 @@
 @(plugins: Seq[SMGPlugin], availRemotes:Seq[String], rmtId: Option[String], availStates:Seq[String], minSeverity: Option[String], period:String, limit:Int, hardOnly: Boolean, logMsgs: Seq[SMGMonitorLogMsg])
 
 @main("SMG - Monitor log", plugins) {
-<div>
-  <h6>
-    <a href="/monitor">Monitor Issues</a> |
-    <a href="/monitor/runtree">Run trees</a> |
-    <a href="/monitor/heatmap">Monitor Heatmap</a>
-  </h6>
-</div>
+
+@monitorMenu("log")
 
 <h3>Monitoring log</h3>
 

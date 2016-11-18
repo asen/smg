@@ -1,34 +1,13 @@
 @import com.smule.smg.SMGFetchCommandTree
 @import com.smule.smg.SMGMonState
-@(seq: Seq[SMGFetchCommandTree], levelOffs: Int, maxLevels: Int, rootId: String, rootMonState: Option[SMGMonState], curUrl: String)
+@(seq: Seq[SMGFetchCommandTree], levelOffs: Int, maxLevels: Int, rootId: String, curUrl: String)
 
 <ul xmlns="http://www.w3.org/1999/html">
   @for(t <- seq){
     <li>
       <p>
         @if(t.node.id == rootId) {
-        <form method="get" action="silenceFetch">
           <strong>@t.node.id</strong>
-          @if(rootMonState.isDefined) {
-          [
-            @if(rootMonState.get.isSilenced) {
-            Silenced @rootMonState.get.silencedUntilStr
-            } else {
-            Not currently silenced
-            }
-          ]
-          } else {
-            <font color="red">No monitoring data available</font>
-          }
-          <input id="silenceFetchRdrUrl" type="hidden" name="rdr" value="@curUrl">
-          <script language="JavaScript"><!--
-            // XXX a hack to make this work via /proxy/remote-id/ (use browser's url vs the server url)
-            document.getElementById('silenceFetchRdrUrl').value = window.location.pathname + window.location.search;
-          --></script>
-          <input type="hidden" name="cmd" value="@rootId">
-          <input type="submit" value="Silence for" title="Silence this fetch commans issues (and child issues) for the provided period">
-          <input type="text" name="until" size="6" value="2h" />
-        </form>
         } else {
         <a href="?root=@t.node.id" onclick="goToRoot('@t.node.id'); return false">@t.node.id</a>
         }
@@ -39,7 +18,7 @@
       <i>(@{t.node.command.timeoutSec}s) @t.node.command.str</i>
       </p>
       @if(!t.isLeaf && levelOffs > 0){
-        @views.html.runTreesDisplay(t.children, levelOffs - 1, maxLevels, rootId, rootMonState, curUrl)
+        @views.html.runTreesDisplay(t.children, levelOffs - 1, maxLevels, rootId, curUrl)
       }
     </li>
   }

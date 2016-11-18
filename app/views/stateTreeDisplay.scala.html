@@ -1,0 +1,15 @@
+@import com.smule.smg.SMGTree
+@import com.smule.smg.SMGMonState
+@(tree: SMGTree[SMGMonState], pg:Int, maxPages:Int)
+
+<div>
+  @stateNodeDisplay(tree.node)
+  <ul>
+    @for(t <- tree.children){
+    <li>
+      @stateNodeDisplay(t.node)
+    </li>
+    }
+  </ul>
+
+</div>

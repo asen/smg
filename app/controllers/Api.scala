@@ -284,4 +284,21 @@ class Api  @Inject() (actorSystem: ActorSystem,
         NotFound("")
     )
   }
+
+  def monitorTrees(rx: Option[String],
+                   rxx: Option[String],
+                   ms: Option[String],
+                   soft: Option[String],
+                   ackd: Option[String],
+                   slncd: Option[String],
+                   rid: Option[String],
+                   pg: Int,
+                   lmt: Int) = Action {
+    val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.withName(s)),
+      includeSoft = soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
+      includeSilenced = slncd.getOrElse("off") == "on")
+    val tpl = monitorApi.localMonTrees(flt, rid, pg, lmt)
+    val m = Map("seq" -> Json.toJson(tpl._1), "maxpg" -> Json.toJson(tpl._2))
+    Ok(Json.toJson(m))
+  }
 }

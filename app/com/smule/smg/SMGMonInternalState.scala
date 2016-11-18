@@ -14,9 +14,9 @@ import scala.collection.mutable
   * tasks. The specific subclasses implement any differences based
   * their type (run state, pre-fetch state, object state and var state)
   */
-trait SMGMonInternalState extends SMGTreeNode with SMGMonState {
-  //val id: String - in SMGTreeNode
-  //val parentId: String - in SMGTreeNode
+trait SMGMonInternalState extends SMGMonState {
+  //val id: String - from SMGTreeNode
+  //val parentId: String - from SMGTreeNode
 
   override def recentStates: Seq[SMGState] = myRecentStates
   override def isHard: Boolean = myIsHard
@@ -477,6 +477,6 @@ class SMGMonRunState(val interval: Int,
 }
 
 object SMGMonRunState {
-  def stateId(interval: Int, pluginId: Option[String]) = "$interval_" + interval.toString +
+  def stateId(interval: Int, pluginId: Option[String]) = "$interval_%04d".format(interval) +
     pluginId.map(s => s"-$s").getOrElse("")
 }

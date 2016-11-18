@@ -313,6 +313,44 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     allMonitorStatesById.get(cmdId)
   }
 
+
+  override def localMonTrees(flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): (Seq[SMGTree[SMGMonState]], Int) = {
+    val allTreesToFilter = if (rootId.isDefined) {
+      findTreeWithRootId(rootId.get).map { t =>
+        Seq(t)
+      }.getOrElse(Seq())
+    } else topLevelMonitorStateTrees.sortBy(_.node.id)
+    val allMatching = allTreesToFilter.flatMap { tt =>
+      tt.findTreesMatching(flt.matchesState)
+    }.map(_.asInstanceOf[SMGTree[SMGMonState]])
+    val ret = SMGTree.sliceTree(allMatching, pg, pgSz)
+    val tlToDisplay = allMatching.size + allMatching.map(_.children.size).sum
+    val maxPg = (tlToDisplay / pgSz) + (if (tlToDisplay % pgSz == 0) 0 else 1)
+    (ret, maxPg)
+  }
+
+  /**
+    *
+    * @param remoteId
+    * @param flt
+    * @param rootId
+    * @param pg
+    * @param pgSz
+    * @return a tuple with the resulting page of trees and the total number of pages
+    */
+  override def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String],
+                        pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    if (remoteId == SMGRemote.local.id) {
+      Future {
+        localMonTrees(flt, rootId, pg, pgSz)
+      }
+    } else {
+      remotes.monTrees(remoteId, flt, rootId, pg, pgSz)
+    }
+  }
+
+
   override def fetchCommandState(cmdId: String): Future[Option[SMGMonState]] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
     if (SMGRemote.isRemoteObj(cmdId)){
@@ -551,4 +589,5 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
   loadStateFromDisk()
+
 }

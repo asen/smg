@@ -1,0 +1,11 @@
+@import com.smule.smg.SMGTree
+@import com.smule.smg.SMGMonState
+@(ms: SMGMonState)
+
+  <p><a href="?rid=@ms.id" onclick="goToRoot('@ms.id'); return false">@ms.id</a></p>
+  <p>
+    <!-- @{ms.asJson.toString} -->
+    <span style="background-color: @ms.severityColor;">@{ms.currentStateVal}</span> <a href="@ms.showUrl">@ms.text</a>
+    [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ]
+  </p>
+

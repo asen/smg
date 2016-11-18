@@ -23,6 +23,7 @@ GET     /monitor             controllers.Application.monitorIssues(soft: Option[
 GET     /monitor/heatmap     controllers.Application.monitorHeatmap
 GET     /monitor/log         controllers.Application.monitorLog(remote: String ?= "*", p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String])
 GET     /monitor/runtree     controllers.Application.monitorRunTree(remote: String ?= "", root: Option[String], lvls: Option[Int])
+GET     /monitor/trees       controllers.Application.monitorTrees(remote: String ?= "", rx: Option[String], rxx: Option[String], ms: Option[String], hsoft: String ?= "off", hackd: String ?= "off", hslncd: String ?= "off", rid: Option[String], pg: Int ?= 0, lmt: Int ?= 200)
 GET     /monitor/silenceFetch  controllers.Application.monitorSilenceFetch(cmd: String, until: Option[String], rdr: String)
 
 GET     /proxy/:remote/*path  controllers.Application.proxy(remote: String, path: String)
@@ -49,6 +50,7 @@ POST    /api/agg            controllers.Api.agg
 GET     /api/rrd/:oid       controllers.Api.downloadRrd(oid: String)
 
 GET     /api/monitor/issues    controllers.Api.monitorIssues(soft: Option[String], ack: Option[String], slc: Option[String])
+GET     /api/monitor/trees    controllers.Api.monitorTrees(rx: Option[String], rxx: Option[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rid: Option[String], pg: Int ?= 0, lmt: Int ?= 200)
 GET     /api/monitor/runtree   controllers.Api.monitorRunTree(root: Option[String])
 GET     /api/monitor/fcstate   controllers.Api.monitorFetchCommandState(cmd: String)
 GET     /api/monitor/fcsilence   controllers.Api.monitorFetchCommandSilence(cmd: String, until: Option[Int])

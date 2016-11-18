@@ -577,6 +577,31 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def monitorTrees(remote: String,
+                   rx: Option[String],
+                   rxx: Option[String],
+                   ms: Option[String],
+                   hsoft: String,
+                   hackd: String,
+                   hslncd: String,
+                   rid: Option[String],
+                   pg: Int,
+                   lmt: Int) = Action.async { request =>
+    val conf = configSvc.config
+    val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.withName(s)),
+      includeSoft = hsoft == "off", includeAcked = hackd == "off",
+      includeSilenced = hslncd == "off")
+    val offs = pg * lmt
+    val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
+    val myLimit = Math.max(2, lmt)
+    val myPg = Math.max(0, pg)
+    monitorApi.monTrees(remote, flt, rid, myPg, myLimit).map { t =>
+      val seq = t._1
+      val maxPg = t._2
+      Ok(views.html.stateTrees(configSvc.plugins, remote, remoteIds, flt, rid, seq, myPg, maxPg, myLimit, request.uri))
+    }
+  }
+
   def monitorRunTree(remote: String, root: Option[String], lvls: Option[Int]) = Action.async { request =>
     val conf = configSvc.config
     val rootStr = root.getOrElse("")
@@ -587,20 +612,15 @@ class Application  @Inject() (actorSystem: ActorSystem,
     } else {
       remotes.monitorRunTree(remote, root)
     }
-    val rootMonStateFut = if (rootStr == "") Future { None } else {
-      monitorApi.fetchCommandState(rootStr)
-    }
-    Future.sequence(Seq(treesMapFut,rootMonStateFut)).map { seq =>
-      val treesMap = seq(0).asInstanceOf[Map[Int,Seq[SMGFetchCommandTree]]]
-      val rootMonState = seq(1).asInstanceOf[Option[SMGMonState]]
+
+    treesMapFut.map { treesMap =>
       val parentId = if (rootStr == "") None else {
         treesMap.values.flatten.find { t => t.node.id == rootStr }.flatMap(_.node.preFetch)
       }
       val maxLevels = if (rootStr != "") conf.MAX_RUNTREE_LEVELS else lvls.getOrElse(conf.runTreeLevelsDisplay)
       val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
       Ok(views.html.runTrees(configSvc.plugins, remote, remoteIds,
-        treesMap, rootStr, rootMonState, parentId,
-        maxLevels, conf.runTreeLevelsDisplay, request.uri))
+        treesMap, rootStr, parentId, maxLevels, conf.runTreeLevelsDisplay, request.uri))
     }
   }
 

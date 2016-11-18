@@ -33,6 +33,13 @@ case class SMGTree[T <: SMGTreeNode](node: T, children: Seq[SMGTree[T]]) {
     }
   }
 
+  def findTreesMatching(matchFn: (T) => Boolean): Seq[SMGTree[T]] = {
+    if (matchFn(this.node)){
+      return Seq(this)
+    }
+    children.flatMap(ct => ct.findTreesMatching(matchFn))
+  }
+
 }
 
 // helper static methods for deaing with trees
@@ -78,7 +85,7 @@ object SMGTree {
         if (recLevel > MAX_SMG_TREE_LEVELS) {
           throw new RuntimeException(s"SMGTree.buildTree: Configuration error - recursion ($recLevel) exceeded $MAX_SMG_TREE_LEVELS")
         }
-        buildTree(myParents.toList.sortBy(_.node.id))
+        buildTree(myParents)
         recLevel -= 1
       }
     }
@@ -90,8 +97,33 @@ object SMGTree {
       if (trees.tail.isEmpty) {
         trees.head
       } else {
-        SMGTree(trees.head.node, trees.flatMap(_.children).sortBy(_.node.id))
+        SMGTree(trees.head.node, trees.flatMap(_.children))
       }
     }
+  }
+
+  def sliceTree[T <: SMGTreeNode](topLevel: Seq[SMGTree[T]], pg:Int, pgSz: Int): Seq[SMGTree[T]] = {
+    if (topLevel.isEmpty)
+      return topLevel
+    val offs = pg * pgSz
+    val max = offs + pgSz
+    val ret = ListBuffer[SMGTree[T]]()
+    var cur = 0
+    val tlIt = topLevel.iterator
+    var curTl = topLevel.head
+    while (cur < max - 1 && tlIt.hasNext) {
+      curTl = tlIt.next()
+      val csz = curTl.children.size
+      cur += 1
+      if (cur + csz > offs) {
+        val toSkip = if (offs > cur) offs - cur else 0
+        val toTake = max - cur
+        val newt = SMGTree[T](curTl.node, curTl.children.slice(toSkip, toSkip + toTake))
+        val newtsz = newt.children.size
+        ret += newt
+        cur += newtsz
+      } else cur += csz
+    }
+    ret.toList
   }
 }

@@ -167,6 +167,10 @@ trait SMGRemotesApi {
     */
   def monitorRunTree(remoteId: String, root: Option[String]): Future[Map[Int,Seq[SMGFetchCommandTree]]]
 
+
+  def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
+
+
   /**
     * TODO
     * @param cmdId
@@ -458,5 +462,14 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
       clientForId(remoteId).get.monitorFetchCommandState(cmdId)
     else Future { None }
   }
+
+  override def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String],
+                        pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]   = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monitorTrees(flt, rootId, pg, pgSz)
+    else Future { (Seq(), 0) }
+
+  }
+
 
 }

@@ -1,0 +1,109 @@
+@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGMonState
+@import com.smule.smg.SMGMonFilter
+@import com.smule.smg.SMGTree
+@import com.smule.smg.SMGState
+@(plugins: Seq[SMGPlugin], rmtId: String, availRemotes:Seq[String], flt: SMGMonFilter, rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], pg:Int, maxPages:Int, limit: Int, curUrl: String)
+
+@main("SMG - State trees", plugins, 300) {
+
+@monitorMenu("trees")
+
+<h3>State trees</h3>
+
+<div>
+  <form id="runTreeFilterForm" method="GET">
+    <label class="autosubmit-lbl">Limit:</label>
+    <input type="number" id="limit" name="lmt" value="@{limit}" min="2" max="9999" onchange="mySubmitOnChange(this);">
+    @if(availRemotes.nonEmpty){
+    <label class="autosubmit-lbl">Remote filter:</label>
+    <select name="remote" class="select-remote" onchange="remoteChanged(this);" >
+      @for( rid <- availRemotes ) {
+      <option value='@rid' @if(rid == rmtId){ selected } >@if(rid == ""){Local}else{@rid}</option>
+      }
+    </select>
+    }
+    <label class="autosubmit-lbl">Regex filter:</label>
+      <input type="text" id="inpRx" name="rx" onchange="mySubmitOnChange(this);" value="@{flt.rx.getOrElse("")}">
+    <label class="autosubmit-lbl">Top-level regex exclude filter:</label>
+      <input type="text" id="inpRxx" name="rxx" onchange="mySubmitOnChange(this);" value="@{flt.rxx.getOrElse("")}">
+    <br/>
+    <label class="autosubmit-lbl">Minimal severity filter:</label>
+    <select name="ms" onchange="mySubmitOnChange(this);" >
+      @for( sid <- SMGState.values.toList.map(_.toString)) {
+      <option value='@sid' @if(sid == flt.minState.getOrElse(SMGState.OK).toString){ selected } >@sid</option>
+      }
+    </select>
+    <label class="autosubmit-lbl" for="cbSoft">Hide Soft errors</label>
+      <input id="cbSoft" type="checkbox" name="hsoft" @if(!flt.includeSoft){ checked } onchange="mySubmitOnChange(this);" />
+    <label class="autosubmit-lbl" for="cbAcked">Hide Acknowledged errors</label>
+      <input id="cbAcked" type="checkbox" name="hackd" @if(!flt.includeAcked){ checked } onchange="mySubmitOnChange(this);" />
+    <label class="autosubmit-lbl" for="cbSlncd">Hide Silenced objects</label>
+      <input id="cbSlncd" type="checkbox" name="hslncd" @if(!flt.includeSilenced){ checked } onchange="mySubmitOnChange(this);" />
+
+    <input type="hidden" id="treePage" name="pg" value="@pg">
+    <input type="hidden" id="treeRoot" name="rid" value="@{rootId.getOrElse("")}">
+    <input style="display: none" id="btn_GET" type="submit">
+    <input type="button" value="Refresh" onclick="mySubmitOnChange(this);">
+  </form>
+</div>
+
+<!-- strip empty params from the form so that urls are less cluttered -->
+<script language="JavaScript">
+
+    function remoteChanged(elem) {
+      document.getElementById("treeRoot").value = "" ;
+      mySubmitOnChange(elem);
+    }
+
+    function disableEmptyInputs() {
+        $(':input', this).each(function() {
+           this.disabled = !($(this).val())
+        });
+    };
+
+    function realSubmit() {
+        setTimeout(0, $('#btn_GET').click());
+    }
+
+    function mySubmitOnChange(elem) {
+        disableEmptyInputs();
+        realSubmit();
+    }
+
+    function goToRoot(rootId) {
+      document.getElementById("treeRoot").value = rootId
+      realSubmit();
+    }
+
+    function goToPage(pgNum) {
+      document.getElementById("treePage").value = pgNum
+      realSubmit();
+    }
+
+    $('form#runTreeFilterForm').submit(disableEmptyInputs);
+</script>
+
+
+<h5><a href="?" onclick="goToRoot(''); return false">Top Level</a></h5>
+<ul>
+  @for(tree <- trees){
+    <li>
+      @if(tree.node.parentId.isDefined){
+      <p>Parent: <a href="?rid=@tree.node.parentId.get" onclick="goToRoot('@tree.node.parentId.get'); return false">@tree.node.parentId.get</a></p>
+      }
+      @stateTreeDisplay(tree, pg, maxPages)
+    </li>
+  }
+</ul>
+}
+
+<p> Pages:
+@for(p <- 1 to maxPages) {
+  @if(p - 1 != pg){
+    [<a href="#" onclick="goToPage(@{p - 1}); return false">@p</a>]
+  } else {
+    [@p]
+  }
+}
+</p>

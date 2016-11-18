@@ -1,0 +1,20 @@
+
+@(cur: String)
+
+<div>
+  <h6>
+    @if(cur != "issues"){
+    <a href="/monitor">Monitor Issues</a> |
+    }
+    @if(cur != "trees"){
+    <a href="/monitor/trees">State trees</a> |
+    }
+    @if(cur != "log"){
+    <a href="/monitor/log">Monitor Log</a> |
+    }
+    @if(cur != "heatmap"){
+    <a href="/monitor/heatmap">Monitor Heatmap</a> |
+    }
+    <a href="/monitor/runtree">Run trees</a>
+  </h6>
+</div>

@@ -129,7 +129,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
   implicit val smgStateReads: Reads[SMGState] = SMGState.smgStateReads
 
-  implicit val smgMonStateViewReads: Reads[SMGMonStateView] = {
+  implicit val smgMonStateViewReads: Reads[SMGMonState] = {
     (
       (JsPath \ "id").readNullable[String].map(optid => prefixedId(optid.getOrElse("UNKNOWN"))) and //TODO temp readNullable
         (JsPath \ "s").read[Double] and
@@ -140,6 +140,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
         (JsPath \ "su").readNullable[Int] and
         (JsPath \ "o").readNullable[String].map(oid => oid.map(s => prefixedId(s))) and
         (JsPath \ "pf").readNullable[String].map(pfid => pfid.map(s => prefixedId(s))) and
+        (JsPath \ "pid").readNullable[String].map(pid => pid.map(s => prefixedId(s))) and
         (JsPath \ "uf").readNullable[String] and
         (JsPath \ "rs").readNullable[List[SMGState]].map(opt => opt.getOrElse(List())) and // TODO temp readNullable
         (JsPath \ "er").readNullable[Int].map(oi => oi.getOrElse(0)) and // TODO temp readNullable
@@ -150,7 +151,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
   implicit val smgMonHeatmapReads: Reads[SMGMonHeatmap] = {
      (
-      (JsPath \ "lst").read[List[SMGMonStateView]] and
+      (JsPath \ "lst").read[List[SMGMonState]] and
         (JsPath \ "sps").read[Int]
       ) (SMGMonHeatmap.apply _)
   }
@@ -185,6 +186,18 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
           }
         }
       ) (SMGFetchCommandTree.apply _)
+  }
+
+  implicit val smgMonStateTreeReads: Reads[SMGTree[SMGMonState]] = {
+    (
+      (JsPath \ "n").read[SMGMonState] and
+        (JsPath \ "c").read[Seq[JsValue]].map { jsseq =>
+          jsseq.map { jsv =>
+            //println(jsv)
+            jsv.as[SMGTree[SMGMonState]]
+          }
+        }
+      ) (SMGTree[SMGMonState](_,_) )
   }
 
 
@@ -431,7 +444,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     ws.url(remote.url + API_PREFIX + "monitor/issues" + paramsStr).withRequestTimeout(shortTimeoutMs).get().map { resp =>
       Try {
         val jsval = Json.parse(resp.body)
-        jsval.as[Seq[SMGMonStateView]]
+        jsval.as[Seq[SMGMonState]]
       }.recover {
         case x => {
           log.ex(x, "remote monitor/state parse error: " + remote.id)
@@ -488,7 +501,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       withRequestTimeout(shortTimeoutMs).post(postMap).map { resp =>
       Try {
         val jsval = Json.parse(resp.body)
-        jsval.as[Map[String,Seq[SMGMonStateView]]].map(t => (prefixedId(t._1), t._2))
+        jsval.as[Map[String,Seq[SMGMonState]]].map(t => (prefixedId(t._1), t._2))
       }.recover {
         case x => {
           log.ex(x, "remote monitor/ovstates parse error: " + remote.id)
@@ -526,12 +539,43 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
+  def monitorTrees(flt: SMGMonFilter, rootId: Option[String],
+               pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]   = {
+
+    val paramsBuf = ListBuffer[String](s"pg=$pg&lmt=$pgSz")
+    val fltParams = flt.asUrlParams
+    if (fltParams != "") paramsBuf += fltParams
+    if (rootId.isDefined) paramsBuf += s"rid=${SMGRemote.localId(rootId.get)}"
+    val params = s"?" + paramsBuf.mkString("&")
+
+    ws.url(remote.url + API_PREFIX + "monitor/trees" + params).
+      withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
+      Try {
+        val jsval = Json.parse(resp.body).as[Map[String, JsValue]]
+        val seq = jsval("seq").as[Seq[SMGTree[SMGMonState]]]
+        val maxPg = jsval("maxpg").as[Int]
+        (seq, maxPg)
+      }.recover {
+        case x => {
+          log.ex(x, "remote monitor/trees parse error: " + remote.id)
+          (Seq(),0)
+        }
+      }.get
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/trees fetch error: " + remote.id)
+        (Seq(),0)
+      }
+    }
+
+  }
+
   def monitorFetchCommandState(cmdId: String): Future[Option[SMGMonState]] = {
     ws.url(remote.url + API_PREFIX + s"monitor/fcstate?cmd=${SMGRemote.localId(cmdId)}" ).
       withRequestTimeout(shortTimeoutMs).get().map { resp =>
       Try {
         val jsval = Json.parse(resp.body)
-        Some(jsval.as[SMGMonStateView])
+        Some(jsval.as[SMGMonState])
       }.recover {
         case x => {
           log.ex(x, "remote monitor/fcstate parse error: " + remote.id)
@@ -716,6 +760,7 @@ object SMGRemoteClient {
       if (ms.silencedUntil.isDefined) mm += ("su" -> Json.toJson(ms.silencedUntil.get))
       if (ms.oid.isDefined) mm += ("o" -> Json.toJson(ms.oid.get))
       if (ms.pfId.isDefined) mm += ("pf" -> Json.toJson(ms.pfId.get))
+      if (ms.parentId.isDefined) mm += ("pid" -> Json.toJson(ms.parentId.get))
       if (ms.aggShowUrlFilter.isDefined) mm += ("uf" -> Json.toJson(ms.aggShowUrlFilter.get))
       Json.toJson(mm.toMap)
     }
@@ -778,6 +823,13 @@ object SMGRemoteClient {
         "n" -> Json.toJson(t.node),
         "c" -> Json.toJson(t.children)
       )
+  }
+
+  implicit lazy val smgMonStateTreeWrites: Writes[SMGTree[SMGMonState]] = new Writes[SMGTree[SMGMonState]] {
+    def writes(t: SMGTree[SMGMonState]) = Json.obj(
+      "n" -> Json.toJson(t.node),
+      "c" -> Json.toJson(t.children)
+    )
   }
 
 }

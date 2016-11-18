@@ -1,11 +1,13 @@
 package com.smule.smg
 
+import java.net.URLEncoder
 import java.text.SimpleDateFormat
 import java.util.Date
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 
 
@@ -114,9 +116,9 @@ object SMGMonState {
 }
 
 
-trait SMGMonState {
+trait SMGMonState extends SMGTreeNode {
 
-  val id: String
+  //val id: String
 
   def severity: Double
   def text: String
@@ -191,6 +193,11 @@ trait SMGMonState {
       s"LINK: ${bodyLink(smgBaseUrl, smgRemoteId)}\n\n"
   }
 
+  def asJson: JsValue = {
+    import  SMGRemoteClient.smgMonStateWrites
+    Json.toJson(this)
+  }
+
 }
 
 // "generic"/remote mon state
@@ -203,6 +210,7 @@ case class SMGMonStateView(id: String,
                            silencedUntil: Option[Int],
                            oid: Option[String],
                            pfId: Option[String],
+                           parentId: Option[String],
                            aggShowUrlFilter: Option[String],
                            recentStates: Seq[SMGState],
                            errorRepeat: Int,
@@ -249,6 +257,8 @@ case class SMGMonStateAgg(id: String, lst: Seq[SMGMonState], showUrlFilter: Stri
   // XXX chop off :ix portion of child alert keys to define this alert key.
   // Agg states cover entire objects in the context of alerting so var indexes are thrown away
   override def alertKey = lst.map(_.alertKey.split(":")(0)).distinct.mkString(",")
+
+  override def parentId: Option[String] = None
 }
 
 object SMGMonStateAgg {
@@ -292,6 +302,8 @@ case class SMGMonStateGlobal(title: String,
   override def alertKey = s"${SMGMonState.MON_STATE_GLOBAL_PX}$label"
 
   override def recentStates: Seq[SMGState] = Seq(currentState)
+
+  override def parentId: Option[String] = None
 }
 
 case class SMGMonHeatmap(lst: List[SMGMonState], statesPerSquare: Int)
@@ -311,6 +323,52 @@ object SMGMonSilenceAction extends Enumeration {
 }
 
 case class SMGMonSilenceAction(action: SMGMonSilenceAction.Value, silence: Boolean, until: Option[Int])
+
+case class SMGMonFilter(rx: Option[String],
+                        rxx: Option[String],
+                        minState: Option[SMGState.Value],
+                        includeSoft: Boolean,
+                        includeAcked: Boolean,
+                        includeSilenced: Boolean) {
+
+  private def ciRegex(so: Option[String]) = so.map( s => if (s.isEmpty) s else  "(?i)" + s ).map(_.r)
+  private lazy val ciRx = ciRegex(rx)
+  private lazy val ciRxx = ciRegex(rxx)
+
+  def matchesState(ms: SMGMonState): Boolean = {
+    if ((rx.getOrElse("") != "") && ciRx.get.findFirstIn(SMGRemote.localId(ms.id)).isEmpty)
+      return false
+    if ((rxx.getOrElse("") != "") && ciRxx.get.findFirstIn(SMGRemote.localId(ms.id)).nonEmpty)
+      return false
+    if (minState.isDefined && minState.get > ms.currentStateVal)
+      return false
+    if (!(includeSoft || ms.isHard))
+      return false
+    if (!(includeAcked || !ms.isAcked))
+      return false
+    if (!(includeSilenced || !ms.isSilenced))
+      return false
+    true
+  }
+
+  def asUrlParams: String = {
+    val pairs = ListBuffer[String]()
+    if (rx.isDefined) pairs += "rx=" + URLEncoder.encode(rx.get, "UTF-8")
+    if (rxx.isDefined) pairs += "rxx=" + URLEncoder.encode(rxx.get, "UTF-8")
+    if (minState.isDefined) pairs += "ms=" + minState.get.toString
+    if (includeSoft) pairs += "soft=on"
+    if (includeAcked) pairs += "ackd=on"
+    if (includeSilenced) pairs += "slncd=on"
+    pairs.mkString("&")
+  }
+}
+
+object SMGMonFilter {
+
+  val matchAll = SMGMonFilter(rx = None, rxx = None, minState = None,
+    includeSoft = true, includeAcked = true, includeSilenced = true)
+
+}
 
 trait SMGMonitorApi {
 
@@ -352,6 +410,27 @@ trait SMGMonitorApi {
     */
   def silenceObject(ouid:String, action: SMGMonSilenceAction): Future[Boolean]
 
+
+  /**
+    *
+    * @param flt
+    * @param rootId
+    * @param pg
+    * @param pgSz
+    * @return
+    */
+  def localMonTrees(flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): (Seq[SMGTree[SMGMonState]], Int)
+
+  /**
+    *
+    * @param remoteId
+    * @param flt
+    * @param rootId
+    * @param pg
+    * @param pgSz
+    * @return a tuple with the resulting page of trees and the total number of pages
+    */
+  def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
   def silenceFetchCommand(fc: String, until: Option[Int]): Future[Boolean]
 
