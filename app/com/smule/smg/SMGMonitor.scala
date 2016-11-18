@@ -583,6 +583,50 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
+  private def processTree(id: String, procFn: (SMGMonInternalState) => Unit): Boolean = {
+    allMonitorSateTreesById.get(id).exists { ms =>
+      ms.allNodes.foreach(procFn)
+      true
+    }
+  }
+
+  override def acknowledge(id: String): Future[Boolean] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    if (SMGRemote.isLocalObj(id)) {
+      Future {
+        processTree(id, {ms => ms.ack()})
+      }
+    } else remotes.monAck(id)
+  }
+
+  override def unacknowledge(id: String): Future[Boolean] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    if (SMGRemote.isLocalObj(id)) {
+      Future {
+        processTree(id, {ms => ms.unack()})
+      }
+    } else remotes.monUnack(id)
+  }
+
+  override def silence(id: String, slunt: Int): Future[Boolean] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    if (SMGRemote.isLocalObj(id)) {
+      Future {
+        processTree(id, {ms => ms.slnc(slunt)})
+      }
+    } else remotes.monSilence(id, slunt)
+  }
+
+  override def unsilence(id: String): Future[Boolean] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    if (SMGRemote.isLocalObj(id)) {
+      Future {
+        processTree(id, {ms => ms.unslnc()})
+      }
+    } else remotes.monUnsilence(id)
+  }
+
+
   lifecycle.addStopHook { () =>
     Future.successful {
       saveStateToDisk()

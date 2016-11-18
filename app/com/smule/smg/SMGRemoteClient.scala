@@ -602,6 +602,55 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       }
     }
   }
+
+  def monAck(id: String): Future[Boolean] = {
+    ws.url(remote.url + API_PREFIX + s"monitor/ack?id=${SMGRemote.localId(id)}" ).
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
+      resp.status == 200
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/ack error: " + remote.id)
+        false
+      }
+    }
+  }
+
+  def monUnack(id: String): Future[Boolean] = {
+    ws.url(remote.url + API_PREFIX + s"monitor/unack?id=${SMGRemote.localId(id)}" ).
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
+      resp.status == 200
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/unack error: " + remote.id)
+        false
+      }
+    }
+  }
+
+  def monSilence(id: String, slunt: Int): Future[Boolean] = {
+    ws.url(remote.url + API_PREFIX + s"monitor/slnc?id=${SMGRemote.localId(id)}&slunt=$slunt" ).
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
+      resp.status == 200
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/slnc error: " + remote.id)
+        false
+      }
+    }
+  }
+
+  def monUnsilence(id: String): Future[Boolean] = {
+    ws.url(remote.url + API_PREFIX + s"monitor/unslnc?id=${SMGRemote.localId(id)}" ).
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
+      resp.status == 200
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/unslnc error: " + remote.id)
+        false
+      }
+    }
+  }
+
 }
 
 /**

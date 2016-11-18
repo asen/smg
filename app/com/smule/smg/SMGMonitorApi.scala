@@ -400,6 +400,7 @@ trait SMGMonitorApi {
     * @param cmdId
     * @return
     */
+  // TODO deprecate/remove
   def fetchCommandState(cmdId: String): Future[Option[SMGMonState]]
 
 
@@ -408,7 +409,12 @@ trait SMGMonitorApi {
     * @param ouid - object (update) id
     * @param action - see  SMGMonSilenceAction
     */
+  // TODO deprecate/remove
   def silenceObject(ouid:String, action: SMGMonSilenceAction): Future[Boolean]
+
+  // TODO deprecate/remove
+  def silenceFetchCommand(fc: String, until: Option[Int]): Future[Boolean]
+
 
 
   /**
@@ -432,7 +438,14 @@ trait SMGMonitorApi {
     */
   def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
-  def silenceFetchCommand(fc: String, until: Option[Int]): Future[Boolean]
+
+  def acknowledge(id: String): Future[Boolean]
+
+  def unacknowledge(id: String): Future[Boolean]
+
+  def silence(id: String, slunt: Int): Future[Boolean]
+
+  def unsilence(id: String): Future[Boolean]
 
   /**
     * Generate a heatmap from local for the system objects. A heatmap is (possibly condensed) list of SMGMonState squares.

@@ -181,6 +181,11 @@ trait SMGMonInternalState extends SMGMonState {
     }
   }
 
+  def ack(): Unit = myIsAcked = true
+  def unack(): Unit = myIsAcked = false
+  def slnc(until: Int): Unit = myIsSilencedUntil = Some(until)
+  def unslnc(): Unit = myIsSilencedUntil = None
+
   def serialize: JsValue = {
     val mm = mutable.Map[String,JsValue](
       "sts" -> Json.toJson(SMGState.tssNow),

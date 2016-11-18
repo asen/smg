@@ -1,0 +1,11 @@
+
+@(msid: String, btnTitle: String, tgt: String, curUrl: String, optParam: Option[(String,String)])
+
+<form style="display: inline-block;" method="GET" action="/monitor/@tgt">
+  <input type="hidden" name="id" value="@{msid}">
+  <input type="hidden" name="curl" value="@{curUrl}">
+  <input type="submit" value="@btnTitle">
+  @if(optParam.isDefined) {
+    <input type="text" name="@{optParam.get._1}" value="@{optParam.get._2}" size="10" />
+  }
+</form>

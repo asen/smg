@@ -602,6 +602,31 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def monitorAck(id: String, curl: String) = Action.async {
+    monitorApi.acknowledge(id).map { ret =>
+      Redirect(curl)
+    }
+  }
+
+  def monitorUnack(id: String, curl: String) = Action.async {
+    monitorApi.unacknowledge(id).map { ret =>
+      Redirect(curl)
+    }
+  }
+
+  def monitorSilence(id: String, slunt: String, curl: String) = Action.async {
+    val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
+    monitorApi.silence(id, untilTss).map { ret =>
+      Redirect(curl)
+    }
+  }
+
+  def monitorUnsilence(id: String, curl: String) = Action.async {
+    monitorApi.unsilence(id).map { ret =>
+      Redirect(curl)
+    }
+  }
+
   def monitorRunTree(remote: String, root: Option[String], lvls: Option[Int]) = Action.async { request =>
     val conf = configSvc.config
     val rootStr = root.getOrElse("")

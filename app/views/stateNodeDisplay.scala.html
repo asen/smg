@@ -1,11 +1,30 @@
 @import com.smule.smg.SMGTree
 @import com.smule.smg.SMGMonState
-@(ms: SMGMonState)
+@(ms: SMGMonState, curUrl: String)
 
   <p><a href="?rid=@ms.id" onclick="goToRoot('@ms.id'); return false">@ms.id</a></p>
-  <p>
-    <!-- @{ms.asJson.toString} -->
+  <div>
     <span style="background-color: @ms.severityColor;">@{ms.currentStateVal}</span> <a href="@ms.showUrl">@ms.text</a>
     [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ]
-  </p>
+    @if(!ms.isOk){
+      [
+        @if(ms.isAcked) {
+          Acknowledged
+          @stateNodeActionDisplay(ms.id, "Unack", "unack", curUrl, None)
+        } else {
+          @stateNodeActionDisplay(ms.id, "Ack", "ack", curUrl, None)
+        }
+      ]
+    }
+
+    [
+    @if(ms.isSilenced) {
+      Silenced @{ms.silencedUntilStr}
+      @stateNodeActionDisplay(ms.id, "Unsilence", "unslnc", curUrl, None)
+    } else {
+      @stateNodeActionDisplay(ms.id, "Silence for", "slnc", curUrl, Some("slunt", "2h"))
+    }
+    ]
+
+  </div>
 

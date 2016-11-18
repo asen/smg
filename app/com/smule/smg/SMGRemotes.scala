@@ -170,6 +170,13 @@ trait SMGRemotesApi {
 
   def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
+  def monAck(id: String): Future[Boolean]
+
+  def monUnack(id: String): Future[Boolean]
+
+  def monSilence(id: String, slunt: Int): Future[Boolean]
+
+  def monUnsilence(id: String): Future[Boolean]
 
   /**
     * TODO
@@ -471,5 +478,31 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
 
   }
 
+  override def monAck(id: String): Future[Boolean] = {
+    val remoteId = SMGRemote.remoteId(id)
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monAck(id)
+    else Future { false }
+  }
 
+  override def monUnack(id: String): Future[Boolean] = {
+    val remoteId = SMGRemote.remoteId(id)
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monUnack(id)
+    else Future { false }
+  }
+
+  override def monSilence(id: String, slunt: Int): Future[Boolean] = {
+    val remoteId = SMGRemote.remoteId(id)
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monSilence(id, slunt)
+    else Future { false }
+  }
+
+  override def monUnsilence(id: String): Future[Boolean] = {
+    val remoteId = SMGRemote.remoteId(id)
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monUnsilence(id)
+    else Future { false }
+  }
 }

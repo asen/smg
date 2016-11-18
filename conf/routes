@@ -26,6 +26,12 @@ GET     /monitor/runtree     controllers.Application.monitorRunTree(remote: Stri
 GET     /monitor/trees       controllers.Application.monitorTrees(remote: String ?= "", rx: Option[String], rxx: Option[String], ms: Option[String], hsoft: String ?= "off", hackd: String ?= "off", hslncd: String ?= "off", rid: Option[String], pg: Int ?= 0, lmt: Int ?= 200)
 GET     /monitor/silenceFetch  controllers.Application.monitorSilenceFetch(cmd: String, until: Option[String], rdr: String)
 
+GET    /monitor/ack        controllers.Application.monitorAck(id: String, curl: String)
+GET    /monitor/unack        controllers.Application.monitorUnack(id: String, curl: String)
+GET    /monitor/slnc        controllers.Application.monitorSilence(id: String, slunt: String, curl: String)
+GET    /monitor/unslnc        controllers.Application.monitorUnsilence(id: String, curl: String)
+
+
 GET     /proxy/:remote/*path  controllers.Application.proxy(remote: String, path: String)
 
 GET     /inspect/:id       controllers.Application.inspect(id: String)
@@ -58,7 +64,12 @@ GET     /api/monitor/logs       controllers.Api.monitorLog(period: Option[String
 GET     /api/monitor/heatmap   controllers.Api.monitorHeatmap
 GET     /api/monitor/ostates   controllers.Api.monitorObjectViewsGet(ids: String)
 POST    /api/monitor/ostates   controllers.Api.monitorObjectViewsPost
-GET     /api/monitor/silence/:oid   controllers.Api.monitorSilence(oid: String, act: String, slnc: Option[String], unt: Option[Int])
+GET     /api/monitor/silence/:oid   controllers.Api.monitorSilenceObj(oid: String, act: String, slnc: Option[String], unt: Option[Int])
+
+GET     /api/monitor/ack        controllers.Api.monitorAck(id: String)
+GET     /api/monitor/unack      controllers.Api.monitorUnack(id: String)
+GET     /api/monitor/slnc       controllers.Api.monitorSilence(id: String, slunt: Int)
+GET     /api/monitor/unslnc     controllers.Api.monitorUnsilence(id: String)
 
 GET     /api/plugin/:pluginId  controllers.Api.pluginData(pluginId: String)
 

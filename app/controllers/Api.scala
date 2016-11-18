@@ -254,7 +254,8 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorSilence(oid: String, act: String, slnc: Option[String], unt: Option[Int]) =  Action.async {
+  // TODO deprecate/remove
+  def monitorSilenceObj(oid: String, act: String, slnc: Option[String], unt: Option[Int]) =  Action.async {
     val actv = SMGMonSilenceAction.withName(act)
     val silence = slnc.getOrElse("on") == "on"
     monitorApi.silenceObject(oid, SMGMonSilenceAction(actv, silence, unt)).map{ b =>
@@ -267,6 +268,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(trees.map(t => (t._1.toString, Json.toJson(t._2)))))
   }
 
+  // TODO deprecate/remove
   def monitorFetchCommandState(cmd: String) = Action.async {
     monitorApi.fetchCommandState(cmd).map { optState =>
       if (optState.isDefined)
@@ -301,4 +303,42 @@ class Api  @Inject() (actorSystem: ActorSystem,
     val m = Map("seq" -> Json.toJson(tpl._1), "maxpg" -> Json.toJson(tpl._2))
     Ok(Json.toJson(m))
   }
+
+
+  def monitorAck(id: String) = Action.async {
+    monitorApi.acknowledge(id).map { b =>
+      if (b)
+        Ok("OK")
+      else
+        NotFound("state id not found")
+    }
+  }
+
+  def monitorUnack(id: String) = Action.async {
+    monitorApi.unacknowledge(id).map { b =>
+      if (b)
+        Ok("OK")
+      else
+        NotFound("state id not found")
+    }
+  }
+
+  def monitorSilence(id: String, slunt: Int) = Action.async {
+    monitorApi.silence(id, slunt).map { b =>
+      if (b)
+        Ok("OK")
+      else
+        NotFound("state id not found")
+    }
+  }
+
+  def monitorUnsilence(id: String) = Action.async {
+    monitorApi.unsilence(id).map { b =>
+      if (b)
+        Ok("OK")
+      else
+        NotFound("state id not found")
+    }
+  }
+
 }
