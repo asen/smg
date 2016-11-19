@@ -171,7 +171,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       // process object error
       objState.processError(msg.ts, msg.exitCode, msg.errors, isInherited = false)
       //process var states
-      msg.vals.zipWithIndex.foreach { case (v,ix) =>
+      msg.obj.vars.zipWithIndex.foreach { case (v,ix) =>
         val varState = getOrCreateVarState(msg.obj, ix)
         varState.addState(objState.currentState, isInherited = true)
       }
@@ -198,12 +198,12 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       // process pre-fetch error
       pfState.processError(msg.ts, msg.exitCode, msg.errors, isInherited = false)
-      //update children
+      //update all children as they are not getting messages
       findTreeWithRootId(pfState.id).foreach { stTree =>
         stTree.allNodes.tail.foreach(st => st.addState(pfState.currentState, isInherited = true))
       }
     } else {
-      //process pre-fetch OK, child pre-fetches will get their own OK msg
+      //process pre-fetch OK, child fetches will get their own OK msg
       pfState.processSuccess(msg.ts, isInherited = false)
     }
   }
