@@ -85,7 +85,7 @@ object SMGTree {
         if (recLevel > MAX_SMG_TREE_LEVELS) {
           throw new RuntimeException(s"SMGTree.buildTree: Configuration error - recursion ($recLevel) exceeded $MAX_SMG_TREE_LEVELS")
         }
-        buildTree(myParents)
+        buildTree(myParents.sortBy(_.node.id))
         recLevel -= 1
       }
     }
@@ -97,7 +97,7 @@ object SMGTree {
       if (trees.tail.isEmpty) {
         trees.head
       } else {
-        SMGTree(trees.head.node, trees.flatMap(_.children))
+        SMGTree(trees.head.node, trees.flatMap(_.children).sortBy(_.node.id))
       }
     }
   }
