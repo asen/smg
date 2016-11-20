@@ -29,7 +29,7 @@
       <input type="text" id="inpRxx" name="rxx" onchange="mySubmitOnChange(this);" value="@{flt.rxx.getOrElse("")}">
     <br/>
     <label class="autosubmit-lbl">Minimal severity filter:</label>
-    <select name="ms" onchange="mySubmitOnChange(this);" >
+    <select id="inpMs" name="ms" onchange="mySubmitOnChange(this);" >
       @for( sid <- SMGState.values.toList.map(_.toString)) {
       <option value='@sid' @if(sid == flt.minState.getOrElse(SMGState.OK).toString){ selected } >@sid</option>
       }
@@ -73,6 +73,7 @@
 
     function goToRoot(rootId) {
       document.getElementById("treeRoot").value = rootId
+      document.getElementById("inpMs").value = ''
       realSubmit();
     }
 
