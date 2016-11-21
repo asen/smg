@@ -168,6 +168,10 @@ trait SMGRemotesApi {
   def monitorRunTree(remoteId: String, root: Option[String]): Future[Map[Int,Seq[SMGFetchCommandTree]]]
 
 
+  def monProblems(remoteId: String, flt: SMGMonFilter): Future[Seq[SMGMonState]]
+
+  def monSilencedStates(remoteId: String): Future[Seq[SMGMonState]]
+
   def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
   def monAck(id: String): Future[Boolean]
@@ -470,6 +474,19 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     else Future { None }
   }
 
+  override def monProblems(remoteId: String, flt: SMGMonFilter): Future[Seq[SMGMonState]] = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monitorProblems(flt)
+    else Future { Seq() }
+
+  }
+
+  override def monSilencedStates(remoteId: String): Future[Seq[SMGMonState]] = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monitorSilencedStates()
+    else Future { Seq() }
+  }
+
   override def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String],
                         pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]   = {
     if (clientForId(remoteId).nonEmpty)
@@ -505,4 +522,5 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
       clientForId(remoteId).get.monUnsilence(id)
     else Future { false }
   }
+
 }

@@ -375,7 +375,7 @@ trait SMGMonitorApi {
   /**
     * Get all state objects for given sequence of object views
     * @param ovs - sequence of object views for which to get mon states
-    * @return - async sequence of mon states
+    * @return - async map of object view ids -> sequence of mon states
     */
   def objectViewStates(ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]]
 
@@ -385,15 +385,18 @@ trait SMGMonitorApi {
     * @param includeAcked - whether to include acknowledged problems
     * @return list of problenatic mon states
     */
+  // TODO deprecated
   def localProblems(includeSoft: Boolean, includeAcked: Boolean, includeSilenced: Boolean): Seq[SMGMonState]
 
-  /**
-    * get all problematic SMGMonStates
-    * @param includeSoft - whether to include soft errors or hard only
-    * @param includeAcked - whether to include acknowledged problems
-    * @return list of tuples (remote, list of problem mon states) one for each remote
-    */
-  def problems(includeSoft: Boolean, includeAcked: Boolean, includeSilenced: Boolean): Future[Seq[(SMGRemote, Seq[SMGMonState])]]
+
+
+  def localStates(flt: SMGMonFilter): Seq[SMGMonState]
+
+  def problems(remoteId: Option[String], flt: SMGMonFilter): Future[Seq[(SMGRemote, Seq[SMGMonState])]]
+
+  def localSilencedStates(): Seq[SMGMonState]
+
+  def silencedStates(): Future[Seq[(SMGRemote, Seq[SMGMonState])]]
 
   /**
     * Get the combined state for all rrd objects sharing the same parent pre_fetch

@@ -223,6 +223,21 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(probs))
   }
 
+  def monitorProblems(ms: Option[String], soft: Option[String], ack: Option[String], slc: Option[String]) = Action {
+    val myMs = ms.map(s => SMGState.withName(s)).getOrElse(SMGState.E_ANOMALY)
+    val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(myMs),
+      includeSoft =  soft.getOrElse("off") == "on", includeAcked = ack.getOrElse("off") == "on",
+      includeSilenced = slc.getOrElse("off") == "on"
+    )
+    val states = monitorApi.localStates(flt)
+    Ok(Json.toJson(states))
+  }
+
+  def monitorSilencedStates()  = Action {
+    val states = monitorApi.localSilencedStates()
+    Ok(Json.toJson(states))
+  }
+
   def monitorHeatmap = Action { request =>
     monitorHeatmapCommon(request.queryString)
   }

@@ -4,11 +4,11 @@
 
 @(plugins: Seq[SMGPlugin], availRemotes:Seq[String], rmtId: Option[String], availStates:Seq[String], minSeverity: Option[String], period:String, limit:Int, hardOnly: Boolean, logMsgs: Seq[SMGMonitorLogMsg])
 
-@main("SMG - Monitor log", plugins) {
+@main("SMG - Monitor event log", plugins) {
 
 @monitorMenu("log")
 
-<h3>Monitoring log</h3>
+<h3>Event log</h3>
 
 <div>
 <form id="monLogFilterForm" method="GET" action="/monitor/log" class="filter-form">

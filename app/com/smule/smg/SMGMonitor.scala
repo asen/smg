@@ -8,6 +8,7 @@ import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.io.Source
 
@@ -271,6 +272,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
+  // TODO remove this
   override def localProblems(includeSoft: Boolean, includeAcked: Boolean, includeSilenced: Boolean): Seq[SMGMonState] = {
 
     // helper to check whether the given mon state matches the supplied arguments criteria
@@ -296,17 +298,57 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     topLevelProblemsBySeverity.keys.toSeq.sortBy(-_.id).flatMap(sv => topLevelProblemsBySeverity(sv))
   }
 
-  override def problems(includeSoft: Boolean, includeAcked: Boolean, includeSilenced: Boolean): Future[Seq[(SMGRemote, Seq[SMGMonState])]] = {
+  private def localStatesMatching(fltFn: (SMGMonInternalState) => Boolean): Seq[SMGMonState] = {
+    val statesBySeverity = topLevelMonitorStateTrees.sortBy(_.node.id).flatMap { tt =>
+      tt.findTreesMatching(fltFn)
+    }.map(_.node).groupBy(_.currentStateVal)
+    statesBySeverity.keys.toSeq.sortBy(-_.id).flatMap(statesBySeverity(_))
+  }
+
+  override def localStates(flt: SMGMonFilter): Seq[SMGMonState] = {
+    localStatesMatching(flt.matchesState)
+  }
+
+  override def problems(remoteId: Option[String], flt: SMGMonFilter): Future[Seq[(SMGRemote, Seq[SMGMonState])]] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    val futs = ListBuffer[(Future[(SMGRemote, Seq[SMGMonState])])]()
+    if (remoteId.isEmpty || remoteId.get == SMGRemote.wildcard.id) {
+      futs += Future {
+        (SMGRemote.local, localStates(flt))
+      }
+      configSvc.config.remotes.foreach { rmt =>
+        futs += remotes.monProblems(rmt.id, flt).map((rmt,_))
+      }
+    } else if (remoteId.get == SMGRemote.local.id) {
+      futs += Future {
+        (SMGRemote.local, localStates(flt))
+      }
+    } else {
+      val rmtOpt = configSvc.config.remotes.find(_.id == remoteId.get)
+      if (rmtOpt.isDefined)
+        futs += remotes.monProblems(rmtOpt.get.id, flt).map((rmtOpt.get,_))
+    }
+    Future.sequence(futs.toList)
+  }
+
+  override def localSilencedStates(): Seq[SMGMonState] = {
+    localStatesMatching({ ms =>
+      ms.isSilenced
+    })
+  }
+
+  override def silencedStates(): Future[Seq[(SMGRemote, Seq[SMGMonState])]] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
     val remoteFuts = configSvc.config.remotes.map { rmt =>
-      remotes.monitorIssues(rmt.id, includeSoft, includeAcked, includeSilenced).map((rmt,_))
+      remotes.monSilencedStates(rmt.id).map((rmt,_))
     }
     val localFut = Future {
-      (SMGRemote.local, localProblems(includeSoft, includeAcked, includeSilenced))
+      (SMGRemote.local, localSilencedStates())
     }
     val allFuts = Seq(localFut) ++ remoteFuts
     Future.sequence(allFuts)
   }
+
 
   def localFetchState(cmdId: String): Option[SMGMonState] = {
     // TODO validate that result is prefetch?

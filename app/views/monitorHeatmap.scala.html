@@ -4,11 +4,11 @@
 
 @(plugins: Seq[SMGPlugin], monitorStates: Seq[(SMGRemote, SMGMonHeatmap)])
 
-@main("SMG - Monitor overview", plugins) {
+@main("SMG - Monitor heatmap", plugins) {
 
 @monitorMenu("heatmap")
 
-<h3>Monitoring overview</h3>
+<h3>Heatmap</h3>
 
 <!--
   <form method="GET" action="/monitor">

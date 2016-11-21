@@ -452,49 +452,34 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorIssues(soft: Option[String], ackd: Option[String], slncd: Option[String], action: Option[String], oid:Option[String], until: Option[String]) = Action.async {
-    action match {
-      case Some(act) => {
-        val fut = if (oid.isDefined) {
-          val (actv, slnc) = act match {
-            case "ack" => (SMGMonSilenceAction.ACK, true)
-            case "unack" => (SMGMonSilenceAction.ACK, false)
-            case "slnc" => (SMGMonSilenceAction.SILENCE, true)
-            case "unslnc" => (SMGMonSilenceAction.SILENCE, false)
-            case "ackpf" => (SMGMonSilenceAction.ACK_PF, true)
-            case "unackpf" => (SMGMonSilenceAction.ACK_PF, false)
-            case "slncpf" => (SMGMonSilenceAction.SILENCE_PF, true)
-            case "unslncpf" => (SMGMonSilenceAction.SILENCE_PF, false)
-            case s: String => {
-              log.error("Bad action provided" + s)
-              (SMGMonSilenceAction.ACK, false)
-            }
-          }
-          val untilTss = until.map(s => SMGState.tssNow + SMGRrd.parsePeriod(s).getOrElse(0))
-          val slncAction = SMGMonSilenceAction(actv, slnc, untilTss)
-          monitorApi.silenceObject(oid.get, slncAction)
-        } else Future {
-          log.error("monitorIssues: oid not provided")
-          false
-        }
-        fut.map { b =>
-          val rm = mutable.Map[String, Seq[String]]()
-          if (soft.isDefined) rm += ("soft" -> Seq(soft.get))
-          if (ackd.isDefined) rm += ("ackd" -> Seq(ackd.get))
-          if (slncd.isDefined) rm += ("slncd" -> Seq(slncd.get))
-          Redirect("/monitor", rm.toMap)
-        }
-      }
-      case None => {
-        val inclSoft = soft.getOrElse("off") == "on"
-        val inclAck = ackd.getOrElse("off") == "on"
-        val inclSlnc = slncd.getOrElse("off") == "on"
-        monitorApi.problems(inclSoft, inclAck, inclSlnc).map { seq =>
-          Ok(views.html.monitorIssues(configSvc.plugins, seq, inclSoft, inclAck, inclSlnc))
-        }
-      }
+  def monitorProblems(remote: String,
+                      ms: Option[String],
+                      soft: Option[String],
+                      ackd: Option[String],
+                      slncd: Option[String]) = Action.async { request =>
+    val (availRemotes, rmtOpt) = parseRemoteParam(remote)
+    val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_ANOMALY)
+    val inclSoft = soft.getOrElse("off") == "on"
+    val inclAck = ackd.getOrElse("off") == "on"
+    val inclSlnc = slncd.getOrElse("off") == "on"
+    val flt = SMGMonFilter(rx = None, rxx = None, Some(minSev),
+      includeSoft = inclSoft, includeAcked = inclAck, includeSilenced = inclSlnc)
+    val availStates = (SMGState.values - SMGState.OK).toSeq.sorted.map(_.toString)
+    monitorApi.problems(rmtOpt, flt).map { seq =>
+      Ok(views.html.monitorProblems(configSvc.plugins, availRemotes, availStates, rmtOpt,
+        seq, flt, request.uri))
     }
+
   }
+
+  def monitorSilenced() = Action.async { request =>
+
+    monitorApi.silencedStates().map { seq =>
+      Ok(views.html.monitorSilenced(configSvc.plugins, seq, request.uri))
+    }
+
+  }
+
 
   val DEFAULT_HEATMAP_MAX_SIZE = 1800
 
@@ -598,7 +583,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     monitorApi.monTrees(remote, flt, rid, myPg, myLimit).map { t =>
       val seq = t._1
       val maxPg = t._2
-      Ok(views.html.stateTrees(configSvc.plugins, remote, remoteIds, flt, rid, seq, myPg, maxPg, myLimit, request.uri))
+      Ok(views.html.monitorStateTrees(configSvc.plugins, remote, remoteIds, flt, rid, seq, myPg, maxPg, myLimit, request.uri))
     }
   }
 

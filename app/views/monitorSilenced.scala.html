@@ -1,0 +1,38 @@
+@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGRemote
+@import com.smule.smg.SMGMonState
+@import com.smule.smg.SMGState
+@import com.smule.smg.SMGMonFilter
+
+@(plugins: Seq[SMGPlugin], monitorStates: Seq[(SMGRemote, Seq[SMGMonState])], curUrl: String)
+
+@main("SMG - Monitor silenced states", plugins, 60) {
+
+@monitorMenu("silenced")
+
+
+<h3>All silenced states</h3>
+
+
+<hr/>
+@for((r, mss) <- monitorStates) {
+@remoteDisplay(r)
+
+<div>
+  @if(mss.isEmpty) {
+  <span style="color: green">No silenced states</span>
+  } else {
+  <ul>
+    @for((ms,ix) <- mss.zipWithIndex) {
+    <li>
+      <span style="background-color: @ms.severityColor;">@{ms.currentStateVal}</span> <a href="@ms.showUrl">@ms.text</a>
+      [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ] <br/>
+      @monStateActions(ms, curUrl)
+      <hr/>
+    </li>
+    }
+  </ul>
+  }
+</div>
+}
+}

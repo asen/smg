@@ -19,7 +19,8 @@ POST    /reload         controllers.Application.reloadConf
 GET     /reload         controllers.Application.reloadConf
 GET     /user/settings       controllers.Application.userSettings()
 POST    /user/settings       controllers.Application.userSettings()
-GET     /monitor             controllers.Application.monitorIssues(soft: Option[String], ackd: Option[String], slncd: Option[String], action:Option[String], oid:Option[String], until:Option[String])
+GET     /monitor             controllers.Application.monitorProblems(remote: String ?= "*", ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
+GET     /monitor/silenced    controllers.Application.monitorSilenced()
 GET     /monitor/heatmap     controllers.Application.monitorHeatmap
 GET     /monitor/log         controllers.Application.monitorLog(remote: String ?= "*", p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String])
 GET     /monitor/runtree     controllers.Application.monitorRunTree(remote: String ?= "", root: Option[String], lvls: Option[Int])
@@ -56,6 +57,8 @@ POST    /api/agg            controllers.Api.agg
 GET     /api/rrd/:oid       controllers.Api.downloadRrd(oid: String)
 
 GET     /api/monitor/issues    controllers.Api.monitorIssues(soft: Option[String], ack: Option[String], slc: Option[String])
+GET     /api/monitor/problems  controllers.Api.monitorProblems(ms: Option[String], soft: Option[String], ack: Option[String], slc: Option[String])
+GET     /api/monitor/silenced  controllers.Api.monitorSilencedStates()
 GET     /api/monitor/trees    controllers.Api.monitorTrees(rx: Option[String], rxx: Option[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rid: Option[String], pg: Int ?= 0, lmt: Int ?= 200)
 GET     /api/monitor/runtree   controllers.Api.monitorRunTree(root: Option[String])
 GET     /api/monitor/fcstate   controllers.Api.monitorFetchCommandState(cmd: String)

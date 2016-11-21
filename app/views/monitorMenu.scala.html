@@ -3,20 +3,25 @@
 
 <div>
   <h6>|
-    @if(cur != "issues"){
-    <a href="/monitor">Current status</a>  |
+    @if(cur != "problems"){
+    <a href="/monitor">Overview</a>  |
     } else {
-    Current status |
+    Overview |
+    }
+    @if(cur != "silenced"){
+    <a href="/monitor/silenced">Silenced states</a>  |
+    } else {
+    Silenced states |
     }
     @if(cur != "trees"){
-    <a href="/monitor/trees">State trees</a> |
+    <a href="/monitor/trees">Browse states</a> |
     }else {
-    State trees |
+    Browse states |
     }
     @if(cur != "log"){
-    <a href="/monitor/log">Logs</a> |
+    <a href="/monitor/log">Event log</a> |
     }else {
-    Logs |
+    Event log |
     }
     @if(cur != "heatmap"){
     <a href="/monitor/heatmap">Heatmap</a> |

@@ -12,25 +12,7 @@
 
   [ <a href="@ms.showUrl">Graphs</a> ]
 
-
-  @if(!ms.isOk){
-  [
-    @if(ms.isAcked) {
-      Acknowledged
-      @stateNodeActionDisplay(ms.id, "Unack", "unack", curUrl, None)
-    } else {
-      @stateNodeActionDisplay(ms.id, "Ack", "ack", curUrl, None)
-    }
-  ]
-  }
-
-  [
-  @if(ms.isSilenced) {
-    Silenced @{ms.silencedUntilStr}
-    @stateNodeActionDisplay(ms.id, "Unsilence", "unslnc", curUrl, None)
-  }
-  @stateNodeActionDisplay(ms.id, "Silence for", "slnc", curUrl, Some("slunt", "2h"))
-  ]
+  @monStateActions(ms, curUrl)
 </div>
 
 <div>

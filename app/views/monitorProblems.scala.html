@@ -1,0 +1,82 @@
+@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGRemote
+@import com.smule.smg.SMGMonState
+@import com.smule.smg.SMGState
+@import com.smule.smg.SMGMonFilter
+
+@(plugins: Seq[SMGPlugin], availRemotes:Seq[String], availStates:Seq[String], rmtId: Option[String], monitorStates: Seq[(SMGRemote, Seq[SMGMonState])], flt:SMGMonFilter, curUrl: String)
+
+@main("SMG - Monitor overview", plugins, 60) {
+
+@monitorMenu("problems")
+
+
+<h3>Overview</h3>
+
+<form id="monProbsFilterForm" method="GET" action="/monitor/problems" class="filter-form">
+  @if(availRemotes.nonEmpty){
+  <label class="autosubmit-lbl">Remote filter:</label>
+  <select name="remote" class="select-remote" onchange="mySubmitOnChange(this);" >
+    @for( rid <- availRemotes) {
+    <option value='@rid' @if(rid == rmtId.getOrElse("*")){ selected } >@if(rid == ""){Local}else{@rid}</option>
+    }
+  </select>
+  }
+  <label class="autosubmit-lbl">Minimal Severity filter:</label>
+  <select name="ms" onchange="mySubmitOnChange(this);" >
+    @for( sid <- availStates) {
+    <option value='@sid' @if(sid == flt.minState.getOrElse("E_ANOMALY")){ selected } >@sid</option>
+    }
+  </select>
+
+  <label class="autosubmit-lbl" for="cbSoft">Display Soft errors</label>
+  <input id="cbSoft" type="checkbox" name="soft" onchange="mySubmitOnChange(this);" @if(flt.includeSoft){ checked } />
+  <label class="autosubmit-lbl" for="cbAcked">Display Acknowledged errors</label>
+  <input id="cbAcked" type="checkbox" name="ackd" @if(flt.includeAcked){ checked } onchange="mySubmitOnChange(this);" />
+  <label class="autosubmit-lbl" for="cbSlncd">Display Silenced errors</label>
+  <input id="cbSlncd" type="checkbox" name="slncd" @if(flt.includeSilenced){ checked } onchange="mySubmitOnChange(this);" />
+
+  <input id="btn_GET" type="submit" value="Refresh">
+</form>
+
+<!-- strip empty params from the form so that urls are less cluttered -->
+<script language="JavaScript">
+  function disableEmptyInputs() {
+      $(':input', this).each(function() {
+         this.disabled = ((this.name != "remote") && !($(this).val())) ||
+           ((this.name == "remote") && ($(this).val() == "*"));
+      });
+  };
+
+  function mySubmitOnChange(elem) {
+      disableEmptyInputs();
+      setTimeout(0, $('#btn_GET').click());
+  }
+
+  $('form#monProbsFilterForm').submit(disableEmptyInputs);
+</script>
+
+
+<hr/>
+@for((r, mss) <- monitorStates) {
+@remoteDisplay(r)
+
+<div>
+  @if(mss.isEmpty) {
+  <span style="color: green">No issues</span>
+  } else {
+  <ul>
+    @for((ms,ix) <- mss.zipWithIndex) {
+    <li>
+      <span style="background-color: @ms.severityColor;">@{ms.currentStateVal}</span> <a href="@ms.showUrl">@ms.text</a>
+      [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ]
+
+      @monStateActions(ms, curUrl)
+
+    </li>
+    }
+  </ul>
+  }
+</div>
+}
+}

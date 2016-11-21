@@ -1,0 +1,21 @@
+@import com.smule.smg.SMGMonState
+@(ms: SMGMonState, curUrl: String)
+
+@if(!ms.isOk){
+  [
+  @if(ms.isAcked) {
+    Acknowledged
+    @monStateActionDisplay(ms.id, "Unack", "unack", curUrl, None)
+  } else {
+    @monStateActionDisplay(ms.id, "Ack", "ack", curUrl, None)
+  }
+  ]
+}
+
+[
+@if(ms.isSilenced) {
+  Silenced @{ms.silencedUntilStr}
+  @monStateActionDisplay(ms.id, "Unsilence", "unslnc", curUrl, None)
+}
+@monStateActionDisplay(ms.id, "Silence for", "slnc", curUrl, Some("slunt", "2h"))
+]
