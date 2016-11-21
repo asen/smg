@@ -318,12 +318,6 @@ object SMGMonHeatmap {
   }
 }
 
-object SMGMonSilenceAction extends Enumeration {
-  val ACK, SILENCE, ACK_PF, SILENCE_PF = Value
-}
-
-case class SMGMonSilenceAction(action: SMGMonSilenceAction.Value, silence: Boolean, until: Option[Int])
-
 case class SMGMonFilter(rx: Option[String],
                         rxx: Option[String],
                         minState: Option[SMGState.Value],

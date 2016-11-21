@@ -169,18 +169,6 @@ trait SMGMonInternalState extends SMGMonState {
       myIsAcked = false
   }
 
-  // TODO deprecate this
-  def silence(action: SMGMonSilenceAction): Unit = {
-    action.action match {
-      case SMGMonSilenceAction.ACK | SMGMonSilenceAction.ACK_PF => {
-        myIsAcked = action.silence
-      }
-      case SMGMonSilenceAction.SILENCE | SMGMonSilenceAction.SILENCE_PF => {
-        myIsSilencedUntil = if (action.silence) action.until else None
-      }
-    }
-  }
-
   def ack(): Unit = myIsAcked = true
   def unack(): Unit = myIsAcked = false
   def slnc(until: Int): Unit = myIsSilencedUntil = Some(until)
