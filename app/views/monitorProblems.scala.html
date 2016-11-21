@@ -44,7 +44,8 @@
   function disableEmptyInputs() {
       $(':input', this).each(function() {
          this.disabled = ((this.name != "remote") && !($(this).val())) ||
-           ((this.name == "remote") && ($(this).val() == "*"));
+           ((this.name == "remote") && ($(this).val() == "*")) ||
+           ((this.name == "ms") && ($(this).val() == "E_ANOMALY")) ;
       });
   };
 
