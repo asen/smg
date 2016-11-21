@@ -520,10 +520,20 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   private def processTree(id: String, procFn: (SMGMonInternalState) => Unit): Boolean = {
-    allMonitorSateTreesById.get(id).exists { ms =>
-      ms.allNodes.foreach(procFn)
-      true
+    //XXX expand fetch-command id action to all intervals
+    val arr = id.split(":")
+    val myIds = if (arr.length > 1 && configSvc.config.preFetches.contains(arr(0))) {
+      configSvc.config.intervals.toSeq.map(iv => SMGMonPfState.stateId(arr(0),iv))
+    } else Seq(id)
+    var ret = false
+    myIds.foreach { myId =>
+      val mstopt = allMonitorSateTreesById.get(id)
+      if (mstopt.isDefined) {
+        mstopt.get.allNodes.foreach(procFn)
+        ret = true
+      }
     }
+    ret
   }
 
   override def acknowledge(id: String): Future[Boolean] = {
