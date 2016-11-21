@@ -272,32 +272,6 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
-  // TODO remove this
-  override def localProblems(includeSoft: Boolean, includeAcked: Boolean, includeSilenced: Boolean): Seq[SMGMonState] = {
-
-    // helper to check whether the given mon state matches the supplied arguments criteria
-    def myMonStateFilter(ms: SMGMonState): Boolean = {
-      ((ms.currentStateVal != SMGState.OK) &&
-        (includeSoft || ms.isHard) &&
-        (includeAcked || !ms.isAcked) &&
-        (includeSilenced || !ms.isSilenced)) ||
-        (ms.currentStateVal == SMGState.OK && includeSilenced && ms.isSilenced)
-    }
-
-    val allProblems = allMonitorStatesById.filter { case (stateId, monState) =>
-      myMonStateFilter(monState)
-    }
-
-    val topLevelProblemsBySeverity = allProblems.values.filter { monState =>
-      monState.parentId.isEmpty || {
-        val parentProblem = allProblems.get(monState.parentId.get)
-        parentProblem.isEmpty || parentProblem.get.isInstanceOf[SMGMonRunState]
-      }
-    }.groupBy(_.currentStateVal)
-
-    topLevelProblemsBySeverity.keys.toSeq.sortBy(-_.id).flatMap(sv => topLevelProblemsBySeverity(sv))
-  }
-
   private def localStatesMatching(fltFn: (SMGMonInternalState) => Boolean): Seq[SMGMonState] = {
     val statesBySeverity = topLevelMonitorStateTrees.sortBy(_.node.id).flatMap { tt =>
       tt.findTreesMatching(fltFn)
@@ -317,7 +291,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         (SMGRemote.local, localStates(flt))
       }
       configSvc.config.remotes.foreach { rmt =>
-        futs += remotes.monProblems(rmt.id, flt).map((rmt,_))
+        futs += remotes.monitorProblems(rmt.id, flt).map((rmt,_))
       }
     } else if (remoteId.get == SMGRemote.local.id) {
       futs += Future {
@@ -326,7 +300,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     } else {
       val rmtOpt = configSvc.config.remotes.find(_.id == remoteId.get)
       if (rmtOpt.isDefined)
-        futs += remotes.monProblems(rmtOpt.get.id, flt).map((rmtOpt.get,_))
+        futs += remotes.monitorProblems(rmtOpt.get.id, flt).map((rmtOpt.get,_))
     }
     Future.sequence(futs.toList)
   }
@@ -340,7 +314,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   override def silencedStates(): Future[Seq[(SMGRemote, Seq[SMGMonState])]] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
     val remoteFuts = configSvc.config.remotes.map { rmt =>
-      remotes.monSilencedStates(rmt.id).map((rmt,_))
+      remotes.monitorSilencedStates(rmt.id).map((rmt,_))
     }
     val localFut = Future {
       (SMGRemote.local, localSilencedStates())
@@ -348,13 +322,6 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val allFuts = Seq(localFut) ++ remoteFuts
     Future.sequence(allFuts)
   }
-
-
-  def localFetchState(cmdId: String): Option[SMGMonState] = {
-    // TODO validate that result is prefetch?
-    allMonitorStatesById.get(cmdId)
-  }
-
 
   override def localMonTrees(flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): (Seq[SMGTree[SMGMonState]], Int) = {
     val allTreesToFilter = if (rootId.isDefined) {
@@ -388,80 +355,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         localMonTrees(flt, rootId, pg, pgSz)
       }
     } else {
-      remotes.monTrees(remoteId, flt, rootId, pg, pgSz)
-    }
-  }
-
-
-  override def fetchCommandState(cmdId: String): Future[Option[SMGMonState]] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
-    if (SMGRemote.isRemoteObj(cmdId)){
-      remotes.monitorFetchCommandState(cmdId)
-    } else Future {
-      localFetchState(cmdId)
-    }
-  }
-
-  def silenceLocalObject(msid:String, action: SMGMonSilenceAction):Boolean = {
-    val monState = allMonitorStatesById.get(msid)
-    if (monState.isDefined) {
-      val sendAckMsgs = action.silence && (action.action == SMGMonSilenceAction.ACK || action.action == SMGMonSilenceAction.ACK_PF)
-      monState.get.silence(action)
-      // send acknowledgemenet notifications if applicable
-      if (sendAckMsgs)
-        notifSvc.sendAcknowledgementMessages(monState.get)
-
-      val monTree = allMonitorSateTreesById.get(monState.get.id)
-      if (monTree.isDefined) {
-        monTree.get.allNodes.tail.foreach { t =>
-          t.silence(action)
-          if (sendAckMsgs)
-            notifSvc.sendAcknowledgementMessages(t)
-        }
-      }
-      true
-    } else {
-      false
-    }
-  }
-
-  def silenceObject(ouid:String, action: SMGMonSilenceAction): Future[Boolean] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
-    if (SMGRemote.isRemoteObj(ouid)) {
-      remotes.monitorSilence(ouid, action)
-    } else {
-      Future {
-        silenceLocalObject(ouid, action)
-      }
-    }
-  }
-
-  def silenceFetchCommand(cmdId: String, until: Option[Int]): Future[Boolean] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
-    if (SMGRemote.isRemoteObj(cmdId)) {
-      remotes.monitorSilenceFetchCommand(cmdId, until)
-    } else {
-      Future {
-        val conf = configSvc.config
-        val (slncValOpt, pfCmd) = if (conf.preFetches.contains(cmdId)) {
-          (Some(SMGMonSilenceAction.SILENCE_PF), conf.preFetches.get(cmdId))
-        } else if (conf.updateObjectsById.contains(cmdId)) {
-          (Some(SMGMonSilenceAction.SILENCE), None)
-        } else {
-          log.error(s"SMGMonitor.silenceFetchCommand: Invalid fetch command id supplied: $cmdId")
-          (None, None)
-        }
-        if (slncValOpt.isDefined) {
-          val slncAction = SMGMonSilenceAction(slncValOpt.get, silence = true, until)
-          silenceLocalObject(cmdId, slncAction)
-          // XXX TODO temp hack to support monstate id which is pfId:interval
-          if (pfCmd.isDefined)
-            conf.intervals.foreach( i => silenceLocalObject(SMGMonPfState.stateId(pfCmd.get, i), slncAction))
-          true
-        } else {
-          false
-        }
-      }
+      remotes.monitorTrees(remoteId, flt, rootId, pg, pgSz)
     }
   }
 
@@ -638,7 +532,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       Future {
         processTree(id, {ms => ms.ack()})
       }
-    } else remotes.monAck(id)
+    } else remotes.monitorAck(id)
   }
 
   override def unacknowledge(id: String): Future[Boolean] = {
@@ -647,7 +541,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       Future {
         processTree(id, {ms => ms.unack()})
       }
-    } else remotes.monUnack(id)
+    } else remotes.monitorUnack(id)
   }
 
   override def silence(id: String, slunt: Int): Future[Boolean] = {
@@ -656,7 +550,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       Future {
         processTree(id, {ms => ms.slnc(slunt)})
       }
-    } else remotes.monSilence(id, slunt)
+    } else remotes.monitorSilence(id, slunt)
   }
 
   override def unsilence(id: String): Future[Boolean] = {
@@ -665,7 +559,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       Future {
         processTree(id, {ms => ms.unslnc()})
       }
-    } else remotes.monUnsilence(id)
+    } else remotes.monitorUnsilence(id)
   }
 
 

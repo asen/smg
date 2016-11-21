@@ -21,11 +21,10 @@ GET     /user/settings       controllers.Application.userSettings()
 POST    /user/settings       controllers.Application.userSettings()
 GET     /monitor             controllers.Application.monitorProblems(remote: String ?= "*", ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
 GET     /monitor/silenced    controllers.Application.monitorSilenced()
+GET     /monitor/trees       controllers.Application.monitorTrees(remote: String ?= "", rx: Option[String], rxx: Option[String], ms: Option[String], hsoft: String ?= "off", hackd: String ?= "off", hslncd: String ?= "off", rid: Option[String], pg: Int ?= 0, lmt: Int ?= 200)
 GET     /monitor/heatmap     controllers.Application.monitorHeatmap
 GET     /monitor/log         controllers.Application.monitorLog(remote: String ?= "*", p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String])
 GET     /monitor/runtree     controllers.Application.monitorRunTree(remote: String ?= "", root: Option[String], lvls: Option[Int])
-GET     /monitor/trees       controllers.Application.monitorTrees(remote: String ?= "", rx: Option[String], rxx: Option[String], ms: Option[String], hsoft: String ?= "off", hackd: String ?= "off", hslncd: String ?= "off", rid: Option[String], pg: Int ?= 0, lmt: Int ?= 200)
-GET     /monitor/silenceFetch  controllers.Application.monitorSilenceFetch(cmd: String, until: Option[String], rdr: String)
 
 GET    /monitor/ack        controllers.Application.monitorAck(id: String, curl: String)
 GET    /monitor/unack        controllers.Application.monitorUnack(id: String, curl: String)
@@ -56,19 +55,14 @@ POST    /api/graph          controllers.Api.graph
 POST    /api/agg            controllers.Api.agg
 GET     /api/rrd/:oid       controllers.Api.downloadRrd(oid: String)
 
-GET     /api/monitor/issues    controllers.Api.monitorIssues(soft: Option[String], ack: Option[String], slc: Option[String])
-GET     /api/monitor/problems  controllers.Api.monitorProblems(ms: Option[String], soft: Option[String], ack: Option[String], slc: Option[String])
-GET     /api/monitor/silenced  controllers.Api.monitorSilencedStates()
-GET     /api/monitor/trees    controllers.Api.monitorTrees(rx: Option[String], rxx: Option[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rid: Option[String], pg: Int ?= 0, lmt: Int ?= 200)
-GET     /api/monitor/runtree   controllers.Api.monitorRunTree(root: Option[String])
-GET     /api/monitor/fcstate   controllers.Api.monitorFetchCommandState(cmd: String)
-GET     /api/monitor/fcsilence   controllers.Api.monitorFetchCommandSilence(cmd: String, until: Option[Int])
+GET     /api/monitor/problems   controllers.Api.monitorProblems(ms: Option[String], soft: Option[String], ack: Option[String], slc: Option[String])
+GET     /api/monitor/silenced   controllers.Api.monitorSilencedStates()
+GET     /api/monitor/trees      controllers.Api.monitorTrees(rx: Option[String], rxx: Option[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rid: Option[String], pg: Int ?= 0, lmt: Int ?= 200)
+GET     /api/monitor/runtree    controllers.Api.monitorRunTree(root: Option[String])
 GET     /api/monitor/logs       controllers.Api.monitorLog(period: Option[String], limit: Option[Int], sev: Option[String], soft: Option[String])
-GET     /api/monitor/heatmap   controllers.Api.monitorHeatmap
-GET     /api/monitor/ostates   controllers.Api.monitorObjectViewsGet(ids: String)
-POST    /api/monitor/ostates   controllers.Api.monitorObjectViewsPost
-GET     /api/monitor/silence/:oid   controllers.Api.monitorSilenceObj(oid: String, act: String, slnc: Option[String], unt: Option[Int])
-
+GET     /api/monitor/heatmap    controllers.Api.monitorHeatmap
+GET     /api/monitor/ostates    controllers.Api.monitorObjectViewsGet(ids: String)
+POST    /api/monitor/ostates    controllers.Api.monitorObjectViewsPost
 GET     /api/monitor/ack        controllers.Api.monitorAck(id: String)
 GET     /api/monitor/unack      controllers.Api.monitorUnack(id: String)
 GET     /api/monitor/slnc       controllers.Api.monitorSilence(id: String, slunt: Int)

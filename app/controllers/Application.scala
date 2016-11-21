@@ -434,78 +434,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  val DEFAULT_INDEX_HEATMAP_MAX_SIZE = 300
-
-  def monitorIndexSvg(ixid: String) = Action.async {
-    val ixObj = smg.getIndexById(ixid)
-    if (ixObj.isEmpty)
-      Future {  Ok(views.html.monitorSvgNotFound()).as("image/svg+xml") }
-    else if (ixObj.get.disableHeatmap || ixObj.get.flt.matchesAnyObjectIdAndText) {
-      Future {  Ok(views.html.monitorSvgDisabled()).as("image/svg+xml") }
-    } else {
-      val tpl = (ixid, smg.getFilteredObjects(ixObj.get.flt))
-      monitorApi.heatmap(ixObj.get.flt, Some(DEFAULT_INDEX_HEATMAP_MAX_SIZE), None, None).map { hms =>
-        val hmLst = hms.map(_._2)
-        val combinedHm = SMGMonHeatmap.join(hmLst)
-        Ok(views.html.monitorSvgHeatmap(combinedHm)).as("image/svg+xml")
-      }
-    }
-  }
-
-  def monitorProblems(remote: String,
-                      ms: Option[String],
-                      soft: Option[String],
-                      ackd: Option[String],
-                      slncd: Option[String]) = Action.async { request =>
-    val (availRemotes, rmtOpt) = parseRemoteParam(remote)
-    val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_ANOMALY)
-    val inclSoft = soft.getOrElse("off") == "on"
-    val inclAck = ackd.getOrElse("off") == "on"
-    val inclSlnc = slncd.getOrElse("off") == "on"
-    val flt = SMGMonFilter(rx = None, rxx = None, Some(minSev),
-      includeSoft = inclSoft, includeAcked = inclAck, includeSilenced = inclSlnc)
-    val availStates = (SMGState.values - SMGState.OK).toSeq.sorted.map(_.toString)
-    monitorApi.problems(rmtOpt, flt).map { seq =>
-      Ok(views.html.monitorProblems(configSvc.plugins, availRemotes, availStates, rmtOpt,
-        seq, flt, request.uri))
-    }
-
-  }
-
-  def monitorSilenced() = Action.async { request =>
-
-    monitorApi.silencedStates().map { seq =>
-      Ok(views.html.monitorSilenced(configSvc.plugins, seq, request.uri))
-    }
-
-  }
-
-
-  val DEFAULT_HEATMAP_MAX_SIZE = 1800
-
-  def monitorHeatmap = Action.async { request =>
-    val params = request.queryString
-    val flt = SMGFilter.matchAll //SMGFilter.fromParams(params)
-    monitorApi.heatmap(flt,
-      Some(params.get("maxSize").map(_.head.toInt).getOrElse(DEFAULT_HEATMAP_MAX_SIZE)),
-      params.get("offset").map(_.head.toInt),
-      params.get("limit").map(_.head.toInt)).map { data =>
-      Ok(views.html.monitorHeatmap(configSvc.plugins, data))
-    }
-  }
-
-  def monitorLog(remote: String, p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String]) = Action.async {
-    val (availRemotes, rmtOpt) = parseRemoteParam(remote)
-    val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_VAL_WARN)
-    val period = p.getOrElse("24h")
-    val limit = l.getOrElse(100)
-    val hardOnly = soft.getOrElse("off") == "off"
-    monitorApi.monLogApi.getSince(period, rmtOpt, limit, Some(minSev), hardOnly).map { logs =>
-      Ok(views.html.monitorLog(configSvc.plugins, availRemotes, rmtOpt, SMGState.values.toList.map(_.toString),
-        Some(minSev.toString), period, limit, hardOnly, logs))
-    }
-  }
-
   def userSettings() = Action { request =>
     var cookiesToSet = Seq[Cookie]()
     var cookiesToDiscard = Seq[DiscardingCookie]()
@@ -559,6 +487,76 @@ class Application  @Inject() (actorSystem: ActorSystem,
         lmt = maxRes,
         defaultLmt = DEFAULT_SEARCH_RESULTS_LIMIT,
         plugins = configSvc.plugins))
+    }
+  }
+
+  val DEFAULT_INDEX_HEATMAP_MAX_SIZE = 300
+
+  def monitorIndexSvg(ixid: String) = Action.async {
+    val ixObj = smg.getIndexById(ixid)
+    if (ixObj.isEmpty)
+      Future {  Ok(views.html.monitorSvgNotFound()).as("image/svg+xml") }
+    else if (ixObj.get.disableHeatmap || ixObj.get.flt.matchesAnyObjectIdAndText) {
+      Future {  Ok(views.html.monitorSvgDisabled()).as("image/svg+xml") }
+    } else {
+      val tpl = (ixid, smg.getFilteredObjects(ixObj.get.flt))
+      monitorApi.heatmap(ixObj.get.flt, Some(DEFAULT_INDEX_HEATMAP_MAX_SIZE), None, None).map { hms =>
+        val hmLst = hms.map(_._2)
+        val combinedHm = SMGMonHeatmap.join(hmLst)
+        Ok(views.html.monitorSvgHeatmap(combinedHm)).as("image/svg+xml")
+      }
+    }
+  }
+
+  def monitorProblems(remote: String,
+                      ms: Option[String],
+                      soft: Option[String],
+                      ackd: Option[String],
+                      slncd: Option[String]) = Action.async { request =>
+    val (availRemotes, rmtOpt) = parseRemoteParam(remote)
+    val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_ANOMALY)
+    val inclSoft = soft.getOrElse("off") == "on"
+    val inclAck = ackd.getOrElse("off") == "on"
+    val inclSlnc = slncd.getOrElse("off") == "on"
+    val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(minSev),
+      includeSoft = inclSoft, includeAcked = inclAck, includeSilenced = inclSlnc)
+    val availStates = (SMGState.values - SMGState.OK).toSeq.sorted.map(_.toString)
+    monitorApi.problems(rmtOpt, flt).map { seq =>
+      Ok(views.html.monitorProblems(configSvc.plugins, availRemotes, availStates, rmtOpt,
+        seq, flt, request.uri))
+    }
+
+  }
+
+  def monitorSilenced() = Action.async { request =>
+    monitorApi.silencedStates().map { seq =>
+      Ok(views.html.monitorSilenced(configSvc.plugins, seq, request.uri))
+    }
+  }
+
+
+  val DEFAULT_HEATMAP_MAX_SIZE = 1800
+
+  def monitorHeatmap = Action.async { request =>
+    val params = request.queryString
+    val flt = SMGFilter.matchAll //SMGFilter.fromParams(params)
+    monitorApi.heatmap(flt,
+      Some(params.get("maxSize").map(_.head.toInt).getOrElse(DEFAULT_HEATMAP_MAX_SIZE)),
+      params.get("offset").map(_.head.toInt),
+      params.get("limit").map(_.head.toInt)).map { data =>
+      Ok(views.html.monitorHeatmap(configSvc.plugins, data))
+    }
+  }
+
+  def monitorLog(remote: String, p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String]) = Action.async {
+    val (availRemotes, rmtOpt) = parseRemoteParam(remote)
+    val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_VAL_WARN)
+    val period = p.getOrElse("24h")
+    val limit = l.getOrElse(100)
+    val hardOnly = soft.getOrElse("off") == "off"
+    monitorApi.monLogApi.getSince(period, rmtOpt, limit, Some(minSev), hardOnly).map { logs =>
+      Ok(views.html.monitorLog(configSvc.plugins, availRemotes, rmtOpt, SMGState.values.toList.map(_.toString),
+        Some(minSev.toString), period, limit, hardOnly, logs))
     }
   }
 
@@ -631,14 +629,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
       Ok(views.html.runTrees(configSvc.plugins, remote, remoteIds,
         treesMap, rootStr, parentId, maxLevels, conf.runTreeLevelsDisplay, request.uri))
-    }
-  }
-
-  def monitorSilenceFetch(cmd: String, until: Option[String], rdr: String) = Action.async {
-    val untilTss = until.map(s => SMGState.tssNow + SMGRrd.parsePeriod(s).getOrElse(0))
-    monitorApi.silenceFetchCommand(cmd, untilTss).map { b =>
-      val redirTo = if (rdr == "") "/runtree"
-      Redirect(rdr)
     }
   }
 

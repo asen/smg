@@ -215,14 +215,6 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(logs))
   }
 
-  def monitorIssues(soft: Option[String], ack: Option[String], slc: Option[String]) = Action {
-    val inclSoft = soft.getOrElse("off") == "on"
-    val inclAck = ack.getOrElse("off") == "on"
-    val inclSlc = slc.getOrElse("off") == "on"
-    val probs = monitorApi.localProblems(inclSoft, inclAck, inclSlc)
-    Ok(Json.toJson(probs))
-  }
-
   def monitorProblems(ms: Option[String], soft: Option[String], ack: Option[String], slc: Option[String]) = Action {
     val myMs = ms.map(s => SMGState.withName(s)).getOrElse(SMGState.E_ANOMALY)
     val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(myMs),
@@ -269,37 +261,9 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  // TODO deprecate/remove
-  def monitorSilenceObj(oid: String, act: String, slnc: Option[String], unt: Option[Int]) =  Action.async {
-    val actv = SMGMonSilenceAction.withName(act)
-    val silence = slnc.getOrElse("on") == "on"
-    monitorApi.silenceObject(oid, SMGMonSilenceAction(actv, silence, unt)).map{ b =>
-      Ok(b.toString)
-    }
-  }
-
   def monitorRunTree(root: Option[String]) = Action {
     val trees = configSvc.config.fetchCommandTreesWithRoot(root)
     Ok(Json.toJson(trees.map(t => (t._1.toString, Json.toJson(t._2)))))
-  }
-
-  // TODO deprecate/remove
-  def monitorFetchCommandState(cmd: String) = Action.async {
-    monitorApi.fetchCommandState(cmd).map { optState =>
-      if (optState.isDefined)
-        Ok(Json.toJson(optState.get))
-      else
-        NotFound("command id not found")
-    }
-  }
-
-  def monitorFetchCommandSilence(cmd: String, until: Option[Int]) = Action.async {
-    monitorApi.silenceFetchCommand(cmd, until).map( ret =>
-      if (ret)
-        Ok("")
-      else
-        NotFound("")
-    )
   }
 
   def monitorTrees(rx: Option[String],

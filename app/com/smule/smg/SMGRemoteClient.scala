@@ -433,41 +433,6 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
-  def monitorIssues(includeSoft: Boolean, includeAcked: Boolean, includeSilenced: Boolean): Future[Seq[SMGMonState]] = {
-    val params = ListBuffer[String]()
-    if (includeSoft) params += "soft=on"
-    if (includeAcked) params += "ack=on"
-    if (includeSilenced) params += "slc=on"
-    val paramsStr = if (params.isEmpty) "" else "?" + params.mkString("&")
-    lazy val errRet = Seq(SMGMonStateGlobal("Remote data unavailable", remote.id,
-      SMGState((System.currentTimeMillis() / 1000).toInt, SMGState.E_SMGERR, "data unavailable")))
-    ws.url(remote.url + API_PREFIX + "monitor/issues" + paramsStr).withRequestTimeout(shortTimeoutMs).get().map { resp =>
-      Try {
-        val jsval = Json.parse(resp.body)
-        jsval.as[Seq[SMGMonState]]
-      }.recover {
-        case x => {
-          log.ex(x, "remote monitor/state parse error: " + remote.id)
-          errRet
-        }
-      }.get
-    }.recover {
-      case x => {
-        log.ex(x, "remote monitor/state fetch error: " + remote.id)
-        errRet
-      }
-    }
-  }
-
-  def monitorSilence(oid: String, act: SMGMonSilenceAction): Future[Boolean] = {
-//    oid: String, act: String, slnc: Option[String], unt: Option[Int]
-    val actStr = s"act=${act.action.toString}"
-    val slncStr = if (act.silence) "&slnc=on" else "&slnc=off"
-    val untStr = if (act.until.isDefined) s"&unt=${act.until.get}" else ""
-    ws.url(remote.url + API_PREFIX + "monitor/silence/" + toLocalId(oid) + "?" + actStr + slncStr + untStr).
-      withRequestTimeout(shortTimeoutMs).get().map(_ => true).recover { case _ => false }
-  }
-
   def heatmap(flt: SMGFilter, maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[SMGMonHeatmap] = {
     lazy val errRet = SMGMonHeatmap(List(SMGMonStateGlobal("Remote data unavailable", remote.id,
       SMGState((System.currentTimeMillis() / 1000).toInt, SMGState.E_SMGERR, "data unavailable"))), 1)
@@ -583,8 +548,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   }
 
   def monitorTrees(flt: SMGMonFilter, rootId: Option[String],
-               pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]   = {
-
+               pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)] = {
     val paramsBuf = ListBuffer[String](s"pg=$pg&lmt=$pgSz")
     val fltParams = flt.asUrlParams
     if (fltParams != "") paramsBuf += fltParams
@@ -610,43 +574,9 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
         (Seq(),0)
       }
     }
-
   }
 
-  def monitorFetchCommandState(cmdId: String): Future[Option[SMGMonState]] = {
-    ws.url(remote.url + API_PREFIX + s"monitor/fcstate?cmd=${SMGRemote.localId(cmdId)}" ).
-      withRequestTimeout(shortTimeoutMs).get().map { resp =>
-      Try {
-        val jsval = Json.parse(resp.body)
-        Some(jsval.as[SMGMonState])
-      }.recover {
-        case x => {
-          log.ex(x, "remote monitor/fcstate parse error: " + remote.id)
-          None
-        }
-      }.get
-    }.recover {
-      case x => {
-        log.ex(x, "remote monitor/fcstate fetch error: " + remote.id)
-        None
-      }
-    }
-  }
-
-
-  def monitorSilenceFetchCommand(cmdId: String, until: Option[Int]): Future[Boolean] = {
-    ws.url(remote.url + API_PREFIX + s"monitor/fcsilence?cmd=${SMGRemote.localId(cmdId)}&until=${until.getOrElse(0)}" ).
-      withRequestTimeout(shortTimeoutMs).get().map { resp =>
-      resp.status == 200
-    }.recover {
-      case x => {
-        log.ex(x, "remote monitor/fcsilence fetch error: " + remote.id)
-        false
-      }
-    }
-  }
-
-  def monAck(id: String): Future[Boolean] = {
+  def monitorAck(id: String): Future[Boolean] = {
     ws.url(remote.url + API_PREFIX + s"monitor/ack?id=${SMGRemote.localId(id)}" ).
       withRequestTimeout(shortTimeoutMs).get().map { resp =>
       resp.status == 200
@@ -658,7 +588,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
-  def monUnack(id: String): Future[Boolean] = {
+  def monitorUnack(id: String): Future[Boolean] = {
     ws.url(remote.url + API_PREFIX + s"monitor/unack?id=${SMGRemote.localId(id)}" ).
       withRequestTimeout(shortTimeoutMs).get().map { resp =>
       resp.status == 200
@@ -670,7 +600,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
-  def monSilence(id: String, slunt: Int): Future[Boolean] = {
+  def monitorSilence(id: String, slunt: Int): Future[Boolean] = {
     ws.url(remote.url + API_PREFIX + s"monitor/slnc?id=${SMGRemote.localId(id)}&slunt=$slunt" ).
       withRequestTimeout(shortTimeoutMs).get().map { resp =>
       resp.status == 200
@@ -682,7 +612,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
-  def monUnsilence(id: String): Future[Boolean] = {
+  def monitorUnsilence(id: String): Future[Boolean] = {
     ws.url(remote.url + API_PREFIX + s"monitor/unslnc?id=${SMGRemote.localId(id)}" ).
       withRequestTimeout(shortTimeoutMs).get().map { resp =>
       resp.status == 200
@@ -907,8 +837,6 @@ object SMGRemoteClient {
       Json.toJson(mm.toMap)
     }
   }
-
-//  SMGFetchCommandTree(node: SMGFetchCommand, children: Seq[SMGFetchCommandTree])
 
   implicit lazy val smgFetchCommandTreeWrites: Writes[SMGFetchCommandTree] = new Writes[SMGFetchCommandTree] {
     def writes(t: SMGFetchCommandTree) = Json.obj(

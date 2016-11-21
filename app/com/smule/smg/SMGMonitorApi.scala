@@ -379,46 +379,33 @@ trait SMGMonitorApi {
     */
   def objectViewStates(ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]]
 
-  /**
-    * get all local problematic SMGMonStates
-    * @param includeSoft - whether to include sof errors or hard only
-    * @param includeAcked - whether to include acknowledged problems
-    * @return list of problenatic mon states
-    */
-  // TODO deprecated
-  def localProblems(includeSoft: Boolean, includeAcked: Boolean, includeSilenced: Boolean): Seq[SMGMonState]
-
-
-
-  def localStates(flt: SMGMonFilter): Seq[SMGMonState]
-
-  def problems(remoteId: Option[String], flt: SMGMonFilter): Future[Seq[(SMGRemote, Seq[SMGMonState])]]
-
-  def localSilencedStates(): Seq[SMGMonState]
-
-  def silencedStates(): Future[Seq[(SMGRemote, Seq[SMGMonState])]]
 
   /**
-    * Get the combined state for all rrd objects sharing the same parent pre_fetch
-    * @param cmdId
+    * Get all matching states for the given filter
+    * @param flt
     * @return
     */
-  // TODO deprecate/remove
-  def fetchCommandState(cmdId: String): Future[Option[SMGMonState]]
-
+  def localStates(flt: SMGMonFilter): Seq[SMGMonState]
 
   /**
-    * silence/unsilence an object problem
-    * @param ouid - object (update) id
-    * @param action - see  SMGMonSilenceAction
+    * Get all states matching given filter, by remote
+    * @param remoteId - when not specified - return matching states from all remotes
+    * @param flt
+    * @return
     */
-  // TODO deprecate/remove
-  def silenceObject(ouid:String, action: SMGMonSilenceAction): Future[Boolean]
+  def problems(remoteId: Option[String], flt: SMGMonFilter): Future[Seq[(SMGRemote, Seq[SMGMonState])]]
 
-  // TODO deprecate/remove
-  def silenceFetchCommand(fc: String, until: Option[Int]): Future[Boolean]
+  /**
+    * Return all local silenced states
+    * @return
+    */
+  def localSilencedStates(): Seq[SMGMonState]
 
-
+  /**
+    * Return all currently silenced states (by remote)
+    * @return
+    */
+  def silencedStates(): Future[Seq[(SMGRemote, Seq[SMGMonState])]]
 
   /**
     *
@@ -442,12 +429,33 @@ trait SMGMonitorApi {
   def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
 
+  /**
+    * Acknowledge an error for given monitor state. Acknowledgement is automatically cleared on recovery.
+    * @param id
+    * @return
+    */
   def acknowledge(id: String): Future[Boolean]
 
+  /**
+    * Un-acknowledge previously acknowledged error
+    * @param id
+    * @return
+    */
   def unacknowledge(id: String): Future[Boolean]
 
+  /**
+    * Silence given state for given time period
+    * @param id
+    * @param slunt
+    * @return
+    */
   def silence(id: String, slunt: Int): Future[Boolean]
 
+  /**
+    * Unsilence previously silenced state.
+    * @param id
+    * @return
+    */
   def unsilence(id: String): Future[Boolean]
 
   /**

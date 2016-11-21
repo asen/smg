@@ -127,27 +127,6 @@ trait SMGRemotesApi {
                   minSeverity: Option[SMGState.Value], hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]]
 
   /**
-    * get all problematic SMGMonStates from teh given remote
-    * @param remoteId - id of the remote to get data from
-    * @param includeSoft - whether to include soft errors or hard only
-    * @param includeAcked - whether to include acked errors or not
-    * @return list of problenatic mon states
-    */
-  def monitorIssues(remoteId: String, includeSoft: Boolean, includeAcked: Boolean, includeSilenced: Boolean): Future[Seq[SMGMonState]]
-
-
-  /**
-    * silence/unsilence a problem
-    * @param oid
-    * @param act
-    * @return
-    */
-  def monitorSilence(oid: String, act: SMGMonSilenceAction): Future[Boolean]
-
-
-  def monitorSilenceFetchCommand(cmdId: String, until: Option[Int]): Future[Boolean]
-
-  /**
     * Request heatmap from the given remote. A heatmap is (possibly condensed) list of SMGMonState squares.
     * @param remoteId - id of the remote to get data from
     * @param flt - filter to use to get objects
@@ -160,34 +139,68 @@ trait SMGRemotesApi {
 
 
   /**
-    * TODO
-    * @param remoteId
-    * @param root
+    * Request run (command) trees data from the given remote
+    * @param remoteId - id of remote
+    * @param root - optional "root" id
     * @return
     */
   def monitorRunTree(remoteId: String, root: Option[String]): Future[Map[Int,Seq[SMGFetchCommandTree]]]
 
 
-  def monProblems(remoteId: String, flt: SMGMonFilter): Future[Seq[SMGMonState]]
-
-  def monSilencedStates(remoteId: String): Future[Seq[SMGMonState]]
-
-  def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
-
-  def monAck(id: String): Future[Boolean]
-
-  def monUnack(id: String): Future[Boolean]
-
-  def monSilence(id: String, slunt: Int): Future[Boolean]
-
-  def monUnsilence(id: String): Future[Boolean]
-
   /**
-    * TODO
-    * @param cmdId
+    * remote call to get current problems
+    * @param remoteId
+    * @param flt
     * @return
     */
-  def monitorFetchCommandState(cmdId: String): Future[Option[SMGMonState]]
+  def monitorProblems(remoteId: String, flt: SMGMonFilter): Future[Seq[SMGMonState]]
+
+  /**
+    * remote call to get all currently silenced states
+    * @param remoteId
+    * @return
+    */
+  def monitorSilencedStates(remoteId: String): Future[Seq[SMGMonState]]
+
+  /**
+    * remote call to get a page of monitor state trees items
+    * @param remoteId
+    * @param flt
+    * @param rootId
+    * @param pg
+    * @param pgSz
+    * @return
+    */
+  def monitorTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
+
+  /**
+    * remote call to acknowledge an error for given monitor state
+    * @param id - monitor state id
+    * @return
+    */
+  def monitorAck(id: String): Future[Boolean]
+
+  /**
+    * remote call to un-acknowledge an acknowledged error for given monitor state
+    * @param id - monitor state id
+    * @return
+    */
+  def monitorUnack(id: String): Future[Boolean]
+
+  /**
+    * remote call to silence a monitor state until given time in the future
+    * @param id
+    * @param slunt
+    * @return
+    */
+  def monitorSilence(id: String, slunt: Int): Future[Boolean]
+
+  /**
+    * remote call to unsilence an silenced monitor state
+    * @param id - monitor state id
+    * @return
+    */
+  def monitorUnsilence(id: String): Future[Boolean]
 }
 
 
@@ -417,28 +430,6 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     else Future { Seq() }
   }
 
-  override def monitorIssues(remoteId: String, includeSoft: Boolean, includeAcked: Boolean, includeSilenced: Boolean): Future[Seq[SMGMonState]] = {
-    if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorIssues(includeSoft, includeAcked, includeSilenced)
-    else Future { Seq() }
-  }
-
-  def monitorSilence(oid: String, act: SMGMonSilenceAction): Future[Boolean]  = {
-    val remoteId: String = SMGRemote.remoteId(oid)
-    val localId = SMGRemote.localId(oid)
-    if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorSilence(localId, act)
-    else Future { false }
-  }
-
-  def monitorSilenceFetchCommand(cmdId: String, until: Option[Int]): Future[Boolean] = {
-    val remoteId = SMGRemote.remoteId(cmdId)
-    val localId = SMGRemote.localId(cmdId)
-    if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorSilenceFetchCommand(localId, until)
-    else Future { false }
-  }
-
   def heatmap(remoteId: String,
               flt: SMGFilter,
               maxSize: Option[Int],
@@ -467,59 +458,52 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     else Future { Map() }
   }
 
-  override def monitorFetchCommandState(cmdId: String): Future[Option[SMGMonState]] = {
-    val remoteId = SMGRemote.remoteId(cmdId)
-    if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorFetchCommandState(cmdId)
-    else Future { None }
-  }
-
-  override def monProblems(remoteId: String, flt: SMGMonFilter): Future[Seq[SMGMonState]] = {
+  override def monitorProblems(remoteId: String, flt: SMGMonFilter): Future[Seq[SMGMonState]] = {
     if (clientForId(remoteId).nonEmpty)
       clientForId(remoteId).get.monitorProblems(flt)
     else Future { Seq() }
 
   }
 
-  override def monSilencedStates(remoteId: String): Future[Seq[SMGMonState]] = {
+  override def monitorSilencedStates(remoteId: String): Future[Seq[SMGMonState]] = {
     if (clientForId(remoteId).nonEmpty)
       clientForId(remoteId).get.monitorSilencedStates()
     else Future { Seq() }
   }
 
-  override def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String],
-                        pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]   = {
+  override def monitorTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String],
+                            pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]   = {
     if (clientForId(remoteId).nonEmpty)
       clientForId(remoteId).get.monitorTrees(flt, rootId, pg, pgSz)
     else Future { (Seq(), 0) }
 
   }
 
-  override def monAck(id: String): Future[Boolean] = {
+  override def monitorAck(id: String): Future[Boolean] = {
     val remoteId = SMGRemote.remoteId(id)
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monAck(id)
+      clientForId(remoteId).get.monitorAck(id)
     else Future { false }
   }
 
-  override def monUnack(id: String): Future[Boolean] = {
+  override def monitorUnack(id: String): Future[Boolean] = {
     val remoteId = SMGRemote.remoteId(id)
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monUnack(id)
+      clientForId(remoteId).get.monitorUnack(id)
     else Future { false }
   }
 
-  override def monSilence(id: String, slunt: Int): Future[Boolean] = {
+  override def monitorSilence(id: String, slunt: Int): Future[Boolean] = {
     val remoteId = SMGRemote.remoteId(id)
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monSilence(id, slunt)
+      clientForId(remoteId).get.monitorSilence(id, slunt)
     else Future { false }
   }
 
-  override def monUnsilence(id: String): Future[Boolean] = {
+  override def monitorUnsilence(id: String): Future[Boolean] = {
     val remoteId = SMGRemote.remoteId(id)
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monUnsilence(id)
+      clientForId(remoteId).get.monitorUnsilence(id)
     else Future { false }
   }
 
