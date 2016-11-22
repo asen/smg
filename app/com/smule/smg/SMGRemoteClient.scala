@@ -398,8 +398,11 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   }
 
   def monitorLogs(periodStr: String, limit: Int,
-                  minSeverity: Option[SMGState.Value], hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
+                  minSeverity: Option[SMGState.Value], hardOnly: Boolean,
+                  inclAcked: Boolean, inclSilenced: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
     val softStr = if (hardOnly) "" else "&soft=on"
+    val ackdStr = if (inclAcked) "&ackd=on" else ""
+    val slncdStr = if (inclSilenced) "&slncd=on" else ""
     val sevStr = if (minSeverity.isDefined) "&sev=" + minSeverity.get.toString else ""
     lazy val errRet = Seq(
       SMGMonitorLogMsg(
@@ -408,13 +411,15 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
         prevState = None,
         repeat = 1,
         isHard = true,
+        isAcked = false,
+        isSilenced = false,
         ouids = Seq(),
         vix = None,
         remote = remote
       )
     )
     ws.url(remote.url + API_PREFIX + "monitor/logs?period=" +
-      SMGRrd.safePeriod(periodStr) + "&limit=" + limit + sevStr + softStr).
+      SMGRrd.safePeriod(periodStr) + "&limit=" + limit + sevStr + softStr + ackdStr + slncdStr).
       withRequestTimeout(shortTimeoutMs).get().map { resp =>
       Try {
         val jsval = Json.parse(resp.body)
@@ -825,6 +830,8 @@ object SMGRemoteClient {
       )
       if (ml.prevState.isDefined) mm += ("ps" -> Json.toJson(ml.prevState))
       if (ml.isHard) mm += ("hard" -> Json.toJson("true"))
+      if (ml.isAcked) mm += ("ackd" -> Json.toJson("true"))
+      if (ml.isSilenced) mm += ("slcd" -> Json.toJson("true"))
       if (ml.ouids.nonEmpty) mm += ("ouids" -> Json.toJson(ml.ouids))
       if (ml.vix.isDefined)  mm += ("vix" -> Json.toJson(ml.vix.get))
       Json.toJson(mm.toMap)

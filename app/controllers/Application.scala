@@ -548,15 +548,18 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorLog(remote: String, p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String]) = Action.async {
+  def monitorLog(remote: String, p: Option[String], l: Option[Int], ms: Option[String],
+                 soft: Option[String], ackd: Option[String], slncd: Option[String]) = Action.async {
     val (availRemotes, rmtOpt) = parseRemoteParam(remote)
     val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_VAL_WARN)
     val period = p.getOrElse("24h")
     val limit = l.getOrElse(100)
     val hardOnly = soft.getOrElse("off") == "off"
-    monitorApi.monLogApi.getSince(period, rmtOpt, limit, Some(minSev), hardOnly).map { logs =>
+    val includeAckd = ackd.getOrElse("off") == "on"
+    val includeSlncd = slncd.getOrElse("off") == "on"
+    monitorApi.monLogApi.getSince(period, rmtOpt, limit, Some(minSev), hardOnly, includeAckd, includeSlncd).map { logs =>
       Ok(views.html.monitorLog(configSvc.plugins, availRemotes, rmtOpt, SMGState.values.toList.map(_.toString),
-        Some(minSev.toString), period, limit, hardOnly, logs))
+        Some(minSev.toString), period, limit, hardOnly, inclAckd = includeAckd, inclSlncd = includeSlncd, logs))
     }
   }
 

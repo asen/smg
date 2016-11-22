@@ -208,10 +208,11 @@ class Api  @Inject() (actorSystem: ActorSystem,
     ids.map(oid => objsById.get(oid)).filter(o => o.nonEmpty).map(o => o.get)
   }
 
-  def monitorLog(period: Option[String], limit: Option[Int], sev: Option[String], soft: Option[String]) = Action {
+  def monitorLog(period: Option[String], limit: Option[Int], sev: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String]) = Action {
     val minSev = sev.map{ s => SMGState.withName(s) }
     val logs = monitorApi.monLogApi.getLocal(period.getOrElse("24h"),
-      limit.getOrElse(100), minSev, soft.getOrElse("off") == "off")
+      limit.getOrElse(100), minSev, soft.getOrElse("off") == "off",
+      ackd.getOrElse("off") == "on", slncd.getOrElse("off") == "on")
     Ok(Json.toJson(logs))
   }
 

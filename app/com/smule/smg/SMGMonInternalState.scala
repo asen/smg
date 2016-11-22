@@ -98,7 +98,7 @@ trait SMGMonInternalState extends SMGMonState {
   }
 
   protected def logEntry(wasHard: Boolean) = SMGMonitorLogMsg(currentState.ts, currentState, myRecentStates.tail.headOption,
-    errorRepeat, isHard = wasHard, ouids , vixOpt, remote)
+    errorRepeat, isHard = wasHard, isAcked = isAcked, isSilenced = isSilenced , ouids , vixOpt, remote)
 
   protected def processAlertsAndLogs(prevStateWasInherited: Boolean): Unit = {
     val curState: SMGState = myRecentStates.head

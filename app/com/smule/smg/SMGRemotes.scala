@@ -124,7 +124,8 @@ trait SMGRemotesApi {
     * @return
     */
   def monitorLogs(remoteId: String, periodStr: String, limit: Int,
-                  minSeverity: Option[SMGState.Value], hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]]
+                  minSeverity: Option[SMGState.Value], hardOnly: Boolean,
+                  inclAcked: Boolean, inclSilenced: Boolean): Future[Seq[SMGMonitorLogMsg]]
 
   /**
     * Request heatmap from the given remote. A heatmap is (possibly condensed) list of SMGMonState squares.
@@ -426,9 +427,10 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
   }
 
   override def monitorLogs(remoteId: String, periodStr: String, limit: Int,
-                           minSeverity: Option[SMGState.Value], hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
+                           minSeverity: Option[SMGState.Value], hardOnly: Boolean,
+                           inclAcked: Boolean, inclSilenced: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorLogs(periodStr, limit, minSeverity, hardOnly)
+      clientForId(remoteId).get.monitorLogs(periodStr, limit, minSeverity, hardOnly, inclAcked, inclSilenced)
     else Future { Seq() }
   }
 

@@ -31,6 +31,8 @@ case class SMGMonitorLogMsg(ts: Int,
                             prevState: Option[SMGState],
                             repeat: Int,
                             isHard: Boolean,
+                            isAcked: Boolean,
+                            isSilenced: Boolean,
                             ouids: Seq[String],
                             vix: Option[Int],
                             remote: SMGRemote
@@ -41,7 +43,12 @@ case class SMGMonitorLogMsg(ts: Int,
 
   val msg = s"state: ${curState.desc} (prev state: ${prevState.map(_.desc).getOrElse("UNKNOWN")})"
 
-  lazy val tsFmt = SMGMonitorLogMsg.logTsFmt.format(new Date(ts.toLong * 1000))
+  lazy val tsFmt: String = tsFmt(ts)
+
+  def hourTs = (ts / 3600) * 3600
+
+  def tsFmt(t :Int): String = SMGMonitorLogMsg.logTsFmt.format(new Date(t.toLong * 1000))
+
   lazy val ouidFmt = if (ouids.isEmpty) "-" else ouids.mkString(",")
   lazy val vixFmt = vix.map(_.toString).getOrElse("-")
   lazy val hardStr = if (isHard) "HARD" else "SOFT"
@@ -87,6 +94,8 @@ object SMGMonitorLogMsg extends Enumeration {
         (JsPath \ "ps").readNullable[SMGState] and
         (JsPath \ "rpt").read[Int] and
         (JsPath \ "hard").readNullable[String].map(hopt => hopt.getOrElse("") == "true") and
+        (JsPath \ "ackd").readNullable[String].map(opt => opt.getOrElse("") == "true") and
+        (JsPath \ "slcd").readNullable[String].map(opt => opt.getOrElse("") == "true") and
         (JsPath \ "ouids").readNullable[List[String]].map(ol => ol.getOrElse(Seq()).map(s => myPrefixedId(s))) and
         (JsPath \ "vix").readNullable[Int] and
         // XXX "remote" is always null ...
@@ -122,7 +131,8 @@ trait SMGMonitorLogApi {
     * @param hardOnly - whether to include soft errors or hard only
     * @return
     */
-  def getLocal(periodStr: String, limit: Int, minSeverity: Option[SMGState.Value], hardOnly: Boolean): Seq[SMGMonitorLogMsg]
+  def getLocal(periodStr: String, limit: Int, minSeverity: Option[SMGState.Value],
+               hardOnly: Boolean, inclAcked: Boolean, inclSilenced: Boolean): Seq[SMGMonitorLogMsg]
 
   /**
     * Get all logs since given period (from all remotes)
@@ -131,7 +141,8 @@ trait SMGMonitorLogApi {
     * @param hardOnly - whether to include soft errors or hard only
     * @return
     */
-  def getSince(periodStr: String, rmtOpt:Option[String], limit: Int, minSeverity: Option[SMGState.Value], hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]]
+  def getSince(periodStr: String, rmtOpt:Option[String], limit: Int, minSeverity: Option[SMGState.Value],
+               hardOnly: Boolean, inclAcked: Boolean, inclSilenced: Boolean): Future[Seq[SMGMonitorLogMsg]]
 }
 
 @Singleton
@@ -157,7 +168,8 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
   }
 
   override def getLocal( periodStr: String, limit: Int,
-                         minSeverity: Option[SMGState.Value], hardOnly: Boolean): Seq[SMGMonitorLogMsg] = {
+                         minSeverity: Option[SMGState.Value], hardOnly: Boolean,
+                         inclAcked: Boolean, inclSilenced: Boolean): Seq[SMGMonitorLogMsg] = {
     val periodSecs = SMGRrd.parsePeriod(periodStr).getOrElse(3600)
     val curTss = SMGState.tssNow
     val startTss = curTss - periodSecs
@@ -171,6 +183,8 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
     lb.flatten.toList.reverse.filter { m =>
       (m.ts >= startTss) &&
         ((!hardOnly) || m.isHard) &&
+        (inclAcked || !m.isAcked) &&
+        (inclSilenced || !m.isSilenced) &&
         (minSeverity.isEmpty ||
           m.curState.state >= minSeverity.get ||
           (m.curState.state == SMGState.OK && m.prevState.map(_.state).getOrElse(SMGState.OK) >= minSeverity.get) )
@@ -179,13 +193,14 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
 
 
   override def getSince(periodStr: String, rmtOpt:Option[String], limit: Int,
-                        minSeverity: Option[SMGState.Value], hardOnly: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
+                        minSeverity: Option[SMGState.Value], hardOnly: Boolean,
+                        inclAcked: Boolean, inclSilenced: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
     implicit val myEc = ExecutionContexts.monitorCtx
     val remoteFuts = if (rmtOpt.isEmpty || rmtOpt.get == SMGRemote.wildcard.id) configSvc.config.remotes.map { rmt =>
-      remotes.monitorLogs(rmt.id, periodStr, limit, minSeverity, hardOnly)
-    } else Seq(remotes.monitorLogs(rmtOpt.get, periodStr, limit, minSeverity, hardOnly))
+      remotes.monitorLogs(rmt.id, periodStr, limit, minSeverity, hardOnly, inclAcked, inclSilenced)
+    } else Seq(remotes.monitorLogs(rmtOpt.get, periodStr, limit, minSeverity, hardOnly, inclAcked, inclSilenced))
     val localFut = if (rmtOpt.getOrElse(SMGRemote.local.id) == SMGRemote.local.id ) Future {
-      getLocal(periodStr, limit, minSeverity, hardOnly)
+      getLocal(periodStr, limit, minSeverity, hardOnly, inclAcked, inclSilenced)
     } else Future { Seq() }
 
     val allFuts = Seq(localFut) ++ remoteFuts
@@ -230,7 +245,7 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
     recentLogs += SMGMonitorLogMsg(
       SMGState.tssNow,
       SMGState(SMGState.tssNow, SMGState.E_SMGERR, "SMG Shutdown"),
-      None, 1, true, Seq(), None, SMGRemote.local)
+      None, 1, true, false, false, Seq(), None, SMGRemote.local)
     saveLogChunk(recentLogs.toList)
   }
 

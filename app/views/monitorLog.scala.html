@@ -2,7 +2,7 @@
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.SMGMonitorLogMsg
 
-@(plugins: Seq[SMGPlugin], availRemotes:Seq[String], rmtId: Option[String], availStates:Seq[String], minSeverity: Option[String], period:String, limit:Int, hardOnly: Boolean, logMsgs: Seq[SMGMonitorLogMsg])
+@(plugins: Seq[SMGPlugin], availRemotes:Seq[String], rmtId: Option[String], availStates:Seq[String], minSeverity: Option[String], period:String, limit:Int, hardOnly: Boolean, inclAckd: Boolean, inclSlncd: Boolean, logMsgs: Seq[SMGMonitorLogMsg])
 
 @main("SMG - Monitor event log", plugins) {
 
@@ -32,10 +32,18 @@
   <label class="autosubmit-lbl">Limit number</label>
   <input type="number" name="l" value="@limit" min="1" max="100000" onchange="mySubmitOnChange(this);" />
 
-  <label class="autosubmit-lbl" for="cbSoft">Display Soft errors</label>
-  <input id="cbSoft" type="checkbox" name="soft" onchange="mySubmitOnChange(this);" @if(!hardOnly){ checked } />
+  <label class="autosubmit-lbl" for="cbSoft">Display soft errors</label>
+    <input id="cbSoft" type="checkbox" name="soft" onchange="mySubmitOnChange(this);" @if(!hardOnly){ checked } />
 
-  <input id="btn_GET" type="submit" value="Refresh">
+  <label class="autosubmit-lbl" for="cbAckd">Display acknowledged errors</label>
+    <input id="cbAckd" type="checkbox" name="ackd" onchange="mySubmitOnChange(this);" @if(inclAckd){ checked } />
+
+  <label class="autosubmit-lbl" for="cbSlncd">Display silenced errors</label>
+    <input id="cbSlncd" type="checkbox" name="slncd" onchange="mySubmitOnChange(this);" @if(inclSlncd){ checked } />
+
+  <input style="display: none" id="btn_GET" type="submit">
+  <input type="button" value="Refresh" onclick="mySubmitOnChange(this);">
+
 </form>
 
   <!-- strip empty params from the form so that urls are less cluttered -->
@@ -43,7 +51,9 @@
   function disableEmptyInputs() {
       $(':input', this).each(function() {
          this.disabled = ((this.name != "remote") && !($(this).val())) ||
-           ((this.name == "remote") && ($(this).val() == "*"));
+           ((this.name == "remote") && ($(this).val() == "*")) ||
+           ((this.name == "ms") && ($(this).val() == "E_VAL_WARN"))
+           ;
       });
   };
 
@@ -60,7 +70,9 @@
 <hr/>
 
 <ul class="monlog">
-@for(ms <- logMsgs) {
+@for((hrts, mls) <- logMsgs.groupBy(_.hourTs).toSeq.sortBy(t => -t._1)) {
+  <li><b>----[@{mls.head.tsFmt(mls.head.hourTs)}]----</b></li>
+  @for(ms <- mls) {
   <li>
     [@{ if(ms.remote.id == "") "local" else ms.remote.id }]
     [@{ms.tsFmt}]: <span class="ml-type-@{ms.mltype}">@{ms.mltype}</span>
@@ -70,6 +82,7 @@
     (n=@{ms.repeat}, @if(ms.isHard){ <strong>HARD</strong> } else { SOFT })
     <span class="ml-msg">@{ms.msg}</span>
   </li>
+  }
 }
 </ul>
 
