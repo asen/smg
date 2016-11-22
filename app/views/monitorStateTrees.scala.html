@@ -43,9 +43,18 @@
 
     <input type="hidden" id="treePage" name="pg" value="@pg">
     <input type="hidden" id="treeRoot" name="rid" value="@{rootId.getOrElse("")}">
+    <input type="hidden" id="frmInpSilenceAllUntil" name="silenceAllUntil" value="">
+    <input type="hidden" id="inpCurl" name="curl" value="">
     <input style="display: none" id="btn_GET" type="submit">
     <input type="button" value="Refresh" onclick="mySubmitOnChange(this);">
   </form>
+</div>
+
+<hr/>
+
+<div>
+  <input type="button" onclick="silenceAllMatching();" value="Silence ALL matching objects for">
+  <input type="text" size="10" id="inpSilenceAllUntil" value="2h">
 </div>
 
 <!-- strip empty params from the form so that urls are less cluttered -->
@@ -74,6 +83,8 @@
     function goToRoot(rootId) {
       document.getElementById("treeRoot").value = rootId
       document.getElementById("inpMs").value = ''
+      document.getElementById("inpRx").value = ''
+      document.getElementById("inpRxx").value = ''
       realSubmit();
     }
 
@@ -82,6 +93,14 @@
       realSubmit();
     }
 
+    function silenceAllMatching() {
+      var until = document.getElementById("inpSilenceAllUntil").value
+      if (confirm("Silence all matching objects for " + until + "?")){
+        document.getElementById("frmInpSilenceAllUntil").value = until;
+        document.getElementById("inpCurl").value = '@curUrl';
+        realSubmit();
+      }
+    }
     $('form#runTreeFilterForm').submit(disableEmptyInputs);
 </script>
 

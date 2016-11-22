@@ -284,6 +284,26 @@ class Api  @Inject() (actorSystem: ActorSystem,
   }
 
 
+  def monitorSilenceAllTrees(rx: Option[String],
+                             rxx: Option[String],
+                             ms: Option[String],
+                             soft: Option[String],
+                             ackd: Option[String],
+                             slncd: Option[String],
+                             rid: Option[String],
+                             until: Int) = Action.async {
+    val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.withName(s)),
+      includeSoft = soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
+      includeSilenced = slncd.getOrElse("off") == "on")
+    monitorApi.silenceAllTrees(SMGRemote.local.id, flt, rid, until).map { ret =>
+      if (ret)
+        Ok("")
+      else
+        NotFound("Some error occured")
+    }
+  }
+
+
   def monitorAck(id: String) = Action.async {
     monitorApi.acknowledge(id).map { b =>
       if (b)

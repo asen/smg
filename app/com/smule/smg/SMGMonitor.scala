@@ -323,19 +323,23 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     Future.sequence(allFuts)
   }
 
-  override def localMonTrees(flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): (Seq[SMGTree[SMGMonState]], Int) = {
+  def localMatchingMonTrees(flt: SMGMonFilter, rootId: Option[String]): Seq[SMGTree[SMGMonInternalState]] = {
     val allTreesToFilter = if (rootId.isDefined) {
       findTreeWithRootId(rootId.get).map { t =>
         Seq(t)
       }.getOrElse(Seq())
     } else topLevelMonitorStateTrees.sortBy(_.node.id)
-    val allMatching = allTreesToFilter.flatMap { tt =>
+    allTreesToFilter.flatMap { tt =>
       tt.findTreesMatching(flt.matchesState)
-    }.map(_.asInstanceOf[SMGTree[SMGMonState]])
+    }
+  }
+
+  override def localMonTrees(flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): (Seq[SMGTree[SMGMonState]], Int) = {
+    val allMatching = localMatchingMonTrees(flt, rootId)
     val ret = SMGTree.sliceTree(allMatching, pg, pgSz)
     val tlToDisplay = allMatching.size + allMatching.map(_.children.size).sum
     val maxPg = (tlToDisplay / pgSz) + (if (tlToDisplay % pgSz == 0) 0 else 1)
-    (ret, maxPg)
+    (ret.map(_.asInstanceOf[SMGTree[SMGMonState]]), maxPg)
   }
 
   /**
@@ -358,6 +362,22 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       remotes.monitorTrees(remoteId, flt, rootId, pg, pgSz)
     }
   }
+
+  override def silenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String],
+                               until: Int): Future[Boolean] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    if (remoteId == SMGRemote.local.id) {
+      Future {
+        localMatchingMonTrees(flt, rootId).foreach { tlt =>
+          tlt.allNodes.foreach(_.slnc(until))
+        }
+        true
+      }
+    } else {
+      remotes.monitorSilenceAllTrees(remoteId, flt, rootId, until)
+    }
+  }
+
 
   private def condenseHeatmapStates(allStates: Seq[SMGMonInternalState], maxSize: Int): (List[SMGMonState], Int) = {
     val chunkSize = (allStates.size / maxSize) + (if (allStates.size % maxSize == 0) 0 else 1)

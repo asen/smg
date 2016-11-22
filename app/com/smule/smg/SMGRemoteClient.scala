@@ -576,6 +576,24 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
+  def monitorSilenceAllTrees(flt: SMGMonFilter, rootId: Option[String],
+                   until: Int): Future[Boolean] = {
+    val paramsBuf = ListBuffer[String](s"until=$until")
+    val fltParams = flt.asUrlParams
+    if (fltParams != "") paramsBuf += fltParams
+    if (rootId.isDefined) paramsBuf += s"rid=${SMGRemote.localId(rootId.get)}"
+    val params = s"?" + paramsBuf.mkString("&")
+    ws.url(remote.url + API_PREFIX + "monitor/slncall" + params).
+      withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
+      resp.status == 200
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/slncall error: " + remote.id)
+        false
+      }
+    }
+  }
+
   def monitorAck(id: String): Future[Boolean] = {
     ws.url(remote.url + API_PREFIX + s"monitor/ack?id=${SMGRemote.localId(id)}" ).
       withRequestTimeout(shortTimeoutMs).get().map { resp =>

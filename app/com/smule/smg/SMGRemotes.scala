@@ -173,6 +173,8 @@ trait SMGRemotesApi {
     */
   def monitorTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
+  def monitorSilenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int): Future[Boolean]
+
   /**
     * remote call to acknowledge an error for given monitor state
     * @param id - monitor state id
@@ -478,6 +480,13 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     else Future { (Seq(), 0) }
 
   }
+
+  override def monitorSilenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int): Future[Boolean] = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monitorSilenceAllTrees(flt, rootId, until)
+    else Future { false }
+  }
+
 
   override def monitorAck(id: String): Future[Boolean] = {
     val remoteId = SMGRemote.remoteId(id)

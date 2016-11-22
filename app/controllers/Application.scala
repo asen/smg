@@ -569,19 +569,33 @@ class Application  @Inject() (actorSystem: ActorSystem,
                    hslncd: String,
                    rid: Option[String],
                    pg: Int,
-                   lmt: Int) = Action.async { request =>
+                   lmt: Int,
+                   silenceAllUntil: Option[String],
+                   curl: Option[String]
+                  ) = Action.async { request =>
     val conf = configSvc.config
     val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.withName(s)),
       includeSoft = hsoft == "off", includeAcked = hackd == "off",
       includeSilenced = hslncd == "off")
-    val offs = pg * lmt
-    val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
-    val myLimit = Math.max(2, lmt)
-    val myPg = Math.max(0, pg)
-    monitorApi.monTrees(remote, flt, rid, myPg, myLimit).map { t =>
-      val seq = t._1
-      val maxPg = t._2
-      Ok(views.html.monitorStateTrees(configSvc.plugins, remote, remoteIds, flt, rid, seq, myPg, maxPg, myLimit, request.uri))
+    val mySlncUntil = silenceAllUntil.map(slunt => SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0))
+
+    if (mySlncUntil.isDefined && curl.isDefined) {
+      monitorApi.silenceAllTrees(remote, flt, rid, mySlncUntil.get).map { ret =>
+        if (ret)
+          Redirect(curl.get)
+        else
+          NotFound("Some error occured")
+      }
+    } else {
+      val offs = pg * lmt
+      val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
+      val myLimit = Math.max(2, lmt)
+      val myPg = Math.max(0, pg)
+      monitorApi.monTrees(remote, flt, rid, myPg, myLimit).map { t =>
+        val seq = t._1
+        val maxPg = t._2
+        Ok(views.html.monitorStateTrees(configSvc.plugins, remote, remoteIds, flt, rid, seq, myPg, maxPg, myLimit, request.uri))
+      }
     }
   }
 
@@ -606,7 +620,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   def monitorUnsilence(id: String, curl: String) = Action.async {
     monitorApi.unsilence(id).map { ret =>
-      Redirect(curl)
+      if (ret)
+        Redirect(curl)
+      else
+        NotFound("Some error occured")
     }
   }
 

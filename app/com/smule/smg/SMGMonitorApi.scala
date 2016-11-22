@@ -422,6 +422,7 @@ trait SMGMonitorApi {
     */
   def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
+  def silenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int): Future[Boolean]
 
   /**
     * Acknowledge an error for given monitor state. Acknowledgement is automatically cleared on recovery.
