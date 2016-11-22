@@ -49,13 +49,13 @@ case class SMGLocalConfig(
 
   val viewObjectsByUpdateId = viewObjects.groupBy(o => o.refObj.map(_.id).getOrElse(o.id))
 
-  val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++
-    pluginObjects.flatMap(t => t._2).filter(ov => ov.refObj.isDefined || ov.isInstanceOf[SMGObjectUpdate]).map {
-      ov => ov match {
-        case update: SMGObjectUpdate => update
-        case _ => ov.refObj.get
-      }
-    }
+  private val pluginUpdateObjects = pluginObjects.flatMap(t => t._2).filter(ov => ov.refObj.isDefined || ov.isInstanceOf[SMGObjectUpdate]).map {
+    case update: SMGObjectUpdate => update
+    case ov => ov.refObj.get
+  }.groupBy(_.id).map { case (id, seq) => seq.head }
+
+  val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++ pluginUpdateObjects
+
 
   val updateObjectsById = updateObjects.groupBy(_.id).map(t => (t._1,t._2.head))
 
