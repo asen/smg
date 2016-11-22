@@ -1,5 +1,6 @@
 package com.smule.smg
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -58,48 +59,62 @@ object SMGTree {
 
   val MAX_SMG_TREE_LEVELS = 10
 
-  def buildTree[T <: SMGTreeNode](leafObjs: Seq[T], parentObjs: Map[String,T]): Seq[SMGTree[T]] = {
-    val ret = ListBuffer[SMGTree[T]]()
+
+  private def validateTrees[T <: SMGTreeNode](leafObjs: Seq[T], topLevel: Seq[SMGTree[T]]) = {
+    val leafIds = leafObjs.map(_.id).toSet
+    val treeLeafIds = topLevel.flatMap(_.leafNodes).map(_.id).toSet
+    val missing = leafIds -- treeLeafIds
+    if (missing.nonEmpty){
+      SMGLogger.error(s"SMGTree.validateTrees: Did not find all leaf nodes, possible circular parents " +
+        s"reference. Missing ${missing.size} objects, up to 10 examples: ${missing.take(10)}")
+    }
+  }
+
+  /**
+    * Build all trees from the given leafs and parent objects. parent objects which are not
+    * referenced by some leaf (or its parent(s)) are excluded
+    * @param leafObjs - all leaf objects
+    * @param parentObjs - a map of all available parent objects.
+    * @tparam T - the type of the tree node objects, extending SMGTreeNode
+    * @return - list of top-level (no parent) trees
+    */
+  def buildTrees[T <: SMGTreeNode](leafObjs: Seq[T], parentObjs: Map[String,T]): Seq[SMGTree[T]] = {
+    val allObjs = leafObjs ++ parentObjs.values.toList.distinct
+    val allByParent = allObjs.groupBy(_.parentId.getOrElse(""))
+    val leafTreesById = leafObjs.map(o => SMGTree[T](o, Seq())).groupBy(_.node.id).map { t =>
+      if (t._2.tail.nonEmpty) {
+        SMGLogger.error(s"SMGTree.buildTrees: leafs list contains duplicate items: ${t._1} -> ${t._2}")
+      }
+      (t._1, t._2.head)
+    }
     var recLevel = 0
 
-    def buildTree(leafs: Seq[SMGTree[T]]): Unit = {
-      //      println(leafs)
-      val byParent = leafs.groupBy(_.node.parentId.getOrElse(""))
-      val myParents = ListBuffer[SMGTree[T]]()
-      byParent.foreach { case (prntId, chldrn) =>
-        if (prntId == "") {
-          // top level
-          ret ++= chldrn
-        } else {
-          val prnt = parentObjs.get(prntId)
-          if (prnt.isEmpty) {
-            SMGLogger.error(s"SMGTree.buildTree: non existing parent id: $prntId")
-            ret ++= chldrn
-          } else {
-            myParents += SMGTree[T](prnt.get, chldrn)
-          }
-        }
+    def myBuildTree(root: T): Option[SMGTree[T]] = {
+      if (recLevel > MAX_SMG_TREE_LEVELS) {
+        SMGLogger.error(s"SMGTree.buildTrees: myBuildTree: recursion exceeded $MAX_SMG_TREE_LEVELS levels")
+        return None
       }
-      if (myParents.nonEmpty) {
-        recLevel += 1
-        if (recLevel > MAX_SMG_TREE_LEVELS) {
-          throw new RuntimeException(s"SMGTree.buildTree: Configuration error - recursion ($recLevel) exceeded $MAX_SMG_TREE_LEVELS")
-        }
-        buildTree(myParents.sortBy(_.node.id))
+      recLevel += 1
+      if (leafTreesById.contains(root.id)){
         recLevel -= 1
+        return Some(leafTreesById(root.id))
       }
-    }
-    buildTree(leafObjs.sortBy(_.id).map(o => SMGTree(o, Seq())))
-    // consolidate top-level trees sharing the same root
-    val topLevelById = ret.toList.groupBy(_.node.id)
-    topLevelById.keys.toList.sorted.map { cid =>
-      val trees = topLevelById(cid)
-      if (trees.tail.isEmpty) {
-        trees.head
-      } else {
-        SMGTree(trees.head.node, trees.flatMap(_.children).sortBy(_.node.id))
+      val myChidren = allByParent.get(root.id)
+      if (myChidren.isEmpty) {
+        recLevel -= 1
+        return None
       }
+      val childTrees = myChidren.get.map { c => myBuildTree(c) }.collect{case Some(x) => x}.sortBy(_.node.id)
+      recLevel -= 1
+      if (childTrees.isEmpty)
+        None
+      else
+        Some(SMGTree[T](root, childTrees))
     }
+
+    val topLevel = allByParent("").map { n => myBuildTree(n) }.collect { case Some(x) => x }.sortBy(_.node.id)
+    validateTrees(leafObjs, topLevel)
+    topLevel.toList
   }
 
   def sliceTree[T <: SMGTreeNode](topLevel: Seq[SMGTree[T]], pg:Int, pgSz: Int): Seq[SMGTree[T]] = {

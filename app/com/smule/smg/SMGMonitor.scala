@@ -149,7 +149,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         }
         val runState = getOrCreateRunState(intvl, plidOpt)
         val parentsMap: Map[String,SMGMonInternalState] =  objsMap ++ pfsMap ++ Map(runState.id -> runState)
-        SMGTree.buildTree[SMGMonInternalState](leafsSeq, parentsMap)
+        SMGTree.buildTrees[SMGMonInternalState](leafsSeq, parentsMap)
       }.toList
     }.toList
     cleanupAllMonitorStates(ret)

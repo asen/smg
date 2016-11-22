@@ -3,11 +3,11 @@
 @(tree: SMGTree[SMGMonState], isRoot: Boolean, pg:Int, maxPages:Int, curUrl: String)
 
 <div>
-  @monitorStateTreeNodeDisplay(tree.node, isRoot, curUrl)
+  @monitorStateTreeNodeDisplay(tree.node, isRoot, false, curUrl)
   <ul>
     @for(t <- tree.children){
     <li>
-      @monitorStateTreeNodeDisplay(t.node, false, curUrl)
+      @monitorStateTreeNodeDisplay(t.node, false, t.children.nonEmpty, curUrl)
     </li>
     }
   </ul>
