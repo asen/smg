@@ -246,7 +246,7 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
   override val id: String = SMGMonVarState.stateId(ou,vix)
   override val parentId: Option[String] = Some(ou.id)
 
-  override def ouids: Seq[String] = Seq(ou.id)
+  override def ouids: Seq[String] = (Seq(ou.id) ++ configSvc.config.viewObjectsByUpdateId.getOrElse(ou.id, Seq()).map(_.id)).distinct
   override def vixOpt: Option[Int] = Some(vix)
   override def oid: Option[String] = Some(ou.id)
   override def pfId: Option[String] = ou.preFetch
@@ -380,7 +380,7 @@ class SMGMonObjState(var ou: SMGObjectUpdate,
 
   override def parentId: Option[String] = SMGMonPfState.fetchParentStateId(ou.preFetch, ou.interval, ou.pluginId)
 
-  override def ouids: Seq[String] = Seq(ou.id)
+  override def ouids: Seq[String] = (Seq(ou.id) ++ configSvc.config.viewObjectsByUpdateId.getOrElse(ou.id, Seq()).map(_.id)).distinct
   override def vixOpt: Option[Int] = None
 
   override def oid: Option[String] = Some(ou.id)
