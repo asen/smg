@@ -1,5 +1,7 @@
 package com.smule.smg
 
+import java.text.DecimalFormat
+
 import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.mutable
@@ -141,6 +143,8 @@ class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
     (maxLtCnt > maxStCnt) && // sanity check
     (maxLtStatsSize(maxStCnt, maxLtCnt) * 0.75 <= ltStats.size)  // require at least 75% of the max long term stats
 
+  private def numFmt(num: Double) = SMGState.numFmt(num)
+
   def checkAnomaly(changeThresh: Double, maxStCnt: Int, maxLtCnt: Int): Option[String] = {
     // sanity checks first
 
@@ -178,17 +182,19 @@ class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
 
     // if variances and 95%-iles are too different we probably have a drop or spike
     if ((maxVar > changeThresh * minVar) && (maxP90 > changeThresh * minP90)) {
-      lazy val varianceStr = s" (stVariance=${stStat.variance}/stddev=${scala.math.sqrt(stStat.variance)}/p90=${stStat.p90}, " +
-        s"ltVariance=${ltAggStat.variance}/stddev=${scala.math.sqrt(ltAggStat.variance)}/p90=${ltAggStat.p90})"
+      lazy val varianceStr = s" (stVariance=${numFmt(stStat.variance)}/" +
+        s"stddev=${numFmt(scala.math.sqrt(stStat.variance))}/p90=${numFmt(stStat.p90)}, " +
+        s"ltVariance=${numFmt(ltAggStat.variance)}/stddev=${numFmt(scala.math.sqrt(ltAggStat.variance))}/" +
+        s"p90=${numFmt(ltAggStat.p90)})"
       // average increase -> spike
       // and one additional check - must be an increase compared to all individual ltStats
       if ((stStat.avg > changeThresh * ltAggStat.avg) && ltStats.forall(_.avg <= stStat.avg))
-        return Some(s"SPIKE: stAvg=${stStat.avg} gt $changeThresh * ltAvg=${ltAggStat.avg} " +
+        return Some(s"SPIKE: stAvg=${numFmt(stStat.avg)} gt $changeThresh * ltAvg=${numFmt(ltAggStat.avg)} " +
           varianceStr)
       // average decrease -> drop
       // and one additional check - must be a drop compared to all individual ltStats
       if ((ltAggStat.avg > changeThresh * stStat.avg) && ltStats.forall(_.avg >= stStat.avg))
-        return Some(s"DROP: ltAvg=${ltAggStat.avg} gt $changeThresh * stAvg=${stStat.avg} " +
+        return Some(s"DROP: ltAvg=${numFmt(ltAggStat.avg)} gt $changeThresh * stAvg=${numFmt(stStat.avg)} " +
           varianceStr)
     }
 

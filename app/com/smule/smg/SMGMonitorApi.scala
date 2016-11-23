@@ -1,7 +1,7 @@
 package com.smule.smg
 
 import java.net.URLEncoder
-import java.text.SimpleDateFormat
+import java.text.{DecimalFormat, SimpleDateFormat}
 import java.util.Date
 
 import play.api.libs.functional.syntax._
@@ -36,6 +36,11 @@ object SMGState extends Enumeration {
       longTimeFormat
     myFmt.format(new Date(ts.toLong * 1000))
   }
+
+  private val myFormatter = new DecimalFormat("#.######")
+
+  def numFmt(num: Double) = if (num.isNaN) "NaN" else myFormatter.format(num)
+
 
   private val severityChars = Map(
     0 -> "",   //OK

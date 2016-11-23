@@ -263,6 +263,8 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
 
   private def movingStats = myMovingStatsOpt.get
 
+  private def numFmt(num: Double) = SMGState.numFmt(num)
+
   private def processCounterUpdate(ts: Int, rawVal: Double): Option[(Double,Option[String])] = {
     val tsDelta = ts - myCounterPrevTs
 
@@ -279,7 +281,7 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
       val r = (rawVal - myCounterPrevValue) / tsDelta
       val tpl = if ((r < 0) || (maxr.isDefined && (maxr.get < r))){
         log.debug(s"SMGMonVarState.processCounterUpdate($id): Counter overflow detected: p=$myCounterPrevValue/$myCounterPrevTs c=$rawVal/$ts r=$r maxr=$maxr")
-        (Double.NaN, Some(s"Counter overflow: p=$myCounterPrevValue c=$rawVal td=$tsDelta r=$r maxr=${maxr.getOrElse(Double.NaN)}"))
+        (Double.NaN, Some(s"Counter overflow: p=${numFmt(myCounterPrevValue)} c=${numFmt(rawVal)} td=$tsDelta r=${numFmt(r)} maxr=${numFmt(maxr.getOrElse(Double.NaN))}"))
       } else
         (r, None)
       Some(tpl)
@@ -333,14 +335,14 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
         } else movingStats.reset()
 
         if (curRet == null) {
-          curRet = SMGState(ts,SMGState.OK, s"OK: value=$newVal : $descSx")
+          curRet = SMGState(ts,SMGState.OK, s"OK: value=${numFmt(newVal)} : $descSx")
         }
         curRet
       }
       ret = allAlertStates.maxBy(_.state)
     }
     if (ret == null) {
-      ret = SMGState(ts, SMGState.OK, s"OK: value=$newVal")
+      ret = SMGState(ts, SMGState.OK, s"OK: value=${numFmt(newVal)}")
     }
     if (ret.state != SMGState.OK) {
       log.debug(s"MONITOR: ${ou.id} : $vix : $ret")

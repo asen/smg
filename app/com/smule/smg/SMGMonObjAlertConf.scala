@@ -8,13 +8,15 @@ import play.api.libs.json.{JsValue, Json}
 
 case class SMGMonAlertThresh(value: Double, op: String) {
 
+  private def numFmt(num: Double) = SMGState.numFmt(num)
+
   def checkAlert(fetchedValue: Double):Option[String] = {
     op match {
-      case "gte" => if (fetchedValue >= value) Some(s"$fetchedValue >= $value") else None
-      case "gt"  => if (fetchedValue > value) Some(s"$fetchedValue > $value") else None
-      case "lte" => if (fetchedValue <= value) Some(s"$fetchedValue <= $value") else None
-      case "lt"  => if (fetchedValue < value) Some(s"$fetchedValue < $value") else None
-      case "eq"  => if (fetchedValue == value) Some(s"$fetchedValue == $value") else None
+      case "gte" => if (fetchedValue >= value) Some(s"${numFmt(fetchedValue)} >= ${numFmt(value)}") else None
+      case "gt"  => if (fetchedValue > value) Some(s"${numFmt(fetchedValue)} > ${numFmt(value)}") else None
+      case "lte" => if (fetchedValue <= value) Some(s"${numFmt(fetchedValue)} <= ${numFmt(value)}") else None
+      case "lt"  => if (fetchedValue < value) Some(s"${numFmt(fetchedValue)} < ${numFmt(value)}") else None
+      case "eq"  => if (fetchedValue == value) Some(s"${numFmt(fetchedValue)} == ${numFmt(value)}") else None
       case badop: String => {
         SMGLogger.warn("SMGMonAlertThresh: invalid op: " + badop)
         None
