@@ -308,7 +308,7 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
         var curRet: SMGState = null
         val warnThreshVal = alertConf.warn.map(_.value).getOrElse(Double.NaN)
         val critThreshVal = alertConf.crit.map(_.value).getOrElse(Double.NaN)
-        val descSx = s"( $warnThreshVal / $critThreshVal )"
+        val descSx = s"( ${numFmt(warnThreshVal)} / ${numFmt(critThreshVal)} )"
 
         if (alertConf.crit.isDefined) {
           val alertDesc = alertConf.crit.get.checkAlert(newVal)
