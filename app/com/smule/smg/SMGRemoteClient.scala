@@ -398,9 +398,9 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   }
 
   def monitorLogs(periodStr: String, limit: Int,
-                  minSeverity: Option[SMGState.Value], hardOnly: Boolean,
+                  minSeverity: Option[SMGState.Value], inclSoft: Boolean,
                   inclAcked: Boolean, inclSilenced: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
-    val softStr = if (hardOnly) "" else "&soft=on"
+    val softStr = if (inclSoft) "&soft=on" else ""
     val ackdStr = if (inclAcked) "&ackd=on" else ""
     val slncdStr = if (inclSilenced) "&slncd=on" else ""
     val sevStr = if (minSeverity.isDefined) "&sev=" + minSeverity.get.toString else ""

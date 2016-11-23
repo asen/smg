@@ -120,11 +120,13 @@ trait SMGRemotesApi {
     * @param remoteId - id of the remote to get data from
     * @param periodStr - period string
     * @param limit - max entries to return
-    * @param hardOnly - whether to include soft errors or hard only
+    * @param inclSoft - whether to include soft errors or hard only
+    * @param inclAcked- whether to include acked errors
+    * @param inclSilenced - whether to include silenced errors
     * @return
     */
   def monitorLogs(remoteId: String, periodStr: String, limit: Int,
-                  minSeverity: Option[SMGState.Value], hardOnly: Boolean,
+                  minSeverity: Option[SMGState.Value], inclSoft: Boolean,
                   inclAcked: Boolean, inclSilenced: Boolean): Future[Seq[SMGMonitorLogMsg]]
 
   /**
@@ -427,10 +429,10 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
   }
 
   override def monitorLogs(remoteId: String, periodStr: String, limit: Int,
-                           minSeverity: Option[SMGState.Value], hardOnly: Boolean,
+                           minSeverity: Option[SMGState.Value], inclSoft: Boolean,
                            inclAcked: Boolean, inclSilenced: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorLogs(periodStr, limit, minSeverity, hardOnly, inclAcked, inclSilenced)
+      clientForId(remoteId).get.monitorLogs(periodStr, limit, minSeverity, inclSoft, inclAcked, inclSilenced)
     else Future { Seq() }
   }
 

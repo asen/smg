@@ -548,18 +548,23 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+
+  val DEFAULT_LOGS_SINCE = "24h"
+  val DEFAULT_LOGS_LIMIT = 200
+
   def monitorLog(remote: String, p: Option[String], l: Option[Int], ms: Option[String],
                  soft: Option[String], ackd: Option[String], slncd: Option[String]) = Action.async {
     val (availRemotes, rmtOpt) = parseRemoteParam(remote)
     val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_VAL_WARN)
-    val period = p.getOrElse("24h")
-    val limit = l.getOrElse(100)
-    val hardOnly = soft.getOrElse("off") == "off"
+    val period = p.getOrElse(DEFAULT_LOGS_SINCE)
+    val limit = l.getOrElse(DEFAULT_LOGS_LIMIT)
+    val inclSoft = soft.getOrElse("off") == "on"
     val includeAckd = ackd.getOrElse("off") == "on"
     val includeSlncd = slncd.getOrElse("off") == "on"
-    monitorApi.monLogApi.getSince(period, rmtOpt, limit, Some(minSev), hardOnly, includeAckd, includeSlncd).map { logs =>
+    monitorApi.monLogApi.getSince(period, rmtOpt, limit, Some(minSev), inclSoft, includeAckd, includeSlncd).map { logs =>
       Ok(views.html.monitorLog(configSvc.plugins, availRemotes, rmtOpt, SMGState.values.toList.map(_.toString),
-        Some(minSev.toString), period, limit, hardOnly, inclAckd = includeAckd, inclSlncd = includeSlncd, logs))
+        Some(minSev.toString), period, DEFAULT_LOGS_SINCE, limit, DEFAULT_LOGS_LIMIT,
+        inclSoft = inclSoft, inclAckd = includeAckd, inclSlncd = includeSlncd, logs))
     }
   }
 
