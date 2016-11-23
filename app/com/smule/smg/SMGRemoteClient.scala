@@ -407,6 +407,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     lazy val errRet = Seq(
       SMGMonitorLogMsg(
         ts = SMGState.tssNow,
+        msid = None,
         curState = SMGState(SMGState.tssNow, SMGState.E_SMGERR, "Remote logs fetch error"),
         prevState = None,
         repeat = 1,
@@ -828,6 +829,7 @@ object SMGRemoteClient {
         "cs" -> Json.toJson(ml.curState),
         "rpt" -> Json.toJson(ml.repeat)
       )
+      if (ml.msid.isDefined) mm += ("msid" -> Json.toJson(ml.msid.get))
       if (ml.prevState.isDefined) mm += ("ps" -> Json.toJson(ml.prevState))
       if (ml.isHard) mm += ("hard" -> Json.toJson("true"))
       if (ml.isAcked) mm += ("ackd" -> Json.toJson("true"))

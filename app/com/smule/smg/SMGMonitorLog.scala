@@ -27,6 +27,7 @@ import scala.io.Source
   * @param remote - originating remote instance
   */
 case class SMGMonitorLogMsg(ts: Int,
+                            msid: Option[String],
                             curState: SMGState,
                             prevState: Option[SMGState],
                             repeat: Int,
@@ -41,7 +42,7 @@ case class SMGMonitorLogMsg(ts: Int,
 
   val mltype: SMGMonitorLogMsg.Value = SMGMonitorLogMsg.fromObjectState(curState.state)
 
-  val msg = s"state: ${curState.desc} (prev state: ${prevState.map(_.desc).getOrElse("UNKNOWN")})"
+  val msg = s"state: ${curState.desc} (prev state: ${prevState.map(_.desc).getOrElse("N/A")})"
 
   lazy val tsFmt: String = tsFmt(ts)
 
@@ -50,10 +51,12 @@ case class SMGMonitorLogMsg(ts: Int,
   def tsFmt(t :Int): String = SMGMonitorLogMsg.logTsFmt.format(new Date(t.toLong * 1000))
 
   lazy val ouidFmt = if (ouids.isEmpty) "-" else ouids.mkString(",")
+  lazy val msIdFmt = msid.getOrElse(ouidFmt)
+
   lazy val vixFmt = vix.map(_.toString).getOrElse("-")
   lazy val hardStr = if (isHard) "HARD" else "SOFT"
 
-  lazy val logLine = s"[$tsFmt]: $ts $mltype $ouidFmt $vixFmt $repeat ${hardStr} $msg\n"
+  lazy val logLine = s"[$tsFmt]: $ts $mltype $msIdFmt $vixFmt $repeat ${hardStr} $msg\n"
 
   def objectsFilter = SMGMonStateAgg.objectsUrlFilter(ouids)
   def objectsFilterWithRemote = s"remote=${remote.id}&$objectsFilter"
@@ -90,6 +93,7 @@ object SMGMonitorLogMsg extends Enumeration {
     }
     (
       (JsPath \ "ts").read[Int] and
+        (JsPath \ "msid").readNullable[String].map(opt => opt.map(myPrefixedId)) and
         (JsPath \ "cs").read[SMGState] and
         (JsPath \ "ps").readNullable[SMGState] and
         (JsPath \ "rpt").read[Int] and
@@ -247,7 +251,7 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
 
   private def saveOnShutdown() = {
     recentLogs += SMGMonitorLogMsg(
-      SMGState.tssNow,
+      SMGState.tssNow, None,
       SMGState(SMGState.tssNow, SMGState.E_SMGERR, "SMG Shutdown"),
       None, 1, isHard = true, isAcked = false, isSilenced = false, Seq(), None, SMGRemote.local)
     saveLogChunk(recentLogs.toList)

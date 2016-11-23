@@ -79,8 +79,8 @@
     [@{ if(ms.remote.id == "") "local" else ms.remote.id }]
     [@{ms.tsFmt}]: <span class="ml-type-@{ms.mltype}">@{ms.mltype}</span>
     @if(ms.ouids.nonEmpty) {
-      <a href="/dash?@{ms.objectsFilterWithRemote}">@{ms.ouids.mkString(",")}</a> [@if(ms.vix.isDefined){@{ms.vix.get}} else {-}]
-    } else { - [-] }
+      <a href="/dash?@{ms.objectsFilterWithRemote}">@{ms.msIdFmt}</a>
+    } else { @{ms.msIdFmt} }
     (n=@{ms.repeat}, @if(ms.isHard){ <strong>HARD</strong> } else { SOFT })
     <span class="ml-msg">@{ms.msg}</span>
   </li>
