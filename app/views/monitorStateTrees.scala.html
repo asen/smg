@@ -82,9 +82,11 @@
 
     function goToRoot(rootId) {
       document.getElementById("treeRoot").value = rootId
+      document.getElementById("treePage").value = 0
       document.getElementById("inpMs").value = ''
       document.getElementById("inpRx").value = ''
       document.getElementById("inpRxx").value = ''
+      disableEmptyInputs();
       realSubmit();
     }
 
