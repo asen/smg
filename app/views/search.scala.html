@@ -5,38 +5,56 @@
 
 @main("SMG - Search", plugins, 0) {
 
+@if(res.isEmpty) {
+  <p>&nbsp;</p>
+  <p>&nbsp;</p>
+  <p>&nbsp;</p>
+  <p>&nbsp;</p>
+}
 
 <div align="center">
 <form id="searchForm" method="GET">
-  <h3>Enter search terms below to find indexes and objects</h3>
-  <input id="inpQ" type="text" name="q" size="100" value="@q" autofocus />
-  (Limit: <input id="inpL" type="text" name="lmt" size="4" value="@lmt" />)
-  <input type="submit" value="Search"/>
+  <h3 style="cursor: help;" title='Enter search terms below.
+Click "Search" (or hit Enter) to treat these as words and find matching indexes and objects.
+Click "Go to graphs" to treat these as regexes and display matching graphs directly'>Search</h3>
+  (<label>Limit:</label> <input id="inpL" type="text" name="lmt" size="4" value="@lmt" />)
+  <input id="inpQ" type="text" name="q" size="100" value="@q"
+         title='Enter words and click "Search" (or hit Enter) to find indexes and objects.
+Enter regex(es) and click "Go to graphs" to display matching graphs directly' autofocus />
+  <input type="submit" value="Search" title="Find indexes and objects matching the query words"/>
+  <input type="button" value="Go to graphs" onclick="submitTrxForm();"
+         title="Treat the query words as regexes and display matching graphs directly"/>
 </form>
 
-<!-- strip empty/default params from the form so that urls are less cluttered -->
+<form id="trxForm" method="GET" action="/dash">
+  <input type="hidden" name="remote" value="*" />
+  <input id="trxQ" type="hidden" name="trx" value="" />
+</form>
+
+  <!-- strip empty/default params from the form so that urls are less cluttered -->
 <script language="JavaScript">
-function disableEmptyInputs() {
+  function disableEmptyInputs() {
       $(':input', this).each(function() {
-         // !($(this).val()) ||
+         //!($(this).val()) ||
          this.disabled = ((this.name == "lmt") && ($(this).val() == @defaultLmt))
       });
   };
 
   $('form#searchForm').submit(disableEmptyInputs);
+
+  function submitTrxForm() {
+    var val = document.getElementById("inpQ").value
+    if (val){
+      document.getElementById("trxQ").value = val
+      document.getElementById("trxForm").submit()
+      return true
+    }
+    return false
+  }
 </script>
-
-
-  <h4>or use the quick regex filter below to display matching graphs directly.</h4>
-  <form method="GET" action="/dash">
-    <input type="hidden" name="remote" value="*" />
-    <p><input id="trxQ" type="text" name="trx" size="50"
-              title="Enter one or more regular expressions separated by space.
-These will be matched against graph object ids, titles, graph labels or units."/>
-    <input type="submit" value="Go to graphs"/></p>
-  </form>
-
-  <h4>or check the <a href="/ci">Configured indexes</a></h4>
+  <h4>Or check the <a href="/ci" title="List of configured top-level indexes">Configured indexes</a> or
+    the <a href="/autoindex" title="List of automatically discovered from object ids indexes">Automatic index</a>
+  </h4>
 </div>
 
 @if(res.nonEmpty) {
@@ -51,8 +69,13 @@ These will be matched against graph object ids, titles, graph labels or units."/
 </ul>
 } else {
   @if(q != ""){
+  <hr/>
   <h4 align="center">No results to display</h4>
   }
+  <p>&nbsp;</p>
+  <p>&nbsp;</p>
+  <p>&nbsp;</p>
+  <p>&nbsp;</p>
 }
 
 }
