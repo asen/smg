@@ -96,9 +96,9 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     getOrCreateState[SMGMonObjState](stateId, createFn, if (update) Some(updateFn) else None)
   }
 
-  private def getOrCreatePfState(pf: SMGPreFetchCmd, interval: Int, update: Boolean = false): SMGMonPfState = {
+  private def getOrCreatePfState(pf: SMGPreFetchCmd, interval: Int, pluginId: Option[String], update: Boolean = false): SMGMonPfState = {
     val stateId = SMGMonPfState.stateId(pf, interval)
-    def createFn() = { new SMGMonPfState(pf, interval, configSvc, monLogApi, notifSvc) }
+    def createFn() = { new SMGMonPfState(pf, interval, pluginId, configSvc, monLogApi, notifSvc) }
     def updateFn(state: SMGMonPfState) = {
       if (state.pfCmd != pf) {
         // this is logged at object level
@@ -143,9 +143,17 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
           ou.vars.indices.map { vix => getOrCreateVarState(ou,vix, update = true) }
         }
         val objsMap = seq.map { ou =>  getOrCreateObjState(ou, update = true) }.groupBy(_.id).map(t => (t._1,t._2.head) )
-        val pfsMap = config.preFetches.map { t =>
-          val pfState = getOrCreatePfState(t._2, intvl, update = true)
+        val pfsMap = if (plidOpt.isEmpty) config.preFetches.map { t =>
+          val pfState = getOrCreatePfState(t._2, intvl, plidOpt, update = true)
           (pfState.id, pfState)
+        } else {
+          val pluginOpt = configSvc.plugins.find(_.pluginId == plidOpt.get)
+          pluginOpt.map { pl =>
+            pl.preFetches.map { t =>
+              val pfState = getOrCreatePfState(t._2, intvl, plidOpt, update = true)
+              (pfState.id, pfState)
+            }
+          }.getOrElse(Map())
         }
         val runState = getOrCreateRunState(intvl, plidOpt)
         val parentsMap: Map[String,SMGMonInternalState] =  objsMap ++ pfsMap ++ Map(runState.id -> runState)
@@ -194,7 +202,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       log.error(s"SMGMonitor.receivePfMsg: did not find prefetch for id: ${msg.pfId}")
       return
     }
-    val pfState = getOrCreatePfState(pf.get, msg.interval)
+    val pfState = getOrCreatePfState(pf.get, msg.interval, msg.pluginId)
 
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       // process pre-fetch error

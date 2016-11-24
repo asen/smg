@@ -49,10 +49,10 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val sz = if (commandTrees.isEmpty) 0 else commandTrees.map(_.size).sum
     if (!SMGRunStats.resetInterval(interval, sz)) {
       log.error("SMGrapher.run(interval=" + interval + "): Overlapping runs detected - aborting")
-      configSvc.sendRunMsg(SMGDFRunMsg(interval, List("Overlapping runs detected")))
+      configSvc.sendRunMsg(SMGDFRunMsg(interval, List("Overlapping runs detected"), None))
       return
     } else {
-      configSvc.sendRunMsg(SMGDFRunMsg(interval, List()))
+      configSvc.sendRunMsg(SMGDFRunMsg(interval, List(), None))
     }
     Future {
       commandTrees.foreach { fRoot =>

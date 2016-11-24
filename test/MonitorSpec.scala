@@ -377,17 +377,17 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 
       // step 0, send some OK data
 
-      mon.receivePfMsg(SMGDFPfMsg(startOfTest, pf.id, pfObj1.interval, pfObjs, 0, List()))
+      mon.receivePfMsg(SMGDFPfMsg(startOfTest, pf.id, pfObj1.interval, pfObjs, 0, List(), None))
       pfObjs.foreach { pfo =>
         mon.receiveObjMsg(SMGDFObjMsg(startOfTest, pfo, List(1.0, 2.0), 0, List()))
       }
 
-      mon.receivePfMsg(SMGDFPfMsg(startOfTest + 60, pf.id, pfObj1.interval, pfObjs, 0, List()))
+      mon.receivePfMsg(SMGDFPfMsg(startOfTest + 60, pf.id, pfObj1.interval, pfObjs, 0, List(), None))
       pfObjs.foreach { pfo =>
         mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, pfo, List(2.0, 1.0), 0, List()))
       }
 
-      mon.receivePfMsg(SMGDFPfMsg(startOfTest + 120, pf.id, pfObj1.interval, pfObjs, 0, List()))
+      mon.receivePfMsg(SMGDFPfMsg(startOfTest + 120, pf.id, pfObj1.interval, pfObjs, 0, List(), None))
       pfObjs.foreach { pfo =>
         mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, pfo, List(1.0, 2.0), 0, List()))
       }

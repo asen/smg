@@ -21,6 +21,12 @@ trait SMGPlugin {
   def run(): Unit
   def reloadConf(): Unit
 
+  /**
+    * Plugins can define real (or synthetic) pf commands and send monitor messages for these
+    * actual plugin objects should have proper prefetch/parents relationships
+    * @return
+    */
+  def preFetches: Map[String, SMGPreFetchCmd] = Map()
 
   // XXX TODO need to rethink dependencies (who creates the plugins) to get rid of this
   private var remotesInst: SMGRemotesApi = null

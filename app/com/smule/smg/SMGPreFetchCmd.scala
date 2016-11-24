@@ -11,7 +11,10 @@ package com.smule.smg
   * @param preFetch - optional "parent" pre fetch command, this command will wait for its parent
   *                 to succeed before being executed
   */
-case class SMGPreFetchCmd(id: String, command: SMGCmd, preFetch: Option[String], override val ignoreTs: Boolean) extends SMGFetchCommand {
+case class SMGPreFetchCmd(id: String,
+                          command: SMGCmd,
+                          preFetch: Option[String],
+                          override val ignoreTs: Boolean) extends SMGFetchCommand {
   val isRrdObj = false
 }
 

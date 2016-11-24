@@ -6,9 +6,15 @@ package com.smule.smg
 
 case class SMGDFObjMsg( ts: Int, obj: SMGObjectUpdate, vals: List[Double], exitCode: Int, errors: List[String])
 
-case class SMGDFPfMsg( ts: Int, pfId: String, interval: Int, objs: Seq[SMGObjectUpdate], exitCode: Int, errors: List[String])
+case class SMGDFPfMsg( ts: Int,
+                       pfId: String,
+                       interval: Int,
+                       objs: Seq[SMGObjectUpdate],
+                       exitCode: Int, errors: List[String],
+                       pluginId: Option[String]
+                     )
 
-case class SMGDFRunMsg(interval: Int, errors: List[String], pluginId: Option[String] = None) {
+case class SMGDFRunMsg(interval: Int, errors: List[String], pluginId: Option[String]) {
   val ts = SMGRrd.tssNow
   val isOverlap = errors.nonEmpty
 }

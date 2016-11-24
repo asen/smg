@@ -403,11 +403,12 @@ object SMGMonObjState {
 
 class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
                     interval:Int,
+                    val pluginId: Option[String],
                     val configSvc: SMGConfigService,
                     val monLog: SMGMonitorLogApi,
                     val notifSvc: SMGMonNotifyApi)  extends SMGMonBaseFetchState {
   override val id: String = SMGMonPfState.stateId(pfCmd, interval)
-  override def parentId: Option[String] = SMGMonPfState.fetchParentStateId(pfCmd.preFetch, interval, None)
+  override def parentId: Option[String] = SMGMonPfState.fetchParentStateId(pfCmd.preFetch, interval, pluginId)
 
   override def ouids: Seq[String] = configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval)).map(_.id)
   override def vixOpt: Option[Int] = None
