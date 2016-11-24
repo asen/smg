@@ -97,8 +97,8 @@ trait SMGMonInternalState extends SMGMonState {
     s"${currentState.desc} (ts=${currentState.timeStr}$goodBadSince)"
   }
 
-  protected def logEntry(wasHard: Boolean) = SMGMonitorLogMsg(currentState.ts, Some(this.id), currentState, myRecentStates.tail.headOption,
-    errorRepeat, isHard = wasHard, isAcked = isAcked, isSilenced = isSilenced , ouids , vixOpt, remote)
+  protected def logEntry(logIsHard: Boolean) = SMGMonitorLogMsg(currentState.ts, Some(this.id), currentState, myRecentStates.tail.headOption,
+    errorRepeat, isHard = logIsHard, isAcked = isAcked, isSilenced = isSilenced , ouids , vixOpt, remote)
 
   protected def processAlertsAndLogs(prevStateWasInherited: Boolean): Unit = {
     val curState: SMGState = myRecentStates.head
