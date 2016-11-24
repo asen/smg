@@ -83,7 +83,7 @@ class TestConfigSvc() extends SMGConfigService {
 
   override val useInternalScheduler: Boolean = true
   override val plugins: Seq[SMGPlugin] = Seq()
-
+  override val pluginsById: Map[String, SMGPlugin] = Map()
 
   override def registerDataFeedListener(lsnr: SMGDataFeedListener): Unit = {}
 
