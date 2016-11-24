@@ -3,7 +3,7 @@
 @import com.smule.smg.SMGMonFilter
 @import com.smule.smg.SMGTree
 @import com.smule.smg.SMGState
-@(plugins: Seq[SMGPlugin], rmtId: String, availRemotes:Seq[String], flt: SMGMonFilter, rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], pg:Int, maxPages:Int, limit: Int, curUrl: String)
+@(plugins: Seq[SMGPlugin], rmtId: String, availRemotes:Seq[String], flt: SMGMonFilter, rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], pg:Int, maxPages:Int, limit: Int, defLimit: Int, curUrl: String)
 
 @main("SMG - Monitor browse states", plugins, 300) {
 
@@ -67,7 +67,10 @@
 
     function disableEmptyInputs() {
         $(':input', this).each(function() {
-           this.disabled = !($(this).val())
+           this.disabled = !($(this).val()) ||
+              ((this.name == "pg") && ($(this).val() == "0")) ||
+              ((this.name == "ms") && ($(this).val() == "OK")) ||
+              ((this.name == "lmt") && ($(this).val() == @defLimit))
         });
     };
 

@@ -568,6 +568,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+
+  val TREES_PAGE_DFEAULT_LIMIT = 200
+
   def monitorTrees(remote: String,
                    rx: Option[String],
                    rxx: Option[String],
@@ -577,7 +580,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
                    hslncd: String,
                    rid: Option[String],
                    pg: Int,
-                   lmt: Int,
+                   lmt: Option[Int],
                    silenceAllUntil: Option[String],
                    curl: Option[String]
                   ) = Action.async { request =>
@@ -586,7 +589,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
       includeSoft = hsoft == "off", includeAcked = hackd == "off",
       includeSilenced = hslncd == "off")
     val mySlncUntil = silenceAllUntil.map(slunt => SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0))
-
     if (mySlncUntil.isDefined && curl.isDefined) {
       monitorApi.silenceAllTrees(remote, flt, rid, mySlncUntil.get).map { ret =>
         if (ret)
@@ -595,14 +597,15 @@ class Application  @Inject() (actorSystem: ActorSystem,
           NotFound("Some error occured")
       }
     } else {
-      val offs = pg * lmt
+      val myLimit = Math.max(2, lmt.getOrElse(TREES_PAGE_DFEAULT_LIMIT))
+      val offs = pg * myLimit
       val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
-      val myLimit = Math.max(2, lmt)
       val myPg = Math.max(0, pg)
       monitorApi.monTrees(remote, flt, rid, myPg, myLimit).map { t =>
         val seq = t._1
         val maxPg = t._2
-        Ok(views.html.monitorStateTrees(configSvc.plugins, remote, remoteIds, flt, rid, seq, myPg, maxPg, myLimit, request.uri))
+        Ok(views.html.monitorStateTrees(configSvc.plugins, remote, remoteIds, flt, rid, seq, myPg, maxPg,
+          myLimit, TREES_PAGE_DFEAULT_LIMIT, request.uri))
       }
     }
   }
