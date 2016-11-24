@@ -147,7 +147,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
           val pfState = getOrCreatePfState(t._2, intvl, plidOpt, update = true)
           (pfState.id, pfState)
         } else {
-          val pluginOpt = configSvc.plugins.find(_.pluginId == plidOpt.get)
+          val pluginOpt = configSvc.pluginsById.get(plidOpt.get)
           pluginOpt.map { pl =>
             pl.preFetches.map { t =>
               val pfState = getOrCreatePfState(t._2, intvl, plidOpt, update = true)
@@ -173,9 +173,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
 
   override def receiveObjMsg(msg: SMGDFObjMsg): Unit = {
     log.debug("SMGMonitor: receive: " + msg)
-
     val objState = getOrCreateObjState(msg.obj)
-
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       // process object error
       objState.processError(msg.ts, msg.exitCode, msg.errors, isInherited = false)
@@ -197,13 +195,16 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
 
   override def receivePfMsg(msg: SMGDFPfMsg): Unit = {
     log.debug("SMGMonitor: receive: " + msg)
-    val pf = configSvc.config.preFetches.get(msg.pfId)
+    val pf = if (msg.pluginId.isEmpty)
+      configSvc.config.preFetches.get(msg.pfId)
+    else
+      configSvc.pluginsById.get(msg.pluginId.get).flatMap(p => p.preFetches.get(msg.pfId))
+
     if (pf.isEmpty) {
       log.error(s"SMGMonitor.receivePfMsg: did not find prefetch for id: ${msg.pfId}")
       return
     }
     val pfState = getOrCreatePfState(pf.get, msg.interval, msg.pluginId)
-
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       // process pre-fetch error
       pfState.processError(msg.ts, msg.exitCode, msg.errors, isInherited = false)

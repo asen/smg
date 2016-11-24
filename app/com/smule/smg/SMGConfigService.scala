@@ -51,6 +51,8 @@ trait SMGConfigService {
     */
   val plugins: Seq[SMGPlugin]
 
+  val pluginsById: Map[String, SMGPlugin]
+
   /**
     * register an object instance as "data feed listener", so that it gets notified on all monitor state events
     * SMGMonitor registers itself, but plugins can register too
@@ -227,6 +229,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
     * @inheritdoc
     */
   override val plugins = createPlugins
+
+  override val pluginsById: Map[String, SMGPlugin] = plugins.groupBy(_.pluginId).map(t => (t._1, t._2.head))
 
   private var currentConfig = getNewConfig
 
