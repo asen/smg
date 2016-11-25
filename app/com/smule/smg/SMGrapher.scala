@@ -345,4 +345,26 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }(ExecutionContexts.rrdGraphCtx)
   }
 
+
+  private def getMatchingIndexes(ovs: Seq[SMGObjectView], allIxes: Seq[SMGIndex]): Seq[SMGIndex] = {
+    ovs.flatMap { ov =>
+      allIxes.filter { ix =>
+        (!ix.flt.matchesAnyObjectIdAndText) &&
+          ((ix.flt.remote.getOrElse("") == SMGRemote.wildcard.id) ||
+            (SMGRemote.remoteId(ix.id) == SMGRemote.remoteId(ov.id))) &&
+          ix.flt.matches(ov)
+      }
+    }.distinct.sortBy(_.title)
+  }
+
+  /**
+    * Get all indexes which would match this object view
+    *
+    * @param ov
+    * @return
+    */
+  override def objectIndexes(ov: SMGObjectView): Seq[SMGIndex] = {
+    val nonAgs = if (ov.isAgg) ov.asInstanceOf[SMGAggObjectView].objs else Seq(ov)
+    getMatchingIndexes(nonAgs, allIndexes)
+  }
 }

@@ -277,7 +277,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
         Future.sequence(Seq(gfut,mfut)).map { t =>
           val lst = t(0).asInstanceOf[Seq[SMGImageView]]
           val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonState]]].flatMap(_._2).toList
-          Ok(views.html.show(configSvc.plugins, obj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms))
+          val ixes = smg.objectIndexes(obj)
+          Ok(views.html.show(configSvc.plugins, obj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms, ixes))
         }
       }
       case None => Future { }.map { _ => NotFound("object id not found") }
@@ -306,10 +307,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val aobj = SMGAggObject.build(objList, op, title)
       val gfut = smg.graphAggObject(aobj, smg.detailPeriods, gopts, byRemote.keys.size > 1)
       val mfut = if (showMs) monitorApi.objectViewStates(objList) else Future { Map() }
+      val ixes = smg.objectIndexes(aobj)
       Future.sequence(Seq(gfut,mfut)).map { t =>
         val lst = t(0).asInstanceOf[Seq[SMGImageView]]
         val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonState]]].flatMap(_._2).toList
-        Ok(views.html.show(configSvc.plugins, aobj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms))
+        Ok(views.html.show(configSvc.plugins, aobj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms, ixes))
       }
     }
   }

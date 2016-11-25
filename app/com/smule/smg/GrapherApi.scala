@@ -137,6 +137,13 @@ trait GrapherApi {
     */
   def search(q: String, maxResults: Int): Future[Seq[SMGSearchResult]]
 
+  /**
+    * Get all indexes which would match this object view
+    * @param ov
+    * @return
+    */
+  def objectIndexes(ov: SMGObjectView): Seq[SMGIndex]
+
   // convenience reference to the remotesApi
   def remotes: SMGRemotesApi
 }
