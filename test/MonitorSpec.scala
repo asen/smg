@@ -47,7 +47,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
 
-      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
+      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Int])
       verify(monlog, times(0)).logMsg(any[SMGMonitorLogMsg]())
 
       val ov = cs.config.viewObjectsById("test.object.1")
@@ -55,7 +55,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       ms.size shouldEqual 2
       ms.head.isOk shouldEqual true
       ms.head.recentStates.head.ts shouldEqual startOfTest + 120
-      ms.head.recentStates.head.desc shouldEqual "OK: value=1.5 : ( 3.0 / 5.0 )"
+      ms.head.recentStates.head.desc shouldEqual "OK: value=1.5 : ( 3 / 5 )"
       ms(1).isOk shouldEqual true
       ms(1).recentStates.head.ts shouldEqual startOfTest + 120
       ms(1).recentStates.head.desc shouldEqual "OK: value=2.5"
@@ -82,7 +82,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 360, nonPfObj, List(6.0, 1.0), 0, List()))
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
 
-      verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
+      verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Int])
       verify(monlog, times(3)).logMsg(any[SMGMonitorLogMsg]())
 
       val ov = cs.config.viewObjectsById("test.object.1")
@@ -90,10 +90,10 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       ms.size shouldEqual 2
       ms.head.isOk shouldEqual false
       ms.head.recentStates.head.ts shouldEqual startOfTest + 420
-      ms.head.recentStates.head.desc shouldEqual "CRIT: 6.0 >= 5.0 : ( 3.0 / 5.0 )"
+      ms.head.recentStates.head.desc shouldEqual "CRIT: 6 >= 5 : ( 3 / 5 )"
       ms(1).isOk shouldEqual true
       ms(1).recentStates.head.ts shouldEqual startOfTest + 420
-      ms(1).recentStates.head.desc shouldEqual "OK: value=1.0"
+      ms(1).recentStates.head.desc shouldEqual "OK: value=1"
 
     }
 
@@ -119,7 +119,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 480, nonPfObj, List(6.0, 1.0), 0, List()))
 
-      verify(notifSvc, times(2)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
+      verify(notifSvc, times(2)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Int])
       verify(monlog, times(4)).logMsg(any[SMGMonitorLogMsg]())
 
       val ov = cs.config.viewObjectsById("test.object.1")
@@ -127,10 +127,10 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       ms.size shouldEqual 2
       ms.head.isOk shouldEqual false
       ms.head.recentStates.head.ts shouldEqual startOfTest + 480
-      ms.head.recentStates.head.desc shouldEqual "CRIT: 6.0 >= 5.0 : ( 3.0 / 5.0 )"
+      ms.head.recentStates.head.desc shouldEqual "CRIT: 6 >= 5 : ( 3 / 5 )"
       ms(1).isOk shouldEqual true
       ms(1).recentStates.head.ts shouldEqual startOfTest + 480
-      ms(1).recentStates.head.desc shouldEqual "OK: value=1.0"
+      ms(1).recentStates.head.desc shouldEqual "OK: value=1"
 
     }
 
@@ -393,7 +393,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       }
 
 
-      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
+      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Int])
       verify(monlog, times(0)).logMsg(any[SMGMonitorLogMsg]())
 
       val ov = cs.config.viewObjectsById("test.pf.object.1")
@@ -401,10 +401,10 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       ms.size shouldEqual 2
       ms.head.isOk shouldEqual true
       ms.head.recentStates.head.ts shouldEqual startOfTest + 120
-      ms.head.recentStates.head.desc shouldEqual "OK: value=1.0 : ( 3.0 / 5.0 )"
+      ms.head.recentStates.head.desc shouldEqual "OK: value=1 : ( 3 / 5 )"
       ms(1).isOk shouldEqual true
       ms(1).recentStates.head.ts shouldEqual startOfTest + 120
-      ms(1).recentStates.head.desc shouldEqual "OK: value=2.0"
+      ms(1).recentStates.head.desc shouldEqual "OK: value=2"
     }
 
 //    "work and send messages and logs on pf error states" in {

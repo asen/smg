@@ -86,7 +86,7 @@ trait SMGMonInternalState extends SMGMonState {
     Some("rx=" + java.net.URLEncoder.encode(rx, "UTF-8")) // TODO, better showUrl?
   }
 
-  protected def currentStateDesc = {
+  protected def currentStateDesc: String = {
     val goodBadSince = if (myLastStateChange == 0 || myLastOkStateChange == 0) ""
     else if (currentState.isOk)
       s", good since ${SMGState.formatTss(myLastOkStateChange)}"
@@ -121,7 +121,7 @@ trait SMGMonInternalState extends SMGMonState {
       if (isStateChange || isHardChanged || prevStateWasInherited) {
         if (isHardError) {
           if (!isSilencedOrAcked)
-            notifSvc.sendAlertMessages(this, notifCmds)
+            notifSvc.sendAlertMessages(this, notifCmds, backoff)
         }
         monLog.logMsg(logEntry(isHardError))
       } else {
@@ -418,6 +418,8 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
   override def text: String = s"${pfCmd.id}(intvl=$interval): $currentStateDesc"
 
   override def alertSubject: String = s"${pfCmd.id}[intvl=$interval]"
+
+  override def alertKey = pfCmd.id
 
   override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
     val tuples = configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval)).
