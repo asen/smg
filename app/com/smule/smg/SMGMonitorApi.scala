@@ -39,7 +39,7 @@ object SMGState extends Enumeration {
 
   private val myFormatter = new DecimalFormat("#.######")
 
-  def numFmt(num: Double) = if (num.isNaN) "NaN" else myFormatter.format(num)
+  def numFmt(num: Double): String = if (num.isNaN) "NaN" else myFormatter.format(num)
 
 
   private val severityChars = Map(
@@ -60,9 +60,9 @@ object SMGState extends Enumeration {
     5 -> "white"  //E_SMGERR
   )
 
-  def stateChar(stateIx: Int) = severityChars.getOrElse(stateIx, "e")
+  def stateChar(stateIx: Int): String = severityChars.getOrElse(stateIx, "e")
 
-  def stateTextColor(stateIx: Int) = severityTextColors.getOrElse(stateIx, "black")
+  def stateTextColor(stateIx: Int): String = severityTextColors.getOrElse(stateIx, "black")
 
   val okColor = "#009900"
   val colorsSeq = Seq(
@@ -77,11 +77,11 @@ object SMGState extends Enumeration {
     5.0 -> "#ff0000"
   )
 
-  val colorsMap = (Seq(0.0 -> okColor) ++ colorsSeq).toMap
+  val colorsMap: Map[Double, String] = (Seq(0.0 -> okColor) ++ colorsSeq).toMap
 
-  def stateColor(stateIx: Int) =  colorsMap.getOrElse(stateIx.toDouble, "#000000")
+  def stateColor(stateIx: Int): String =  colorsMap.getOrElse(stateIx.toDouble, "#000000")
 
-  def tssNow = SMGRrd.tssNow //(System.currentTimeMillis() / 1000).toInt
+  def tssNow: Int = SMGRrd.tssNow //(System.currentTimeMillis() / 1000).toInt
 
   val smgStateReads: Reads[SMGState] = {
     //SMGState(ts: Int, state: SMGState.Value, desc: String)
@@ -96,11 +96,11 @@ object SMGState extends Enumeration {
 }
 
 case class SMGState(ts: Int, state: SMGState.Value, desc: String) {
-  def timeStr = SMGState.formatTss(ts)
-  def charRep = SMGState.stateChar(state.id)
-  def stateColor = SMGState.stateColor(state.id)
-  def textColor = SMGState.stateTextColor(state.id)
-  val isOk = state == SMGState.OK
+  def timeStr: String = SMGState.formatTss(ts)
+  def charRep: String = SMGState.stateChar(state.id)
+  def stateColor: String = SMGState.stateColor(state.id)
+  def textColor: String = SMGState.stateTextColor(state.id)
+  val isOk: Boolean = state == SMGState.OK
 }
 
 object SMGMonState {
@@ -111,9 +111,9 @@ object SMGMonState {
     SMGState.stateChar(severity.round.toInt)
   }
 
-  def textColor(severity: Double) = SMGState.stateTextColor(severity.round.toInt)
+  def textColor(severity: Double): String = SMGState.stateTextColor(severity.round.toInt)
 
-  def oidFilter(oid: String) = {
+  def oidFilter(oid: String): String = {
     val arr = SMGRemote.localId(oid).split("\\.")
     val optDot = if (arr.length > 1) "." else ""
     s"px=${arr.dropRight(1).mkString(".") + optDot}&sx=${optDot + arr.lastOption.getOrElse("")}"
@@ -141,9 +141,9 @@ trait SMGMonState extends SMGTreeNode {
   def errorRepeat: Int
 
   def alertKey: String
-  def alertSubject = alertKey // can be overriden
+  def alertSubject: String = alertKey // can be overriden
 
-  def currentStateVal = recentStates.headOption.map(_.state).getOrElse(SMGState.E_SMGERR) // XXX empty recentStates is smg err
+  def currentStateVal: SMGState.Value = recentStates.headOption.map(_.state).getOrElse(SMGState.E_SMGERR) // XXX empty recentStates is smg err
 
   private lazy val urlPx = "/dash?remote=" + remote.id + "&"
 
@@ -153,14 +153,14 @@ trait SMGMonState extends SMGTreeNode {
     Some(SMGMonState.oidFilter(oid.get))
   } else None
 
-  lazy val showUrl = if (myShowUrlFilter.isDefined) {
+  lazy val showUrl: String = if (myShowUrlFilter.isDefined) {
     urlPx + myShowUrlFilter.get
   } else "/monitor"
 
-  lazy val isOk = currentStateVal == SMGState.OK
+  lazy val isOk: Boolean = currentStateVal == SMGState.OK
   def severityStr: String = SMGMonState.severityStr(severity)
 
-  def severityColor = {
+  def severityColor: String = {
     if (severity == 0.0)
       SMGState.okColor
     else {
@@ -172,29 +172,29 @@ trait SMGMonState extends SMGTreeNode {
     }
   }
 
-  def textColor = SMGMonState.textColor(severity)
+  def textColor: String = SMGMonState.textColor(severity)
 
-  def hardStr = if (isOk) "" else if (isHard) " HARD" else " SOFT"
+  def hardStr: String = if (isOk) "" else if (isHard) " HARD" else " SOFT"
 
-  def silencedUntilStr = if (silencedUntil.isEmpty) "permanently" else {
+  def silencedUntilStr: String = if (silencedUntil.isEmpty) "permanently" else {
     "until " + new Date(silencedUntil.get.toLong * 1000).toString
   }
 
-  def isSilencedOrAcked = isSilenced || isAcked
+  def isSilencedOrAcked: Boolean = isSilenced || isAcked
 
-  def notifySubject(smgHost: String, smgRemoteId: Option[String], isRepeat: Boolean) = {
+  def notifySubject(smgHost: String, smgRemoteId: Option[String], isRepeat: Boolean): String = {
     val repeatStr = if (isRepeat) "(repeat) " else ""
     s"${SMGMonNotifySeverity.fromStateValue(currentStateVal)}: ${smgRemoteId.map(rid => s"($rid) ").getOrElse("")}$repeatStr$alertSubject"
   }
 
   private def bodyLink(smgBaseUrl: String, smgRemoteId: Option[String]) = if (myShowUrlFilter.isEmpty)
-    s"${smgBaseUrl}/monitor#${smgRemoteId.getOrElse("")}"
+    s"$smgBaseUrl/monitor#${smgRemoteId.getOrElse("")}"
   else
-    s"${smgBaseUrl}/dash?remote=${smgRemoteId.getOrElse(SMGRemote.local.id)}&${myShowUrlFilter.get}"
+    s"$smgBaseUrl/dash?remote=${smgRemoteId.getOrElse(SMGRemote.local.id)}&${myShowUrlFilter.get}"
 
-  def notifyBody(smgBaseUrl: String, smgRemoteId: Option[String]) = {
+  def notifyBody(smgBaseUrl: String, smgRemoteId: Option[String]): String = {
       s"REMOTE: ${smgRemoteId.getOrElse("local")}\n\n" +
-      s"MSG: ${text}\n\n" +
+      s"MSG: $text\n\n" +
       s"LINK: ${bodyLink(smgBaseUrl, smgRemoteId)}\n\n"
   }
 
@@ -222,16 +222,16 @@ case class SMGMonStateView(id: String,
                            remote: SMGRemote
                           ) extends SMGMonState {
 
-  override def alertKey = id
+  override def alertKey: String = id
 }
 
 // local agg (condensed) mon state
 case class SMGMonStateAgg(id: String, lst: Seq[SMGMonState], showUrlFilter: String) extends SMGMonState {
 
-  lazy val lstsz = lst.size
+  lazy val lstsz: Int = lst.size
 
-  override val severity =  if (lstsz == 0) 0 else lst.map(_.severity).max
-  override def text = {
+  override val severity: Double =  if (lstsz == 0) 0 else lst.map(_.severity).max
+  override def text: String = {
     val lsz = lst.size
     if (lsz > 10)
       s"Multiple ($lsz) objects including: \n" + lst.take(5).map(ms => ms.text + ms.hardStr).mkString("\n") + " ..."
@@ -247,11 +247,11 @@ case class SMGMonStateAgg(id: String, lst: Seq[SMGMonState], showUrlFilter: Stri
   override val pfId = None
   override val aggShowUrlFilter = Some(showUrlFilter)
 
-  override val errorRepeat = lst.map(_.errorRepeat).max
+  override val errorRepeat: Int = lst.map(_.errorRepeat).max
 //  override lazy val hardStr = ""
-  override val remote = SMGRemote.local
+  override val remote: SMGRemote = SMGRemote.local
 
-  override val recentStates = {
+  override val recentStates: Seq[SMGState] = {
     val longestListState = lst.maxBy(_.recentStates.size)
     longestListState.recentStates.indices.map { i =>
       val statesAtI = lst.map(ms => ms.recentStates.lift(i)).collect { case Some(x) => x }
@@ -261,7 +261,7 @@ case class SMGMonStateAgg(id: String, lst: Seq[SMGMonState], showUrlFilter: Stri
 
   // XXX chop off :ix portion of child alert keys to define this alert key.
   // Agg states cover entire objects in the context of alerting so var indexes are thrown away
-  override def alertKey = lst.map(_.alertKey.split(":")(0)).distinct.mkString(",")
+  override def alertKey: String = lst.map(_.alertKey.split(":")(0)).distinct.mkString(",")
 
   override def parentId: Option[String] = None
 }
@@ -284,14 +284,14 @@ case class SMGMonStateGlobal(title: String,
                             ) extends SMGMonState{
 
   //  def currentState = recentStates.head
-  val id = label
+  val id: String = label
 
   val desc = s"$title ($label)"
 
   def longDesc(s: SMGState) = s"$desc: ${s.desc} (ts=${s.timeStr})"
 
-  lazy val severity = currentState.state.id.toDouble
-  def text = longDesc(currentState)
+  lazy val severity: Double = currentState.state.id.toDouble
+  def text: String = longDesc(currentState)
   lazy val isHard = true
   override val isAcked = false // TODO
   override val isSilenced = false // TODO
@@ -300,7 +300,7 @@ case class SMGMonStateGlobal(title: String,
   override val oid = None
   override val pfId = None
 
-  override val remote = SMGRemote.local
+  override val remote: SMGRemote = SMGRemote.local
 
   override val errorRepeat  = 1
 
