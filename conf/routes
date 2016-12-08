@@ -55,7 +55,7 @@ POST    /api/graph          controllers.Api.graph
 POST    /api/agg            controllers.Api.agg
 GET     /api/rrd/:oid       controllers.Api.downloadRrd(oid: String)
 
-GET     /api/monitor/problems   controllers.Api.monitorProblems(ms: Option[String], soft: Option[String], ack: Option[String], slc: Option[String])
+GET     /api/monitor/problems   controllers.Api.monitorProblems(ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
 GET     /api/monitor/silenced   controllers.Api.monitorSilencedStates()
 GET     /api/monitor/trees      controllers.Api.monitorTrees(rx: Option[String], rxx: Option[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rid: Option[String], pg: Int ?= 0, lmt: Int ?= 200)
 GET     /api/monitor/slncall    controllers.Api.monitorSilenceAllTrees(rx: Option[String], rxx: Option[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rid: Option[String], until: Int)
