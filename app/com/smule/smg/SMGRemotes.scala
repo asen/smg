@@ -281,7 +281,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     }
     Future.sequence(futs.toList).map { bools =>
       if (bools.exists(x => x))
-        callSystemGc("fetchConfigs")
+        configSvc.callSystemGc("SMGRemotes.fetchConfigs")
     }
   }
 
@@ -297,7 +297,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     if (cli.isDefined){
       cli.get.fetchConfig.map { copt =>
         if(copt.isDefined) cachedConfigs(slaveId) = copt
-        callSystemGc(s"fetchConfigs($slaveId)")
+        configSvc.callSystemGc(s"SMGRemotes.fetchConfigs($slaveId)")
       }
     } else {
       log.warn(s"SMGRemotes.fetchSlaveConfig($slaveId) - client not defined")
@@ -311,16 +311,6 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
   override def notifyMasters(): Unit = {
     initRemoteMasterClients()
     remoteMasterClients.values.foreach(_.notifyReloadConf())
-  }
-
-  private def callSystemGc(ctx: String): Unit = {
-    // XXX looks like java is leaking direct memory buffers (or possibly - just slowing
-    // down external commands when reclaiming these on the fly) when reloading conf.
-    // This is an attempt to fix that after realizing that a "manual gc" via jconsole clears overlap issues
-    // TODO make this configurable?
-    log.info(s"SMGRemotes ($ctx) calling System.gc() ... START")
-    System.gc()
-    log.info(s"SMGRemotes ($ctx) calling System.gc() ... DONE")
   }
 
   /**

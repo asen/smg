@@ -91,4 +91,11 @@ class TestConfigSvc() extends SMGConfigService {
 
   override def registerReloadListener(lsnr: SMGConfigReloadListener): Unit = {}
 
+  /**
+    * XXX looks like java is leaking direct memory buffers (or possibly - just slowing
+    * down external commands when reclaiming these on the fly) when reloading conf.
+    * This is an attempt to fix that after realizing that a "manual gc" via jconsole clears overlap issues.
+    * This method can be disabled via application.conf
+    */
+  override def callSystemGc(ctx: String): Unit = {}
 }

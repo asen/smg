@@ -46,53 +46,62 @@ trait SMGConfigService {
     */
   val useInternalScheduler: Boolean
 
+
   /**
-    * Configured (in application.conf) plugins
+    * XXX looks like java is leaking direct memory buffers (or possibly - just slowing
+    * down external commands when reclaiming these on the fly) when reloading conf.
+    * This is an attempt to fix that after realizing that a "manual gc" via jconsole clears overlap issues.
+    * This method can be disabled via application.conf
     */
+  def callSystemGc(ctx: String): Unit
+
+  /**
+  * Configured (in application.conf) plugins
+  */
   val plugins: Seq[SMGPlugin]
 
   val pluginsById: Map[String, SMGPlugin]
 
   /**
-    * register an object instance as "data feed listener", so that it gets notified on all monitor state events
-    * SMGMonitor registers itself, but plugins can register too
-    * @param lsnr - the instance to register
-    */
+  * register an object instance as "data feed listener", so that it gets notified on all monitor state events
+  * SMGMonitor registers itself, but plugins can register too
+  * @param lsnr - the instance to register
+  */
   def registerDataFeedListener(lsnr: SMGDataFeedListener): Unit
 
   protected def dataFeedListeners: Seq[SMGDataFeedListener]
 
   /**
-    * Send a data feed object message to all registered listeners for processing
-    * @param msg - the message to send
-    */
+  * Send a data feed object message to all registered listeners for processing
+  * @param msg - the message to send
+  */
   def sendObjMsg(msg: SMGDFObjMsg): Unit = dataFeedListeners.foreach(dfl => Try(dfl.receiveObjMsg(msg)))
 
   /**
-    * Send a data feed "Pre fetch" command message to all registered listeners for processing
-    * @param msg - the message to send
-    */
+  * Send a data feed "Pre fetch" command message to all registered listeners for processing
+  * @param msg - the message to send
+  */
   def sendPfMsg(msg: SMGDFPfMsg): Unit = dataFeedListeners.foreach(dfl => Try(dfl.receivePfMsg(msg)))
 
   /**
-    * Send a data feed "run" (e.g. finished/overlap etc) message to all registered listeners for processing
-    * @param msg - the message to send
-    */
+  * Send a data feed "run" (e.g. finished/overlap etc) message to all registered listeners for processing
+  * @param msg - the message to send
+  */
   def sendRunMsg(msg: SMGDFRunMsg): Unit = dataFeedListeners.foreach(dfl => Try(dfl.receiveRunMsg(msg)))
 
 
   /**
-    * Register an object instance to be notified on config reloads
-    * @param lsnr - the object reference to register
-    */
+  * Register an object instance to be notified on config reloads
+  * @param lsnr - the object reference to register
+  */
   def registerReloadListener(lsnr: SMGConfigReloadListener): Unit
 
   /**
-    * Get all applicable to the provided object value (at index vix) AlertConfigs (a.k.a. checks)
-    * @param ou
-    * @param vix
-    * @return
-    */
+  * Get all applicable to the provided object value (at index vix) AlertConfigs (a.k.a. checks)
+  * @param ou
+  * @param vix
+  * @return
+  */
   def objectValueAlertConfs(ou: SMGObjectUpdate, vix: Int): Seq[SMGMonVarAlertConf] = {
     val acs = config.objectAlertConfs
     if (acs.contains(ou.id))
@@ -103,12 +112,12 @@ trait SMGConfigService {
 
 
   /**
-    * Get all applicable to the provided object value (at index vix) Notification configs
-    * @param ou
-    * @param vixOpt
-    * @param atSeverity
-    * @return a tuple of commands to execute together with a backoff time
-    */
+  * Get all applicable to the provided object value (at index vix) Notification configs
+  * @param ou
+  * @param vixOpt
+  * @param atSeverity
+  * @return a tuple of commands to execute together with a backoff time
+  */
   def objectVarNotifyCmdsAndBackoff(ou: SMGObjectUpdate, vixOpt: Option[Int],
                                     atSeverity: SMGMonNotifySeverity.Value): (Seq[SMGMonNotifyCmd], Int) = {
     val oncOpt = config.objectNotifyConfs.get(ou.id)
@@ -140,10 +149,10 @@ trait SMGConfigService {
   }
 
   /**
-    * Get all "global" configured notficiations commands for the provided severity
-    * @param atSeverity
-    * @return
-    */
+  * Get all "global" configured notficiations commands for the provided severity
+  * @param atSeverity
+  * @return
+  */
   def globalNotifyCmds(atSeverity: SMGMonNotifySeverity.Value): Seq[SMGMonNotifyCmd] = {
     if (atSeverity > SMGMonNotifySeverity.WARNING)
       config.globalCritNotifyConf
@@ -166,13 +175,29 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
   private val log = SMGLogger
 
   /**
-    * @inheritdoc
-    */
+  * @inheritdoc
+  */
   override val useInternalScheduler: Boolean = configuration.getBoolean("smg.useInternalScheduler").getOrElse(true)
 
+  private val callSystemGcOnReload: Boolean = configuration.getBoolean("smg.callSystemGcOnReload").getOrElse(true)
+
+  override def callSystemGc(ctx: String): Unit = {
+    // TODO synchronize ?
+    if (callSystemGcOnReload) {
+      // XXX looks like java is leaking direct memory buffers (or possibly - just slowing
+      // down external commands when reclaiming these on the fly) when reloading conf.
+      // This is an attempt to fix that after realizing that a "manual gc" via jconsole clears overlap issues
+      log.info(s"ConfigService ($ctx) calling System.gc() ... START")
+      System.gc()
+      log.info(s"ConfigService ($ctx) calling System.gc() ... DONE")
+    } else {
+      log.info(s"ConfigService ($ctx) calling of System.gc() is disabled via smg.callSystemGcOnReload=false")
+    }
+  }
+
   /**
-    * root Yaml config file to use
-    */
+  * root Yaml config file to use
+  */
   private val currentConfigFile: String = configuration.getString("smg.config").getOrElse("/etc/smg/config.yml")
 
   private val defaultThreadsPerInterval: Int = configuration.getInt("smg.defaultThreadsPerInterval").getOrElse(4)
@@ -226,25 +251,25 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
   def reloadListerenrs: List[SMGConfigReloadListener] = myConfigReloadListeners.synchronized(myConfigReloadListeners.toList)
 
   /**
-    * @inheritdoc
-    */
-  override val plugins = createPlugins
+  * @inheritdoc
+  */
+  override val plugins: Seq[SMGPlugin] = createPlugins
 
   override val pluginsById: Map[String, SMGPlugin] = plugins.groupBy(_.pluginId).map(t => (t._1, t._2.head))
 
   private var currentConfig = getNewConfig
 
   /**
-    * @inheritdoc
-    */
+  * @inheritdoc
+  */
   override def config: SMGLocalConfig = currentConfig
 
   private val reloadIsRunning: AtomicBoolean = new AtomicBoolean(false)
 
   /**
-    * @inheritdoc
-    */
-  override def reload: Unit = {
+  * @inheritdoc
+  */
+  override def reload(): Unit = {
     if (!reloadIsRunning.getAndSet(true)) {
       val t0 = System.currentTimeMillis()
       log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)
@@ -260,14 +285,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
                 " intervals=" + newConf.intervals.toList.sorted.mkString(","))
         Try(reloadListerenrs.foreach(_.reload()))
 
-        // XXX looks like java is leaking direct memory buffers (or possibly - just slowing
-        // down external commands when reclaiming these on the fly) when reloading conf.
-        // This is an attempt to fix that after realizing that a "manual gc" via jconsole clears overlap issues
-        // TODO make this configurable?
-        log.info("ConfifService calling System.gc() ... START")
-        System.gc()
-        log.info("ConfifService calling System.gc() ... DONE")
-
+        callSystemGc("ConfigService.reload")
       } finally {
         reloadIsRunning.set(false)
       }
@@ -315,10 +333,10 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
   }
 
   /**
-    * Generate a new immutable SMGLocalConfig object, using mutable helpers in the process
-    *
-    * @return - a newly parsed from currentConfigFile configuration
-    */
+  * Generate a new immutable SMGLocalConfig object, using mutable helpers in the process
+  *
+  * @return - a newly parsed from currentConfigFile configuration
+  */
   private def getNewConfig: SMGLocalConfig = {
     val globalConf = mutable.Map[String,String]()
     val allViewObjectsConf  = ListBuffer[SMGObjectView]()
