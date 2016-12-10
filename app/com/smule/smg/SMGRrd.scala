@@ -269,7 +269,7 @@ object SMGRrd {
 
   def resolutionRrdStr(interval: Int, period: String, step: Option[Int]) = {
     val resStr = getDataResolution(interval, period, step)
-    s" 'COMMENT: resolution\\: $resStr\\n' "
+    s" 'COMMENT: step\\: $resStr\\n' "
   }
 
 
