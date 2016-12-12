@@ -304,6 +304,8 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
     if (newVal.isNaN) {
       ret = SMGState(ts, SMGState.E_ANOMALY, s"ANOM: value=NaN (${nanDesc.getOrElse("unknown")})")
     } else if (alertConfs.nonEmpty) {
+      if (!alertConfs.exists(_.spike.isDefined)) movingStats.reset()
+      var movingStatsUpdated = false
       val allAlertStates = alertConfs.map { alertConf =>
         var curRet: SMGState = null
         val warnThreshVal = alertConf.warn.map(_.value).getOrElse(Double.NaN)
@@ -320,27 +322,28 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
           if (alertDesc.isDefined)
             curRet = SMGState(ts,SMGState.E_VAL_WARN, s"WARN: ${alertDesc.get} : $descSx")
         }
-
         if (alertConf.spike.isDefined) {
           // Update short/long term averages, to be used for spike/drop detection
           val ltMaxCounts = alertConf.spike.get.maxLtCnt(ou.interval)
           val stMaxCounts = alertConf.spike.get.maxStCnt(ou.interval)
-          movingStats.update(ts, newVal, stMaxCounts, ltMaxCounts)
+          if (!movingStatsUpdated) {
+            movingStats.update(ts, newVal, stMaxCounts, ltMaxCounts)
+            movingStatsUpdated = true
+          }
           // check for spikes
           if (curRet == null) {
             val alertDesc = alertConf.spike.get.checkAlert(movingStats, stMaxCounts, ltMaxCounts)
             if (alertDesc.isDefined)
               curRet = SMGState(ts, SMGState.E_ANOMALY, s"ANOM: ${alertDesc.get}")
           }
-        } else movingStats.reset()
-
+        }
         if (curRet == null) {
           curRet = SMGState(ts,SMGState.OK, s"OK: value=${numFmt(newVal)} : $descSx")
         }
         curRet
       }
       ret = allAlertStates.maxBy(_.state)
-    }
+    } else movingStats.reset()
     if (ret == null) {
       ret = SMGState(ts, SMGState.OK, s"OK: value=${numFmt(newVal)}")
     }
@@ -364,12 +367,12 @@ object SMGMonVarState {
 
 trait SMGMonBaseFetchState extends SMGMonInternalState {
 
-  def processError(ts: Int, exitCode :Int, errors: List[String], isInherited: Boolean) = {
+  def processError(ts: Int, exitCode :Int, errors: List[String], isInherited: Boolean): Unit = {
     val errorMsg = s"Fetch error: exit=$exitCode, OUTPUT: " + errors.mkString("\n")
     addState(SMGState(ts, SMGState.E_FETCH, errorMsg), isInherited)
   }
 
-  def processSuccess(ts: Int, isInherited: Boolean) = {
+  def processSuccess(ts: Int, isInherited: Boolean): Unit = {
     addState(SMGState(ts, SMGState.OK, "OK"), isInherited)
   }
 }
