@@ -581,8 +581,8 @@ graphs.
 - **title**: - free form text description of the object. If not 
 specified, the object id will be used as a title.
 
-- **rrdType**: (default - GAUGE) - can be COUNTER etc, check rrdtool docs 
-for other options.
+- **rrdType**: (default - GAUGE) - can be COUNTER, DERIVE etc, check 
+rrdtool docs for other options.
 
 - **stack**: (default - false) - if set to true - stack graph lines on 
 top of each other.

@@ -31,10 +31,10 @@ trait SMGMonInternalState extends SMGMonState {
     myIsSilencedUntil
   }
 
-  override def severity = currentStateVal.id.toDouble
-  override def remote = SMGRemote.local
+  override def severity: Double = currentStateVal.id.toDouble
+  override def remote: SMGRemote = SMGRemote.local
 
-  override def alertKey = id
+  override def alertKey: String = id
 
   def errorRepeat: Int = {
     val mylst = myRecentStates.take(maxHardErrorCount)
@@ -51,7 +51,7 @@ trait SMGMonInternalState extends SMGMonState {
   protected def vixOpt: Option[Int]
   protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int)
 
-  def currentState = myRecentStates.head
+  def currentState: SMGState = myRecentStates.head
 
   //protected val configSvc: SMGConfigService
   protected val monLog: SMGMonitorLogApi
@@ -292,7 +292,7 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
   }
 
   def processValue(ts: Int, rawVal: Double): Unit = {
-    val valOpt = if (ou.rrdType == "COUNTER") {
+    val valOpt = if (ou.rrdType != "GAUGE") {
       processCounterUpdate(ts, rawVal)
     } else Some((rawVal, None))
     if (valOpt.isEmpty) {

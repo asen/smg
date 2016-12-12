@@ -176,14 +176,14 @@ object SMGRrd {
     private var idx = -1
     private val labelsPx = "ds"
 
-    def prefix = px + labelsPx
+    def prefix: String = px + labelsPx
 
     def nextLabel: String = {
       idx += 1
       prefix + idx.toString
     }
 
-    def reset() = idx = -1
+    def reset(): Unit = idx = -1
 
     protected def setIdx(newIdx: Int): Unit = idx = newIdx
 
@@ -236,9 +236,9 @@ object SMGRrd {
     c.toString
   }
 
-  def substCdef(cdef: String, dsLbl: String) = cdef.replaceAll("\\$ds", dsLbl)
+  def substCdef(cdef: String, dsLbl: String): String = cdef.replaceAll("\\$ds", dsLbl)
 
-  def substCdefEx(cdef: String, dsLbl: String, dsSx: String) = cdef.replaceAll("(\\$ds\\d+)","$1" + dsSx).replaceAll("\\$ds", dsLbl)
+  def substCdefEx(cdef: String, dsLbl: String, dsSx: String): String = cdef.replaceAll("(\\$ds\\d+)","$1" + dsSx).replaceAll("\\$ds", dsLbl)
 
   val HTAB = "    " // 4 spaces
 
@@ -263,11 +263,11 @@ object SMGRrd {
     c.toString
   }
 
-  def lastUpdated(lastLabel: String) = if (lastLabel != "")
+  def lastUpdated(lastLabel: String): String = if (lastLabel != "")
     " 'COMMENT:\\s' 'GPRINT:" + lastLabel + "lst:last data point from %Y-%m-%d %H\\:%M:strftime' "
   else ""
 
-  def resolutionRrdStr(interval: Int, period: String, step: Option[Int]) = {
+  def resolutionRrdStr(interval: Int, period: String, step: Option[Int]): String = {
     val resStr = getDataResolution(interval, period, step)
     s" 'COMMENT: step\\: $resStr\\n' "
   }
