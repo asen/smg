@@ -292,7 +292,7 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
   }
 
   def processValue(ts: Int, rawVal: Double): Unit = {
-    val valOpt = if (ou.rrdType != "GAUGE") {
+    val valOpt = if (ou.isCounter) {
       processCounterUpdate(ts, rawVal)
     } else Some((rawVal, None))
     if (valOpt.isEmpty) {

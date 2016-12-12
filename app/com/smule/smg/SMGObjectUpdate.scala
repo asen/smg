@@ -9,7 +9,10 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
 //  override val vars: List[Map[String, String]]
 
   override val interval: Int
+
   val rrdType: String
+  def isCounter: Boolean = (rrdType != "GAUGE") && (rrdType != "ABSOLUTE")
+
   def fetchValues: List[Double]
   val preFetch: Option[String]
   val rrdFile: Option[String]
