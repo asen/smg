@@ -422,7 +422,7 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
 
   override def alertSubject: String = s"${pfCmd.id}[intvl=$interval]"
 
-  override def alertKey = pfCmd.id
+  override def alertKey: String = pfCmd.id
 
   override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
     val tuples = configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval)).
@@ -463,9 +463,9 @@ class SMGMonRunState(val interval: Int,
 
   private val pluginDesc = pluginId.map(s => s" (plugin - $s)").getOrElse("")
 
-  def processOk(ts:Int) = addState(SMGState(ts, SMGState.OK, s"interval $interval$pluginDesc - OK"), isInherited = false)
+  def processOk(ts:Int): Unit = addState(SMGState(ts, SMGState.OK, s"interval $interval$pluginDesc - OK"), isInherited = false)
 
-  def processOverlap(ts: Int) = addState(
+  def processOverlap(ts: Int): Unit = addState(
     SMGState(ts, SMGState.E_SMGERR, s"interval $interval$pluginDesc - overlapping runs"),
     isInherited = false)
 
@@ -478,6 +478,6 @@ class SMGMonRunState(val interval: Int,
 }
 
 object SMGMonRunState {
-  def stateId(interval: Int, pluginId: Option[String]) = "$interval_%04d".format(interval) +
+  def stateId(interval: Int, pluginId: Option[String]): String = "$interval_%04d".format(interval) +
     pluginId.map(s => s"-$s").getOrElse("")
 }

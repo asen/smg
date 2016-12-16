@@ -47,7 +47,7 @@ case class SMGLocalConfig(
 
   override val viewObjectsById: Map[String, SMGObjectView] = viewObjects.groupBy(o => o.id).map( t => (t._1, t._2.head) )
 
-  val viewObjectsByUpdateId = viewObjects.groupBy(o => o.refObj.map(_.id).getOrElse(o.id))
+  val viewObjectsByUpdateId: Map[String, Seq[SMGObjectView]] = viewObjects.groupBy(o => o.refObj.map(_.id).getOrElse(o.id))
 
   private val pluginUpdateObjects = pluginObjects.flatMap(t => t._2).filter(ov => ov.refObj.isDefined || ov.isInstanceOf[SMGObjectUpdate]).map {
     case update: SMGObjectUpdate => update
@@ -57,38 +57,38 @@ case class SMGLocalConfig(
   val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++ pluginUpdateObjects
 
 
-  val updateObjectsById = updateObjects.groupBy(_.id).map(t => (t._1,t._2.head))
+  val updateObjectsById: Map[String, SMGObjectUpdate] = updateObjects.groupBy(_.id).map(t => (t._1,t._2.head))
 
-  def allRemotes = SMGRemote.local :: remotes.toList
+  def allRemotes: List[SMGRemote] = SMGRemote.local :: remotes.toList
 
   private def globalNotifyConf(key: String) =  globals.get(key).map { s =>
     s.split(",").map(cmdid => notifyCommands.get(cmdid)).filter(_.isDefined).map(_.get).toSeq
   }.getOrElse(Seq())
 
 
-  val globalCritNotifyConf = globalNotifyConf("$notify-crit")
-  val globalWarnNotifyConf = globalNotifyConf("$notify-warn")
-  val globalSpikeNotifyConf = globalNotifyConf("$notify-spike")
+  val globalCritNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-crit")
+  val globalWarnNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-warn")
+  val globalSpikeNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-spike")
 
-  val globalNotifyBackoff = globals.get("$notify-backoff").flatMap{ s =>
+  val globalNotifyBackoff: Int = globals.get("$notify-backoff").flatMap{ s =>
     SMGRrd.parsePeriod(s)
   }.getOrElse(SMGMonVarNotifyConf.DEFAULT_NOTIFY_BACKOFF)
 
-  val notifyBaseUrl = globals.getOrElse("$notify-baseurl", "http://localhost:9000")
-  val notifyRemoteId = globals.get("$notify-remote")
+  val notifyBaseUrl: String = globals.getOrElse("$notify-baseurl", "http://localhost:9000")
+  val notifyRemoteId: Option[String] = globals.get("$notify-remote")
 
-  val proxyDisable = globals.getOrElse("$proxy-disable","false") == "true"
-  val proxyTimeout = globals.getOrElse("$proxy-timeout","30000").toLong
+  val proxyDisable: Boolean = globals.getOrElse("$proxy-disable","false") == "true"
+  val proxyTimeout: Long = globals.getOrElse("$proxy-timeout","30000").toLong
 
-  val indexTreeLevels = globals.getOrElse("$index-tree-levels", "1").toInt
+  val indexTreeLevels: Int = globals.getOrElse("$index-tree-levels", "1").toInt
 
 
   val MAX_RUNTREE_LEVELS = 10
 
-  val runTreeLevelsDisplay = globals.getOrElse("$run-tree-levels-display", "1").toInt
+  val runTreeLevelsDisplay: Int = globals.getOrElse("$run-tree-levels-display", "1").toInt
 
   // option to notify slaves on reload conf, this may be removed in the future
-  val reloadSlaveRemotes = globals.getOrElse("$reload-slave-remotes", "false") == "true"
+  val reloadSlaveRemotes: Boolean = globals.getOrElse("$reload-slave-remotes", "false") == "true"
 
 
   private def buildCommandsTree(interval: Int, rrdObjs: Seq[SMGRrdObject]): Seq[SMGFetchCommandTree] = {

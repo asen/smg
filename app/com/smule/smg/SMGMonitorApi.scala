@@ -145,19 +145,19 @@ trait SMGMonState extends SMGTreeNode {
 
   def currentStateVal: SMGState.Value = recentStates.headOption.map(_.state).getOrElse(SMGState.E_SMGERR) // XXX empty recentStates is smg err
 
-  private lazy val urlPx = "/dash?remote=" + remote.id + "&"
+  private def urlPx = "/dash?remote=" + remote.id + "&"
 
-  private lazy val myShowUrlFilter: Option[String] = if (aggShowUrlFilter.isDefined) {
+  private def myShowUrlFilter: Option[String] = if (aggShowUrlFilter.isDefined) {
     aggShowUrlFilter
   } else if (oid.isDefined) {
     Some(SMGMonState.oidFilter(oid.get))
   } else None
 
-  lazy val showUrl: String = if (myShowUrlFilter.isDefined) {
+  def showUrl: String = if (myShowUrlFilter.isDefined) {
     urlPx + myShowUrlFilter.get
   } else "/monitor"
 
-  lazy val isOk: Boolean = currentStateVal == SMGState.OK
+  def isOk: Boolean = currentStateVal == SMGState.OK
   def severityStr: String = SMGMonState.severityStr(severity)
 
   def severityColor: String = {
