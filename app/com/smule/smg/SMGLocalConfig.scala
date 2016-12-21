@@ -75,7 +75,7 @@ case class SMGLocalConfig(
   }.getOrElse(SMGMonVarNotifyConf.DEFAULT_NOTIFY_BACKOFF)
 
   val globalNotifyStrikes: Int = globals.get("$notify-strikes").map { s =>
-    s.toInt
+    Math.max(s.toInt,1)
   }.getOrElse(SMGMonVarNotifyConf.DEFAULT_NOTIFY_STRIKES)
 
 

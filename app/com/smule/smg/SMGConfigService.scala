@@ -167,7 +167,7 @@ trait SMGConfigService {
   def objectVarNotifyStrikes(ou: SMGObjectUpdate, vixOpt: Option[Int]): Int = {
     val oncOpt = config.objectNotifyConfs.get(ou.id)
     val vixes = if (vixOpt.isDefined) Seq(vixOpt.get) else ou.vars.indices
-    vixes.map { vix =>
+    val ret = vixes.map { vix =>
       oncOpt.map{ onc =>
         val seq = onc.varConf(vix)
         if (seq.isEmpty)
@@ -176,6 +176,7 @@ trait SMGConfigService {
           seq.map(_.notifyStrikes).min
       }.getOrElse(config.globalNotifyStrikes)
     }.min
+    Math.max(ret,1)
   }
 }
 

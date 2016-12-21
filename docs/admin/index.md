@@ -459,6 +459,9 @@ Int.MaxValue which effectively disables throttling.
  you can set the max messages sent during given interval (in seconds). 
  This sets the interval (default is 3600 or 1h).
 
+- **$notify-strikes**: (default: _3_) - how many consecutive error states to
+be considered a hard error and in turn - trigger alert notifications.
+
 <a name="rrd-objects" />
 ### RRD objects
 
@@ -952,19 +955,28 @@ appropriate severity level (crit/warn/spike), the special
 notify-disable flag explicitly disabling notifications for the 
 applicable object var or the notify-backoff value specifying
 at what interval non-recovered object alert notifications 
-should be re-sent.
+should be re-sent. The notify-strikes value determines how many 
+consecutive error states to be considered a hard error and in turn - 
+trigger alert notifications.
 
     notify-crit: notify-cmd-id-1,notify-cmd-id-2,...
     notify-warn: notify-cmd-id-1,notify-cmd-id-2,...
     notify-spike: notify-cmd-id-1,notify-cmd-id-2,...
     notify-disable: true
     notify-backoff: 6h
+    notify-strikes: 3
 
 > In order to disable fetch error notifications for given object one must
 set "_notify-disable: true_" on all vars. For pre-fetch it must be set to 
 true on all objects vars, otherwise fetch errors will still trigger
 notifications to any applicable (object or global) notification
-commands (recipients).
+commands (recipients). 
+
+> When multiple conflicting notify-strikes values apply, SMG will 
+use the minimal from these. For fetch errors (applicable to object and 
+pre-fecth command failures) this means the minimal value (but never 
+less than 1) applicable to any of the "children" graph vars (ones 
+depending on the failed command).
 
 Currently there are two ways to apply alert/notify configs to any given 
 object variable:
