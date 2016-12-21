@@ -3,7 +3,7 @@
 @import com.smule.smg.SMGMonObjNotifyConf
 @import com.smule.smg.SMGMonNotifyCmd
 @import com.smule.smg.SMGMonNotifySeverity
-@(ov:SMGObjectView, acs: Option[SMGMonObjAlertConf], ncs: Option[SMGMonObjNotifyConf], ncmds: Seq[(SMGMonNotifySeverity.Value, Seq[SMGMonNotifyCmd], Int)] , hstate: Option[String])
+@(ov:SMGObjectView, acs: Option[SMGMonObjAlertConf], ncs: Option[SMGMonObjNotifyConf], ncmds: Seq[(SMGMonNotifySeverity.Value, Seq[SMGMonNotifyCmd], Int)], nstrikes: Seq[Int], hstate: Option[String])
 
 <h3>Object View</h3>
 <p>@ov</p>
@@ -38,6 +38,14 @@
     @if(cs.nonEmpty){
      @v: @{cs.mkString(", ")} (backoff=@backoff)<br/>
     }
+  }
+</p>
+
+<h3>Notify Strikes</h3>
+<p>
+  OBJ: @{nstrikes.head}<br/>
+  @for((ns,i) <- nstrikes.tail.zipWithIndex){
+  VIX[@i]: @ns<br/>
   }
 </p>
 

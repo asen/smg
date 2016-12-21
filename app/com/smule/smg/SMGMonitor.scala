@@ -88,7 +88,6 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     def createFn() = { new SMGMonObjState(ou, configSvc, monLogApi, notifSvc) }
     def updateFn(state: SMGMonObjState) = {
       if (state.ou != ou) {
-        // this is logged at object level
         log.warn(s"Updating changed object state with id ${state.id}")
         state.ou = ou
       }
@@ -168,6 +167,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val tt = createStateTrees(configSvc.config)
     allMonitorSateTreesById = tt._2
     topLevelMonitorStateTrees = tt._1
+    allMonitorStatesById.values.foreach(_.configReloaded())
     notifSvc.configReloaded()
   }
 
@@ -218,7 +218,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
-  val runErrorMaxStrikes = 2 // TODO read from config?
+  //val runErrorMaxStrikes = 2 // TODO read from config?
 
   override def receiveRunMsg(msg: SMGDFRunMsg): Unit = {
     log.debug("SMGMonitor: receive: " + msg)
@@ -281,15 +281,19 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
-  private def localStatesMatching(fltFn: (SMGMonInternalState) => Boolean): Seq[SMGMonState] = {
+  private def localStatesMatching(fltFn: (SMGMonInternalState) => Boolean): Seq[SMGMonInternalState] = {
     val statesBySeverity = topLevelMonitorStateTrees.sortBy(_.node.id).flatMap { tt =>
       tt.findTreesMatching(fltFn)
     }.map(_.node).groupBy(_.currentStateVal)
     statesBySeverity.keys.toSeq.sortBy(-_.id).flatMap(statesBySeverity(_))
   }
 
-  override def localStates(flt: SMGMonFilter): Seq[SMGMonState] = {
-    localStatesMatching(flt.matchesState)
+  override def localStates(flt: SMGMonFilter, includeInherited: Boolean): Seq[SMGMonState] = {
+    val ret = localStatesMatching(flt.matchesState)
+    if (includeInherited)
+      ret
+    else
+      ret.filter(!_.isInherited)
   }
 
   override def problems(remoteId: Option[String], flt: SMGMonFilter): Future[Seq[(SMGRemote, Seq[SMGMonState])]] = {
@@ -297,14 +301,14 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val futs = ListBuffer[(Future[(SMGRemote, Seq[SMGMonState])])]()
     if (remoteId.isEmpty || remoteId.get == SMGRemote.wildcard.id) {
       futs += Future {
-        (SMGRemote.local, localStates(flt))
+        (SMGRemote.local, localStates(flt, includeInherited = false))
       }
       configSvc.config.remotes.foreach { rmt =>
         futs += remotes.monitorProblems(rmt.id, flt).map((rmt,_))
       }
     } else if (remoteId.get == SMGRemote.local.id) {
       futs += Future {
-        (SMGRemote.local, localStates(flt))
+        (SMGRemote.local, localStates(flt, includeInherited = false))
       }
     } else {
       val rmtOpt = configSvc.config.remotes.find(_.id == remoteId.get)

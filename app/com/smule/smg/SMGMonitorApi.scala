@@ -328,7 +328,8 @@ case class SMGMonFilter(rx: Option[String],
                         minState: Option[SMGState.Value],
                         includeSoft: Boolean,
                         includeAcked: Boolean,
-                        includeSilenced: Boolean) {
+                        includeSilenced: Boolean
+                       ) {
 
   private def ciRegex(so: Option[String]) = so.map( s => if (s.isEmpty) s else  "(?i)" + s ).map(_.r)
   private lazy val ciRx = ciRegex(rx)
@@ -384,7 +385,7 @@ trait SMGMonitorApi {
     * @param flt
     * @return
     */
-  def localStates(flt: SMGMonFilter): Seq[SMGMonState]
+  def localStates(flt: SMGMonFilter, includeInherited: Boolean): Seq[SMGMonState]
 
   /**
     * Get all states matching given filter, by remote

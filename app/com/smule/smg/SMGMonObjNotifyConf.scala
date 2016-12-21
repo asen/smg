@@ -10,7 +10,8 @@ case class SMGMonVarNotifyConf(src: SMGMonAlertConfSource.Value,
                                warn: Seq[String],
                                spike: Seq[String],
                                notifyBackoff: Option[Int],
-                               notifyDisable: Boolean
+                               notifyDisable: Boolean,
+                               notifyStrikes: Int
                              )
 
 
@@ -18,14 +19,17 @@ object SMGMonVarNotifyConf {
 
   val log = SMGLogger
 
-  val DEFAULT_NOTIFY_BACKOFF = SMGRrd.parsePeriod("6h").get
+  val DEFAULT_NOTIFY_BACKOFF: Int = SMGRrd.parsePeriod("6h").get
+
+  val DEFAULT_NOTIFY_STRIKES: Int = 3
 
   private val NOTIFY_KEYS = Set(
     "notify-crit",
     "notify-warn",
     "notify-spike",
     "notify-backoff",
-    "notify-disable"
+    "notify-disable",
+    "notify-strikes"
   )
 
   def fromVarMap(src: SMGMonAlertConfSource.Value, srcId: String, vMap: Map[String, String]): Option[SMGMonVarNotifyConf] = {
@@ -38,11 +42,13 @@ object SMGMonVarNotifyConf {
       val notifySpike = vMap.get("notify-spike").map { v => v.split(",").toSeq }.getOrElse(Seq())
       val notifyBackoff = vMap.get("notify-backoff").flatMap { v => SMGRrd.parsePeriod(v) }
       val notifyDisable = vMap.getOrElse("notify-disable", "false") == "true"
-      Some(SMGMonVarNotifyConf(src, srcId, notifyCrit, notifyWarn, notifySpike, notifyBackoff, notifyDisable))
+      val notifyStrikes = vMap.get("notify-strikes").map(_.toInt).getOrElse(DEFAULT_NOTIFY_STRIKES)
+      Some(SMGMonVarNotifyConf(src, srcId, notifyCrit, notifyWarn, notifySpike, notifyBackoff,
+        notifyDisable, Math.max(notifyStrikes,1)))
     }
   }
 
-  def isNotifyKey(k: String) = k.startsWith("notify-")
+  def isNotifyKey(k: String): Boolean = k.startsWith("notify-")
 }
 
 case class SMGMonObjNotifyConf(private val varConfs: Map[Int, Seq[SMGMonVarNotifyConf]]) {

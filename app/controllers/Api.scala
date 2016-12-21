@@ -63,7 +63,11 @@ class Api  @Inject() (actorSystem: ActorSystem,
     * @param e
     * @return
     */
-  def fetch(oid: String, r: Option[Int], s: Option[String], e: Option[String], fnan: Option[String]) = Action.async {
+  def fetch(oid: String,
+            r: Option[Int],
+            s: Option[String],
+            e: Option[String],
+            fnan: Option[String]): Action[AnyContent] = Action.async {
     val obj = smg.getObjectView(oid)
     if (obj.isEmpty) Future {
       Ok("[]")
@@ -87,7 +91,12 @@ class Api  @Inject() (actorSystem: ActorSystem,
     * @param e
     * @return
     */
-  def fetchAgg(ids: String, op: String, r: Option[Int], s: Option[String], e: Option[String], fnan: Option[String]) = Action.async {
+  def fetchAgg(ids: String,
+               op: String,
+               r: Option[Int],
+               s: Option[String],
+               e: Option[String],
+               fnan: Option[String]): Action[AnyContent] = Action.async {
     val idLst = ids.split(',').toList
     val objList = idLst.filter(id => smg.getObjectView(id).nonEmpty).map(id => smg.getObjectView(id).get)
     if (objList.isEmpty)
@@ -116,7 +125,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     *
     * @return
     */
-  def graph = Action.async { request =>
+  def graph: Action[AnyContent] = Action.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val gopts = goptsFromParams(params)
     graphCommon(params("ids").head, params("periods").headOption, gopts).map { imgLst: Seq[SMGImageView] =>
@@ -148,7 +157,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     *
     * @return
     */
-  def agg = Action.async { request =>
+  def agg: Action[AnyContent] = Action.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val gopts = goptsFromParams(params)
     aggCommon(params("ids").head, params("op").head, params("periods").headOption,
@@ -177,7 +186,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     val lst = ids.map(oid => objsById.get(oid)).filter(o => o.nonEmpty).map(o => o.get)
     if (lst.nonEmpty) {
       val aggObj = SMGAggObject.build(lst, op, title)
-      smg.graphAggObject(aggObj, periods, gopts, false)
+      smg.graphAggObject(aggObj, periods, gopts, xRemote = false)
     } else Future {
       Seq()
     }
@@ -222,7 +231,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
       includeSoft =  soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
       includeSilenced = slncd.getOrElse("off") == "on"
     )
-    val states = monitorApi.localStates(flt)
+    val states = monitorApi.localStates(flt, includeInherited = false)
     Ok(Json.toJson(states))
   }
 
@@ -235,7 +244,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     monitorHeatmapCommon(request.queryString)
   }
 
-  def monitorHeatmapCommon(params: Map[String, Seq[String]]) = {
+  def monitorHeatmapCommon(params: Map[String, Seq[String]]): Result = {
     val flt = SMGFilter.fromParams(params)
     val hm = monitorApi.localHeatmap(flt,
       params.get("maxSize").map(_.head.toInt),
@@ -244,17 +253,17 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(hm))
   }
 
-  def monitorObjectViewsPost = Action.async { request =>
+  def monitorObjectViewsPost: Action[AnyContent] = Action.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val ids = params("ids").head
     monitorObjectViewsCommon(ids)
   }
 
-  def monitorObjectViewsGet(idsStr: String) = Action.async {
+  def monitorObjectViewsGet(idsStr: String): Action[AnyContent] = Action.async {
     monitorObjectViewsCommon(idsStr)
   }
 
-  def monitorObjectViewsCommon(idsStr: String) = {
+  def monitorObjectViewsCommon(idsStr: String): Future[Result] = {
     val lst = idsToObjectViews(idsStr)
     monitorApi.objectViewStates(lst).map { mss =>
       val json = Json.toJson(mss)
@@ -292,7 +301,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
                              ackd: Option[String],
                              slncd: Option[String],
                              rid: Option[String],
-                             until: Int) = Action.async {
+                             until: Int): Action[AnyContent] = Action.async {
     val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.withName(s)),
       includeSoft = soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
       includeSilenced = slncd.getOrElse("off") == "on")
@@ -305,7 +314,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
   }
 
 
-  def monitorAck(id: String) = Action.async {
+  def monitorAck(id: String): Action[AnyContent] = Action.async {
     monitorApi.acknowledge(id).map { b =>
       if (b)
         Ok("OK")
@@ -314,7 +323,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorUnack(id: String) = Action.async {
+  def monitorUnack(id: String): Action[AnyContent] = Action.async {
     monitorApi.unacknowledge(id).map { b =>
       if (b)
         Ok("OK")
@@ -323,7 +332,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorSilence(id: String, slunt: Int) = Action.async {
+  def monitorSilence(id: String, slunt: Int): Action[AnyContent] = Action.async {
     monitorApi.silence(id, slunt).map { b =>
       if (b)
         Ok("OK")
@@ -332,7 +341,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorUnsilence(id: String) = Action.async {
+  def monitorUnsilence(id: String): Action[AnyContent] = Action.async {
     monitorApi.unsilence(id).map { b =>
       if (b)
         Ok("OK")

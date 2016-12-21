@@ -22,6 +22,7 @@ trait SMGMonInternalState extends SMGMonState {
   override def isHard: Boolean = myIsHard
   override def isAcked: Boolean = myIsAcked
   override def isSilenced: Boolean = silencedUntil.isDefined
+  def isInherited: Boolean = myStateIsInherited
 
   override def silencedUntil: Option[Int] = {
     val sopt = myIsSilencedUntil // copy to avoid race condition in the if clause
@@ -50,12 +51,13 @@ trait SMGMonInternalState extends SMGMonState {
   def ouids: Seq[String]
   protected def vixOpt: Option[Int]
   protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int)
-
-  def currentState: SMGState = myRecentStates.head
+  protected def getMaxHardErrorCount: Int
 
   //protected val configSvc: SMGConfigService
   protected val monLog: SMGMonitorLogApi
   protected val notifSvc: SMGMonNotifyApi
+
+  def currentState: SMGState = myRecentStates.head
 
   protected var myRecentStates: List[SMGState] = List(SMGState.initialState)
   protected var myLastOkStateChange = 0
@@ -71,11 +73,21 @@ trait SMGMonInternalState extends SMGMonState {
   protected var myCounterPrevValue = Double.NaN
   protected var myCounterPrevTs = 0
 
-  protected def maxHardErrorCount: Int
+  private var myMaxHardErrorCount: Option[Int] = None
+
+  protected def maxHardErrorCount: Int = {
+    if (myMaxHardErrorCount.isEmpty)
+      myMaxHardErrorCount = Some(getMaxHardErrorCount)
+    myMaxHardErrorCount.get
+  }
+
+  def configReloaded(): Unit = {
+    myMaxHardErrorCount = Some(getMaxHardErrorCount)
+  }
 
   protected def maxRecentStates: Int = maxHardErrorCount
 
-  private val log = SMGLogger
+  protected val log = SMGLogger
 
   override def aggShowUrlFilter: Option[String] = {
     if (ouids.isEmpty)
@@ -91,7 +103,7 @@ trait SMGMonInternalState extends SMGMonState {
     else if (currentState.isOk)
       s", good since ${SMGState.formatTss(myLastOkStateChange)}"
     else {
-      val s = s", bad since ${SMGState.formatTss(myLastOkStateChange)}"
+      val s = s", rpt=$errorRepeat/$maxHardErrorCount, bad since ${SMGState.formatTss(myLastOkStateChange)}"
       if (myLastStateChange != myLastOkStateChange) s + s", last change ${SMGState.formatTss(myLastStateChange)}" else s
     }
     s"${currentState.desc} (ts=${currentState.timeStr}$goodBadSince)"
@@ -241,7 +253,6 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
                      val configSvc: SMGConfigService,
                      val monLog: SMGMonitorLogApi,
                      val notifSvc: SMGMonNotifyApi) extends SMGMonInternalState {
-  val log = SMGLogger
 
   override val id: String = SMGMonVarState.stateId(ou,vix)
   override val parentId: Option[String] = Some(ou.id)
@@ -357,8 +368,11 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
     lazy val mntype = SMGMonNotifySeverity.fromStateValue(currentStateVal)
     configSvc.objectVarNotifyCmdsAndBackoff(ou, Some(vix), mntype)
   }
-  //protected val maxRecentStates: Int = 3
-  override protected def maxHardErrorCount = 3 // TODO read from config
+
+  override protected def getMaxHardErrorCount: Int = {
+    configSvc.objectVarNotifyStrikes(ou, Some(vix))
+  }
+
 }
 
 object SMGMonVarState {
@@ -397,7 +411,10 @@ class SMGMonObjState(var ou: SMGObjectUpdate,
     configSvc.objectVarNotifyCmdsAndBackoff(ou, None, mntype)
   }
 
-  override protected def maxHardErrorCount = 3 // TODO read from config
+  override protected def getMaxHardErrorCount: Int = {
+    configSvc.objectVarNotifyStrikes(ou, None)
+  }
+
 }
 
 object SMGMonObjState {
@@ -432,8 +449,15 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
     (ncmds, backoff)
   }
 
-  override protected def maxHardErrorCount = 3 // TODO read from config
-
+  override def getMaxHardErrorCount: Int = {
+    val objsNotifyStrikes = configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval)).map { ou =>
+      configSvc.objectVarNotifyStrikes(ou, None)
+    }
+    if (objsNotifyStrikes.nonEmpty) objsNotifyStrikes.min else {
+      log.warn(s"SMGMonPfState.getPfMaxHardErrorCount(${pfCmd.id}): empty objsNotifyStrikes seq")
+      configSvc.config.globalNotifyStrikes
+    }
+  }
 }
 
 object SMGMonPfState {
@@ -474,7 +498,7 @@ class SMGMonRunState(val interval: Int,
     (ncmds, 0)
   }
 
-  override protected def maxHardErrorCount = 2 // TODO read from config
+  override protected def getMaxHardErrorCount = 2 // TODO read from config???
 }
 
 object SMGMonRunState {

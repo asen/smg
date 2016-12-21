@@ -9,6 +9,7 @@
 - $notify-spike: mail-asen
 - $notify-global: mail-asen
 
+- $notify-strikes: 3
 
 - $notify-throttle-count: 60
 - $notify-throttle-interval: 3600
@@ -29,10 +30,7 @@
      notify-warn: mail-asen
      alert-crit-gt: 8
      notify-crit: mail-asen
-
-
-
-
+     notify-strikes: 2
 
 - ~all.alert.spikes:
 #  rxx: "(sysload)$"

@@ -416,8 +416,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @return
     */
   def reloadConf = Action {
-    configSvc.reload
-    //TODO XXX up to now SMG would notify all (slave) remotes, now - only masters
+    configSvc.reload()
     remotes.notifyMasters()
     if (configSvc.config.reloadSlaveRemotes) {
       remotes.notifySlaves()
@@ -464,23 +463,25 @@ class Application  @Inject() (actorSystem: ActorSystem,
       } else NotFound("Remote object not found")
     } else {
       val ov = smg.getObjectView(id)
-      if (ov.isDefined) {
-        val ou = ov.get.refObj
-        val ac = if (ou.isDefined) configSvc.config.objectAlertConfs.get(ou.get.id) else None
-        val nc = if (ou.isDefined) configSvc.config.objectNotifyConfs.get(ou.get.id) else None
+      val ou = if (ov.isDefined) ov.get.refObj else None
+      if (ou.isDefined) {
+        val ac = configSvc.config.objectAlertConfs.get(ou.get.id)
+        val nc = configSvc.config.objectNotifyConfs.get(ou.get.id)
         val ncmds = SMGMonNotifySeverity.values.toList.map { v =>
           val cmdBackoff = configSvc.objectVarNotifyCmdsAndBackoff(ou.get, None, v)
           (v, cmdBackoff._1, cmdBackoff._2)
         }
+        val notifyStrikesObj = configSvc.objectVarNotifyStrikes(ou.get, None)
+        val notifyStrikesVars = ou.get.vars.indices.map( vix => configSvc.objectVarNotifyStrikes(ou.get, Some(vix)))
         val hstate =  monitorApi.inspectObject(ov.get)
-        Ok(views.html.inspectObject(ov.get, ac, nc, ncmds, hstate))
+        Ok(views.html.inspectObject(ov.get, ac, nc, ncmds, Seq(notifyStrikesObj) ++ notifyStrikesVars, hstate))
       } else NotFound("Object not found")
     }
   }
 
   val DEFAULT_SEARCH_RESULTS_LIMIT = 500
 
-  def search(q: Option[String], lmt: Option[Int]) = Action.async {
+  def search(q: Option[String], lmt: Option[Int]): Action[AnyContent] = Action.async {
     val maxRes = lmt.getOrElse(DEFAULT_SEARCH_RESULTS_LIMIT)
     smg.search(q.getOrElse(""), maxRes + 1).map { sres =>
       Ok(views.html.search(q = q.getOrElse(""),
