@@ -454,7 +454,7 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
       configSvc.objectVarNotifyStrikes(ou, None)
     }
     if (objsNotifyStrikes.nonEmpty) objsNotifyStrikes.min else {
-      log.warn(s"SMGMonPfState.getPfMaxHardErrorCount(${pfCmd.id}): empty objsNotifyStrikes seq")
+      log.debug(s"SMGMonPfState.getPfMaxHardErrorCount(${pfCmd.id}): empty objsNotifyStrikes seq")
       configSvc.config.globalNotifyStrikes
     }
   }
