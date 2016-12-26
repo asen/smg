@@ -56,6 +56,10 @@
   @filter(flt, period, cols, rows, predefPeriods, availRemotes, aggOp,
           byRemote.nonEmpty && byRemote.tail.nonEmpty, xagg, gopts)
 
+  @if(aggOp.isEmpty){
+  @displaySelectHeader()
+  }
+
   <div class="alert alert-success">
     Displaying @dispCount @if(aggOp.isDefined){ aggregate (@aggOp.get) } graphs (using @slicedCount out of @tlCount matching objects) in max @cols columns and max @rows rows.
   </div>
@@ -90,6 +94,9 @@
                 [<a href="@{pa.actionUrl(g.obj, period)}">@{pa.name}</a>]
                 }
               </div>
+              @if(aggOp.isEmpty){
+              @displaySelectElem(g)
+              }
               @if(showMs && monData.contains(g.obj.id)){
               <div class="subtitle-div">
                 @monitorSvgObjects(monData(g.obj.id))

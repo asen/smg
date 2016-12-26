@@ -1,0 +1,12 @@
+@import com.smule.smg.SMGImageView
+
+@(g: SMGImageView)
+
+<span>
+  <label for="cbsel_@g.obj.id">Select</label>
+  <input class="cbseldisp" type="checkbox" id="cbsel_@g.obj.id" onclick="gl_dispSelManager.onCbClick(this, '@g.obj.id')">
+  <input class="inline-img-button btnseldisp" id="btnsel_@g.obj.id" type="image" value="Display"
+         title="Display the current manual selection" width="16px" height="16px"
+         src="@routes.Assets.versioned("images/launch.png")" onclick="javascript: gl_dispSelManager.display();" />
+
+</span>

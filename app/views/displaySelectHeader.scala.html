@@ -1,0 +1,25 @@
+@()
+
+<div id="selected-for-display-div">
+  <b><big>Manual selection (
+
+  <!--
+    <label>Name selection</label> <input type="text" value="default" />
+  -->
+
+  <input id="gl_dispSelManager_clear_btn"
+         class="inline-img-button" type="image" value="Clear" title="Clear the current manual selection"
+         src="@routes.Assets.versioned("images/delete.png")" onclick="javascript: gl_dispSelManager.clear();" />
+  <input id="gl_dispSelManager_refresh_btn"
+         class="inline-img-button" type="image" value="Refresh" title="Refresh the current manual selection"
+         src="@routes.Assets.versioned("images/refresh.png")" onclick="javascript: gl_dispSelManager.refresh();" />
+  <input id="gl_dispSelManager_display_btn"
+         class="inline-img-button" type="image" value="Display" title="Display the current manual selection"
+         src="@routes.Assets.versioned("images/launch.png")" onclick="javascript: gl_dispSelManager.display();" />
+
+  ):</big></b>
+
+  <span id="selected-for-display-list">None</span>
+
+
+</div>
