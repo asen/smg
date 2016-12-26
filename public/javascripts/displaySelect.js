@@ -1,4 +1,33 @@
 
+
+function smgRemoteId(oid) {
+  if (oid.startsWith("@")) {
+    var ix = oid.indexOf(".")
+    return oid.slice(0, ix)
+  } else {
+    return ""
+  }
+}
+
+function smgLocalId(oid){
+  if (oid.startsWith("@")) {
+    var ix = oid.indexOf(".")
+    return oid.slice(ix + 1)
+  } else {
+    return oid
+  }
+}
+
+function smgCompareStrs(a,b) {
+  if (a == b) {
+    return 0
+  } else if (a > b) {
+    return 1
+  } else {
+    return -1
+  }
+}
+
 var gl_dispSelManager = {
 
     curSel: "default",
@@ -19,9 +48,6 @@ var gl_dispSelManager = {
     },
 
     onCbClick: function(elem, oid) {
-//        console.log(elem)
-//        console.log(elem.checked)
-//        console.log(oid)
       if (elem.checked) {
         this.addSelected(this.curSel, oid)
       } else {
@@ -46,24 +72,21 @@ var gl_dispSelManager = {
           $("#gl_dispSelManager_clear_btn").hide();
           $("#gl_dispSelManager_display_btn").hide();
         }
-
         var myself = this;
         $('.cbseldisp').each(function(i, obj) {
             var oid = obj.id.replace(/^cbsel_/, "")
-            obj.checked = myself.isSelected(oid)
-        });
-        $('.btnseldisp').each(function(i, obj) {
-            var oid = obj.id.replace(/^btnsel_/, "")
-            if (myself.isSelected(oid)){
-                $(this).show();
-            } else {
-                $(this).hide();
+            var isSelected = myself.isSelected(oid)
+            obj.checked = isSelected
+            var btnElem =  document.getElementById("btnsel_" + oid)
+            if (btnElem){
+              var vis = "hidden"
+              if (isSelected) {
+                vis = "visible"
+              }
+              btnElem.style.visibility = vis;
             }
         });
-//        console.log("refresh: " + str)
         $("#selected-for-display-list").html(str)
-
-
     },
 
     display: function() {
@@ -83,7 +106,7 @@ var gl_dispSelManager = {
       if (cur.indexOf(oid) < 0) {
         cur.push(oid)
       }
-      this.setStoredObj(selId, cur)
+      this.setStoredObj(selId, cur.sort(this.compareOids))
     },
 
     removeSelected: function(selId, oid) {
@@ -96,23 +119,27 @@ var gl_dispSelManager = {
         return
       }
       cur.splice(ix,1)
-      this.setStoredObj(selId, cur)
+      this.setStoredObj(selId, cur.sort(this.compareOids));
     },
 
     getOids: function(){
       return this.listSelection(this.curSel);
     },
 
-    getLocalIds: function(){
-      return this.getOids().map(function(oid){
-        if (oid.startsWith("@")) {
-          var ix = oid.indexOf(".")
-          return oid.slice(ix + 1)
-        } else {
-          return oid
-        }
+    compareOids: function(a,b) {
+      var ra = smgRemoteId(a);
+      var rb = smgRemoteId(b);
+      var la = smgLocalId(a);
+      var lb = smgLocalId(b);
+      if (ra == rb) {
+        return smgCompareStrs(la, lb)
+      } else {
+        return smgCompareStrs(ra, rb)
+      }
+    },
 
-      })
+    getLocalIds: function(){
+      return this.getOids().map(smgLocalId)
     },
 
     listSelection: function(selId) {
