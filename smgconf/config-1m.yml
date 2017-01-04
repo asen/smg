@@ -111,3 +111,41 @@
     - label: num
       alert-spike: ""
 
+
+- localhost.ex1.cdef:
+  title: "A cdef graph for this host 1"
+  command: "echo 1 && echo 2"
+#  options:
+  interval: 60
+  rrdType: GAUGE
+  vars:
+    - label: val1
+      cdef: "$ds,10,*"
+    - label: val2
+      cdef: "$ds,10,*"
+
+- localhost.ex1.cdefv:
+  title: "A cdef var graph for this host 1"
+  ref: localhost.ex1.cdef
+  cdef_vars:
+    - label: val1-cdf
+      cdef: "$ds1,$ds0,+"
+
+- localhost.ex2.cdef:
+  title: "A cdef graph for this host 2"
+  command: "echo 3 && echo 4"
+#  options:
+  interval: 60
+  rrdType: GAUGE
+  vars:
+    - label: val1
+      cdef: "$ds,10,*"
+    - label: val2
+      cdef: "$ds,10,*"
+
+- localhost.ex2.cdefv:
+  title: "A cdef var graph for this host 1"
+  ref: localhost.ex2.cdef
+  cdef_vars:
+    - label: val1-cdf
+      cdef: "$ds1,$ds0,+"

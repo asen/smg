@@ -363,30 +363,30 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
       if (objv.graphVarsIndexes.isEmpty || objv.graphVarsIndexes.contains(t._2)) {
         val v = t._1
         val vlabel = lblFmt(v.getOrElse("label", rrdLbl))
-        c.append(" 'DEF:").append(rrdLbl).append("=")
+        val cdef = v.get("cdef")
+        val srcLabel = if (cdef.isDefined) "cdf_" + rrdLbl else rrdLbl
+        c.append(" 'DEF:").append(srcLabel).append("=")
         c.append(rrdFname).append(":").append(rrdLbl).append(":AVERAGE'") // TODO support MAX
         if (!gopts.disablePop) {
-          c.append(" 'DEF:pp_").append(rrdLbl).append("=")
+          c.append(" 'DEF:pp_").append(srcLabel).append("=")
           c.append(rrdFname).append(":").append(rrdLbl).append(s":AVERAGE:end=now-$period:start=end-$period'") // TODO support MAX
           val ppoffs = parsePeriod(period).getOrElse(0)
-          c.append(" 'SHIFT:pp_").append(rrdLbl).append(s":$ppoffs'")
+          c.append(" 'SHIFT:pp_").append(srcLabel).append(s":$ppoffs'")
         }
-        val cdef = v.get("cdef")
-        val lbl = if (cdef.nonEmpty) {
-          val cdefLbl = "cdf_" + rrdLbl
-          val cdefSubst = substCdef(cdef.get, rrdLbl)
-          c.append(" 'CDEF:").append(cdefLbl).append("=").append(cdefSubst).append("'")
+        if (cdef.nonEmpty) {
+          val cdefSubst = substCdef(cdef.get, srcLabel)
+          c.append(" 'CDEF:").append(rrdLbl).append("=").append(cdefSubst).append("'")
           if (!gopts.disablePop) {
-            c.append(" 'CDEF:pp_").append(cdefLbl).append("=").append(substCdef(cdef.get, "pp_" + rrdLbl)).append("'")
+            c.append(" 'CDEF:pp_").append(rrdLbl).append("=").append(substCdef(cdef.get, "pp_" + srcLabel)).append("'")
           }
-          cdefLbl
-        } else rrdLbl
+          rrdLbl
+        }
         if (objv.cdefVars.isEmpty) {
-          val gvStr = graphVar(v, lbl, vlabel, colorMaker, first = first, stacked = objv.stack, gopts)
+          val gvStr = graphVar(v, rrdLbl, vlabel, colorMaker, first = first, stacked = objv.stack, gopts)
           first = false
           c.append(gvStr)
         }
-        lastLabel = lbl
+        lastLabel = rrdLbl
       }
     }
     if (objv.cdefVars.nonEmpty){
@@ -677,17 +677,17 @@ class SMGRrdFetch(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
       val arr0 = ln.trim.split(":",2).map(_.trim)
       val tss = arr0(0).toInt
       val arr = arr0(1).split("\\s+").map(_.trim).map(n => if ("(?i)nan".r.findFirstMatchIn(n).nonEmpty) Double.NaN else n.toDouble)
-      //process cdefVars if defined (these have higher "priority" than vars, hiding the later)
+      //process cdefs
+      objv.vars.zipWithIndex.foreach { case (v, i) =>
+        if (v.contains("cdef")) {
+          arr(i) = computeCdef(v("cdef"), arr(i))
+        }
+      }
+      //process cdefVars
       if (objv.cdefVars.nonEmpty) {
         val cdLst = objv.cdefVars.map {cv => computeRpnValue(cv("cdef"), arr.toList)}
         SMGRrdRow(tss, cdLst)
       } else {
-        //process cdefs only if cdefVars is empty, we want cdefVars to work on raw values
-        objv.vars.zipWithIndex.foreach { case (v, i) =>
-          if (v.contains("cdef")) {
-            arr(i) = computeCdef(v("cdef"), arr(i))
-          }
-        }
         val filteredArr = if (objv.graphVarsIndexes.nonEmpty) {
           objv.graphVarsIndexes.map(ix => arr(ix)).toArray
         } else arr
