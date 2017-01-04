@@ -280,21 +280,25 @@ object SMGRrd {
     val cur = rpn.pop()
     cur match {
       case "+" => evalRpn(rpn) + evalRpn(rpn)
-      case "-" => evalRpn(rpn) - evalRpn(rpn)
-      case "/" => {
-        val d0 = evalRpn(rpn)
+      case "-" => {
         val d1 = evalRpn(rpn)
+        val d0 = evalRpn(rpn)
+        d0 - d1
+      }
+      case "/" => {
+        val d1 = evalRpn(rpn)
+        val d0 = evalRpn(rpn)
         if (d1 == 0.0) Double.NaN else d0 / d1
       }
       case "*" => evalRpn(rpn) * evalRpn(rpn)
       case "%" => {
-        val d0 = evalRpn(rpn)
         val d1 = evalRpn(rpn)
+        val d0 = evalRpn(rpn)
         if (d1 == 0.0) Double.NaN else d0 % d1
       }
       case "ADDNAN" => {
-        val d0 = evalRpn(rpn)
         val d1 = evalRpn(rpn)
+        val d0 = evalRpn(rpn)
         if (d0.isNaN && d1.isNaN) Double.NaN
         else if (d0.isNaN) d1
         else if (d1.isNaN) d0
