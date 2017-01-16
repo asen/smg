@@ -133,7 +133,7 @@ trait SMGMonInternalState extends SMGMonState {
       if (isStateChange || isHardChanged || prevStateWasInherited) {
         if (isHardError) {
           if (!isSilencedOrAcked)
-            notifSvc.sendAlertMessages(this, notifCmds, backoff)
+            notifSvc.sendAlertMessages(this, notifCmds)
         }
         monLog.logMsg(logEntry(isHardError))
       } else {

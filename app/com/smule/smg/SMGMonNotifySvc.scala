@@ -53,7 +53,7 @@ case class SMGMonNotifyCmd(id:String, command: String, timeoutSec: Int) {
 
 trait SMGMonNotifyApi {
 
-  def sendAlertMessages(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd], backOffSeconds: Int): Future[Boolean]
+  def sendAlertMessages(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd]): Future[Boolean]
 
   def checkAndResendAlertMessages(monState: SMGMonState, backOffSeconds: Int): Future[Boolean]
 
@@ -237,23 +237,16 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     }
   }
 
-  override def sendAlertMessages(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd], backOffSeconds: Int): Future[Boolean] = {
-    lazy val falseRet = Future { false }
-    if (ncmds.isEmpty)
-      falseRet
+  override def sendAlertMessages(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd]): Future[Boolean] = {
+    val akey = monState.alertKey
+    val prevCmdsOpt = activeAlerts.get(akey)
+    if (ncmds.isEmpty && prevCmdsOpt.isEmpty)
+      Future { false }
     else {
-      val akey = monState.alertKey
-      val prevCmdsOpt = activeAlerts.get(akey)
-      var ret = falseRet
-      var toNotify = if (prevCmdsOpt.isDefined) {
-        ret = checkAndResendAlertMessages(monState, backOffSeconds)
-        ncmds.toSet -- prevCmdsOpt.get.toSet
-      } else ncmds.toSet
-      if (toNotify.nonEmpty){
-        activeAlerts(akey) = prevCmdsOpt.getOrElse(List()) ++ toNotify
-        activeAlertsLastTs(akey) = SMGRrd.tssNow
-        runStateCommandsAsync(monState, ncmds, isRepeat = false)
-      } else ret
+      val toNotify = ncmds.toSet ++ prevCmdsOpt.getOrElse(List()).toSet
+      activeAlerts(akey) = toNotify.toList
+      activeAlertsLastTs(akey) = SMGRrd.tssNow
+      runStateCommandsAsync(monState, toNotify.toList, isRepeat = false)
     }
   }
 

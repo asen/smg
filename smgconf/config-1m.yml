@@ -129,7 +129,7 @@
   ref: localhost.ex1.cdef
   cdef_vars:
     - label: val1-cdf
-      cdef: "$ds1,$ds0,+"
+      cdef: "$ds1,$ds0,/"
 
 - localhost.ex2.cdef:
   title: "A cdef graph for this host 2"
@@ -148,4 +148,4 @@
   ref: localhost.ex2.cdef
   cdef_vars:
     - label: val1-cdf
-      cdef: "$ds1,$ds0,+"
+      cdef: "$ds1,$ds0,/"
