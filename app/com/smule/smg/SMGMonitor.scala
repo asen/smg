@@ -44,10 +44,11 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
 
   private val allMonitorStatesById = TrieMap[String, SMGMonInternalState]()
 
-  private var (topLevelMonitorStateTrees, allMonitorSateTreesById) = createStateTrees(configSvc.config)
+  private var topLevelMonitorStateTrees = createStateTrees(configSvc.config)
+  private var allMonitorStateTreesById = buildIdToTreeMap(topLevelMonitorStateTrees)
 
   def findTreeWithRootId(rootId: String): Option[SMGTree[SMGMonInternalState]] = {
-    allMonitorSateTreesById.get(rootId)
+    allMonitorStateTreesById.get(rootId)
   }
 
   private def getOrCreateState[T <: SMGMonInternalState](stateId: String,
@@ -100,7 +101,6 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     def createFn() = { new SMGMonPfState(pf, interval, pluginId, configSvc, monLogApi, notifSvc) }
     def updateFn(state: SMGMonPfState) = {
       if (state.pfCmd != pf) {
-        // this is logged at object level
         log.warn(s"Updating changed object pre-fetch state with id ${state.id}")
         state.pfCmd = pf
       }
@@ -135,8 +135,9 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     ret.toMap
   }
 
-  private def createStateTrees(config: SMGLocalConfig): (List[SMGTree[SMGMonInternalState]], Map[String, SMGTree[SMGMonInternalState]]) = {
-    val ret = config.updateObjects.groupBy(_.pluginId).flatMap { case (plidOpt, plSeq) =>
+  private def createStateTrees(config: SMGLocalConfig): List[SMGTree[SMGMonInternalState]] = {
+    val ret = config.updateObjects.groupBy(_.pluginId).flatMap { idSeqTpl =>
+      val (plidOpt, plSeq)  = idSeqTpl
       plSeq.groupBy(_.interval).flatMap { case (intvl, seq) =>
         val leafsSeq = seq.flatMap { ou =>
           ou.vars.indices.map { vix => getOrCreateVarState(ou,vix, update = true) }
@@ -159,14 +160,13 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         SMGTree.buildTrees[SMGMonInternalState](leafsSeq, parentsMap)
       }.toList
     }.toList
-    cleanupAllMonitorStates(ret)
-    (ret, buildIdToTreeMap(ret))
+    ret
   }
 
   override def reload(): Unit = {
-    val tt = createStateTrees(configSvc.config)
-    allMonitorSateTreesById = tt._2
-    topLevelMonitorStateTrees = tt._1
+    topLevelMonitorStateTrees = createStateTrees(configSvc.config)
+    cleanupAllMonitorStates(topLevelMonitorStateTrees)
+    allMonitorStateTreesById = buildIdToTreeMap(topLevelMonitorStateTrees)
     allMonitorStatesById.values.foreach(_.configReloaded())
     notifSvc.configReloaded()
   }
@@ -430,7 +430,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   def inspectStateTree(stateId: String): Option[String] = {
-    allMonitorSateTreesById.get(stateId).map { mst =>
+    allMonitorStateTreesById.get(stateId).map { mst =>
       mst.allNodes.map(_.serialize.toString()).mkString("\n")
     }
   }
@@ -478,7 +478,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   def serializeAllMonitorStates: List[String] = {
-    allMonitorStatesById.grouped(MAX_STATES_PER_CHUNK).map { chunk =>
+    allMonitorStatesById.toList.grouped(MAX_STATES_PER_CHUNK).map { chunk =>
       val om = chunk.map{ t =>
         val k = t._1
         val v = t._2
@@ -560,7 +560,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     } else Seq(id)
     var ret = false
     myIds.foreach { myId =>
-      val mstopt = allMonitorSateTreesById.get(id)
+      val mstopt = allMonitorStateTreesById.get(id)
       if (mstopt.isDefined) {
         mstopt.get.allNodes.foreach(procFn)
         ret = true

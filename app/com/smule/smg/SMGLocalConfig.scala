@@ -56,7 +56,6 @@ case class SMGLocalConfig(
 
   val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++ pluginUpdateObjects
 
-
   val updateObjectsById: Map[String, SMGObjectUpdate] = updateObjects.groupBy(_.id).map(t => (t._1,t._2.head))
 
   def allRemotes: List[SMGRemote] = SMGRemote.local :: remotes.toList
