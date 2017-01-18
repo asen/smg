@@ -128,12 +128,13 @@ trait SMGMonInternalState extends SMGMonState {
         monLog.logMsg(logEntry(wasHardError))
     } else { // error state
       val isStateChange = curState.state != prevStates.head.state
+      val isImprovement = curState.state < prevStates.head.state
       val isHardChanged = isHardError && !wasHardError
       lazy val (notifCmds, backoff) = notifyCmdsAndBackoff
       if (isStateChange || isHardChanged || prevStateWasInherited) {
         if (isHardError) {
           if (!isSilencedOrAcked)
-            notifSvc.sendAlertMessages(this, notifCmds)
+            notifSvc.sendAlertMessages(this, notifCmds, isImprovement)
         }
         monLog.logMsg(logEntry(isHardError))
       } else {

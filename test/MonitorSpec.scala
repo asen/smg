@@ -47,7 +47,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
 
-      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
+      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
       verify(monlog, times(0)).logMsg(any[SMGMonitorLogMsg]())
 
       val ov = cs.config.viewObjectsById("test.object.1")
@@ -82,7 +82,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 360, nonPfObj, List(6.0, 1.0), 0, List()))
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
 
-      verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
+      verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
       verify(monlog, times(3)).logMsg(any[SMGMonitorLogMsg]())
 
       val ov = cs.config.viewObjectsById("test.object.1")
@@ -119,7 +119,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
       mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 480, nonPfObj, List(6.0, 1.0), 0, List()))
 
-      verify(notifSvc, times(2)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
+      verify(notifSvc, times(2)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
       verify(monlog, times(4)).logMsg(any[SMGMonitorLogMsg]())
 
       val ov = cs.config.viewObjectsById("test.object.1")
@@ -393,7 +393,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       }
 
 
-      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
+      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
       verify(monlog, times(0)).logMsg(any[SMGMonitorLogMsg]())
 
       val ov = cs.config.viewObjectsById("test.pf.object.1")

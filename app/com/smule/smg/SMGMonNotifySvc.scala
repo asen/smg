@@ -53,7 +53,7 @@ case class SMGMonNotifyCmd(id:String, command: String, timeoutSec: Int) {
 
 trait SMGMonNotifyApi {
 
-  def sendAlertMessages(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd]): Future[Boolean]
+  def sendAlertMessages(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd], isImprovement: Boolean): Future[Boolean]
 
   def checkAndResendAlertMessages(monState: SMGMonState, backOffSeconds: Int): Future[Boolean]
 
@@ -226,8 +226,10 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     }
   }
 
-  private def runStateCommandsAsync(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd], isRepeat: Boolean): Future[Boolean] = {
-    val subj = monState.notifySubject(configSvc.config.notifyBaseUrl, configSvc.config.notifyRemoteId, isRepeat)
+  private def runStateCommandsAsync(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd],
+                                    isRepeat: Boolean, isImprovement: Boolean): Future[Boolean] = {
+    val improvedStr = if (isImprovement) "(improved) " else ""
+    val subj = improvedStr + monState.notifySubject(configSvc.config.notifyBaseUrl, configSvc.config.notifyRemoteId, isRepeat)
     val body = monState.notifyBody(configSvc.config.notifyBaseUrl, configSvc.config.notifyRemoteId)
     val severity = SMGMonNotifySeverity.fromStateValue(monState.currentStateVal)
     updateThrottleCounters(severity, monState.alertKey, subj, body, ncmds).map { shouldSend =>
@@ -237,7 +239,8 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     }
   }
 
-  override def sendAlertMessages(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd]): Future[Boolean] = {
+  override def sendAlertMessages(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd],
+                                 isImprovement: Boolean): Future[Boolean] = {
     val akey = monState.alertKey
     val prevCmdsOpt = activeAlerts.get(akey)
     if (ncmds.isEmpty && prevCmdsOpt.isEmpty)
@@ -246,7 +249,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
       val toNotify = ncmds.toSet ++ prevCmdsOpt.getOrElse(List()).toSet
       activeAlerts(akey) = toNotify.toList
       activeAlertsLastTs(akey) = SMGRrd.tssNow
-      runStateCommandsAsync(monState, toNotify.toList, isRepeat = false)
+      runStateCommandsAsync(monState, toNotify.toList, isRepeat = false, isImprovement)
     }
   }
 
@@ -258,7 +261,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     if (tsLast.isDefined && (tsNow - tsLast.get >= backOffSeconds)) {
       val cmds = activeAlerts.get(akey)
       activeAlertsLastTs(akey) = tsNow
-      if (cmds.isDefined) futs += runStateCommandsAsync(monState, cmds.get, isRepeat = true)
+      if (cmds.isDefined) futs += runStateCommandsAsync(monState, cmds.get, isRepeat = true, isImprovement = false)
     }
     if (futs.isEmpty)
       Future { false }
@@ -271,7 +274,8 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     val cmds = activeAlerts.remove(akey)
     activeAlertsLastTs.remove(akey)
     if (cmds.isDefined)
-      runStateCommandsAsync(monState, cmds.get, isRepeat = false)
+      // XXX setting isImprovement to false to avoid somewhat redundant "(improved) RECOVERY" strings in subj
+      runStateCommandsAsync(monState, cmds.get, isRepeat = false, isImprovement = false)
     else
       Future { false }
   }
