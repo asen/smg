@@ -65,7 +65,9 @@ case class SMGLocalConfig(
   }.getOrElse(Seq())
 
 
+  val globalSmgerrNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-global")
   val globalCritNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-crit")
+  val globalUnknNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-unkn")
   val globalWarnNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-warn")
   val globalSpikeNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-spike")
 

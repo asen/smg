@@ -84,7 +84,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
 
   val log = SMGLogger
 
-  implicit val ec = monitorCtx
+  implicit private val ec = monitorCtx
 
   // alertKey -> cmds
   private val activeAlerts = TrieMap[String, List[SMGMonNotifyCmd]]()
@@ -127,13 +127,14 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     rets.exists(p => p)
   }
 
-  def remoteSubjStr = configSvc.config.notifyRemoteId.map(s => s"($s)").getOrElse("")
+  def remoteSubjStr: String = configSvc.config.notifyRemoteId.map(s => s"($s)").getOrElse("")
 
   private def sendQueuedMsgs(msgsToCondense: Seq[SMGMonNotifyMsgData]): Future[Boolean] = {
     // send condensed states as a single msg, async
     if (msgsToCondense.isEmpty) Future { false }
     else Future {
-      val allRcpts = msgsToCondense.flatMap(_.cmds).distinct
+      val allRcpts =  (configSvc.globalNotifyCmds(SMGMonNotifySeverity.SMGERR) ++
+        msgsToCondense.flatMap(_.cmds)).distinct
       val msgSubj = s"UNTHROTTLED $remoteSubjStr - ${msgsToCondense.size} messages supressed during throttle"
       val condensedSubjects = msgsToCondense.map(_.subjStr).take(MAX_CONDENSED_SUBJECTS)
       val msgBody = s"$msgSubj. Some example subjects (displaying ${condensedSubjects.size}/${msgsToCondense.size}):\n\n" +
@@ -156,13 +157,14 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
   }
 
   private def sendThrottledMsg(addNcmds: Seq[SMGMonNotifyCmd], cnt: Int, maxCnt: Int, throttledUntil: Int): Future[Boolean] = {
-    val allCmds = (configSvc.globalNotifyCmds(SMGMonNotifySeverity.SMGERR) ++ addNcmds).distinct
+    val msgSubj = s"THROTTLED $remoteSubjStr message rate ($cnt) exceeded $maxCnt msgs/$throttleInterval sec"
+    val msgBody = s"$msgSubj: \n\n Further notifications will be delayed " +
+      s"until ${new Date(1000L * throttledUntil).toString}.\n\n" +
+      s"Check ${configSvc.config.notifyBaseUrl}/monitor#${configSvc.config.notifyRemoteId.getOrElse("")}\n\n"
+    val allCmds = (configSvc.globalNotifyCmds(SMGMonNotifySeverity.SMGERR) ++
+      activeAlerts.values.flatten.toSeq ++ addNcmds).distinct
     val futs = allCmds.map { ncmd =>
       Future {
-        val msgSubj = s"THROTTLED $remoteSubjStr message rate ($cnt) exceeded $maxCnt msgs/$throttleInterval sec"
-        val msgBody = s"$msgSubj: \n\n Further notifications will be delayed " +
-          s"until ${new Date(1000L * throttledUntil).toString}.\n\n" +
-          s"Check ${configSvc.config.notifyBaseUrl}/monitor#${configSvc.config.notifyRemoteId.getOrElse("")}\n\n"
         try {
           ncmd.alert(SMGMonNotifySeverity.THROTTLED, SMGMonNotifySeverity.THROTTLED.toString, msgSubj, msgBody)
           log.info(s"SMGMonNotifySvc.sendThrottledMsg: Notified ${ncmd.id} for $msgSubj")

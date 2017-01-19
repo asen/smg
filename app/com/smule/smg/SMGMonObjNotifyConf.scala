@@ -7,6 +7,7 @@ package com.smule.smg
 case class SMGMonVarNotifyConf(src: SMGMonAlertConfSource.Value,
                                srcId: String,
                                crit: Seq[String],
+                               unkn: Seq[String],
                                warn: Seq[String],
                                spike: Seq[String],
                                notifyBackoff: Option[Int],
@@ -25,8 +26,9 @@ object SMGMonVarNotifyConf {
 
   private val NOTIFY_KEYS = Set(
     "notify-crit",
+    "notify-unkn",
     "notify-warn",
-    "notify-spike",
+    "notify-anom",
     "notify-backoff",
     "notify-disable",
     "notify-strikes"
@@ -37,13 +39,14 @@ object SMGMonVarNotifyConf {
     if (matchingKeys.isEmpty)
       None
     else {
-      val notifyCrit = vMap.get("notify-crit").map { v => v.split(",").toSeq }.getOrElse(Seq())
-      val notifyWarn = vMap.get("notify-warn").map { v => v.split(",").toSeq }.getOrElse(Seq())
-      val notifySpike = vMap.get("notify-spike").map { v => v.split(",").toSeq }.getOrElse(Seq())
+      val notifyCrit = vMap.get("notify-crit").map { v => v.split("\\s*,\\s*").toSeq }.getOrElse(Seq())
+      val notifyUnk = vMap.get("notify-unkn").map { v => v.split("\\s*,\\s*").toSeq }.getOrElse(Seq())
+      val notifyWarn = vMap.get("notify-warn").map { v => v.split("\\s*,\\s*").toSeq }.getOrElse(Seq())
+      val notifySpike = vMap.get("notify-anom").map { v => v.split("\\s*,\\s*").toSeq }.getOrElse(Seq())
       val notifyBackoff = vMap.get("notify-backoff").flatMap { v => SMGRrd.parsePeriod(v) }
       val notifyDisable = vMap.getOrElse("notify-disable", "false") == "true"
       val notifyStrikes = vMap.get("notify-strikes").map(_.toInt).getOrElse(DEFAULT_NOTIFY_STRIKES)
-      Some(SMGMonVarNotifyConf(src, srcId, notifyCrit, notifyWarn, notifySpike, notifyBackoff,
+      Some(SMGMonVarNotifyConf(src, srcId, notifyCrit, notifyUnk, notifyWarn, notifySpike, notifyBackoff,
         notifyDisable, Math.max(notifyStrikes,1)))
     }
   }

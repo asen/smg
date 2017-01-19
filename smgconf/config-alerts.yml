@@ -3,11 +3,12 @@
   id: mail-asen
   command: "smgscripts/notif-dummy.sh asen@smule.com"
 
-- $notify-warn: mail-asen
-- $notify-crit: mail-asen
-#,pd
-- $notify-spike: mail-asen
 - $notify-global: mail-asen
+- $notify-crit: mail-asen
+- $notify-unkn: mail-asen
+- $notify-warn: mail-asen
+#,pd
+- $notify-anom: mail-asen
 
 - $notify-strikes: 3
 

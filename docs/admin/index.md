@@ -427,14 +427,21 @@ appended to the command string:
 > Example command that could be executed:
 
 > smgscripts/notif-mail.sh 'asen@smule.com somebodyelse@smule.com' WARNING host.xxx.sysload:1 'WARNING sl5min > 20' 'A bit more detailed warning info here'
-    
+
+- **$notify-global**: a comma separated list of list of $notify-command 
+ids, to be executed on any global SMG errors (usually - overlaps)
+
 - **$notify-crit**: a comma separated list of list of $notify-command 
 ids, to be executed on any (global or object-specific) critical errors
+
+- **$notify-unkn**: a comma separated list of list of $notify-command 
+ids, to be executed on any (global or object-specific) "unknown" (i.e. 
+fetch command failure) errors
 
 - **$notify-warn**: a comma separated list of list of $notify-command 
 ids, to be executed on any (global or object-specific) warning errors
 
-- **$notify-spike**: a comma separated list of list of $notify-command 
+- **$notify-anom**: a comma separated list of list of $notify-command 
 ids, to be executed on any anomaly (spike/drop) errors. Be warned
 that this can get noisy on large setups.
 
@@ -960,8 +967,9 @@ consecutive error states to be considered a hard error and in turn -
 trigger alert notifications.
 
     notify-crit: notify-cmd-id-1,notify-cmd-id-2,...
+    notify-unkn: notify-cmd-id-1,notify-cmd-id-2,...
     notify-warn: notify-cmd-id-1,notify-cmd-id-2,...
-    notify-spike: notify-cmd-id-1,notify-cmd-id-2,...
+    notify-anom: notify-cmd-id-1,notify-cmd-id-2,...
     notify-disable: true
     notify-backoff: 6h
     notify-strikes: 3

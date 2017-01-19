@@ -129,14 +129,13 @@ trait SMGConfigService {
         val vixes = if (vixOpt.isDefined) Seq(vixOpt.get) else ou.vars.indices
         vixes.flatMap { vix =>
           oncOpt.get.varConf(vix).flatMap { vnc =>
-            if (atSeverity > SMGMonNotifySeverity.WARNING)
-              vnc.crit
-            else if (atSeverity > SMGMonNotifySeverity.ANOMALY)
-              vnc.warn
-            else if (atSeverity > SMGMonNotifySeverity.ACKNOWLEDGEMENT)
-              vnc.spike
-            else
-              Seq()
+            atSeverity match {
+              case SMGMonNotifySeverity.CRITICAL => vnc.crit
+              case SMGMonNotifySeverity.UNKNOWN => vnc.unkn
+              case SMGMonNotifySeverity.WARNING => vnc.warn
+              case SMGMonNotifySeverity.ANOMALY => vnc.spike
+              case _ => Seq()
+            }
           }
         }.distinct.map(s => config.notifyCommands.get(s)).filter(_.isDefined).map(_.get)
       } else
@@ -154,14 +153,14 @@ trait SMGConfigService {
   * @return
   */
   def globalNotifyCmds(atSeverity: SMGMonNotifySeverity.Value): Seq[SMGMonNotifyCmd] = {
-    if (atSeverity > SMGMonNotifySeverity.WARNING)
-      config.globalCritNotifyConf
-    else if (atSeverity > SMGMonNotifySeverity.ANOMALY)
-      config.globalWarnNotifyConf
-    else if (atSeverity > SMGMonNotifySeverity.ACKNOWLEDGEMENT)
-      config.globalSpikeNotifyConf
-    else
-      Seq()
+    atSeverity match {
+      case SMGMonNotifySeverity.SMGERR => config.globalSmgerrNotifyConf
+      case SMGMonNotifySeverity.CRITICAL => config.globalCritNotifyConf
+      case SMGMonNotifySeverity.UNKNOWN => config.globalUnknNotifyConf
+      case SMGMonNotifySeverity.WARNING => config.globalWarnNotifyConf
+      case SMGMonNotifySeverity.ANOMALY => config.globalSpikeNotifyConf
+      case _ => Seq()
+    }
   }
 
   def objectVarNotifyStrikes(ou: SMGObjectUpdate, vixOpt: Option[Int]): Int = {
