@@ -243,15 +243,15 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
 
   override def sendAlertMessages(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd],
                                  isImprovement: Boolean): Future[Boolean] = {
-    val akey = monState.alertKey
-    val prevCmdsOpt = activeAlerts.get(akey)
-    if (ncmds.isEmpty && prevCmdsOpt.isEmpty)
+    if (ncmds.isEmpty)
       Future { false }
     else {
-      val toNotify = ncmds.toSet ++ prevCmdsOpt.getOrElse(List()).toSet
-      activeAlerts(akey) = toNotify.toList
+      val akey = monState.alertKey
+      val toNotify = ncmds.distinct
+      val allNotified = toNotify.toSet ++ activeAlerts.getOrElse(akey, List()).toSet
+      activeAlerts(akey) = allNotified.toList
       activeAlertsLastTs(akey) = SMGRrd.tssNow
-      runStateCommandsAsync(monState, toNotify.toList, isRepeat = false, isImprovement)
+      runStateCommandsAsync(monState, toNotify, isRepeat = false, isImprovement)
     }
   }
 
