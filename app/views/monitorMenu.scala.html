@@ -8,30 +8,30 @@
     } else {
     Overview |
     }
-    @if(cur != "silenced"){
-    <a href="/monitor/silenced">Silenced states</a>  |
-    } else {
-    Silenced states |
-    }
-    @if(cur != "trees"){
-    <a href="/monitor/trees">Browse states</a> |
-    }else {
-    Browse states |
-    }
     @if(cur != "log"){
     <a href="/monitor/log">Event log</a> |
     }else {
     Event log |
     }
-    @if(cur != "heatmap"){
-    <a href="/monitor/heatmap">Heatmap</a> |
+    @if(cur != "trees"){
+    <a href="/monitor/trees">State trees</a> |
     }else {
-    Heatmap |
+    State trees |
+    }
+    @if(cur != "silenced"){
+    <a href="/monitor/silenced">Silenced states</a>  |
+    } else {
+    Silenced states |
     }
     @if(cur != "runtrees"){
     <a href="/monitor/runtree">Run trees</a> |
     }else {
     Run trees |
+    }
+    @if(cur != "heatmap"){
+    <a href="/monitor/heatmap">Heatmap</a> |
+    }else {
+    Heatmap |
     }
   </h6>
 </div>
