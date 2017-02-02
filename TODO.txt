@@ -2,7 +2,9 @@ v 0.4+
 
 == General Enhancements ==
 
-* support aggregate objects (same as aggrgeate view but actually updated in a RRD for history)
+* support aggregate objects (same as aggregate view but actually updated in a RRD for history)
+
+* filter to hide empty graphs.
 
 * Remove period(=24h), cols(=6) and rows(=10) from /dash form params/URL
 when same as default
