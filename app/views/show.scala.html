@@ -44,12 +44,12 @@
 Changing this reloads the page.">MaxY:</label>
         <input id="maxy_inp" size="12" type="text" name="maxy" value="@gopts.maxY" onchange="mySubmitOnChange(this);">
 
-        <label class="autosubmit-lbl" title="Disable the dotted line(s) representing the previous period value(s).
+        <label for="dpp_cb" class="autosubmit-lbl" title="Disable the dotted line(s) representing the previous period value(s).
 Changing this reloads the page.">Disable Period-Over-Period:</label>
         <input type="checkbox" id="dpp_cb"
                onchange="mySubmitOnChange(this);" @if(gopts.disablePop){ checked } />
 
-        <label class="autosubmit-lbl" title="Disable the straight dotted line(s) representing the 95%-ile value(s).
+        <label for="d95p_cb" class="autosubmit-lbl" title="Disable the straight dotted line(s) representing the 95%-ile value(s).
 Changing this reloads the page.">Disable 95%-ile line:</label>
         <input type="checkbox" id="d95p_cb"
                onchange="mySubmitOnChange(this);" @if(gopts.disable95pRule){ checked } />
