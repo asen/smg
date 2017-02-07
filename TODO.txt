@@ -11,6 +11,8 @@ when same as default
 
 * support "tags", be able to filter by tag.
 
+* backups/replication?
+
 == Monitor ==
 
 * indicate silenced/acknowledged in monitor state display next to graphs
