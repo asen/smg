@@ -2,6 +2,8 @@ v 0.4+
 
 == General Enhancements ==
 
+* indicate rrdType next to graphs
+
 * support aggregate objects (same as aggregate view but actually updated in a RRD for history)
 
 * filter to hide empty graphs.

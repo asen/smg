@@ -119,7 +119,7 @@ trait SMGMonInternalState extends SMGMonState {
     if (curState.isOk && prevStates.head.isOk)
       return // no changes to report
 
-    lazy val wasHardError = prevStates.forall(!_.isOk)
+    lazy val wasHardError = prevStates.take(maxHardErrorCount).forall(!_.isOk)
     lazy val isHardError = !curState.isOk && prevStates.take(maxHardErrorCount - 1).forall(!_.isOk)
 
     if (curState.isOk) { // recovery

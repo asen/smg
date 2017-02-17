@@ -243,9 +243,13 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
 
   override def sendAlertMessages(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd],
                                  isImprovement: Boolean): Future[Boolean] = {
-    if (ncmds.isEmpty)
-      Future { false }
-    else {
+    if (ncmds.isEmpty) {
+      Future {
+        if (monState.currentStateVal > SMGState.E_ANOMALY) // TODO XXX temp logging to troubleshoot issue
+          log.info(s"SMGMonNotifySvc.sendAlertMessages: empty recipients list for ${monState.id} (${monState.currentStateVal})")
+        false
+      }
+    } else {
       val akey = monState.alertKey
       val toNotify = ncmds.distinct
       val allNotified = toNotify.toSet ++ activeAlerts.getOrElse(akey, List()).toSet
