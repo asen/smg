@@ -25,6 +25,12 @@ trait SMGObjectBase {
     */
   def interval: Int
 
+  /**
+    * rrdtool type (GAUGE, COUNTER etc)
+    * @return
+    */
+  def rrdType: String
+
 
   /**
     * All applicable for search vars definitions (object views can define subsets)

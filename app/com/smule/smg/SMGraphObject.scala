@@ -12,7 +12,8 @@ case class SMGraphObject(
                           stack: Boolean,
                           gvIxes: List[Int],
                           rrdFile: Option[String],
-                          refObj: Option[SMGObjectUpdate]
+                          refObj: Option[SMGObjectUpdate],
+                          rrdType: String
                         ) extends SMGObjectView {
 
   /**

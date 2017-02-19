@@ -89,7 +89,7 @@
             </h4>
             <div class="subtitle-div">
               <div class="subtitle-div">
-                @{g.obj.id} [<a href="#@g.obj.id" >#</a>]
+                @{g.obj.id} (@{g.obj.rrdType}) [<a href="#@g.obj.id" >#</a>]
                 @for(pa <- plugins.flatMap(_.actions)){
                 [<a href="@{pa.actionUrl(g.obj, period)}">@{pa.name}</a>]
                 }

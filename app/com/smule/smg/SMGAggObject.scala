@@ -66,6 +66,8 @@ case class SMGAggObject(id: String,
                          graphVarsIndexes: Seq[Int],
                          title: String ) extends SMGAggObjectView {
   override val refObj: Option[SMGObjectUpdate] = None
+
+  override lazy val rrdType = objs.map(_.rrdType).distinct.mkString(",")
 }
 
 /**

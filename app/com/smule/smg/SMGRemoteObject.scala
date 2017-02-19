@@ -12,7 +12,8 @@ case class SMGRemoteObject(
                             cdefVars: List[Map[String, String]],
                             graphVarsIndexes: Seq[Int],
                             title: String,
-                            stack: Boolean
+                            stack: Boolean,
+                            rrdType: String
                           ) extends SMGObjectView {
 
 
@@ -49,7 +50,8 @@ case class SMGRemoteObjectCopy(
                             graphVarsIndexes: Seq[Int],
                             title: String,
                             stack: Boolean,
-                            rrdFile: Option[String]
+                            rrdFile: Option[String],
+                            rrdType: String
                           ) extends SMGObjectView {
 
   def this(robj:SMGObjectView, rrdFile: String) = this(robj.id,
@@ -59,7 +61,9 @@ case class SMGRemoteObjectCopy(
     robj.graphVarsIndexes,
     robj.title,
     robj.stack,
-    Some(rrdFile))
+    Some(rrdFile),
+    robj.rrdType
+  )
 
   /**
     * The "show" url for this object
@@ -85,4 +89,6 @@ case class SMGRemoteAggObject(
                             title: String
                           ) extends SMGAggObjectView {
   override val refObj: Option[SMGObjectUpdate] = None
+
+  override lazy val rrdType: String = objs.map(_.rrdType).distinct.mkString(",")
 }

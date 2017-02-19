@@ -543,7 +543,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
                 ymap.getOrElse("title", refobj.title).toString,
                 ymap.getOrElse("stack", refobj.stack).asInstanceOf[Boolean],
                 ymap.getOrElse("gv", new util.ArrayList[Int]()).asInstanceOf[util.ArrayList[Int]].toList,
-                refobj.rrdFile, refUpdateObj)
+                refobj.rrdFile, refUpdateObj, refobj.rrdType)
               objectIds(oid) = obj
               allViewObjectsConf += obj
             }
