@@ -194,7 +194,7 @@ class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
       // average decrease -> drop
       // and one additional check - must be a drop compared to all individual ltStats
       if ((ltAggStat.avg > changeThresh * stStat.avg) && ltStats.forall(_.avg >= stStat.avg))
-        return Some(s"DROP: $ltStStr  $varianceStr")
+        return Some(s"DROP: $ltStStr $varianceStr")
     }
     None
   }
