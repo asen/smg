@@ -5,11 +5,11 @@
 @import com.smule.smg.SMGState
 @(plugins: Seq[SMGPlugin], rmtId: String, availRemotes:Seq[String], flt: SMGMonFilter, rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], pg:Int, maxPages:Int, limit: Int, defLimit: Int, curUrl: String)
 
-@main("SMG - Monitor browse states", plugins, 300) {
+@main("SMG - Monitor State trees", plugins, 300) {
 
 @monitorMenu("trees")
 
-<h3>Browse states</h3>
+<h3>State trees</h3>
 
 <div>
   <form id="runTreeFilterForm" method="GET">
