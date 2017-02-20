@@ -189,12 +189,12 @@ class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
       // average increase -> spike
       // and one additional check - must be an increase compared to all individual ltStats
       if ((stStat.avg > changeThresh * ltAggStat.avg) && ltStats.forall(_.avg <= stStat.avg))
-        return Some(s"SPIKE: stAvg=${numFmt(stStat.avg)} gt $changeThresh * ltAvg=${numFmt(ltAggStat.avg)} " +
+        return Some(s"SPIKE: stAvg=${numFmt(stStat.avg)}/$changeThresh/ltAvg=${numFmt(ltAggStat.avg)} " +
           varianceStr)
       // average decrease -> drop
       // and one additional check - must be a drop compared to all individual ltStats
       if ((ltAggStat.avg > changeThresh * stStat.avg) && ltStats.forall(_.avg >= stStat.avg))
-        return Some(s"DROP: ltAvg=${numFmt(ltAggStat.avg)} gt $changeThresh * stAvg=${numFmt(stStat.avg)} " +
+        return Some(s"DROP: stAvg=${numFmt(stStat.avg)}/$changeThresh/ltAvg=${numFmt(ltAggStat.avg)}" +
           varianceStr)
     }
 
