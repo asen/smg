@@ -182,22 +182,20 @@ class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
 
     // if variances and 95%-iles are too different we probably have a drop or spike
     if ((maxVar > changeThresh * minVar) && (maxP90 > changeThresh * minP90)) {
-      lazy val varianceStr = s" (stVariance=${numFmt(stStat.variance)}/" +
+      lazy val varianceStr = s"(stVariance=${numFmt(stStat.variance)}/" +
         s"stddev=${numFmt(scala.math.sqrt(stStat.variance))}/p90=${numFmt(stStat.p90)}, " +
         s"ltVariance=${numFmt(ltAggStat.variance)}/stddev=${numFmt(scala.math.sqrt(ltAggStat.variance))}/" +
         s"p90=${numFmt(ltAggStat.p90)})"
+      lazy val ltStStr = s"stAvg=${numFmt(stStat.avg)}/$changeThresh/ltAvg=${numFmt(ltAggStat.avg)}"
       // average increase -> spike
       // and one additional check - must be an increase compared to all individual ltStats
       if ((stStat.avg > changeThresh * ltAggStat.avg) && ltStats.forall(_.avg <= stStat.avg))
-        return Some(s"SPIKE: stAvg=${numFmt(stStat.avg)}/$changeThresh/ltAvg=${numFmt(ltAggStat.avg)} " +
-          varianceStr)
+        return Some(s"SPIKE: $ltStStr $varianceStr")
       // average decrease -> drop
       // and one additional check - must be a drop compared to all individual ltStats
       if ((ltAggStat.avg > changeThresh * stStat.avg) && ltStats.forall(_.avg >= stStat.avg))
-        return Some(s"DROP: stAvg=${numFmt(stStat.avg)}/$changeThresh/ltAvg=${numFmt(ltAggStat.avg)}" +
-          varianceStr)
+        return Some(s"DROP: $ltStStr  $varianceStr")
     }
-
     None
   }
 
