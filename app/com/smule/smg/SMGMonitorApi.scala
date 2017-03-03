@@ -26,15 +26,37 @@ object SMGState extends Enumeration {
 
   val longTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
+  val YEAR_SECONDS = 365 * 24 * 3600
+  val DAY_SECONDS = 24 * 3600
+
   def formatTss(ts: Int): String = {
     val tsDiff = Math.abs(tssNow - ts)
-    val myFmt = if (tsDiff < 24 * 3600)
+    val myFmt = if (tsDiff < DAY_SECONDS)
       hmsTimeFormat
-    else  if (tsDiff < 365 * 24 * 3600)
+    else  if (tsDiff < YEAR_SECONDS)
       shortTimeFormat
     else
       longTimeFormat
     myFmt.format(new Date(ts.toLong * 1000))
+  }
+
+  def formatDuration(duration: Int): String = {
+    var tsDiff = duration
+    val sb = new StringBuilder()
+    if (tsDiff >  YEAR_SECONDS) {
+      sb.append(s"${tsDiff / YEAR_SECONDS}y")
+      tsDiff = tsDiff % YEAR_SECONDS
+    }
+    if (tsDiff > DAY_SECONDS) {
+      sb.append(s"${tsDiff / DAY_SECONDS}d")
+      tsDiff = tsDiff % DAY_SECONDS
+    }
+    if (tsDiff > 3600) {
+      sb.append(s"${tsDiff / 3600}h")
+      tsDiff = tsDiff % 3600
+    }
+    sb.append(s"${tsDiff / 60}m")
+    sb.toString()
   }
 
   private val myFormatter = new DecimalFormat("#.######")

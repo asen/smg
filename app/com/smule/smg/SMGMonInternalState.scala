@@ -61,6 +61,7 @@ trait SMGMonInternalState extends SMGMonState {
 
   protected var myRecentStates: List[SMGState] = List(SMGState.initialState)
   protected var myLastOkStateChange = 0
+  protected var myLastGoodBadStateDuration = 0
   protected var myLastStateChange = 0
 
   protected var myIsHard: Boolean = true
@@ -100,11 +101,13 @@ trait SMGMonInternalState extends SMGMonState {
 
   protected def currentStateDesc: String = {
     val goodBadSince = if (myLastStateChange == 0 || myLastOkStateChange == 0) ""
-    else if (currentState.isOk)
-      s", good since ${SMGState.formatTss(myLastOkStateChange)}"
-    else {
-      val s = s", rpt=$errorRepeat/$maxHardErrorCount, bad since ${SMGState.formatTss(myLastOkStateChange)}"
-      if (myLastStateChange != myLastOkStateChange) s + s", last change ${SMGState.formatTss(myLastStateChange)}" else s
+    else if (currentState.isOk) {
+      val badDuration = if (myLastGoodBadStateDuration > 0) s", was bad for ${SMGState.formatDuration(myLastGoodBadStateDuration)}" else ""
+      s", good since ${SMGState.formatTss(myLastOkStateChange)}$badDuration"
+    } else {
+      val goodDuration = if (myLastGoodBadStateDuration > 0) s", was good for ${SMGState.formatDuration(myLastGoodBadStateDuration)}" else ""
+      val lastChange = if (myLastStateChange != myLastOkStateChange) s", last change ${SMGState.formatTss(myLastStateChange)}" else ""
+      s", rpt=$errorRepeat/$maxHardErrorCount, bad since ${SMGState.formatTss(myLastOkStateChange)}$lastChange$goodDuration"
     }
     s"${currentState.desc} (ts=${currentState.timeStr}$goodBadSince)"
   }
@@ -153,8 +156,12 @@ trait SMGMonInternalState extends SMGMonState {
     }
 
     //check if we are flipping OK/non-OK state and update myLastOkStateChange
-    if (state.isOk != myRecentStates.head.isOk)
+    //also record how long this state was in trouble
+    if (state.isOk != myRecentStates.head.isOk) {
+      if (myLastOkStateChange != 0)
+        myLastGoodBadStateDuration = state.ts - myLastOkStateChange
       myLastOkStateChange = state.ts
+    }
 
     // update myLastStateChange if any state value change
     if (state.state != myRecentStates.head.state) {
@@ -196,6 +203,7 @@ trait SMGMonInternalState extends SMGMonState {
       }),
       "lsc" -> Json.toJson(myLastStateChange),
       "lkc" -> Json.toJson(myLastOkStateChange),
+      "lgbd" -> Json.toJson(myLastGoodBadStateDuration),
       "cpt" -> Json.toJson(myCounterPrevTs)
     )
     if (!myCounterPrevValue.isNaN) mm += ("cpv" -> Json.toJson(myCounterPrevValue))
@@ -227,6 +235,7 @@ trait SMGMonInternalState extends SMGMonState {
 
       myLastStateChange = (src \ "lsc").as[Int]
       myLastOkStateChange = (src \ "lkc").as[Int]
+      myLastGoodBadStateDuration = (src \ "lgbd").asOpt[Int].getOrElse(0) // TODO reading Option for backwards compatibility
       myCounterPrevTs = (src \ "cpt").as[Int]
 
       myCounterPrevValue = (src \ "cpv").asOpt[Double].getOrElse(Double.NaN)
