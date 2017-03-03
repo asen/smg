@@ -4,10 +4,10 @@
 
 Play [2.4/scala](https://www.playframework.com/) app using external 
 scripts to fetch numbers from services and [rrdtool](http://oss.oetiker.ch/rrdtool/) 
-to maintain many databases and display graphs from them. It can also 
-do a lot more than that - like checking the fetched valules against 
-pre-configured thresholds and/or anomalies and sending alerts. It is 
-also possible to extend SMG via plugins (scala extensions).
+to maintain many time series databases and display graphs from them. 
+It can also do a lot more than that - like checking the fetched valules 
+against pre-configured thresholds and/or anomalies and sending alerts. 
+It is also possible to extend SMG via plugins (scala extensions).
 
 Intended to be a simple to maintain but scalable monitoring system for 
 people who prefer to generate their configs over clicking on UI to set 
@@ -28,7 +28,7 @@ Binary releases available here: https://github.com/asen/smg/releases
     $ git checkout release # recommended, to get on a stable branch
     $ ./build-smg.sh
     ...
-    *** Done. Output in target/universal/smg-0.3.tgz
+    *** Done. Output in target/universal/smg-0.4.tgz
 ```
 
 ## Install and configure
@@ -42,14 +42,14 @@ Binary releases available here: https://github.com/asen/smg/releases
 * Unpack tgz
 
     ```
-       # tar -xzf smg-03.tgz
+       # tar -xzf smg-0.4.tgz
     ```
  
 * Create /etc/smg/config.yml (e.g. by copying the example config into 
 /etc/smg/config.yml and editing as needed):
 
     ```
-        # mkdir /etc/smg && cp smg-0.3/smgconf/config-example.yml /etc/smg/config.yml
+        # mkdir /etc/smg && cp smg-0.4/smgconf/config-example.yml /etc/smg/config.yml
         # vim /etc/smg/config.yml
     ```
   
@@ -100,7 +100,7 @@ of 8g is tuned for large setups)
     Check logs/nohup.out for startup errors and logs/application.log for 
 SMG/config issues.
 
-    There is also a ./stop-smg.sh script which can be used ti gracefully 
+    There is also a ./stop-smg.sh script which can be used to gracefully 
 stop SMG.
 
 * Point your browser to localhost:9000 (localhost:9000/assets/docs/index.html 
