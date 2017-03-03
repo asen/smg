@@ -4,7 +4,7 @@ set -e
 
 #./activator universal:packageZipTarball
 
-VERSION=0.4
+VERSION=0.5
 
 echo "*** Building docs"
 
