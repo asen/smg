@@ -298,6 +298,15 @@ object SMGMonStateAgg {
     val rx = s"^(${oids.map(oid => SMGRemote.localId(oid)).distinct.mkString("|")})$$"
     "rx=" + java.net.URLEncoder.encode(rx, "UTF-8") // TODO, better showUrl?
   }
+
+  def aggByParentId(lst: Seq[SMGMonState]): Map[String, SMGMonState]= {
+    val ret = lst.filter(_.parentId.isDefined).groupBy(_.parentId.get).map { t =>
+      val pid = t._1
+      val msa = SMGMonStateAgg(pid, t._2, s"rx=${pid}")
+      (pid,msa)
+    }
+    ret
+  }
 }
 
 case class SMGMonStateGlobal(title: String,

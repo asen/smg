@@ -1,10 +1,10 @@
 @import com.smule.smg.SMGMonState
-@(monStates: Seq[SMGMonState])
-@SVG_WIDTH = @{ 600 }
-@CELL_HEIGHT = @{ 8 }
+@(monStates: Seq[SMGMonState], svgColsW: Option[Int])
 @CELL_WIDTH = @{ 9 }
 @CELL_PADDING = @{ 1 }
 @CELL_SPACE = @{ CELL_WIDTH + CELL_PADDING }
+@SVG_WIDTH = @{svgColsW.map{ c => (c * CELL_SPACE) + 2}.getOrElse(600) }
+@CELL_HEIGHT = @{ 8 }
 @ROW_HEIGHT = @{ CELL_HEIGHT * 3 }
 @ROW_PADDING = @{ 1 }
 @ROW_SPACE = @{ ROW_HEIGHT + ROW_PADDING }

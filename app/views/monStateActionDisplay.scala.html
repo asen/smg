@@ -1,11 +1,19 @@
 
-@(msid: String, btnTitle: String, tgt: String, curUrl: String, optParam: Option[(String,String)])
+@(msid: String, btnTitle: String, tgt: String, curUrl: Option[String], optParam: Option[(String,String)])
 
 <form style="display: inline-block;" method="GET" action="/monitor/@tgt">
   <input type="hidden" name="id" value="@{msid}">
-  <input type="hidden" name="curl" value="@{curUrl}">
+  @if(curUrl.isDefined){
+  <input type="hidden" name="curl" value="@{curUrl.get}">
   <input type="submit" value="@btnTitle">
+  } else {
+    @defining(java.util.UUID.randomUUID.toString) { formUUID =>
+    <input id="curl_@{formUUID}" type="hidden" name="curl" value="">
+    <input type="submit" value="@btnTitle" onclick='document.getElementById("curl_@{formUUID}").value = window.location.href'>
+    }
+  }
   @if(optParam.isDefined) {
-    <input type="text" name="@{optParam.get._1}" value="@{optParam.get._2}" size="10" />
+    <input type="text" name="@{optParam.get._1}" value="@{optParam.get._2}" size="6" />
   }
 </form>
+

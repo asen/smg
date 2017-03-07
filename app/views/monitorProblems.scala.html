@@ -72,7 +72,7 @@
       <span style="background-color: @ms.severityColor;">@{ms.currentStateVal}</span> <a href="@ms.showUrl">@ms.text</a>
       [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ]
 
-      @monStateActions(ms, curUrl)
+      @monStateActions(ms, Some(curUrl))
 
     </li>
     }

@@ -6,6 +6,7 @@
 @import com.smule.smg.SMGPlugin
 @import com.smule.smg.GraphOptions
 @import com.smule.smg.SMGMonState
+@import com.smule.smg.SMGMonStateAgg
 
 @(plugins: Seq[SMGPlugin], idx: Option[SMGIndex], parentIdx: Option[SMGIndex], byRemote: Seq[(String, Seq[SMGImageView])], flt: SMGFilter,
   period: String, cols: Int, rows: Int, pg: Int, maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int,
@@ -65,7 +66,7 @@
   </div>
 
   @if(showMs){
-    @monitorSvgObjects(monOverview)
+    @monitorSvgObjects(monOverview, None)
   }
 
   @if(aggOp.isEmpty){
@@ -98,8 +99,15 @@
               @displaySelectElem(g)
               }
               @if(showMs && monData.contains(g.obj.id)){
-              <div class="subtitle-div">
-                @monitorSvgObjects(monData(g.obj.id))
+              <div>
+                <div class="subtitle-div">
+                  @monitorSvgObjects(monData(g.obj.id), Some(monData(g.obj.id).size))
+                </div>
+                @if(aggOp.isEmpty){
+                <div class="subtitle-div">
+                  @monStateActions(SMGMonStateAgg.aggByParentId(monData(g.obj.id)).head._2, None)
+                </div>
+                }
               </div>
               }
             </div>
