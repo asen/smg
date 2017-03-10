@@ -1,4 +1,4 @@
-import com.smule.smg.{SMGMonSpikeThresh, SMGMonValueMovingStats, SMGRrd}
+import com.smule.smg.{SMGMonSpikeThresh, SMGMonValueMovingStats, SMGRrd, SMGState}
 import com.smule.smgplugins.spiker.SpikeCheckParams
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
@@ -85,7 +85,7 @@ class SpikerSpec extends Specification {
       if (debug) {
         println(o.serialize)
       }
-      val r = aThresh.checkAlert(o, stMaxMinutes, ltMaxMinutes)
+      val r = aThresh.checkAlert(o, stMaxMinutes, ltMaxMinutes, SMGState.numFmt)
       if (r.isDefined){
         //          println(o.serialize)
         spikes += 1
