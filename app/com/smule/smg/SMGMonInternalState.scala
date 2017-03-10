@@ -284,7 +284,10 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
 
   private def movingStats = myMovingStatsOpt.get
 
-  private def numFmt(num: Double) = SMGState.numFmt(num)
+  private def numFmt(num: Double): String = {
+    val myNum = ou.vars(vix).get("cdef").map(cdf => SMGRrd.computeCdef(cdf, num)).getOrElse(num)
+    SMGState.numFmt(myNum) + ou.vars(vix).get("mu").map(mu => s" $mu").getOrElse("")
+  }
 
   private def processCounterUpdate(ts: Int, rawVal: Double): Option[(Double,Option[String])] = {
     val tsDelta = ts - myCounterPrevTs
