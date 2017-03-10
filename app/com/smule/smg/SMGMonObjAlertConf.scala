@@ -8,9 +8,7 @@ import play.api.libs.json.{JsValue, Json}
 
 case class SMGMonAlertThresh(value: Double, op: String) {
 
-  private def numFmt(num: Double) = SMGState.numFmt(num)
-
-  def checkAlert(fetchedValue: Double):Option[String] = {
+  def checkAlert(fetchedValue: Double, numFmt: (Double) => String):Option[String] = {
     op match {
       case "gte" => if (fetchedValue >= value) Some(s"${numFmt(fetchedValue)} >= ${numFmt(value)}") else None
       case "gt"  => if (fetchedValue > value) Some(s"${numFmt(fetchedValue)} > ${numFmt(value)}") else None
@@ -45,8 +43,8 @@ case class SMGMonSpikeThresh(confStr: String) {
 
   def maxLtCnt(interval: Int) = scala.math.max( parsePeriodStr(maxLtCntStr) / interval, 2) + maxStCnt(interval)
 
-  def checkAlert(mvstats: SMGMonValueMovingStats, maxStCnt: Int, maxLtCnt: Int): Option[String] = {
-    mvstats.checkAnomaly(changeThresh, maxStCnt, maxLtCnt).map(s => s"($maxStCntStr/$maxLtCntStr) $s")
+  def checkAlert(mvstats: SMGMonValueMovingStats, maxStCnt: Int, maxLtCnt: Int, numFmt: (Double) => String): Option[String] = {
+    mvstats.checkAnomaly(changeThresh, maxStCnt, maxLtCnt, numFmt).map(s => s"($maxStCntStr/$maxLtCntStr) $s")
   }
 }
 

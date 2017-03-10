@@ -337,12 +337,12 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
         val descSx = s"( ${numFmt(warnThreshVal)} / ${numFmt(critThreshVal)} )"
 
         if (alertConf.crit.isDefined) {
-          val alertDesc = alertConf.crit.get.checkAlert(newVal)
+          val alertDesc = alertConf.crit.get.checkAlert(newVal, numFmt)
           if (alertDesc.isDefined)
             curRet = SMGState(ts, SMGState.E_VAL_CRIT, s"CRIT: ${alertDesc.get} : $descSx")
         }
         if ((curRet == null) && alertConf.warn.isDefined ) {
-          val alertDesc = alertConf.warn.get.checkAlert(newVal)
+          val alertDesc = alertConf.warn.get.checkAlert(newVal, numFmt)
           if (alertDesc.isDefined)
             curRet = SMGState(ts,SMGState.E_VAL_WARN, s"WARN: ${alertDesc.get} : $descSx")
         }
@@ -356,7 +356,7 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
           }
           // check for spikes
           if (curRet == null) {
-            val alertDesc = alertConf.spike.get.checkAlert(movingStats, stMaxCounts, ltMaxCounts)
+            val alertDesc = alertConf.spike.get.checkAlert(movingStats, stMaxCounts, ltMaxCounts, numFmt)
             if (alertDesc.isDefined)
               curRet = SMGState(ts, SMGState.E_ANOMALY, s"ANOM: ${alertDesc.get}")
           }

@@ -143,9 +143,7 @@ class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
     (maxLtCnt > maxStCnt) && // sanity check
     (maxLtStatsSize(maxStCnt, maxLtCnt) * 0.75 <= ltStats.size)  // require at least 75% of the max long term stats
 
-  private def numFmt(num: Double) = SMGState.numFmt(num)
-
-  def checkAnomaly(changeThresh: Double, maxStCnt: Int, maxLtCnt: Int): Option[String] = {
+  def checkAnomaly(changeThresh: Double, maxStCnt: Int, maxLtCnt: Int, numFmt: (Double) => String): Option[String] = {
     // sanity checks first
 
     val maxg = maxGap(maxStCnt)
