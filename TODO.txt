@@ -22,6 +22,8 @@ when same as default
 
 * add "silence all" action in dash view (?)
 
+* global silence state/button (?)
+
 == Search ==
 
 * smart (?) search
