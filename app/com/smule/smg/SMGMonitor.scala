@@ -573,10 +573,11 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     implicit val ec = ExecutionContexts.rrdGraphCtx
     if (SMGRemote.isLocalObj(id)) {
       Future {
-        processTree(id, {ms =>
-          ms.ack()
-          notifSvc.sendAcknowledgementMessages(ms)
-        })
+        val rootmsopt = allMonitorStateTreesById.get(id)
+        if (rootmsopt.isDefined){
+          notifSvc.sendAcknowledgementMessages(rootmsopt.get.node)
+          processTree(id, {ms => ms.ack() })
+        } else false
       }
     } else remotes.monitorAck(id)
   }
