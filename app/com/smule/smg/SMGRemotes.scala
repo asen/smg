@@ -151,12 +151,22 @@ trait SMGRemotesApi {
 
 
   /**
+    * XXX TODO Deprecated
     * remote call to get current problems
     * @param remoteId
     * @param flt
     * @return
     */
   def monitorProblems(remoteId: String, flt: SMGMonFilter): Future[Seq[SMGMonState]]
+
+
+  /**
+    * remote call to get current (problem) states
+    * @param remote
+    * @param flt
+    * @return
+    */
+  def monitorStates(remote: SMGRemote, flt: SMGMonFilter): Future[SMGMonitorStatesResponse]
 
   /**
     * remote call to get all currently silenced states
@@ -177,6 +187,10 @@ trait SMGRemotesApi {
   def monitorTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
   def monitorSilenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int): Future[Boolean]
+
+  def monitorMute(remoteId: String): Future[Boolean]
+
+  def monitorUnmute(remoteId: String): Future[Boolean]
 
   /**
     * remote call to acknowledge an error for given monitor state
@@ -461,6 +475,21 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
 
   }
 
+  /**
+    * remote call to get current (problem) states
+    *
+    * @param remote
+    * @param flt
+    * @return
+    */
+  override def monitorStates(remote: SMGRemote, flt: SMGMonFilter): Future[SMGMonitorStatesResponse] = {
+    if (clientForId(remote.id).nonEmpty)
+      clientForId(remote.id).get.monitorStates(flt)
+    else Future { SMGMonitorStatesResponse(remote, Seq(), isMuted = false) }
+
+  }
+
+
   override def monitorSilencedStates(remoteId: String): Future[Seq[SMGMonState]] = {
     if (clientForId(remoteId).nonEmpty)
       clientForId(remoteId).get.monitorSilencedStates()
@@ -510,4 +539,15 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     else Future { false }
   }
 
+  override def monitorMute(remoteId: String): Future[Boolean] = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monitorMute()
+    else Future { false }
+  }
+
+  override def monitorUnmute(remoteId: String): Future[Boolean] = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monitorUnmute()
+    else Future { false }
+  }
 }

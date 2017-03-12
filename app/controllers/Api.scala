@@ -20,7 +20,8 @@ class Api  @Inject() (actorSystem: ActorSystem,
                       smg: GrapherApi,
                       remotes: SMGRemotesApi,
                       configSvc: SMGConfigService,
-                      monitorApi: SMGMonitorApi
+                      monitorApi: SMGMonitorApi,
+                      notifyApi: SMGMonNotifyApi
                      )  extends Controller {
 
 
@@ -225,6 +226,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(logs))
   }
 
+  // TODO XXX deprecated
   def monitorProblems(ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String]) = Action {
     val myMs = ms.map(s => SMGState.withName(s)).getOrElse(SMGState.E_ANOMALY)
     val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(myMs),
@@ -233,6 +235,16 @@ class Api  @Inject() (actorSystem: ActorSystem,
     )
     val states = monitorApi.localStates(flt, includeInherited = false)
     Ok(Json.toJson(states))
+  }
+
+  def monitorStates(ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String]) = Action {
+    val myMs = ms.map(s => SMGState.withName(s)).getOrElse(SMGState.E_ANOMALY)
+    val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(myMs),
+      includeSoft =  soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
+      includeSilenced = slncd.getOrElse("off") == "on"
+    )
+    val states = monitorApi.localStates(flt, includeInherited = false)
+    Ok(Json.toJson(SMGMonitorStatesResponse(SMGRemote.local, states, isMuted = notifyApi.isMuted)))
   }
 
   def monitorSilencedStates()  = Action {
@@ -348,6 +360,16 @@ class Api  @Inject() (actorSystem: ActorSystem,
       else
         NotFound("state id not found")
     }
+  }
+
+  def monitorMute(): Action[AnyContent] = Action {
+    notifyApi.muteAll()
+    Ok("OK")
+  }
+
+  def monitorUnmute(): Action[AnyContent] = Action {
+    notifyApi.unmuteAll()
+    Ok("OK")
   }
 
 }

@@ -69,6 +69,10 @@ trait SMGMonNotifyApi {
 
   def tick(): Unit
 
+  def muteAll(): Unit
+  def isMuted: Boolean
+  def unmuteAll(): Unit
+
 }
 
 case class SMGMonNotifyMsgData(severity: SMGMonNotifySeverity.Value,
@@ -96,6 +100,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
   private var currentThrottleCnt = 0
   private val throttledMsgs = mutable.ListBuffer[SMGMonNotifyMsgData]()
   private var throttledIsSent = false
+  private var myIsMuted: Boolean = false
 
   private def throttleInterval = configSvc.config.globals.getOrElse("$notify-throttle-interval", "3600").toInt
   private def throttleMaxCount = configSvc.config.globals.getOrElse("$notify-throttle-count", Int.MaxValue.toString).toInt
@@ -108,18 +113,22 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
                                    alertKey:String,
                                    subj: String,
                                    body: String): Boolean = {
+    if (isMuted) {
+      log.warn(s"SMGMonNotifySvc.notify: Muted state prevents notifications for ${alertKey} with subject $subj")
+      return true
+    }
     val rets = ncmds.map { c =>
       try {
         c.alert(severity, alertKey, subj, body)
-        log.info(s"SMGMonNotifySvc.runCommands: Notified ${c.id} for $subj")
+        log.info(s"SMGMonNotifySvc.notify: notified ${c.id} for $subj")
         true
       } catch {
         case cex: SMGCmdException => {
-          log.error(s"SMGMonNotifySvc.runCommands: notification failed $c subj=$subj body=$body")
+          log.error(s"SMGMonNotifySvc.notify: notification failed $c subj=$subj body=$body")
           false
         }
         case t: Throwable => {
-          log.ex(t, s"SMGMonNotifySvc.runCommands: unexpected error: $c subj=$subj body=$body")
+          log.ex(t, s"SMGMonNotifySvc.notify: unexpected error: $c subj=$subj body=$body")
           false
         }
       }
@@ -158,6 +167,10 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
 
   private def sendThrottledMsg(addNcmds: Seq[SMGMonNotifyCmd], cnt: Int, maxCnt: Int, throttledUntil: Int): Future[Boolean] = {
     val msgSubj = s"THROTTLED $remoteSubjStr message rate ($cnt) exceeded $maxCnt msgs/$throttleInterval sec"
+    if (isMuted) {
+      log.warn(s"SMGMonNotifySvc.notify: Muted state prevents sending of throttle messages with subj: $msgSubj")
+      return Future { true }
+    }
     val msgBody = s"$msgSubj: \n\n Further notifications will be delayed " +
       s"until ${new Date(1000L * throttledUntil).toString}.\n\n" +
       s"Check ${configSvc.config.notifyBaseUrl}/monitor#${configSvc.config.notifyRemoteId.getOrElse("")}\n\n"
@@ -306,11 +319,12 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
         val jsv = Json.toJson(t._2.map(_.id))
         (ak, jsv)
         }),
-      "aalt" -> Json.toJson(activeAlertsLastTs.toMap)
+      "aalt" -> Json.toJson(activeAlertsLastTs.toMap),
+      "ismtd" -> Json.toJson(myIsMuted)
     ))
   }
 
-  def deserializeState(srcStr: String) = {
+  def deserializeState(srcStr: String): Unit = {
     try {
       //activeAlerts.clear()
       val src = Json.parse(srcStr)
@@ -324,6 +338,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
           activeAlerts(t._1) = ncmds
       }
       (src \ "aalt").as[Map[String,Int]].foreach { t => activeAlertsLastTs(t._1) = t._2}
+      myIsMuted = (src \ "ismtd").asOpt[Boolean].getOrElse(false)
     } catch {
       case t: Throwable => log.ex(t, "Unexpected exception in SMGMonNotifySvc.deserializeState")
     }
@@ -348,4 +363,10 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     cleanupMap(activeAlerts)
     cleanupMap(activeAlertsLastTs)
   }
+
+  override def muteAll(): Unit = myIsMuted = true
+
+  override def isMuted: Boolean = myIsMuted
+
+  override def unmuteAll(): Unit = myIsMuted = false
 }

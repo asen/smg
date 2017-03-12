@@ -318,6 +318,29 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     Future.sequence(futs.toList)
   }
 
+  override def states(remoteId: Option[String], flt: SMGMonFilter): Future[Seq[SMGMonitorStatesResponse]] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    val futs = ListBuffer[(Future[SMGMonitorStatesResponse])]()
+    if (remoteId.isEmpty || remoteId.get == SMGRemote.wildcard.id) {
+      futs += Future {
+        SMGMonitorStatesResponse(SMGRemote.local, localStates(flt, includeInherited = false), isMuted = notifSvc.isMuted)
+      }
+      configSvc.config.remotes.foreach { rmt =>
+        futs += remotes.monitorStates(rmt, flt)
+      }
+    } else if (remoteId.get == SMGRemote.local.id) {
+      futs += Future {
+        SMGMonitorStatesResponse(SMGRemote.local, localStates(flt, includeInherited = false), isMuted = notifSvc.isMuted)
+      }
+    } else {
+      val rmtOpt = configSvc.config.remotes.find(_.id == remoteId.get)
+      if (rmtOpt.isDefined)
+        futs += remotes.monitorStates(rmtOpt.get, flt)
+    }
+    Future.sequence(futs.toList)
+  }
+
+
   override def localSilencedStates(): Seq[SMGMonState] = {
     localStatesMatching({ ms =>
       ms.isSilenced
@@ -576,7 +599,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         val rootmsopt = allMonitorStateTreesById.get(id)
         if (rootmsopt.isDefined){
           notifSvc.sendAcknowledgementMessages(rootmsopt.get.node)
-          processTree(id, {ms => ms.ack() })
+          processTree(id, {ms => ms.ack()})
         } else false
       }
     } else remotes.monitorAck(id)
@@ -607,6 +630,36 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         processTree(id, {ms => ms.unslnc()})
       }
     } else remotes.monitorUnsilence(id)
+  }
+
+
+  private def muteUnmuteCommon(remoteId: String,
+                               localMuteUnmute: () => Unit,
+                               remoteMuteUnmite: (String) => Future[Boolean]): Future[Boolean] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+
+    def myMuteLocal() =  Future {
+      localMuteUnmute()
+      true
+    }
+
+    if (SMGRemote.wildcard.id == remoteId) {
+      val futs = Seq(myMuteLocal()) ++ configSvc.config.remotes.map(rmt => remoteMuteUnmite(rmt.id))
+      Future.sequence(futs).map(seq => true)
+    } else if (SMGRemote.local.id == remoteId) {
+      myMuteLocal()
+    } else {
+      remoteMuteUnmite(remoteId)
+    }
+
+  }
+
+  override def mute(remoteId: String): Future[Boolean] = {
+    muteUnmuteCommon(remoteId, notifSvc.muteAll, remotes.monitorMute)
+  }
+
+  override def unmute(remoteId: String): Future[Boolean] = {
+    muteUnmuteCommon(remoteId, notifSvc.unmuteAll, remotes.monitorUnmute)
   }
 
 

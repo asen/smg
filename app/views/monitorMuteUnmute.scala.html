@@ -1,0 +1,24 @@
+@import com.smule.smg.SMGRemote
+@(remoteId: String, isMuted: Boolean, curUrl: String)
+@action = {@if(isMuted){/monitor/unmute}else{/monitor/mute}}
+@submitVal = {@if(isMuted){ Unmute } else { Mute}}
+@submitValSx = {@if(remoteId != SMGRemote.wildcard.id) {} else {All }}
+@text = {
+  @if(remoteId != SMGRemote.wildcard.id) {
+  <strong>Notifications:
+    @if(isMuted){
+    <font color="red">Disabled</font>
+    } else {
+    <font color="green">Enabled</font>
+    }
+  </strong>
+  } else { }
+}
+
+<form action='@action' method="GET">
+  <input type="hidden" name="curl" value="@curUrl">
+  <input type="hidden" name="remote" value="@remoteId">
+  @text
+   <input type="submit" value='@submitVal @submitValSx'>
+</form>
+

@@ -201,6 +201,14 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       ) (SMGTree[SMGMonState](_,_) )
   }
 
+  implicit val smgMonitorStatesRemoteResponseReads: Reads[SMGMonitorStatesResponse] = {
+    (
+      (JsPath \ "remote").readNullable[String].map(x => remote) and
+      (JsPath \ "seq").read[Seq[SMGMonState]] and
+      (JsPath \ "ismtd").readNullable[Boolean].map(x => x.getOrElse(false))
+      )(SMGMonitorStatesResponse.apply _)
+  }
+
 
   /**
     * Asynchronous call to /api/config to retrieve the configuration of the remote instance
@@ -533,6 +541,31 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
+  def monitorStates(flt: SMGMonFilter): Future[SMGMonitorStatesResponse] = {
+    val params = s"?" + flt.asUrlParams
+    lazy val errRet = SMGMonitorStatesResponse( remote,
+      Seq(SMGMonStateGlobal("Remote data unavailable", remote.id,
+      SMGState(SMGState.tssNow, SMGState.E_SMGERR, "data unavailable"))), isMuted = false)
+
+    ws.url(remote.url + API_PREFIX + "monitor/states" + params).
+      withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
+      Try {
+        Json.parse(resp.body).as[SMGMonitorStatesResponse]
+      }.recover {
+        case x => {
+          log.ex(x, "remote monitor/problems parse error: " + remote.id)
+          errRet
+        }
+      }.get
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/problems fetch error: " + remote.id)
+        errRet
+      }
+    }
+  }
+
+
   def monitorSilencedStates(): Future[Seq[SMGMonState]] = {
     lazy val errRet = Seq(SMGMonStateGlobal("Remote data unavailable", remote.id,
       SMGState((System.currentTimeMillis() / 1000).toInt, SMGState.E_SMGERR, "data unavailable")))
@@ -644,6 +677,30 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }.recover {
       case x => {
         log.ex(x, "remote monitor/unslnc error: " + remote.id)
+        false
+      }
+    }
+  }
+
+  def monitorMute(): Future[Boolean] = {
+    ws.url(remote.url + API_PREFIX + "monitor/mute" ).
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
+      resp.status == 200
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/mute error: " + remote.id)
+        false
+      }
+    }
+  }
+
+  def monitorUnmute(): Future[Boolean] = {
+    ws.url(remote.url + API_PREFIX + "monitor/unmute" ).
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
+      resp.status == 200
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/unmute error: " + remote.id)
         false
       }
     }
@@ -882,5 +939,16 @@ object SMGRemoteClient {
     )
   }
 
+  implicit val smgMonitorStatesRemoteResponseReads: Writes[SMGMonitorStatesResponse]  = new Writes[SMGMonitorStatesResponse] {
+    def writes(msr: SMGMonitorStatesResponse) = {
+     //  case class SMGMonHeatmap(lst: List[SMGMonState], statesPerSquare: Int)
+     Json.obj(
+       "remote" -> "",
+       "seq" -> msr.states,
+       "ismtd" -> msr.isMuted
+     )
+    }
+  }
+  
 }
 

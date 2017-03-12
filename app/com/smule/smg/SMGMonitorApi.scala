@@ -401,6 +401,8 @@ object SMGMonFilter {
 
 }
 
+case class SMGMonitorStatesResponse(remote: SMGRemote, states: Seq[SMGMonState], isMuted: Boolean)
+
 trait SMGMonitorApi {
 
   /**
@@ -419,12 +421,25 @@ trait SMGMonitorApi {
   def localStates(flt: SMGMonFilter, includeInherited: Boolean): Seq[SMGMonState]
 
   /**
+    * TODO XXX deprecated
     * Get all states matching given filter, by remote
     * @param remoteId - when not specified - return matching states from all remotes
     * @param flt
     * @return
     */
   def problems(remoteId: Option[String], flt: SMGMonFilter): Future[Seq[(SMGRemote, Seq[SMGMonState])]]
+
+  /**
+    * Get all states matching given filter, by remote
+    * @param remoteId - when not specified - return matching states from all remotes
+    * @param flt
+    * @return
+    */
+  def states(remoteId: Option[String], flt: SMGMonFilter): Future[Seq[SMGMonitorStatesResponse]]
+
+  def mute(remoteId: String): Future[Boolean]
+
+  def unmute(remoteId: String): Future[Boolean]
 
   /**
     * Return all local silenced states

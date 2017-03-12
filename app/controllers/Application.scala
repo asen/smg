@@ -524,9 +524,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(minSev),
       includeSoft = inclSoft, includeAcked = inclAck, includeSilenced = inclSlnc)
     val availStates = (SMGState.values - SMGState.OK).toSeq.sorted.map(_.toString)
-    monitorApi.problems(rmtOpt, flt).map { seq =>
+    monitorApi.states(rmtOpt, flt).map { msr =>
       Ok(views.html.monitorProblems(configSvc.plugins, availRemotes, availStates, rmtOpt,
-        seq, flt, request.uri))
+        msr, flt, request.uri))
     }
 
   }
@@ -634,6 +634,24 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   def monitorUnsilence(id: String, curl: String) = Action.async {
     monitorApi.unsilence(id).map { ret =>
+      if (ret)
+        Redirect(curl)
+      else
+        NotFound("Some error occured")
+    }
+  }
+
+  def monitorMute(remote: String, curl: String) = Action.async {
+    monitorApi.mute(remote).map { ret =>
+      if (ret)
+        Redirect(curl)
+      else
+        NotFound("Some error occured")
+    }
+  }
+
+  def monitorUnmute(remote: String, curl: String) = Action.async {
+    monitorApi.unmute(remote).map { ret =>
       if (ret)
         Redirect(curl)
       else
