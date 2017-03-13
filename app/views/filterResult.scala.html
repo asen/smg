@@ -67,6 +67,7 @@
 
   @if(showMs){
     @monitorSvgObjects(monOverview, None)
+    @monStateListActions(monData.values.toSeq.flatten)
   }
 
   @if(aggOp.isEmpty){

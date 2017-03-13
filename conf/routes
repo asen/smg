@@ -31,6 +31,9 @@ GET    /monitor/unack        controllers.Application.monitorUnack(id: String, cu
 GET    /monitor/slnc         controllers.Application.monitorSilence(id: String, slunt: String, curl: String)
 GET    /monitor/unslnc       controllers.Application.monitorUnsilence(id: String, curl: String)
 
+POST   /monitor/ackList       controllers.Application.monitorAckList()
+POST   /monitor/slncList      controllers.Application.monitorSilenceList()
+
 GET    /monitor/mute         controllers.Application.monitorMute(remote: String, curl: String)
 GET    /monitor/unmute       controllers.Application.monitorUnmute(remote: String, curl: String)
 
@@ -72,6 +75,8 @@ GET     /api/monitor/ack        controllers.Api.monitorAck(id: String)
 GET     /api/monitor/unack      controllers.Api.monitorUnack(id: String)
 GET     /api/monitor/slnc       controllers.Api.monitorSilence(id: String, slunt: Int)
 GET     /api/monitor/unslnc     controllers.Api.monitorUnsilence(id: String)
+POST    /api/monitor/ackList    controllers.Api.monitorAckList()
+POST    /api/monitor/slncList   controllers.Api.monitorSilenceList()
 
 GET     /api/monitor/mute       controllers.Api.monitorMute()
 GET     /api/monitor/unmute     controllers.Api.monitorUnmute()

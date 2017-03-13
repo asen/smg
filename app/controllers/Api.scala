@@ -362,6 +362,25 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def monitorAckList: Action[AnyContent] = Action { request =>
+    val params = request.body.asFormUrlEncoded.get
+    val ids = params("ids").head.split(",")
+    if (monitorApi.acknowledgeListLocal(ids))
+      Ok("OK")
+    else
+      NotFound("silenceListLocal returned false")
+  }
+
+  def monitorSilenceList: Action[AnyContent] = Action { request =>
+    val params = request.body.asFormUrlEncoded.get
+    val ids = params("ids").head.split(",")
+    val slunt = params("slunt").head.toInt
+    if (monitorApi.silenceListLocal(ids, slunt))
+      Ok("OK")
+    else
+      NotFound("silenceListLocal returned false")
+  }
+
   def monitorMute(): Action[AnyContent] = Action {
     notifyApi.muteAll()
     Ok("OK")

@@ -1,0 +1,27 @@
+@import com.smule.smg.SMGMonState
+@(mss: Seq[SMGMonState])
+
+@if(!mss.isEmpty){
+<div>
+  @if(mss.exists{ms => !ms.isOk && !ms.isAcked}){
+  <form style="float: left;" method="POST" action="/monitor/ackList">
+    <input type="hidden" name="ids" value="@{mss.filter{ms => !ms.isOk  && !ms.isAcked}.map(ms => ms.id).mkString(",")}">
+    <input type="hidden" id="curlAckList" name="curl" value="">
+    <input type="submit"
+           value="Acknowledge all problems on page"
+           onclick='document.getElementById("curlAckList").value = window.location.href'
+    >
+  </form>
+  }
+
+  <form style="float: none;" method="POST" action="/monitor/slncList">
+    <input type="hidden" name="ids" value="@{mss.map(ms => ms.id).mkString(",")}">
+    <input type="hidden" id="curlSlcList" name="curl" value="">
+    <input type="submit"
+           value="Silence all objects on page for"
+           onclick='document.getElementById("curlSlcList").value = window.location.href'
+    >
+    <input type="text" name="slunt" value="2h" size="6" />
+  </form>
+</div>
+}

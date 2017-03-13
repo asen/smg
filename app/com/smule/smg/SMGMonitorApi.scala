@@ -506,6 +506,37 @@ trait SMGMonitorApi {
   def unsilence(id: String): Future[Boolean]
 
   /**
+    * Acknowledge an error for given monitor states. Acknowledgement is automatically cleared on recovery.
+    * @param ids
+    * @return
+    */
+  def acknowledgeList(ids: Seq[String]): Future[Boolean]
+
+  /**
+    * Silence given states for given time period
+    * @param ids
+    * @param slunt
+    * @return
+    */
+  def silenceList(ids: Seq[String], slunt: Int): Future[Boolean]
+
+  /**
+    * Acknowledge an error for given monitor states. Acknowledgement is automatically cleared on recovery.
+    * @param ids
+    * @return
+    */
+  def acknowledgeListLocal(ids: Seq[String]): Boolean
+
+  /**
+    * Silence given states for given time period
+    * @param ids
+    * @param slunt
+    * @return
+    */
+  def silenceListLocal(ids: Seq[String], slunt: Int): Boolean
+
+
+  /**
     * Generate a heatmap from local for the system objects. A heatmap is (possibly condensed) list of SMGMonState squares.
     * @param flt - filter to use to get objects
     * @param maxSize - limit the heatmap to that many squares (note max width is enforced separately).

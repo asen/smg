@@ -220,6 +220,22 @@ trait SMGRemotesApi {
     * @return
     */
   def monitorUnsilence(id: String): Future[Boolean]
+
+  /**
+    * Acknowledge an error for given monitor states. Acknowledgement is automatically cleared on recovery.
+    * @param ids
+    * @return
+    */
+  def acknowledgeList(remoteId: String, ids: Seq[String]): Future[Boolean]
+
+  /**
+    * Silence given states for given time period
+    * @param ids
+    * @param slunt
+    * @return
+    */
+  def silenceList(remoteId: String, ids: Seq[String], slunt: Int): Future[Boolean]
+
 }
 
 
@@ -548,6 +564,31 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
   override def monitorUnmute(remoteId: String): Future[Boolean] = {
     if (clientForId(remoteId).nonEmpty)
       clientForId(remoteId).get.monitorUnmute()
+    else Future { false }
+  }
+
+  /**
+    * Acknowledge an error for given monitor states. Acknowledgement is automatically cleared on recovery.
+    *
+    * @param ids
+    * @return
+    */
+  override def acknowledgeList(remoteId: String, ids: Seq[String]): Future[Boolean] = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.acknowledgeList(ids)
+    else Future { false }
+  }
+
+  /**
+    * Silence given states for given time period
+    *
+    * @param ids
+    * @param slunt
+    * @return
+    */
+  override def silenceList(remoteId: String, ids: Seq[String], slunt: Int): Future[Boolean] = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.silenceList(ids, slunt)
     else Future { false }
   }
 }

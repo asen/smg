@@ -682,6 +682,48 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
+  /**
+    * Acknowledge an error for given monitor states. Acknowledgement is automatically cleared on recovery.
+    *
+    * @param ids
+    * @return
+    */
+  def acknowledgeList(ids: Seq[String]): Future[Boolean] = {
+    val sids: String = ids.map(id => toLocalId(id)).mkString(",")
+    val postMap = Map("ids" -> Seq(sids))
+    ws.url(remote.url + API_PREFIX + "monitor/ackList").
+      withRequestTimeout(shortTimeoutMs).post(postMap).map { resp =>
+      resp.status == 200
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/ackList error: " + remote.id)
+        false
+      }
+    }
+  }
+
+  /**
+    * Silence given states for given time period
+    *
+    * @param ids
+    * @param slunt
+    * @return
+    */
+  def silenceList(ids: Seq[String], slunt: Int): Future[Boolean] = {
+    val sids: String = ids.map(id => toLocalId(id)).mkString(",")
+    val postMap = Map("ids" -> Seq(sids), "slunt" -> Seq(slunt.toString))
+    ws.url(remote.url + API_PREFIX + "monitor/slncList").
+      withRequestTimeout(shortTimeoutMs).post(postMap).map { resp =>
+      resp.status == 200
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/slncList error: " + remote.id)
+        false
+      }
+    }
+  }
+
+
   def monitorMute(): Future[Boolean] = {
     ws.url(remote.url + API_PREFIX + "monitor/mute" ).
       withRequestTimeout(shortTimeoutMs).get().map { resp =>

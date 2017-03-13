@@ -641,6 +641,27 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def monitorAckList() = Action.async { request =>
+    val params = request.body.asFormUrlEncoded.get
+    val ids = params("ids").head.split(",")
+    val curl = params("curl").head
+    monitorApi.acknowledgeList(ids).map { ret =>
+      Redirect(curl)
+    }
+  }
+
+  def monitorSilenceList() = Action.async { request =>
+    val params = request.body.asFormUrlEncoded.get
+    val ids = params("ids").head.split(",")
+    val curl = params("curl").head
+    val slunt = params("slunt").head
+    val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
+    monitorApi.silenceList(ids, untilTss).map { ret =>
+      Redirect(curl)
+    }
+  }
+
+
   def monitorMute(remote: String, curl: String) = Action.async {
     monitorApi.mute(remote).map { ret =>
       if (ret)

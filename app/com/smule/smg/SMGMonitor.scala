@@ -633,6 +633,121 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
 
+  private def groupByNonInheritedParent(ids: Seq[String]): Seq[SMGMonInternalState] = {
+    val mss = ids.map(id => allMonitorStatesById.get(id)).collect { case Some(ms) => ms }
+    // try to group states by top-most failing state
+    mss.map { ms =>
+      var curPar: Option[SMGMonInternalState] = Some(ms)
+      while (curPar.isDefined && curPar.get.isInherited && curPar.get.parentId.isDefined) {
+        curPar = allMonitorStatesById.get(curPar.get.parentId.get)
+      }
+      curPar.getOrElse(ms)
+    }.distinct
+  }
+
+  /**
+    * Acknowledge an error for given monitor states. Acknowledgement is automatically cleared on recovery.
+    *
+    * @param ids
+    * @return
+    */
+  override def acknowledgeListLocal(ids: Seq[String]): Boolean = {
+    val parentMss = groupByNonInheritedParent(ids)
+    parentMss.foreach { pms =>
+      val rootmsopt = allMonitorStateTreesById.get(pms.id)
+      if (rootmsopt.isDefined){
+        if (!rootmsopt.get.node.isAcked)
+          notifSvc.sendAcknowledgementMessages(rootmsopt.get.node)
+        processTree(pms.id, {ms => ms.ack()})
+      }
+    }
+    true
+  }
+
+  private def groupByCommonParents(ids: Seq[String]): Seq[SMGMonInternalState] = {
+    var mss = ids.map(id => allMonitorStatesById.get(id)).collect { case Some(ms) => ms }
+    // group states which represent common parent and replace them with parent
+    var searchMore = true
+    while (searchMore) {
+      searchMore = false
+      mss = mss.groupBy(_.parentId).flatMap { t =>
+        val pid = t._1
+        val seq = t._2
+        if (pid.isEmpty)
+          seq
+        else {
+          val tn = allMonitorStateTreesById.get(pid.get)
+          if (tn.isEmpty)
+            seq
+          else {
+            val childIds = tn.get.children.map(_.node.id).sorted.mkString(",")
+            val sortedIds = seq.map(_.id).sorted.mkString(",")
+            if (childIds != sortedIds)
+              seq
+            else {
+              searchMore = true
+              Seq(tn.get.node)
+            }
+          }
+        }
+      }.toSeq
+    }
+    mss.distinct
+  }
+
+  /**
+    * Silence given states for given time period
+    *
+    * @param ids
+    * @param slunt
+    * @return
+    */
+  override def silenceListLocal(ids: Seq[String], slunt: Int): Boolean = {
+    val mss = groupByCommonParents(ids)
+    mss.foreach { pms =>
+      processTree(pms.id, {ms => ms.slnc(slunt)})
+    }
+    true
+  }
+
+  /**
+    * Acknowledge an error for given monitor states. Acknowledgement is automatically cleared on recovery.
+    *
+    * @param ids
+    * @return
+    */
+  override def acknowledgeList(ids: Seq[String]): Future[Boolean] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    val futs = ids.groupBy(id => SMGRemote.remoteId(id)).map { t =>
+      val rmtId = t._1
+      val rmtIds = t._2
+      if (SMGRemote.local.id == rmtId) {
+        Future { acknowledgeListLocal(rmtIds) }
+      } else remotes.acknowledgeList(rmtId, rmtIds)
+    }
+    Future.sequence(futs).map(bools => true)
+  }
+
+  /**
+    * Silence given states for given time period
+    *
+    * @param ids
+    * @param slunt
+    * @return
+    */
+  override def silenceList(ids: Seq[String], slunt: Int): Future[Boolean] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    val futs = ids.groupBy(id => SMGRemote.remoteId(id)).map { t =>
+      val rmtId = t._1
+      val rmtIds = t._2
+      if (SMGRemote.local.id == rmtId) {
+        Future { silenceListLocal(rmtIds, slunt) }
+      } else remotes.silenceList(rmtId, rmtIds, slunt)
+    }
+    Future.sequence(futs).map(bools => true)
+  }
+
+
   private def muteUnmuteCommon(remoteId: String,
                                localMuteUnmute: () => Unit,
                                remoteMuteUnmite: (String) => Future[Boolean]): Future[Boolean] = {

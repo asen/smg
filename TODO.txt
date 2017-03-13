@@ -20,9 +20,7 @@ when same as default
 
 == Monitor ==
 
-* add "silence all" action in dash view (?)
-
-* global silence state/button (?)
+* better way to silence hosts before issues (scheduling downtime).
 
 == Search ==
 
