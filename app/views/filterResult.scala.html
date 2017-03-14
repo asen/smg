@@ -11,7 +11,7 @@
 @(plugins: Seq[SMGPlugin], idx: Option[SMGIndex], parentIdx: Option[SMGIndex], byRemote: Seq[(String, Seq[SMGImageView])], flt: SMGFilter,
   period: String, cols: Int, rows: Int, pg: Int, maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int,
   availRemotes: Seq[SMGRemote], aggOp: Option[String], xagg: Boolean, cwidth: Int, gopts: GraphOptions,
-  showMs:Boolean, monData: Map[String, Seq[SMGMonState]], monOverview: Seq[SMGMonState])
+  showMs:Boolean, monData: Map[String, Seq[SMGMonState]], monOverview: Seq[SMGMonState])(implicit flash: Flash)
 
 @main("SMG - " + (if (idx.isDefined) idx.get.title else flt.humanText), plugins) {
 

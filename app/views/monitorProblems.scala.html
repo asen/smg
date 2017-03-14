@@ -5,7 +5,8 @@
 @import com.smule.smg.SMGMonFilter
 @import com.smule.smg.SMGMonitorStatesResponse
 
-@(plugins: Seq[SMGPlugin], availRemotes:Seq[String], availStates:Seq[String], rmtId: Option[String], monitorStates: Seq[SMGMonitorStatesResponse], flt:SMGMonFilter, curUrl: String)
+@(plugins: Seq[SMGPlugin], availRemotes:Seq[String], availStates:Seq[String], rmtId: Option[String],
+  monitorStates: Seq[SMGMonitorStatesResponse], flt:SMGMonFilter, curUrl: String)(implicit flash: Flash)
 
 @main("SMG - Monitor overview", plugins, 60) {
 

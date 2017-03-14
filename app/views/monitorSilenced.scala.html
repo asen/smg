@@ -4,7 +4,7 @@
 @import com.smule.smg.SMGState
 @import com.smule.smg.SMGMonFilter
 
-@(plugins: Seq[SMGPlugin], monitorStates: Seq[(SMGRemote, Seq[SMGMonState])], curUrl: String)
+@(plugins: Seq[SMGPlugin], monitorStates: Seq[(SMGRemote, Seq[SMGMonState])], curUrl: String)(implicit flash: Flash)
 
 @main("SMG - Monitor silenced states", plugins, 60) {
 

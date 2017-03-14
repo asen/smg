@@ -37,7 +37,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   val MAX_INDEX_LEVELS = 5
 
 
-  private def parseRemoteParam(remote: String): Tuple2[List[String],Option[String]] = {
+  private def parseRemoteParam(remote: String): (List[String], Option[String]) = {
     val remoteIds = SMGRemote.local.id :: configSvc.config.remotes.map(_.id).toList
     val rmtOpt = remote match {
       case "*" => None
@@ -50,7 +50,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   /**
     * List all topl-level configured indexes
     */
-  def index(remote :String, lvls: Option[Int]) = Action { request =>
+  def index(remote :String, lvls: Option[Int]): Action[AnyContent] = Action { implicit request =>
     val (availRemotes, rmtOpt) = parseRemoteParam(remote)
     val tlIndexesByRemote = smg.getTopLevelIndexesByRemote(rmtOpt)
     val myLevels = lvls.getOrElse(configSvc.config.indexTreeLevels)
@@ -64,7 +64,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   /**
     * List all automatically discovered indexes in a tree-like display
     */
-  def autoindex(root: String, expandLevels: Int) = Action {
+  def autoindex(root: String, expandLevels: Int): Action[AnyContent] = Action { implicit request =>
     val topLevel = smg.getAutoIndex
     val dispIx = topLevel.findChildIdx(root)
     if (dispIx.isEmpty) {
@@ -154,7 +154,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
                  dpp: String,
                  d95p: String,
                  maxy: Option[String]
-               ) = Action.async { request =>
+               ): Action[AnyContent] = Action.async { implicit request =>
     // TODO replace the long param list above with SMGFilter.fromParams(request.queryString)
     val showMs = msEnabled(request)
     val idx = if (ix.nonEmpty) {
@@ -242,7 +242,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
     // We need both the (future) images and monitor states resolved before responding
     Future.sequence(Seq(futImages, futMonitorStates)).map { mySeq =>
-      val lst = mySeq(0).asInstanceOf[List[SMGImageView]]
+      val lst = mySeq.head.asInstanceOf[List[SMGImageView]]
       val monStatesByImgView = mySeq(1).asInstanceOf[Map[String,Seq[SMGMonState]]]
       //preserve order
       val monOverview = lst.flatMap(iv => monStatesByImgView.getOrElse(iv.obj.id, List()))
@@ -266,7 +266,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param cols - number fo columns to display graphs in
     * @return
     */
-  def show(oid:String, cols: Int, dpp: String, d95p: String, maxy: Option[String]) = Action.async { request =>
+  def show(oid:String, cols: Int, dpp: String, d95p: String,
+           maxy: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val showMs = msEnabled(request)
     val gopts = GraphOptions(step = None, pl = None, xsort = None,
       disablePop = dpp == "on", disable95pRule = d95p == "on", maxY = optStr2OptDouble(maxy))
@@ -294,7 +295,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param cols - number fo columns to display graphs in
     * @return
     */
-  def showAgg(ids:String, op:String, title:Option[String], cols: Int, dpp: String, d95p: String, maxy: Option[String]) = Action.async { request =>
+  def showAgg(ids:String, op:String, title:Option[String], cols: Int, dpp: String, d95p: String,
+              maxy: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val showMs = msEnabled(request)
     val gopts = GraphOptions(step = None, pl = None, xsort = None,
       disablePop = dpp == "on", disable95pRule = d95p == "on", maxY = optStr2OptDouble(maxy))
@@ -309,7 +311,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val mfut = if (showMs) monitorApi.objectViewStates(objList) else Future { Map() }
       val ixes = smg.objectIndexes(aobj)
       Future.sequence(Seq(gfut,mfut)).map { t =>
-        val lst = t(0).asInstanceOf[Seq[SMGImageView]]
+        val lst = t.head.asInstanceOf[Seq[SMGImageView]]
         val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonState]]].flatMap(_._2).toList
         Ok(views.html.show(configSvc.plugins, aobj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms, ixes))
       }
@@ -327,7 +329,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param d
     * @return
     */
-  def fetch(oid: String, r:Option[Int], s: Option[String], e: Option[String], d:Boolean) = Action.async {
+  def fetch(oid: String, r:Option[Int], s: Option[String], e: Option[String],
+            d:Boolean): Action[AnyContent] = Action.async {
     val obj = smg.getObjectView(oid)
     if (obj.isEmpty) Future { Ok("Object Id Not Found") }
     else {
@@ -349,7 +352,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param d - download or inline display
     * @return
     */
-  def fetchAgg(ids:String, op:String, r:Option[Int], s: Option[String], e: Option[String], d:Boolean) = Action.async {
+  def fetchAgg(ids:String, op:String, r:Option[Int], s: Option[String], e: Option[String],
+               d:Boolean): Action[AnyContent] = Action.async {
     val idLst = ids.split(',')
     val objList = idLst.filter( id => smg.getObjectView(id).nonEmpty ).map(id => smg.getObjectView(id).get)
     if (objList.isEmpty)
@@ -363,7 +367,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def fetchCommon(ov: SMGObjectView, d: Boolean, ret: Seq[SMGRrdRow]): Result = {
+  private def fetchCommon(ov: SMGObjectView, d: Boolean, ret: Seq[SMGRrdRow]): Result = {
     val httpHdrs = mutable.Map[String,String]()
     val hdr = if (ret.isEmpty) "Object Data Not Found\n" else {
       if (d){
@@ -405,7 +409,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param interval - interval for which to run the update job
     * @return
     */
-  def runJob(interval: Int) = Action {
+  def runJob(interval: Int): Action[AnyContent] = Action {
     smg.run(interval)
     Ok("OK")
   }
@@ -415,7 +419,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     *
     * @return
     */
-  def reloadConf = Action {
+  def reloadConf: Action[AnyContent] = Action {
     configSvc.reload()
     remotes.notifyMasters()
     if (configSvc.config.reloadSlaveRemotes) {
@@ -425,7 +429,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     Ok("OK")
   }
 
-  def pluginIndex(pluginId: String) = Action { request =>
+  def pluginIndex(pluginId: String): Action[AnyContent] = Action { implicit request =>
     val httpParams = request.queryString.map { case (k,v) => k -> v.mkString }
     configSvc.plugins.find( p => p.pluginId == pluginId) match {
       case Some(plugin) => {
@@ -435,7 +439,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def userSettings() = Action { request =>
+  def userSettings(): Action[AnyContent] = Action { implicit request =>
     var cookiesToSet = Seq[Cookie]()
     var cookiesToDiscard = Seq[DiscardingCookie]()
     var showMs = msEnabled(request)
@@ -453,7 +457,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     Ok(views.html.userSettings(configSvc.plugins, msg, showMs)).withCookies(cookiesToSet:_*).discardingCookies(cookiesToDiscard:_*)
   }
 
-  def inspect(id: String) = Action {
+  def inspect(id: String): Action[AnyContent] = Action {
     if (SMGRemote.isRemoteObj(id)) {
       // XXX fow now just redirect to the remore url
       val rid = SMGRemote.remoteId(id)
@@ -481,7 +485,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   val DEFAULT_SEARCH_RESULTS_LIMIT = 500
 
-  def search(q: Option[String], lmt: Option[Int]): Action[AnyContent] = Action.async {
+  def search(q: Option[String], lmt: Option[Int]): Action[AnyContent] = Action.async { implicit request =>
     val maxRes = lmt.getOrElse(DEFAULT_SEARCH_RESULTS_LIMIT)
     smg.search(q.getOrElse(""), maxRes + 1).map { sres =>
       Ok(views.html.search(q = q.getOrElse(""),
@@ -495,7 +499,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   val DEFAULT_INDEX_HEATMAP_MAX_SIZE = 300
 
-  def monitorIndexSvg(ixid: String) = Action.async {
+  def monitorIndexSvg(ixid: String): Action[AnyContent] = Action.async {
     val ixObj = smg.getIndexById(ixid)
     if (ixObj.isEmpty)
       Future {  Ok(views.html.monitorSvgNotFound()).as("image/svg+xml") }
@@ -515,7 +519,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
                       ms: Option[String],
                       soft: Option[String],
                       ackd: Option[String],
-                      slncd: Option[String]) = Action.async { request =>
+                      slncd: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val (availRemotes, rmtOpt) = parseRemoteParam(remote)
     val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_ANOMALY)
     val inclSoft = soft.getOrElse("off") == "on"
@@ -531,7 +535,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   }
 
-  def monitorSilenced() = Action.async { request =>
+  def monitorSilenced(): Action[AnyContent] = Action.async { implicit request =>
     monitorApi.silencedStates().map { seq =>
       Ok(views.html.monitorSilenced(configSvc.plugins, seq, request.uri))
     }
@@ -540,7 +544,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   val DEFAULT_HEATMAP_MAX_SIZE = 1800
 
-  def monitorHeatmap = Action.async { request =>
+  def monitorHeatmap: Action[AnyContent] = Action.async { implicit request =>
     val params = request.queryString
     val flt = SMGFilter.matchAll //SMGFilter.fromParams(params)
     monitorApi.heatmap(flt,
@@ -555,8 +559,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
   val DEFAULT_LOGS_SINCE = "24h"
   val DEFAULT_LOGS_LIMIT = 200
 
-  def monitorLog(remote: String, p: Option[String], l: Option[Int], ms: Option[String],
-                 soft: Option[String], ackd: Option[String], slncd: Option[String]) = Action.async {
+  def monitorLog(remote: String, p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String],
+                 ackd: Option[String], slncd: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val (availRemotes, rmtOpt) = parseRemoteParam(remote)
     val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_VAL_WARN)
     val period = p.getOrElse(DEFAULT_LOGS_SINCE)
@@ -586,7 +590,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
                    lmt: Option[Int],
                    silenceAllUntil: Option[String],
                    curl: Option[String]
-                  ) = Action.async { request =>
+                  ): Action[AnyContent] = Action.async { implicit request =>
     val conf = configSvc.config
     val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.withName(s)),
       includeSoft = hsoft == "off", includeAcked = hackd == "off",
@@ -613,91 +617,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorAck(id: String, curl: String) = Action.async {
-    monitorApi.acknowledge(id).map { ret =>
-      Redirect(curl)
-    }
-  }
-
-  def monitorUnack(id: String, curl: String) = Action.async {
-    monitorApi.unacknowledge(id).map { ret =>
-      Redirect(curl)
-    }
-  }
-
-  def monitorSilence(id: String, slunt: String, curl: String) = Action.async {
-    val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
-    monitorApi.silence(id, untilTss).map { ret =>
-      Redirect(curl)
-    }
-  }
-
-  def monitorUnsilence(id: String, curl: String) = Action.async {
-    monitorApi.unsilence(id).map { ret =>
-      if (ret)
-        Redirect(curl)
-      else
-        NotFound("Some error occured")
-    }
-  }
-
-  def monitorAckList() = Action.async { request =>
-    val params = request.body.asFormUrlEncoded.get
-    val ids = params("ids").head.split(",")
-    val curl = params("curl").head
-    monitorApi.acknowledgeList(ids).map { ret =>
-      Redirect(curl)
-    }
-  }
-
-  def monitorSilenceList() = Action.async { request =>
-    val params = request.body.asFormUrlEncoded.get
-    val ids = params("ids").head.split(",")
-    val curl = params("curl").head
-    val slunt = params("slunt").head
-    val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
-    monitorApi.silenceList(ids, untilTss).map { ret =>
-      Redirect(curl)
-    }
-  }
-
-  def monitorSilenceIdx(ix: String, slunt: String, curl: String) = Action.async {
-    val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
-    val idx = smg.getIndexById(ix)
-    if (idx.isDefined) {
-      val objs = smg.getFilteredObjects(idx.get.flt)
-      monitorApi.silenceList(objs.map(_.id), untilTss).map { b =>
-        if (b)
-          Redirect(curl)
-        else
-          NotFound(s"Some error occured with index $ix")
-      }
-    } else {
-      Future { NotFound(s"Index $ix not found") }
-    }
-
-  }
-
-
-  def monitorMute(remote: String, curl: String) = Action.async {
-    monitorApi.mute(remote).map { ret =>
-      if (ret)
-        Redirect(curl)
-      else
-        NotFound("Some error occured")
-    }
-  }
-
-  def monitorUnmute(remote: String, curl: String) = Action.async {
-    monitorApi.unmute(remote).map { ret =>
-      if (ret)
-        Redirect(curl)
-      else
-        NotFound("Some error occured")
-    }
-  }
-
-  def monitorRunTree(remote: String, root: Option[String], lvls: Option[Int]) = Action.async { request =>
+  def monitorRunTree(remote: String, root: Option[String],
+                     lvls: Option[Int]): Action[AnyContent] = Action.async { implicit request =>
     val conf = configSvc.config
     val rootStr = root.getOrElse("")
     val treesMapFut = if (remote == "") {
@@ -719,7 +640,136 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def proxy(remote: String, path: String) = Action.async {
+  def monitorAck(id: String, curl: String): Action[AnyContent] = Action.async {
+    monitorApi.acknowledge(id).map { ret =>
+      Redirect(curl).flashing( if (ret) {
+        "success" -> s"Acknowledged $id"
+      } else {
+        "error" -> s"Some unexpected error occured while acknowledging $id"
+      })
+    }
+  }
+
+  def monitorUnack(id: String, curl: String): Action[AnyContent] = Action.async {
+    monitorApi.unacknowledge(id).map { ret =>
+      Redirect(curl).flashing( if (ret) {
+        "success" -> s"Removed acknowledgement for $id"
+      } else {
+        "error" -> s"Some unexpected error occured while removing acknowledgement for $id"
+      })
+    }
+  }
+
+  def monitorSilence(id: String, slunt: String, curl: String): Action[AnyContent] = Action.async {
+    val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
+    monitorApi.silence(id, untilTss).map { ret =>
+      Redirect(curl).flashing( if (ret) {
+        "success" -> s"Silenced $id until ${SMGState.formatTss(untilTss)}"
+      } else {
+        "error" -> s"Some unexpected error occured while silencing $id"
+      })
+    }
+  }
+
+  def monitorUnsilence(id: String, curl: String): Action[AnyContent] = Action.async {
+    monitorApi.unsilence(id).map { ret =>
+      Redirect(curl).flashing( if (ret) {
+        "success" -> s"Unsilenced $id"
+      } else {
+        "error" -> s"Some unexpected error occured while unsilencing $id"
+      })
+    }
+  }
+
+  def monitorAckList(): Action[AnyContent] = Action.async { request =>
+    val params = request.body.asFormUrlEncoded.get
+    val ids = params("ids").head.split(",")
+    val curl = params("curl").head
+    monitorApi.acknowledgeList(ids).map { ret =>
+      Redirect(curl).flashing( if (ret) {
+        "success" -> s"Acknowledged ${ids.length} objects"
+      } else {
+        "error" -> s"Some unexpected error occured while acknowledging ${ids.length} objects"
+      })
+    }
+  }
+
+  def monitorSilenceList(): Action[AnyContent] = Action.async { request =>
+    val params = request.body.asFormUrlEncoded.get
+    val ids = params("ids").head.split(",")
+    val curl = params("curl").head
+    val slunt = params("slunt").head
+    val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
+    monitorApi.silenceList(ids, untilTss).map { ret =>
+      Redirect(curl).flashing( if (ret) {
+        "success" -> s"Silenced ${ids.length} objects until ${SMGState.formatTss(untilTss)}"
+      } else {
+        "error" -> s"Some unexpected error occured while silencing ${ids.length} objects"
+      })
+    }
+  }
+
+  def monitorSilenceIdx(ix: String, slunt: String, curl: String): Action[AnyContent] = Action.async { request =>
+    val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
+    val idx = smg.getIndexById(ix)
+    if (idx.isDefined) {
+      val objs = smg.getFilteredObjects(idx.get.flt)
+      monitorApi.silenceList(objs.map(_.id), untilTss).map { ret =>
+        Redirect(curl).flashing( if (ret) {
+          "success" -> s"Silenced all objects matching index: ${idx.get.title} (${idx.get.id})"
+        } else {
+          "error" -> s"Some unexpected error occured while silencing objects matching index: ${idx.get.title} (${idx.get.id})"
+        })
+      }
+    } else {
+      Future {
+        Redirect(curl).flashing(
+          "error" -> s"Index with id $ix not found"
+        )
+      }
+    }
+  }
+
+  private def remoteFlashSuffix(remote: String) = {
+    if (remote == SMGRemote.wildcard.id)
+      " for all remotes"
+    else if (remote == SMGRemote.local.id)
+      ""
+    else
+      s" for $remote"
+  }
+
+
+  def monitorMute(remote: String, curl: String): Action[AnyContent] = Action.async {
+    monitorApi.mute(remote).map { ret =>
+      Redirect(curl).flashing( if (ret) {
+        "success" -> s"Mute successful - notfiications disabled${remoteFlashSuffix(remote)}"
+      } else {
+        "error" -> s"Mute failed - some unexpected error occured while disabling notifications${remoteFlashSuffix(remote)}"
+      })
+    }
+  }
+
+  def monitorUnmute(remote: String, curl: String): Action[AnyContent] = Action.async {
+    monitorApi.unmute(remote).map { ret =>
+      Redirect(curl).flashing( if (ret) {
+        "success" -> s"Unmute successful - notfiications enabled${remoteFlashSuffix(remote)}"
+      } else {
+        "error" -> s"Unmute failed - some unexpected error occured while enabling notifications${remoteFlashSuffix(remote)}"
+      })
+    }
+  }
+
+  /**
+    * proxy GET requests to "slave" SMG instances (for images etc).
+    * Note that it is better to setup a "native" reverse proxy (e.g. apache/nginx) in front of
+    * SMG for better performance in which case this method should be unused. Check docs for more info
+    * 
+    * @param remote
+    * @param path
+    * @return
+    */
+  def proxy(remote: String, path: String): Action[AnyContent] = Action.async {
     val remoteHost = configSvc.config.remotes.find(_.id == remote).map(_.url)
     if (remoteHost.isEmpty) Future { NotFound(s"remote $remote not found") }
     else {

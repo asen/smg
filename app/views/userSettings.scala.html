@@ -1,5 +1,5 @@
 @import com.smule.smg.SMGPlugin
-@(plugins: Seq[SMGPlugin], msg: Option[String], showMs: Boolean)
+@(plugins: Seq[SMGPlugin], msg: Option[String], showMs: Boolean)(implicit flash: Flash)
 
 @main("SMG - User settings", plugins) {
 

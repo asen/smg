@@ -3,7 +3,9 @@
 @import com.smule.smg.SMGMonFilter
 @import com.smule.smg.SMGTree
 @import com.smule.smg.SMGState
-@(plugins: Seq[SMGPlugin], rmtId: String, availRemotes:Seq[String], flt: SMGMonFilter, rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], pg:Int, maxPages:Int, limit: Int, defLimit: Int, curUrl: String)
+@(plugins: Seq[SMGPlugin], rmtId: String, availRemotes:Seq[String], flt: SMGMonFilter,
+  rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], pg:Int, maxPages:Int,
+  limit: Int, defLimit: Int, curUrl: String)(implicit flash: Flash)
 
 @main("SMG - Monitor State trees", plugins, 300) {
 

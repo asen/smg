@@ -5,7 +5,8 @@
 @import com.smule.smg.SMGMonState
 @import com.smule.smg.SMGIndex
 
-@(plugins: Seq[SMGPlugin], obj: SMGObjectView, lst: Seq[SMGImageView], cols: Int, cwidth: Int, gopts: GraphOptions, showMs: Boolean, ms: Seq[SMGMonState], ixes: Seq[SMGIndex])
+@(plugins: Seq[SMGPlugin], obj: SMGObjectView, lst: Seq[SMGImageView], cols: Int, cwidth: Int,
+  gopts: GraphOptions, showMs: Boolean, ms: Seq[SMGMonState], ixes: Seq[SMGIndex])(implicit flash: Flash)
 
   @main("SMG - " + obj.title, plugins) {
 

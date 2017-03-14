@@ -1,5 +1,5 @@
 @import com.smule.smg.SMGPlugin
-@(title: String, plugins: Seq[SMGPlugin], autoRefresh: Int = 300)(content: Html)
+@(title: String, plugins: Seq[SMGPlugin], autoRefresh: Int = 300)(content: Html)(implicit flash: Flash)
 
 <!DOCTYPE html>
 <html lang="en">
@@ -55,6 +55,14 @@
                 </div> <!-- /.navbar-collapse -->
             </div> <!-- /.container-fluid -->
         </nav>
+
+        @if(flash.get("success").isDefined){
+        <div align="center"><font color="green"><strong>@{flash.get("success").get}</strong></font></div>
+        }
+        @if(flash.get("error").isDefined){
+        <div align="center"><font color="red"><strong>@{flash.get("error").get}</strong></font></div>
+        }
+
         <div class="container-fluid">
             <div class="row">
                 <div class="col-md-12">@content</div>

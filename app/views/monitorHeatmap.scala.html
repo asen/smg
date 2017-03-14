@@ -2,7 +2,7 @@
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.SMGMonHeatmap
 
-@(plugins: Seq[SMGPlugin], monitorStates: Seq[(SMGRemote, SMGMonHeatmap)])
+@(plugins: Seq[SMGPlugin], monitorStates: Seq[(SMGRemote, SMGMonHeatmap)])(implicit flash: Flash)
 
 @main("SMG - Monitor heatmap", plugins) {
 

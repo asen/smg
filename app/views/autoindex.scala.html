@@ -2,7 +2,7 @@
 @import com.smule.smg.GrapherApi
 @import com.smule.smg.SMGAutoIndex
 
-@(topLevel: SMGAutoIndex, periods: Seq[String], expandLevels: Int, plugins: Seq[SMGPlugin])
+@(topLevel: SMGAutoIndex, periods: Seq[String], expandLevels: Int, plugins: Seq[SMGPlugin])(implicit flash: Flash)
 
 @main("SMG - Auto Index " + topLevel.id, plugins) {
 

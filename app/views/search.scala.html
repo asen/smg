@@ -1,7 +1,8 @@
 @import com.smule.smg.SMGPlugin
 @import com.smule.smg.SMGSearchResult
 
-@(q: String, res: Seq[SMGSearchResult], hasMore: Boolean, lmt:Int, defaultLmt:Int, plugins: Seq[SMGPlugin])
+@(q: String, res: Seq[SMGSearchResult], hasMore: Boolean, lmt:Int, defaultLmt:Int,
+  plugins: Seq[SMGPlugin])(implicit flash: Flash)
 
 @main("SMG - Search", plugins, 0) {
 

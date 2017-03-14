@@ -2,7 +2,8 @@
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.SMGPlugin
 
-@(rmtId: Option[String], availRemotes:Seq[String], lvls: Int, defaultLevels: Int, remotesData: Seq[(SMGRemote, Seq[SMGIndex])], periods: Seq[String], plugins: Seq[SMGPlugin])
+@(rmtId: Option[String], availRemotes:Seq[String], lvls: Int, defaultLevels: Int,
+ remotesData: Seq[(SMGRemote, Seq[SMGIndex])], periods: Seq[String], plugins: Seq[SMGPlugin])(implicit flash: Flash)
 
 @main("SMG - Index", plugins) {
 

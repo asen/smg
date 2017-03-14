@@ -1,6 +1,6 @@
 @import com.smule.smg.SMGPlugin
 
-@(plugin: SMGPlugin, htmlContent: String, plugins: Seq[SMGPlugin])
+@(plugin: SMGPlugin, htmlContent: String, plugins: Seq[SMGPlugin])(implicit flash: Flash)
 
 @main("SMG - " + plugin.pluginId + " Index", plugins, if (plugin.autoRefresh) 300 else 0) {
   @Html(htmlContent)
