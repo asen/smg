@@ -34,6 +34,8 @@ GET    /monitor/unslnc       controllers.Application.monitorUnsilence(id: String
 POST   /monitor/ackList       controllers.Application.monitorAckList()
 POST   /monitor/slncList      controllers.Application.monitorSilenceList()
 
+GET    /monitor/slncIdx       controllers.Application.monitorSilenceIdx(ix: String, slunt: String, curl: String)
+
 GET    /monitor/mute         controllers.Application.monitorMute(remote: String, curl: String)
 GET    /monitor/unmute       controllers.Application.monitorUnmute(remote: String, curl: String)
 

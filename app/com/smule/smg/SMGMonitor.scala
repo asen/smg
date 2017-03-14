@@ -665,7 +665,14 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   private def groupByCommonParents(ids: Seq[String]): Seq[SMGMonInternalState] = {
-    var mss = ids.map(id => allMonitorStatesById.get(id)).collect { case Some(ms) => ms }
+    // check if ids are object view ids and convert to object update ids
+    var mss = ids.map{id =>
+      val voopt = configSvc.config.viewObjectsById.get(id)
+      if (voopt.isDefined)
+        voopt.get.refObj.map(ou => ou.id).getOrElse(id)
+      else
+        id
+    }.distinct.map { id => allMonitorStatesById.get(id) }.collect { case Some(ms) => ms }
     // group states which represent common parent and replace them with parent
     var searchMore = true
     while (searchMore) {

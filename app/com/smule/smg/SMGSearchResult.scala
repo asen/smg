@@ -5,27 +5,33 @@ package com.smule.smg
   */
 
 trait SMGSearchResult {
+  def typeStr: String
   def remoteId: String
   def showUrl: String
   def title: String
   def desc: String
   def children: Seq[SMGSearchResult]
+  val idxOpt: Option[SMGIndex]
 }
 
 case class SMGSearchResultObject(ov: SMGObjectView) extends SMGSearchResult {
+  val typeStr = "Object"
   val showUrl = ov.dashUrl
   val title = ov.title
   val desc = s"${ov.id}: " + ov.filteredVars(true).map(_.getOrElse("label", "unlabelled")).mkString(", ")
   val children = Seq()
   val remoteId = SMGRemote.remoteId(ov.id)
+  override val idxOpt: Option[SMGIndex] = None
 }
 
 case class SMGSearchResultIndex(idx: SMGIndex, ovs: Seq[SMGObjectView]) extends SMGSearchResult {
+  val typeStr = "Index"
   val showUrl = "/dash?" + idx.asUrl
-  val title = idx.title
-  val desc = idx.id + ": " + idx.desc.getOrElse("")
-  val remoteId = SMGRemote.remoteId(idx.id)
+  val remoteId = if (SMGRemote.isRemoteObj(idx.id))SMGRemote.remoteId(idx.id) else "Local"
+  val title = s"(${remoteId}) " + idx.title
+  val desc = idx.id + idx.desc.map(s => ": " + s).getOrElse("")
   val children = ovs.map(SMGSearchResultObject)
+  override val idxOpt: Option[SMGIndex] = Some(idx)
 }
 
 class SMGSearchQuery(q: String) {

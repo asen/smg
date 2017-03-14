@@ -661,6 +661,23 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def monitorSilenceIdx(ix: String, slunt: String, curl: String) = Action.async {
+    val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
+    val idx = smg.getIndexById(ix)
+    if (idx.isDefined) {
+      val objs = smg.getFilteredObjects(idx.get.flt)
+      monitorApi.silenceList(objs.map(_.id), untilTss).map { b =>
+        if (b)
+          Redirect(curl)
+        else
+          NotFound(s"Some error occured with index $ix")
+      }
+    } else {
+      Future { NotFound(s"Index $ix not found") }
+    }
+
+  }
+
 
   def monitorMute(remote: String, curl: String) = Action.async {
     monitorApi.mute(remote).map { ret =>

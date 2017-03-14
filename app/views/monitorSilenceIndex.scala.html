@@ -1,0 +1,12 @@
+@(ixid: String)
+
+<small>
+  <form style="display:inline;" action="/monitor/slncIdx" method="GET">
+    <input type="hidden" name="ix" value="@{ixid}">
+    @defining(java.util.UUID.randomUUID.toString) { formUUID =>
+    <input id="curl_@{formUUID}" type="hidden" name="curl" value="">
+    <input type="submit" value="Silence index objects for" onclick='document.getElementById("curl_@{formUUID}").value = window.location.href'>
+    }
+    <input type="text" name="slunt" value="2h" size="6" />
+  </form>
+</small>

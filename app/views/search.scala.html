@@ -63,7 +63,11 @@ Enter regex(es) and click "Go to graphs" to display matching graphs directly' au
 <ul>
   @for(sr <- res){
     <li>
-      <p><a href="@{sr.showUrl}"><b>@{sr.title}</b></a><br/>@{sr.desc}</p>
+      <div>
+        <b>@{sr.typeStr}: <a href="@{sr.showUrl}">@{sr.title}</a></b>
+        @if(sr.idxOpt.isDefined){ @monitorSilenceIndex(sr.idxOpt.get.id) }
+        <br/>@{sr.desc}
+      </div>
     </li>
   }
 </ul>

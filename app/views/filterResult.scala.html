@@ -35,21 +35,7 @@
         }
       </h4>
     }
-    <ul>
-    @for( cix <- idx.get.children) {
-      <li>
-        <a name="ix_@cix.id"></a>
-        <a href="/dash?@cix.asUrl"><strong>@cix.title</strong></a>
-        @for( p <- predefPeriods) {
-          <a href="/dash?@cix.asUrlForPeriod(p)">(@p)</a>
-        }
-        @if(cix.desc.isDefined) {
-        (@cix.desc.get)
-        }
-        [<a href="#ix_@cix.id">#</a>]
-      </li>
-    }
-    </ul>
+    @indexItem(idx.get, predefPeriods, 1)
     <hr>
   }
 
