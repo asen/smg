@@ -14,7 +14,9 @@
   </form>
   }
 
-  <form style="float: none;" method="POST" action="/monitor/slncList">
+  <form style="float: none;" method="POST" action="/monitor/slncList"
+        onsubmit="return confirm('Are you sure you want to silence @mss.size objects?');"
+  >
     <input type="hidden" name="ids" value="@{mss.map(ms => ms.id).mkString(",")}">
     <input type="hidden" id="curlSlcList" name="curl" value="">
     <input type="submit"

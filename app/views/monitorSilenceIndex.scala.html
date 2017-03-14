@@ -1,7 +1,9 @@
 @(ixid: String)
 
 <small>
-  <form style="display:inline;" action="/monitor/slncIdx" method="GET">
+  <form style="display:inline;" action="/monitor/slncIdx" method="GET"
+        onsubmit="return confirm('Are you sure you want to silence all objects matching index @ixid?');"
+  >
     <input type="hidden" name="ix" value="@{ixid}">
     @defining(java.util.UUID.randomUUID.toString) { formUUID =>
     <input id="curl_@{formUUID}" type="hidden" name="curl" value="">

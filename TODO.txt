@@ -20,7 +20,7 @@ when same as default
 
 == Monitor ==
 
-* better way to silence hosts before issues (scheduling downtime).
+* TODO
 
 == Search ==
 
