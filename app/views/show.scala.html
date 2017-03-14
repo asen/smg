@@ -4,6 +4,7 @@
 @import com.smule.smg.GraphOptions
 @import com.smule.smg.SMGMonState
 @import com.smule.smg.SMGIndex
+@import com.smule.smg.SMGMonStateAgg
 
 @(plugins: Seq[SMGPlugin], obj: SMGObjectView, lst: Seq[SMGImageView], cols: Int, cwidth: Int,
   gopts: GraphOptions, showMs: Boolean, ms: Seq[SMGMonState], ixes: Seq[SMGIndex])(implicit flash: Flash)
@@ -35,7 +36,7 @@
   </script>
   <div class="panel panel-primary">
     <div class="panel-heading">
-      <h2 class="panel-title">Display Object: @obj.title (@obj.rrdType)</h2>
+      <h2 class="panel-title">Display @if(obj.isAgg){Aggregate }Object: @obj.title (@obj.rrdType)</h2>
     </div>
     <div class="panel-body">
       <div class="form-group">
@@ -67,7 +68,14 @@ Changing this reloads the page.">Disable 95%-ile line:</label>
 
   @if(showMs) {
   <div>
-    @monitorSvgObjects(ms, None)
+    <div class="subtitle-div">
+    @monitorSvgObjects(ms, Some(ms.size))
+    </div>
+    @if(!obj.isAgg){
+    <div class="subtitle-div">
+      @monStateActions(SMGMonStateAgg.aggByParentId(ms).head._2, None)
+    </div>
+    }
   </div>
   }
 

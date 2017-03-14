@@ -643,9 +643,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorAck(id: String, curl: String): Action[AnyContent] = Action.async {
     monitorApi.acknowledge(id).map { ret =>
       Redirect(curl).flashing( if (ret) {
-        "success" -> s"Acknowledged $id"
+        "success" -> s"Acknowledged $id problem(s)"
       } else {
-        "error" -> s"Some unexpected error occured while acknowledging $id"
+        "error" -> s"Some unexpected error occured while acknowledging $id problem(s)"
       })
     }
   }
@@ -653,9 +653,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorUnack(id: String, curl: String): Action[AnyContent] = Action.async {
     monitorApi.unacknowledge(id).map { ret =>
       Redirect(curl).flashing( if (ret) {
-        "success" -> s"Removed acknowledgement for $id"
+        "success" -> s"Removed acknowledgement for $id problem(s)"
       } else {
-        "error" -> s"Some unexpected error occured while removing acknowledgement for $id"
+        "error" -> s"Some unexpected error occured while removing acknowledgement for $id problem(s)"
       })
     }
   }
@@ -687,9 +687,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val curl = params("curl").head
     monitorApi.acknowledgeList(ids).map { ret =>
       Redirect(curl).flashing( if (ret) {
-        "success" -> s"Acknowledged ${ids.length} objects"
+        "success" -> s"Acknowledged ${ids.length} objects problems"
       } else {
-        "error" -> s"Some unexpected error occured while acknowledging ${ids.length} objects"
+        "error" -> s"Some unexpected error occured while acknowledging ${ids.length} objects problem"
       })
     }
   }
@@ -743,7 +743,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorMute(remote: String, curl: String): Action[AnyContent] = Action.async {
     monitorApi.mute(remote).map { ret =>
       Redirect(curl).flashing( if (ret) {
-        "success" -> s"Mute successful - notfiications disabled${remoteFlashSuffix(remote)}"
+        "success" -> s"Mute successful - notfications disabled${remoteFlashSuffix(remote)}"
       } else {
         "error" -> s"Mute failed - some unexpected error occured while disabling notifications${remoteFlashSuffix(remote)}"
       })
