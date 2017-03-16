@@ -20,6 +20,16 @@ import play.api.mvc.Cookie
 import play.api.mvc.DiscardingCookie
 
 
+case class DashboardExtraParams (
+                                  period: String,
+                                  cols: Int,
+                                  rows: Int,
+                                  pg: Int,
+                                  agg: Option[String],
+                                  xRemoteAgg: Boolean
+                                )
+
+
 @Singleton
 class Application  @Inject() (actorSystem: ActorSystem,
                               smg: GrapherApi,
@@ -114,10 +124,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   private def optStr2OptDouble(opt: Option[String]): Option[Double] = if (opt.isDefined && (opt.get != "")) Some(opt.get.toDouble) else None
-
-
+  
   /**
-    * Display a set of images based on serach filter and display params
     *
     * @param ix - optional index id to be used (matching to that index id filter will be used)
     * @param px - optional filter prefix
@@ -132,56 +140,136 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param pg - optional page number to display (if results are paginated)
     * @param xagg - optional flag whether to aggregate cross-colos
     * @param xsort - integer indicating whether to sort by the descending value of variable with that index. 0 means no sorting
+    */
+  case class DashboardParams (
+    ix: Option[String],
+    px: Option[String],
+    sx: Option[String],
+    rx: Option[String],
+    rxx: Option[String],
+    trx: Option[String],
+    remote: Option[String],
+    agg: Option[String],
+    period: Option[String],
+    pl: Option[String],
+    step: Option[String],
+    cols: Option[Int],
+    rows: Option[Int],
+    pg: Int,
+    xagg: String,
+    xsort: Int,
+    dpp: String,
+    d95p: String,
+    maxy: Option[String]
+  ) {
+
+    def processParams(idx: Option[SMGIndex]): (SMGFilter, DashboardExtraParams) = {
+      // use index filter/gopts if index available
+      // form is overriding index spec
+      
+      val myXSort = if (idx.isEmpty || (xsort > 0)) xsort else idx.get.flt.gopts.xsort.getOrElse(0)
+      val istep = if (step.getOrElse("") != "") SMGRrd.parseStep(step.get) else None
+      val myStep = if (idx.isEmpty || istep.isDefined) istep else idx.get.flt.gopts.step
+      val myPl = if (idx.isEmpty || pl.isDefined) pl else idx.get.flt.gopts.pl
+      val myDisablePop = if (idx.isEmpty || (dpp == "on")) dpp == "on" else idx.get.flt.gopts.disablePop
+      val myDisable95p = if (idx.isEmpty || (d95p == "on")) d95p == "on" else idx.get.flt.gopts.disable95pRule
+      val myMaxY = if (idx.isEmpty || maxy.isDefined) optStr2OptDouble(maxy) else idx.get.flt.gopts.maxY
+
+      val myGopts = GraphOptions(step = myStep, pl = myPl, xsort = Some(myXSort),
+        disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = myMaxY)
+
+      val myPx = if (idx.isEmpty || px.isDefined) px else idx.get.flt.px
+      val mySx = if (idx.isEmpty || sx.isDefined) sx else idx.get.flt.sx
+      val myRx = if (idx.isEmpty || rx.isDefined) rx else idx.get.flt.rx
+      val myRxx = if (idx.isEmpty || rxx.isDefined) rxx else idx.get.flt.rxx
+      val myTrx = if (idx.isEmpty || rx.isDefined) rx else idx.get.flt.trx
+
+      val myRemote = if (idx.isEmpty || remote.isDefined) remote else idx.get.flt.remote
+
+      val flt = SMGFilter(px = myPx, sx = mySx, rx = myRx, rxx = myRxx, trx = myTrx, remote = myRemote, gopts = myGopts)
+
+      val myPeriod = if (idx.isEmpty || period.isDefined)
+        period.getOrElse(GrapherApi.defaultPeriod)
+      else
+        idx.get.period.getOrElse(GrapherApi.defaultPeriod)
+      
+      val myAgg = if (idx.isEmpty || agg.isDefined) agg else idx.get.aggOp
+      val myXRemoteAgg = if (idx.isEmpty || (xagg == "on")) xagg == "on" else idx.get.xAgg
+      val myCols = if (idx.isEmpty || cols.isDefined)
+        cols.getOrElse(configSvc.config.dashDefaultCols)
+      else
+        idx.get.cols.getOrElse(configSvc.config.dashDefaultCols)
+      val myRows = if (idx.isEmpty || rows.isDefined)
+        rows.getOrElse(configSvc.config.dashDefaultRows)
+      else
+        idx.get.rows.getOrElse(configSvc.config.dashDefaultRows)
+
+      val dep = DashboardExtraParams(period = myPeriod, cols = myCols, rows = myRows, pg = pg, agg = myAgg, xRemoteAgg = myXRemoteAgg)
+
+      (flt,dep)
+    }
+  }
+
+  private def dashParamsFromMap(m: Map[String, String]): DashboardParams = {
+    DashboardParams (
+      ix = m.get("ix"),
+      px = m.get("px"),
+      sx = m.get("sx"),
+      rx = m.get("rx"),
+      rxx = m.get("rxx"),
+      trx = m.get("trx"),
+      remote = m.get("remote"),
+      agg = m.get("agg"),
+      period = m.get("period"),
+      pl = m.get("pl"),
+      step = m.get("step"),
+      cols = m.get("cols").map(_.toInt),
+      rows = m.get("rows").map(_.toInt),
+      pg = m.get("pg").map(_.toInt).getOrElse(0),
+      xagg = m.getOrElse("xagg", ""),
+      xsort = m.get("xsort").map(_.toInt).getOrElse(0),
+      dpp = m.getOrElse("dpp", ""),
+      d95p = m.getOrElse("d95p", ""),
+      maxy = m.get("maxy")
+    )
+  }
+
+  private def dashPostParams(req: Request[AnyContent]): DashboardParams = {
+    val myParams = req.body.asFormUrlEncoded.getOrElse(Map()).map(t => (t._1, t._2.head))
+    dashParamsFromMap(myParams)
+  }
+
+  private def dashGetParams(req: Request[AnyContent]): DashboardParams = {
+    val myParams = req.queryString.map(t => (t._1, t._2.head))
+    dashParamsFromMap(myParams)
+  }
+
+  /**
+    * Display dashboard page (filter and graphs)
     * @return
     */
-  def dashboard(
-                 ix: Option[String],
-                 px: Option[String],
-                 sx: Option[String],
-                 rx: Option[String],
-                 rxx: Option[String],
-                 trx: Option[String],
-                 remote: Option[String],
-                 agg: Option[String],
-                 period: String,
-                 pl: Option[String],
-                 step: Option[String],
-                 cols: Int,
-                 rows: Int,
-                 pg: Int,
-                 xagg: String,
-                 xsort: Int,
-                 dpp: String,
-                 d95p: String,
-                 maxy: Option[String]
-               ): Action[AnyContent] = Action.async { implicit request =>
-    // TODO replace the long param list above with SMGFilter.fromParams(request.queryString)
+  def dash(): Action[AnyContent] = Action.async { implicit request =>
+
+    val myErrors = ListBuffer[String]()
+
+    val dps = if (request.method == "POST")
+      dashPostParams(request)
+    else
+      dashGetParams(request)
+
     val showMs = msEnabled(request)
-    val idx = if (ix.nonEmpty) {
-      smg.getIndexById(ix.get)
+    val idx = if (dps.ix.nonEmpty) {
+      val idxOpt = smg.getIndexById(dps.ix.get)
+      if (idxOpt.isEmpty) {
+        myErrors += s"Index with id ${dps.ix.get} not found"
+      }
+      idxOpt
     } else None
     val parentIdx: Option[SMGIndex] = if (idx.isDefined && idx.get.parentId.isDefined) {
       smg.getIndexById(idx.get.parentId.get)
     } else None
-
-    // use index filter/aggOp/xAgg if url specifies empty filter
-    // form is overriding index spec
-    val myXSort = if (idx.isEmpty || (xsort > 0)) xsort else idx.get.flt.gopts.xsort.getOrElse(0)
-    val istep = if (step.getOrElse("") != "") SMGRrd.parseStep(step.get) else None
-    val myStep = if (idx.isEmpty || istep.isDefined) istep else idx.get.flt.gopts.step
-    val myDisablePop = if (idx.isEmpty || (dpp == "on")) dpp == "on" else idx.get.flt.gopts.disablePop
-    val myDisable95p = if (idx.isEmpty || (d95p == "on")) d95p == "on" else idx.get.flt.gopts.disable95pRule
-    val myMaxY = if (idx.isEmpty || maxy.isDefined) optStr2OptDouble(maxy) else idx.get.flt.gopts.maxY
-    val gopts = GraphOptions(step = myStep, pl = pl, xsort = Some(myXSort),
-      disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = myMaxY)
-    val myAgg = if (idx.isEmpty || agg.isDefined) agg else idx.get.aggOp
-    var xRemoteAgg = if (idx.isEmpty || (xagg == "on")) xagg == "on" else idx.get.xAgg
-
-    val flt = if (px.isEmpty && sx.isEmpty && rx.isEmpty && rxx.isEmpty && trx.isEmpty && idx.nonEmpty) {
-      idx.get.flt
-    }
-    else
-      SMGFilter(px, sx, rx, rxx, trx, remote, gopts)
+    
+    val (flt, dep) = dps.processParams(idx)
 
     val conf = configSvc.config
     val availRemotes = if (conf.remotes.nonEmpty)
@@ -189,20 +277,20 @@ class Application  @Inject() (actorSystem: ActorSystem,
     else
       Seq[SMGRemote]()
 
-    // filter results and slice acording to pagination
+    // filter results and slice according to pagination
     var maxPages = 1
     var tlObjects = 0
-    val limit = cols * rows
+    val limit = dep.cols * dep.rows
     val objsSlice = if (limit <= 0) {
       Seq()
     } else {
-      val offset = pg * limit
+      val offset = dep.pg * limit
       val filteredObjects = smg.getFilteredObjects(flt)
       tlObjects = filteredObjects.size
       maxPages = (tlObjects / limit) + (if ((tlObjects % limit) == 0) 0 else 1)
       val sliced = filteredObjects.slice(offset, offset + limit)
-      if (gopts.xsort.getOrElse(0) > 0)
-        xsortObjectViews(sliced, gopts.xsort.get - 1, period)
+      if (flt.gopts.xsort.getOrElse(0) > 0)
+        xsortObjectViews(sliced, flt.gopts.xsort.get - 1, dep.period)
       else
         sliced
     }
@@ -211,7 +299,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val (futImages, futMonitorStates) = if (objsSlice.isEmpty) {
       ( Future { Seq() },
         Future { Map() } )
-    } else if (myAgg.nonEmpty) {
+    } else if (dep.agg.nonEmpty) {
       // group objects by "graph vars" (identical var defs, subject to aggregation) and produce an aggregate
       // object and corresponding image for each group
       val byGraphVars = mutable.Map[List[Map[String,String]],ListBuffer[SMGObjectView]]()
@@ -224,19 +312,19 @@ class Application  @Inject() (actorSystem: ActorSystem,
         }
         byGraphVars(curVars) += ov
       }
-      val aggObjs = for (v <- orderedVars.toList) yield SMGAggObject.build(byGraphVars(v).toList, myAgg.get)
+      val aggObjs = for (v <- orderedVars.toList) yield SMGAggObject.build(byGraphVars(v).toList, dep.agg.get)
       // if we are not graphing cross-remote, every ag object defined from a cross-remote filter can
       // result in multiple images (one per remote) and we want the monitoring state per resulting image
-      val monObjsSeq = if (!xRemoteAgg) {
+      val monObjsSeq = if (!dep.xRemoteAgg) {
         aggObjs.flatMap { ago =>
           ago.splitByRemoteId.values.toList
         }
       } else aggObjs
-      val aggFutureSeqs = for (ao <- aggObjs) yield smg.graphAggObject(ao, Seq(period), gopts, xRemoteAgg)
+      val aggFutureSeqs = for (ao <- aggObjs) yield smg.graphAggObject(ao, Seq(dep.period), flt.gopts, dep.xRemoteAgg)
       (Future.sequence(aggFutureSeqs).map { sofs => sofs.flatten },
         if (showMs) monitorApi.objectViewStates(monObjsSeq) else Future { Map() } )
     } else {
-      ( smg.graphObjects(objsSlice, Seq(period), gopts),
+      ( smg.graphObjects(objsSlice, Seq(dep.period), flt.gopts),
         if (showMs) monitorApi.objectViewStates(objsSlice) else Future { Map() } )
     }
 
@@ -244,17 +332,19 @@ class Application  @Inject() (actorSystem: ActorSystem,
     Future.sequence(Seq(futImages, futMonitorStates)).map { mySeq =>
       val lst = mySeq.head.asInstanceOf[List[SMGImageView]]
       val monStatesByImgView = mySeq(1).asInstanceOf[Map[String,Seq[SMGMonState]]]
-      //preserve order
-      val monOverview = lst.flatMap(iv => monStatesByImgView.getOrElse(iv.obj.id, List()))
-      // make sure we find agg objects and their op even if not specified in url params but e.g. coming from plugin
-      val myAggOp = if (myAgg.isDefined) myAgg else lst.find(_.obj.isAgg).map(_.obj.asInstanceOf[SMGAggObjectView].op)
+
       val byRemoteMap = lst.groupBy( img => img.remoteId.getOrElse("") )
       val byRemote = (List("") ++ remotes.configs.map(rc => rc.remote.id)).
         filter(rid => byRemoteMap.contains(rid)).map( rid => (rid, byRemoteMap(rid)) )
+      //preserve order
+      val monOverviewOids = objsSlice.map(_.id)
+      // XXX make sure we find agg objects and their op even if not specified in url params but e.g. coming from plugin
+      val myAggOp = if (dep.agg.isDefined) dep.agg else lst.find(_.obj.isAgg).map(_.obj.asInstanceOf[SMGAggObjectView].op)
+      val errorsOpt = if (myErrors.isEmpty) None else Some(myErrors.mkString(", "))
       Ok(
-        views.html.filterResult(configSvc.plugins, idx, parentIdx, byRemote, flt, period, cols, rows, pg, maxPages,
-          lst.size, objsSlice.size, tlObjects, availRemotes, myAggOp, xRemoteAgg,
-          configSvc.config.rrdConf.imageCellWidth, gopts, showMs, monStatesByImgView, monOverview)
+        views.html.filterResult(configSvc.plugins, idx, parentIdx, byRemote, flt, dep, myAggOp, maxPages,
+          lst.size, objsSlice.size, tlObjects, availRemotes, configSvc.config.rrdConf.imageCellWidth,
+          flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt)
       )
     }
   }
@@ -511,6 +601,20 @@ class Application  @Inject() (actorSystem: ActorSystem,
         val hmLst = hms.map(_._2)
         val combinedHm = SMGMonHeatmap.join(hmLst)
         Ok(views.html.monitorSvgHeatmap(combinedHm)).as("image/svg+xml")
+      }
+    }
+  }
+
+  def monitorObjectsSvgHtml(): Action[AnyContent] = Action.async { request =>
+    val oidsParam = request.body.asFormUrlEncoded.get.get("oids")
+    if (oidsParam.isEmpty)
+      Future {  Ok(views.html.monitorSvgNotFound()) }
+    else {
+      val oids = oidsParam.get.head.split(",")
+      val ovs = oids.distinct.map { oid => smg.getObjectView(oid) }.filter(_.isDefined).map(_.get)
+      monitorApi.objectViewStates(ovs).map { byObj =>
+        val mss = ovs.flatMap(ov => byObj.getOrElse(ov.ouId, Seq()))
+        Ok(views.html.monitorSvgObjects(mss.toSeq, None))
       }
     }
   }

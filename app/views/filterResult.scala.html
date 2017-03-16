@@ -7,13 +7,19 @@
 @import com.smule.smg.GraphOptions
 @import com.smule.smg.SMGMonState
 @import com.smule.smg.SMGMonStateAgg
+@import controllers.DashboardExtraParams
 
-@(plugins: Seq[SMGPlugin], idx: Option[SMGIndex], parentIdx: Option[SMGIndex], byRemote: Seq[(String, Seq[SMGImageView])], flt: SMGFilter,
-  period: String, cols: Int, rows: Int, pg: Int, maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int,
-  availRemotes: Seq[SMGRemote], aggOp: Option[String], xagg: Boolean, cwidth: Int, gopts: GraphOptions,
-  showMs:Boolean, monData: Map[String, Seq[SMGMonState]], monOverview: Seq[SMGMonState])(implicit flash: Flash)
+@(plugins: Seq[SMGPlugin], idx: Option[SMGIndex], parentIdx: Option[SMGIndex],
+  byRemote: Seq[(String, Seq[SMGImageView])], flt: SMGFilter, dep: DashboardExtraParams, aggOp: Option[String],
+  maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int, availRemotes: Seq[SMGRemote],
+  cwidth: Int, gopts: GraphOptions, showMs:Boolean, monData: Map[String, Seq[SMGMonState]],
+  monOverviewOids: Seq[String], errorMsg: Option[String])(implicit flash: Flash)
 
 @main("SMG - " + (if (idx.isDefined) idx.get.title else flt.humanText), plugins) {
+
+  @if(errorMsg.isDefined){
+    <div align="center"><h4><font color="red">Error: @errorMsg.get</font></h4></div>
+  }
 
   @if(idx.nonEmpty) {
     <h3>Index: @idx.get.title
@@ -21,7 +27,7 @@
       (@idx.get.desc.get)
     }
     </h3>
-    @if(showMs){ @monitorIndexSvgRef(idx.get.id) }
+    @if(showMs){ @monitorSvgRefIndex(idx.get.id) }
     @if(parentIdx.isDefined) {
       <h4>
         Parent: <a href="/dash?@parentIdx.get.asUrl">@parentIdx.get.title</a>
@@ -39,25 +45,25 @@
     <hr>
   }
 
-@if(rows > 0) {
-  @filter(flt, period, cols, rows, predefPeriods, availRemotes, aggOp,
-          byRemote.nonEmpty && byRemote.tail.nonEmpty, xagg, gopts)
+@if(dep.rows > 0) {
+  @filter(flt, dep.period, dep.cols, dep.rows, predefPeriods, availRemotes, aggOp,
+          byRemote.nonEmpty && byRemote.tail.nonEmpty, dep.xRemoteAgg, gopts)
 
   @if(aggOp.isEmpty){
   @displaySelectHeader()
   }
 
   <div class="alert alert-success">
-    Displaying @dispCount @if(aggOp.isDefined){ aggregate (@aggOp.get) } graphs (using @slicedCount out of @tlCount matching objects) in max @cols columns and max @rows rows.
+    Displaying @dispCount @if(aggOp.isDefined){ aggregate (@aggOp.get) } graphs (using @slicedCount out of @tlCount matching objects) in max @dep.cols columns and max @dep.rows rows.
   </div>
 
   @if(showMs){
-    @monitorSvgObjects(monOverview, None)
+    @monitorSvgRefObjects(monOverviewOids)
     @monStateListActions(monData.values.toSeq.flatten)
   }
 
   @if(aggOp.isEmpty){
-    @pages(period, flt, cols, rows, pg, maxPg)
+    @pages(dep.period, flt, dep.cols, dep.rows, dep.pg, maxPg)
   }
 
   @for( (remoteId, lst) <- byRemote) {
@@ -79,7 +85,7 @@
               <div class="subtitle-div">
                 @{g.obj.id} (@{g.obj.rrdType}) [<a href="#@g.obj.id" >#</a>]
                 @for(pa <- plugins.flatMap(_.actions)){
-                [<a href="@{pa.actionUrl(g.obj, period)}">@{pa.name}</a>]
+                [<a href="@{pa.actionUrl(g.obj, dep.period)}">@{pa.name}</a>]
                 }
               </div>
               @if(aggOp.isEmpty){
@@ -90,10 +96,14 @@
                 <div class="subtitle-div">
                   @monitorSvgObjects(monData(g.obj.id), Some(monData(g.obj.id).size))
                 </div>
-                @if(aggOp.isEmpty){
-                <div class="subtitle-div">
-                  @monStateActions(SMGMonStateAgg.aggByParentId(monData(g.obj.id)).head._2, None)
-                </div>
+                @if(aggOp.isEmpty && monData.contains(g.obj.id)){
+                  @defining(SMGMonStateAgg.aggByParentId(monData(g.obj.id)).headOption.map(_._2)) { objStateOpt =>
+                    @if(objStateOpt.isDefined){
+                    <div class="subtitle-div">
+                    @monStateActions(objStateOpt.get, None)
+                    </div>
+                    }
+                  }
                 }
               </div>
               }
@@ -101,7 +111,7 @@
             <a href="@g.obj.showUrl"><img src="@g.imageUrl" alt="@g.imageUrl" /></a>
           </div>
         </div>
-        @if(((ix + 1) % cols) == 0) {
+        @if(((ix + 1) % dep.cols) == 0) {
         </div><hr/><div class="smgrow">
         }
       }
@@ -110,7 +120,7 @@
   }
 
   @if(aggOp.isEmpty){
-    @pages(period, flt, cols, rows, pg, maxPg)
+    @pages(dep.period, flt, dep.cols, dep.rows, dep.pg, maxPg)
   }
 }
 

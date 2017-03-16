@@ -88,6 +88,9 @@ case class SMGLocalConfig(
 
   val indexTreeLevels: Int = globals.getOrElse("$index-tree-levels", "1").toInt
 
+  val dashDefaultCols: Int = globals.getOrElse("$dash-default-cols", "6").toInt
+  val dashDefaultRows: Int = globals.getOrElse("$dash-default-rows", "10").toInt
+
 
   val MAX_RUNTREE_LEVELS = 10
 

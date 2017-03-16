@@ -9,7 +9,9 @@ GET     /ci             controllers.Application.index(remote :String ?= "*", lvl
 GET     /autoindex      controllers.Application.autoindex(rt: String ?= "", el: Int ?= 1)
 GET     /autoindex/     controllers.Application.autoindex(rt: String ?= "", el: Int ?= 1)
 GET     /autoindex/:rt  controllers.Application.autoindex(rt: String, el: Int ?= 1)
-GET     /dash           controllers.Application.dashboard(ix: Option[String], px: Option[String], sx: Option[String], rx: Option[String], rxx: Option[String], trx: Option[String], remote: Option[String], agg: Option[String], period: String ?= "24h", pl: Option[String], step: Option[String], cols: Int ?= 6, rows: Int ?= 10, pg: Int ?= 0, xagg: String ?= "", xsort: Int ?= 0, dpp: String ?= "", d95p: String ?= "", maxy: Option[String])
+# GET     /dash           controllers.Application.dashboard(ix: Option[String], px: Option[String], sx: Option[String], rx: Option[String], rxx: Option[String], trx: Option[String], remote: Option[String], agg: Option[String], period: String ?= "24h", pl: Option[String], step: Option[String], cols: Int ?= 6, rows: Int ?= 10, pg: Int ?= 0, xagg: String ?= "", xsort: Int ?= 0, dpp: String ?= "", d95p: String ?= "", maxy: Option[String])
+GET     /dash           controllers.Application.dash()
+POST    /dash           controllers.Application.dash()
 GET     /show/:oid      controllers.Application.show(oid: String, cols: Int ?= 6, dpp: String ?= "", d95p: String ?= "", maxy: Option[String])
 GET     /fetch/:oid     controllers.Application.fetch(oid: String, r: Option[Int], s: Option[String], e: Option[String], d: Boolean ?= false)
 GET     /showAgg        controllers.Application.showAgg(ids:String, op:String, title:Option[String], cols: Int ?= 6, dpp: String ?= "", d95p: String ?= "", maxy: Option[String])
@@ -46,6 +48,7 @@ GET     /inspect/:id       controllers.Application.inspect(id: String)
 
 # SVG response
 GET     /monitor/indexSvg    controllers.Application.monitorIndexSvg(ixid: String)
+POST    /monitor/objectsSvg  controllers.Application.monitorObjectsSvgHtml()
 
 # plugin routes
 GET     /plugin/:pluginId  controllers.Application.pluginIndex(pluginId: String)
