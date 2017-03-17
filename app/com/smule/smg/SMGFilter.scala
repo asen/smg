@@ -2,6 +2,9 @@ package com.smule.smg
 
 import java.net.URLEncoder
 
+import scala.util.Try
+import scala.util.matching.Regex
+
 /**
   * Created by asen on 11/14/15.
   */
@@ -27,7 +30,12 @@ case class SMGFilter(px: Option[String],
                     ) {
 
   // make regexes case insensitive
-  private def ciRegex(so: Option[String]) = so.map( s => if (s.isEmpty) s else  "(?i)" + s ).map(_.r)
+  private def ciRegex(so: Option[String]): Option[Regex] = so.map(s => if (s.isEmpty) s else  "(?i)" + s ).
+    map( s =>
+      Try(s.r).getOrElse(
+        "MATCH_NOTHING^".r // XXX The ^ after anything ensures nothing will match
+      )
+    )
   private val ciRx = ciRegex(rx)
   private val ciRxx = ciRegex(rxx)
   private val ciTrxs = trx.map { s =>
