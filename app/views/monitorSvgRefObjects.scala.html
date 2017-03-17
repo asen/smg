@@ -3,11 +3,9 @@
 
 <script language="JavaScript">
 $(document).ready ( function(){
-  console.log("posting");
   $.post('/monitor/objectsSvg',
         { oids: '@{oids.mkString(",")}' },
         function(data) {
-          console.log("got data: " + data);
           $('#pageStatesSvg').html(data);
         }
         );

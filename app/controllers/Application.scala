@@ -252,8 +252,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
     val myErrors = ListBuffer[String]()
 
-    val dps = if (request.method == "POST")
+    val dps = if (request.method == "POST") {
+      myErrors += "This page URL is not share-able because the resulting URL would be too long."
       dashPostParams(request)
+    }
     else
       dashGetParams(request)
 
@@ -344,7 +346,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       Ok(
         views.html.filterResult(configSvc.plugins, idx, parentIdx, byRemote, flt, dep, myAggOp, maxPages,
           lst.size, objsSlice.size, tlObjects, availRemotes, configSvc.config.rrdConf.imageCellWidth,
-          flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt)
+          flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt, conf.maxUrlSize)
       )
     }
   }

@@ -13,7 +13,7 @@
   byRemote: Seq[(String, Seq[SMGImageView])], flt: SMGFilter, dep: DashboardExtraParams, aggOp: Option[String],
   maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int, availRemotes: Seq[SMGRemote],
   cwidth: Int, gopts: GraphOptions, showMs:Boolean, monData: Map[String, Seq[SMGMonState]],
-  monOverviewOids: Seq[String], errorMsg: Option[String])(implicit flash: Flash)
+  monOverviewOids: Seq[String], errorMsg: Option[String], maxUrlSize: Int)(implicit flash: Flash)
 
 @main("SMG - " + (if (idx.isDefined) idx.get.title else flt.humanText), plugins) {
 
@@ -46,7 +46,7 @@
 
 @if(dep.rows > 0) {
   @filter(flt, dep.period, dep.cols, dep.rows, predefPeriods, availRemotes, aggOp,
-          byRemote.nonEmpty && byRemote.tail.nonEmpty, dep.xRemoteAgg, gopts)
+          byRemote.nonEmpty && byRemote.tail.nonEmpty, dep.xRemoteAgg, gopts, maxUrlSize)
 
   @if(aggOp.isEmpty){
   @displaySelectHeader()

@@ -4,8 +4,7 @@
 
 @(flt: SMGFilter, period: String, cols: Int, rows: Int, predefPeriods: Seq[String],
         availRemotes: Seq[SMGRemote], aggOp: Option[String], showXagg: Boolean, xagg: Boolean,
-        gopts: GraphOptions)
-
+        gopts: GraphOptions, maxUrlSize: Int)
 
 <form id="smgFilterForm" method="GET" action="/dash" class="filter-form">
 
@@ -174,6 +173,19 @@ By default aggregation happens per-remote instance">Cross-Remote:</label>
       $(':input', this).each(function() {
           this.disabled = !($(this).val()) || ((this.name == "xsort") && ($(this).val() == 0));
       });
+
+      //estimate URL size and use POST if url would be too long
+      var mySz = 0;
+      $(':input', this).each(function() {
+         if(!this.disabled && (this.type != "submit")){
+           var myStrVal = "" + $(this).val()
+           mySz +=  myStrVal.length
+         }
+      });
+      if (mySz > @maxUrlSize){
+        //console.log("Switching form method to post due to estimated URL size above @maxUrlSize - " + mySz)
+        document.getElementById("smgFilterForm").method = "POST";
+      }
   };
 
   function mySubmitOnChange(elem) {
