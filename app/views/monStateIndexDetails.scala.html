@@ -1,0 +1,14 @@
+@(ixid: String)
+
+@defining(java.util.UUID.randomUUID.toString) { formUUID =>
+
+<img width="16" height="16"
+     onclick="document.getElementById('msidact_@formUUID').style.display = 'block'"
+     src='@routes.Assets.versioned("images/eye.png")'
+>
+<div id="msidact_@formUUID" class="monStateIndexActions" style="display: none">
+  @monitorSvgRefIndex(ixid)<br/>
+  @monStateIndexSilence(ixid, formUUID)
+</div>
+
+}

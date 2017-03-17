@@ -74,6 +74,7 @@ GET     /api/monitor/slncall    controllers.Api.monitorSilenceAllTrees(rx: Optio
 GET     /api/monitor/runtree    controllers.Api.monitorRunTree(root: Option[String])
 GET     /api/monitor/logs       controllers.Api.monitorLog(period: Option[String], limit: Option[Int], sev: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
 GET     /api/monitor/heatmap    controllers.Api.monitorHeatmap
+POST    /api/monitor/heatmap    controllers.Api.monitorHeatmapPost
 GET     /api/monitor/ostates    controllers.Api.monitorObjectViewsGet(ids: String)
 POST    /api/monitor/ostates    controllers.Api.monitorObjectViewsPost
 GET     /api/monitor/ack        controllers.Api.monitorAck(id: String)

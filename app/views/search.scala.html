@@ -66,7 +66,7 @@ Enter regex(es) and click "Go to graphs" to display matching graphs directly' au
     <li>
       <div>
         <b>@{sr.typeStr}: <a href="@{sr.showUrl}">@{sr.title}</a></b>
-        @if(sr.idxOpt.isDefined){ @monStateIndexSilence(sr.idxOpt.get.id) }
+        @if(sr.idxOpt.isDefined){ @monStateIndexDetails(sr.idxOpt.get.id) }
         <br/>@{sr.desc}
       </div>
     </li>

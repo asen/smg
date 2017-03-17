@@ -256,6 +256,10 @@ class Api  @Inject() (actorSystem: ActorSystem,
     monitorHeatmapCommon(request.queryString)
   }
 
+  def monitorHeatmapPost = Action { request =>
+    monitorHeatmapCommon(request.body.asFormUrlEncoded.get)
+  }
+
   def monitorHeatmapCommon(params: Map[String, Seq[String]]): Result = {
     val flt = SMGFilter.fromParams(params)
     val hm = monitorApi.localHeatmap(flt,

@@ -455,8 +455,9 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       maxSize.map(v => s"&maxSize=$v").getOrElse("") +
       offset.map(v => s"&offset=$v").getOrElse("") +
       limit.map(v => s"&limit=$v").getOrElse("")
-    ws.url(remote.url + API_PREFIX + "monitor/heatmap?" + urlParams).
-      withRequestTimeout(graphTimeoutMs).get().map { resp =>
+    ws.url(remote.url + API_PREFIX + "monitor/heatmap").
+      withRequestTimeout(graphTimeoutMs).
+      withHeaders("Content-Type" -> "application/x-www-form-urlencoded").post(urlParams).map { resp =>
       Try {
         val jsval = Json.parse(resp.body)
         jsval.as[SMGMonHeatmap]
