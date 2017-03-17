@@ -22,7 +22,7 @@ when same as default
 
 == Monitor ==
 
-* TODO
+* cleanup/remove deprecated monitorProblems API
 
 == Search ==
 
