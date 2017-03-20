@@ -443,7 +443,13 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
   override val id: String = SMGMonPfState.stateId(pfCmd, interval)
   override def parentId: Option[String] = SMGMonPfState.fetchParentStateId(pfCmd.preFetch, interval, pluginId)
 
-  override def ouids: Seq[String] = configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval)).map(_.id)
+  private def myObjectUpdates = if (pluginId.isEmpty) {
+    configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval))
+  } else {
+    configSvc.config.pluginFetchCommandUpdateObjects(pluginId.get, pfCmd.id)
+  }
+
+  override def ouids: Seq[String] = myObjectUpdates.map(_.id)
   override def vixOpt: Option[Int] = None
   override def oid: Option[String] = None
   override def pfId: Option[String] = Some(pfCmd.id)
@@ -455,8 +461,8 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
   override def alertKey: String = pfCmd.id
 
   override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
-    val tuples = configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval)).
-      map(ou => configSvc.objectVarNotifyCmdsAndBackoff(ou,None, SMGMonNotifySeverity.UNKNOWN))
+    val tuples = myObjectUpdates.
+      map(ou => configSvc.objectVarNotifyCmdsAndBackoff(ou, None, SMGMonNotifySeverity.UNKNOWN))
     lazy val backoff = tuples.map(_._2).max
     lazy val ncmds = tuples.flatMap(_._1).distinct
     (ncmds, backoff)

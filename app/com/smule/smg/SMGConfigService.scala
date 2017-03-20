@@ -776,6 +776,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       remotes.toList,
       remoteMasters.toList,
       plugins.map( p => (p.pluginId, p.objects) ).toMap,
+      plugins.map( p => (p.pluginId, p.preFetches)).toMap,
       objectAlertConfs.toMap,
       notifyCommands.toMap,
       objectNotifyConfs.toMap,

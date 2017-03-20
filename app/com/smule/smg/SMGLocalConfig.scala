@@ -34,6 +34,7 @@ case class SMGLocalConfig(
                            remotes: Seq[SMGRemote],
                            remoteMasters: Seq[SMGRemote],
                            pluginObjects: Map[String, Seq[SMGObjectView]],
+                           pluginPreFetches: Map[String, Map[String, SMGPreFetchCmd]],
                            objectAlertConfs: Map[String, SMGMonObjAlertConf],
                            notifyCommands: Map[String,SMGMonNotifyCmd],
                            objectNotifyConfs: Map[String, SMGMonObjNotifyConf],
@@ -49,12 +50,14 @@ case class SMGLocalConfig(
 
   val viewObjectsByUpdateId: Map[String, Seq[SMGObjectView]] = viewObjects.groupBy(o => o.refObj.map(_.id).getOrElse(o.id))
 
-  private val pluginUpdateObjects = pluginObjects.flatMap(t => t._2).filter(ov => ov.refObj.isDefined || ov.isInstanceOf[SMGObjectUpdate]).map {
+  private def pluginUpdateObjects(pluginId: String) = pluginObjects(pluginId).filter(ov => ov.refObj.isDefined || ov.isInstanceOf[SMGObjectUpdate]).map {
     case update: SMGObjectUpdate => update
     case ov => ov.refObj.get
-  }.groupBy(_.id).map { case (id, seq) => seq.head }
+  }
+  
+  private val pluginsUpdateObjects = pluginObjects.flatMap(t => pluginUpdateObjects(t._1)).groupBy(_.id).map { case (id, seq) => seq.head }
 
-  val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++ pluginUpdateObjects
+  val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++ pluginsUpdateObjects
 
   val updateObjectsById: Map[String, SMGObjectUpdate] = updateObjects.groupBy(_.id).map(t => (t._1,t._2.head))
 
@@ -105,7 +108,7 @@ case class SMGLocalConfig(
   val reloadSlaveRemotes: Boolean = globals.getOrElse("$reload-slave-remotes", "false") == "true"
 
 
-  private def buildCommandsTree(interval: Int, rrdObjs: Seq[SMGRrdObject]): Seq[SMGFetchCommandTree] = {
+  private def buildCommandsTree(rrdObjs: Seq[SMGRrdObject], myPreFetches: Map[String, SMGPreFetchCmd]): Seq[SMGFetchCommandTree] = {
     val ret = ListBuffer[SMGFetchCommandTree]()
     var recLevel = 0
 
@@ -120,7 +123,7 @@ case class SMGLocalConfig(
           // top level
           ret ++= chldrn
         } else {
-          val pf = preFetches.get(pfId)
+          val pf = myPreFetches.get(pfId)
           if (pf.isEmpty) {
             SMGLogger.error(s"SMGLocalConfig.fetchCommandsTree: non existing pre-fetch id: $pfId")
             ret ++= chldrn
@@ -153,9 +156,8 @@ case class SMGLocalConfig(
 
   // build and keep the commands trees (a sequence of trees for each interval)
   private val fetchCommandTrees: Map[Int, Seq[SMGFetchCommandTree]] = rrdObjects.groupBy(_.interval).map { t =>
-    (t._1, buildCommandsTree(t._1, t._2))
+    (t._1, buildCommandsTree(t._2, preFetches))
   }
-
 
   /**
     * Get the top-level command trees for given interval
@@ -198,4 +200,29 @@ case class SMGLocalConfig(
     }
     ret.toList
   }
+
+  // build and keep the plugin commands trees (a sequence of trees for each plugon)
+  private val pluginCommandTrees: Map[String, Seq[SMGTree[SMGTreeNode]]] = pluginObjects.map { t =>
+    val pluginId = t._1
+    val objs = t._2
+    val pfsMap = pluginPreFetches.getOrElse(pluginId, Map())
+    (pluginId, SMGTree.buildTrees[SMGTreeNode](pluginUpdateObjects(pluginId), pfsMap))
+  }
+
+  /**
+    * Get the plugin update objects depending at some level on this command id
+    * (as defined by plugin objects and prefetches)
+    * @param pluginId
+    * @param cmdId
+    * @return
+    */
+  def pluginFetchCommandUpdateObjects(pluginId: String, cmdId: String) : Seq[SMGObjectUpdate] = {
+    val ret = ListBuffer[SMGObjectUpdate]()
+    val topLevel = pluginCommandTrees.getOrElse(pluginId, Seq())
+    val root = SMGTree.findTreeWithRoot(cmdId, topLevel)
+    if (root.isDefined)
+        ret ++= root.get.leafNodes.map(_.asInstanceOf[SMGObjectUpdate])
+    ret.toList
+  }
+
 }

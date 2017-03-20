@@ -47,6 +47,7 @@ class TestConfigSvc() extends SMGConfigService {
     remotes = Seq(),
     remoteMasters = Seq(),
     pluginObjects = Map(),
+    pluginPreFetches = Map(),
     objectAlertConfs = Map(
       "test.object.1" -> SMGMonObjAlertConf(
         varConfs = Map(
