@@ -17,7 +17,7 @@ SMG_BODY=ENV["SMG_ALERT_BODY"] || "" #$5
 # https://v2.developer.pagerduty.com/docs/events-api
 
 event_type = case SMG_SEVERITY
-    when "RECOVERY"
+    when "RECOVERY", "UNTHROTTLED"
       "resolve"
     when "ACKNOWLEDGEMENT"
       "acknowledge"
