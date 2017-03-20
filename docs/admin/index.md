@@ -177,6 +177,15 @@ name is prefixed with '$' sign. Here is the list of supported global
 variables, together with their default values (all of these are 
 optional):
 
+- **$dash-default-cols**: _6_ - How many "columns" of graphs to display on
+the dashboard by default. SMG will insert a new line between graphs at that
+"column".
+
+- **$dash-default-rows**: _10_  - How many "rows" of graphs to display on 
+the dashboard by default. This together with the number of "columns" 
+determines the "page size" - how many graphs will be displayed on each
+graphs page.
+
 - **$rrd\_dir**: _"smgrrd"_ - directory where to store your rrd files. 
 You probably want to change this on any production installation
 (for more demanding setups, may want to put that dir on an SSD drive).
@@ -237,6 +246,15 @@ regular config files (these can have more $includes too)
 display by default on the Configured Indexes page. The default value 
 of 1 means to display only top level indexes, 2 would also display
 their children etc. Valid values are between 1 and 5.
+
+- **$run-tree-levels-display**: _1_ - Same as $index-tree-levels but applies
+to monitor state run trees.
+
+- **$max-url-size**: _8000_ - The maximum url size supported by browsers. SMG
+will use POST requests (instead of GET) if a filter URL would exceed that 
+size. Only draw back is that the resulting URLs will not be shareable. This
+needs to be set to around 2000 for IE support, and can be raised to 32k if
+one does not care about Android and IE. 
 
 <a name="pre_fetch" />
 

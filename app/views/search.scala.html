@@ -16,14 +16,16 @@
 <div align="center">
 <form id="searchForm" method="GET">
   <h3 style="cursor: help;" title='Enter search terms below.
-Click "Search" (or hit Enter) to treat these as words and find matching indexes and objects.
-Click "Go to graphs" to treat these as regexes and display matching graphs directly'>Search</h3>
+
+Click "Search" (or hit Enter) to treat these as words and find matching indexes and objects. Prefix a word with () to make it treated as regex.
+
+Click "Graphs text regex filter" to treat these as regexes and display matching graphs directly'>Search</h3>
   (<label>Limit:</label> <input id="inpL" type="text" name="lmt" size="4" value="@lmt" />)
   <input id="inpQ" type="text" class="clearable" name="q" size="100" value="@q"
-         title='Enter words and click "Search" (or hit Enter) to find indexes and objects.
-Enter regex(es) and click "Go to graphs" to display matching graphs directly' autofocus />
+         title='Enter words or regexes prefixed with () and click "Search" (or hit Enter) to find indexes and objects.
+Enter regex(es) and click "Graphs text regex filter" to display matching graphs directly' autofocus />
   <input type="submit" value="Search" title="Find indexes and objects matching the query words"/>
-  <input type="button" value="Go to graphs" onclick="submitTrxForm();"
+  <input type="button" value="Graphs text regex filter" onclick="submitTrxForm();"
          title="Treat the query words as regexes and display matching graphs directly"/>
 </form>
 

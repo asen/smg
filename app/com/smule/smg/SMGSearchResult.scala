@@ -1,5 +1,7 @@
 package com.smule.smg
 
+import scala.util.Try
+
 /**
   * Created by asen on 9/3/16.
   */
@@ -43,7 +45,11 @@ class SMGSearchQuery(q: String) {
 
   private def textMatches(txt: String): Boolean = if (terms.isEmpty) false else {
     terms.forall { term =>
-      txt.contains(term)
+      if (term.startsWith("()")) {
+        val asCiRegex = Try(("(?i)" + term.substring(2)).r).getOrElse("MATCH_NOTHING^".r)
+        asCiRegex.findFirstIn(txt).nonEmpty
+      } else
+        txt.contains(term)
     }
   }
 

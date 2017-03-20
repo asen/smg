@@ -182,7 +182,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val mySx = if (idx.isEmpty || sx.isDefined) sx else idx.get.flt.sx
       val myRx = if (idx.isEmpty || rx.isDefined) rx else idx.get.flt.rx
       val myRxx = if (idx.isEmpty || rxx.isDefined) rxx else idx.get.flt.rxx
-      val myTrx = if (idx.isEmpty || rx.isDefined) rx else idx.get.flt.trx
+      val myTrx = if (idx.isEmpty || trx.isDefined) trx else idx.get.flt.trx
 
       val myRemote = if (idx.isEmpty || remote.isDefined) remote else idx.get.flt.remote
 

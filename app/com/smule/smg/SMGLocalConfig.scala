@@ -94,7 +94,7 @@ case class SMGLocalConfig(
   // This needs to be set to around 2000 for IE support, and can be raised to 32k if one does not care about android
   // if the dash/filter form URL is estimated to exceed this size, a POST will be used instead of GET
   // Only draw back is that the resulting URLs will not be shareable
-  val maxUrlSize: Int = globals.getOrElse("$dash-default-rows", "8000").toInt
+  val maxUrlSize: Int = globals.getOrElse("$max-url-size", "8000").toInt
 
 
   val MAX_RUNTREE_LEVELS = 10
