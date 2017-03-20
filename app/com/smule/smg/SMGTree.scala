@@ -79,6 +79,8 @@ object SMGTree {
     * @return - list of top-level (no parent) trees
     */
   def buildTrees[T <: SMGTreeNode](leafObjs: Seq[T], parentObjs: Map[String,T]): Seq[SMGTree[T]] = {
+    if (leafObjs.isEmpty)
+      return Seq()
     val allObjs = leafObjs ++ parentObjs.values.toList.distinct
     val allByParent = allObjs.groupBy(_.parentId.getOrElse(""))
     val leafTreesById = leafObjs.map(o => SMGTree[T](o, Seq())).groupBy(_.node.id).map { t =>
@@ -112,7 +114,7 @@ object SMGTree {
         Some(SMGTree[T](root, childTrees))
     }
 
-    val topLevel = allByParent("").map { n => myBuildTree(n) }.collect { case Some(x) => x }.sortBy(_.node.id)
+    val topLevel = allByParent.getOrElse("", Seq()).map { n => myBuildTree(n) }.collect { case Some(x) => x }.sortBy(_.node.id)
     validateTrees(leafObjs, topLevel)
     topLevel.toList
   }
