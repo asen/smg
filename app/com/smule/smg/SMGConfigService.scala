@@ -772,7 +772,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       if (globalConf.contains("$img_dir")) globalConf("$img_dir") else imgDir,
       if (globalConf.contains("$url_prefix")) globalConf("$url_prefix") else urlPrefix,
       intervals.toSet,
-      preFetches.toMap,
+      preFetches.toMap ++ plugins.flatMap(_.preFetches),
       remotes.toList,
       remoteMasters.toList,
       plugins.map( p => (p.pluginId, p.objects) ).toMap,
