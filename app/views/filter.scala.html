@@ -160,7 +160,7 @@ By default aggregation happens per-remote instance">Cross-Remote:</label>
       <input type="hidden" name="xagg" value="on" />
       }
       }
-
+      <input id="smgFilterFormPg" type="hidden" name="pg" value="0" />
     </div>
   </div>
 </form>
@@ -173,6 +173,7 @@ By default aggregation happens per-remote instance">Cross-Remote:</label>
       $(':input', this).each(function() {
           this.disabled = !($(this).val()) ||
                           ((this.name == "xsort") && ($(this).val() == 0)) ||
+                          ((this.name == "pg") && ($(this).val() == 0)) ||
                           ((this.name == "period") && ($(this).val() == "@defaultPeriod")) ||
                           ((this.name == "cols") && ($(this).val() == "@defaultCols")) ||
                           ((this.name == "rows") && ($(this).val() == "@defaultRows"))
@@ -204,6 +205,12 @@ By default aggregation happens per-remote instance">Cross-Remote:</label>
         document.getElementById("smgFilterForm").appendChild(input);
       }
       setTimeout(0, $('#btn_GET').click());
+  }
+
+  function smgFilterGoToPage(pg) {
+    var pgelem = document.getElementById("smgFilterFormPg")
+    pgelem.value = pg
+    mySubmitOnChange(pgelem);
   }
 
   $('form#smgFilterForm').submit(disableEmptyInputs);

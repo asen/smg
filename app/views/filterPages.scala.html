@@ -1,0 +1,45 @@
+@import com.smule.smg.SMGFilter
+
+@(pg: Int, maxPg: Int)
+
+<nav>
+    <ul class="pagination">
+        @if(pg > 0) {
+            <li>
+                <a href="javascript:{}" onclick="smgFilterGoToPage(@{pg - 1});" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        } else {
+            <li class="disabled">
+                <span aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </span>
+            </li>
+        }
+
+        @for( p <- 0 to (maxPg - 1)) {
+            <li @if(p == pg) {
+                class="active"
+                }>
+                <a href="javascript:{}" onclick="smgFilterGoToPage(@{p});">
+                    <span aria-hidden="true">@(p + 1)</span>
+                </a>
+            </li>
+        }
+        @if(pg < maxPg - 1) {
+            <li>
+                <a href="javascript:{}" onclick="smgFilterGoToPage(@{pg + 1});" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        } else {
+            <li class="disabled">
+                <span aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </span>
+            </li>
+        }
+
+    </ul>
+</nav>

@@ -64,8 +64,7 @@
   }
 
   @if(aggOp.isEmpty){
-    @pages(dep.period, flt, dep.cols, dep.rows, dep.pg, maxPg,
-           GrapherApi.defaultPeriod, conf.dashDefaultCols, conf.dashDefaultRows)
+    @filterPages(dep.pg, maxPg)
   }
 
   @for( (remoteId, lst) <- byRemote) {
@@ -122,8 +121,7 @@
   }
 
   @if(aggOp.isEmpty){
-    @pages(dep.period, flt, dep.cols, dep.rows, dep.pg, maxPg,
-    GrapherApi.defaultPeriod, conf.dashDefaultCols, conf.dashDefaultRows)
+    @filterPages(dep.pg, maxPg)
   }
 }
 
