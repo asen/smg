@@ -7,13 +7,14 @@
 @import com.smule.smg.GraphOptions
 @import com.smule.smg.SMGMonState
 @import com.smule.smg.SMGMonStateAgg
+@import com.smule.smg.SMGLocalConfig
 @import controllers.DashboardExtraParams
 
 @(plugins: Seq[SMGPlugin], idx: Option[SMGIndex], parentIdx: Option[SMGIndex],
   byRemote: Seq[(String, Seq[SMGImageView])], flt: SMGFilter, dep: DashboardExtraParams, aggOp: Option[String],
   maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int, availRemotes: Seq[SMGRemote],
-  cwidth: Int, gopts: GraphOptions, showMs:Boolean, monData: Map[String, Seq[SMGMonState]],
-  monOverviewOids: Seq[String], errorMsg: Option[String], maxUrlSize: Int)(implicit flash: Flash)
+  gopts: GraphOptions, showMs:Boolean, monData: Map[String, Seq[SMGMonState]],
+  monOverviewOids: Seq[String], errorMsg: Option[String], conf:SMGLocalConfig)(implicit flash: Flash)
 
 @main("SMG - " + (if (idx.isDefined) idx.get.title else flt.humanText), plugins) {
 
@@ -46,7 +47,8 @@
 
 @if(dep.rows > 0) {
   @filter(flt, dep.period, dep.cols, dep.rows, predefPeriods, availRemotes, aggOp,
-          byRemote.nonEmpty && byRemote.tail.nonEmpty, dep.xRemoteAgg, gopts, maxUrlSize)
+          byRemote.nonEmpty && byRemote.tail.nonEmpty, dep.xRemoteAgg, gopts, conf.maxUrlSize,
+          GrapherApi.defaultPeriod, conf.dashDefaultCols, conf.dashDefaultRows)
 
   @if(aggOp.isEmpty){
   @displaySelectHeader()
@@ -62,7 +64,8 @@
   }
 
   @if(aggOp.isEmpty){
-    @pages(dep.period, flt, dep.cols, dep.rows, dep.pg, maxPg)
+    @pages(dep.period, flt, dep.cols, dep.rows, dep.pg, maxPg,
+           GrapherApi.defaultPeriod, conf.dashDefaultCols, conf.dashDefaultRows)
   }
 
   @for( (remoteId, lst) <- byRemote) {
@@ -70,7 +73,7 @@
     <div class="smgraphcontainer">
       <div class="smgrow">
       @for( (g, ix) <- lst.zipWithIndex) {
-        <div class="smgcell" style="max-width: @{cwidth}px;">
+        <div class="smgcell" style="max-width: @{conf.rrdConf.imageCellWidth}px;">
           <!-- @g.obj -->
           <a name="@g.obj.id" ></a> <a name="@g.period"></a> <a name="@g.obj.id-@g.period"></a>
           <div class="smgraph">
@@ -119,7 +122,8 @@
   }
 
   @if(aggOp.isEmpty){
-    @pages(dep.period, flt, dep.cols, dep.rows, dep.pg, maxPg)
+    @pages(dep.period, flt, dep.cols, dep.rows, dep.pg, maxPg,
+    GrapherApi.defaultPeriod, conf.dashDefaultCols, conf.dashDefaultRows)
   }
 }
 

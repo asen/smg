@@ -64,7 +64,8 @@ case class SMGFilter(px: Option[String],
   }
 
   def asUrlForPeriod(aPeriod: Option[String] = None): String = {
-    val sb = new StringBuilder("period=").append(URLEncoder.encode(aPeriod.getOrElse(GrapherApi.defaultPeriod),"UTF-8"))
+    val sb = new StringBuilder()
+    if (aPeriod.isDefined) sb.append("&period=").append(URLEncoder.encode(aPeriod.get,"UTF-8"))
     if (px.isDefined) sb.append("&px=").append(URLEncoder.encode(px.get,"UTF-8"))
     if (sx.isDefined) sb.append("&sx=").append(URLEncoder.encode(sx.get,"UTF-8"))
     if (rx.isDefined) sb.append("&rx=").append(URLEncoder.encode(rx.get,"UTF-8"))
@@ -73,11 +74,15 @@ case class SMGFilter(px: Option[String],
     if (remote.isDefined) sb.append("&remote=").append(URLEncoder.encode(remote.get,"UTF-8"))
 
     if (gopts.step.isDefined) sb.append("&step=").append(URLEncoder.encode(gopts.step.get.toString,"UTF-8"))
-    if (gopts.xsort.isDefined) sb.append("&xsort=").append(URLEncoder.encode(gopts.xsort.get.toString,"UTF-8"))
+    if (gopts.xsort.isDefined && (gopts.xsort.get != 0))
+      sb.append("&xsort=").append(URLEncoder.encode(gopts.xsort.get.toString,"UTF-8"))
     if (gopts.disablePop) sb.append("&dpp=on")
     if (gopts.disable95pRule) sb.append("&d95p=on")
 
-    sb.toString
+    if (sb.isEmpty)
+      ""
+    else
+      sb.toString.substring(1)
   }
 
   def asUrlForPage(pg: Int, cols: Option[Int], rows: Option[Int], aPeriod: Option[String] = None): String = {
@@ -85,10 +90,13 @@ case class SMGFilter(px: Option[String],
     if (cols.isDefined)  mysb.append("&cols=").append(cols.get)
     if (rows.isDefined)  mysb.append("&rows=").append(rows.get)
     if (pg != 0) mysb.append("&pg=").append(pg)
-    mysb.toString
+    val ret = mysb.toString()
+    if (ret.startsWith("&"))
+      ret.substring(1)
+    else ret
   }
 
-  def asUrl = asUrlForPeriod(None)
+  def asUrl: String = asUrlForPeriod(None)
 
   private val paramsIdHumanSeq = Seq(
     if (trx.isDefined) "trx=" + trx.get else "",
@@ -100,7 +108,7 @@ case class SMGFilter(px: Option[String],
 
   private val paramsHumanText = if (paramsIdHumanSeq.isEmpty) "*" else paramsIdHumanSeq.mkString(" AND ")
 
-  val humanText = paramsHumanText + (if (remote.isDefined) s" (remote=${remote.get})" else "")
+  val humanText: String = paramsHumanText + (if (remote.isDefined) s" (remote=${remote.get})" else "")
 }
 
 object SMGFilter {
@@ -109,12 +117,13 @@ object SMGFilter {
 
   val matchAll = SMGFilter(None,None,None,None,None, Some(SMGRemote.wildcard.id), GraphOptions() )
 
-  def fromPrefixWithRemote(px:String, remoteId: Option[String]) = SMGFilter(Some(px), None, None, None, None, remoteId, GraphOptions() )
+  def fromPrefixWithRemote(px:String, remoteId: Option[String]): SMGFilter =
+    SMGFilter(Some(px), None, None, None, None, remoteId, GraphOptions() )
 
-  def fromPrefixLocal(px:String) = fromPrefixWithRemote(px, None)
+  def fromPrefixLocal(px:String): SMGFilter = fromPrefixWithRemote(px, None)
 
 
-  def fromParams(params: Map[String, Seq[String]]) = {
+  def fromParams(params: Map[String, Seq[String]]): SMGFilter = {
     val gopts = GraphOptions(
       step = params.get("px").map(l => SMGRrd.parseStep(l.head).getOrElse(0)),
       pl = params.get("pl").map(_.head),

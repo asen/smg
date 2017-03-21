@@ -4,7 +4,7 @@
 
 @(flt: SMGFilter, period: String, cols: Int, rows: Int, predefPeriods: Seq[String],
         availRemotes: Seq[SMGRemote], aggOp: Option[String], showXagg: Boolean, xagg: Boolean,
-        gopts: GraphOptions, maxUrlSize: Int)
+        gopts: GraphOptions, maxUrlSize: Int, defaultPeriod: String, defaultCols: Int, defaultRows: Int)
 
 <form id="smgFilterForm" method="GET" action="/dash" class="filter-form">
 
@@ -171,7 +171,12 @@ By default aggregation happens per-remote instance">Cross-Remote:</label>
 <script language="JavaScript">
   function disableEmptyInputs() {
       $(':input', this).each(function() {
-          this.disabled = !($(this).val()) || ((this.name == "xsort") && ($(this).val() == 0));
+          this.disabled = !($(this).val()) ||
+                          ((this.name == "xsort") && ($(this).val() == 0)) ||
+                          ((this.name == "period") && ($(this).val() == "@defaultPeriod")) ||
+                          ((this.name == "cols") && ($(this).val() == "@defaultCols")) ||
+                          ((this.name == "rows") && ($(this).val() == "@defaultRows"))
+                          ;
       });
 
       //estimate URL size and use POST if url would be too long

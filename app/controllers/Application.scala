@@ -345,8 +345,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val errorsOpt = if (myErrors.isEmpty) None else Some(myErrors.mkString(", "))
       Ok(
         views.html.filterResult(configSvc.plugins, idx, parentIdx, byRemote, flt, dep, myAggOp, maxPages,
-          lst.size, objsSlice.size, tlObjects, availRemotes, configSvc.config.rrdConf.imageCellWidth,
-          flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt, conf.maxUrlSize)
+          lst.size, objsSlice.size, tlObjects, availRemotes,
+          flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt, conf)
       )
     }
   }

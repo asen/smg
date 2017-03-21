@@ -1,12 +1,16 @@
 @import com.smule.smg.SMGFilter
 
-@(period:String, flt: SMGFilter, cols: Int, rows: Int, pg: Int, maxPg: Int)
+@(period:String, flt: SMGFilter, cols: Int, rows: Int, pg: Int, maxPg: Int,
+  defaultPeriod: String, defaultCols: Int, defaultRows: Int)
 
 <nav>
     <ul class="pagination">
         @if(pg > 0) {
             <li>
-                <a href="/dash?@flt.asUrlForPage(pg - 1, Some(cols), Some(rows), Some(period))" aria-label="Previous">
+                <a href="/dash?@flt.asUrlForPage(pg - 1,
+                    if (cols == defaultCols) None else Some(cols),
+                    if (rows == defaultRows) None else Some(rows),
+                    if (period == defaultPeriod) None else Some(period))" aria-label="Previous">
                     <span aria-hidden="true">&laquo;</span>
                 </a>
             </li>
@@ -22,12 +26,18 @@
             <li @if(p == pg) {
                 class="active"
                 }>
-                <a href="/dash?@flt.asUrlForPage(p, Some(cols), Some(rows), Some(period))">@(p + 1)</a>
+                <a href="/dash?@flt.asUrlForPage(p,
+                    if (cols == defaultCols) None else Some(cols),
+                    if (rows == defaultRows) None else Some(rows),
+                    if (period == defaultPeriod) None else Some(period))">@(p + 1)</a>
             </li>
         }
         @if(pg < maxPg - 1) {
             <li>
-                <a href="/dash?@flt.asUrlForPage(pg + 1, Some(cols), Some(rows), Some(period))" aria-label="Next">
+                <a href="/dash?@flt.asUrlForPage(pg + 1,
+                    if (cols == defaultCols) None else Some(cols),
+                    if (rows == defaultRows) None else Some(rows),
+                    if (period == defaultPeriod) None else Some(period)))" aria-label="Next">
                     <span aria-hidden="true">&raquo;</span>
                 </a>
             </li>
