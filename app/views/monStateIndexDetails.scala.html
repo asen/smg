@@ -2,13 +2,21 @@
 
 @defining(java.util.UUID.randomUUID.toString) { formUUID =>
 
+<script language="JavaScript">
+  function showMonStateActions_@{formUUID.replace("-","")}(){
+    document.getElementById('msidhm_@formUUID').innerHTML = '@monitorSvgRefIndex(ixid)';
+    document.getElementById('msidact_@formUUID').style.display = 'block';
+  }
+</script>
+
 <img width="16" height="16"
-     onclick="document.getElementById('msidact_@formUUID').style.display = 'block'"
+     onclick='showMonStateActions_@{formUUID.replace("-","")}();'
      title="Show status and actions"
      src='@routes.Assets.versioned("images/eye.png")'
 >
+
 <div id="msidact_@formUUID" class="monStateIndexActions" style="display: none">
-  @monitorSvgRefIndex(ixid)<br/>
+  <span id="msidhm_@formUUID"></span><br/>
   @monStateIndexSilence(ixid, formUUID)
 </div>
 
