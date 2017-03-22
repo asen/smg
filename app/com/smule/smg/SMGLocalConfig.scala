@@ -53,9 +53,9 @@ case class SMGLocalConfig(
   private def pluginUpdateObjects(pluginId: String) = pluginObjects(pluginId).filter(ov => ov.refObj.isDefined || ov.isInstanceOf[SMGObjectUpdate]).map {
     case update: SMGObjectUpdate => update
     case ov => ov.refObj.get
-  }
+  }.distinct
   
-  private val pluginsUpdateObjects = pluginObjects.flatMap(t => pluginUpdateObjects(t._1)).groupBy(_.id).map { case (id, seq) => seq.head }
+  private val pluginsUpdateObjects = pluginObjects.flatMap(t => pluginUpdateObjects(t._1))
 
   val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++ pluginsUpdateObjects
 
