@@ -615,7 +615,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val oids = oidsParam.get.head.split(",")
       val ovs = oids.distinct.map { oid => smg.getObjectView(oid) }.filter(_.isDefined).map(_.get)
       monitorApi.objectViewStates(ovs).map { byObj =>
-        val mss = ovs.flatMap(ov => byObj.getOrElse(ov.ouId, Seq()))
+        val mss = ovs.flatMap(ov => byObj.getOrElse(ov.id, Seq()))
         Ok(views.html.monitorSvgObjects(mss.toSeq, None))
       }
     }
