@@ -24,6 +24,8 @@ when same as default
 
 * cleanup/remove deprecated monitorProblems API
 
+* format large numbers with M/G/T suffixes
+
 == Search ==
 
 * smart (?) search

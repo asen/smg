@@ -6,11 +6,11 @@ target
 /.project
 /.settings
 /RUNNING_PID
-/smgrrd/*
-/monlog/*
-/monstate/*
+#/smgrrd/*
+#/public/smg/*
+#/monlog/*
+#/monstate/*
 /test-out/*
-/public/smg/*
 /public/docs/*
 /public/plugins/jsgraph/pl/plotly-1.18.0.min.js
 .DS_Store
