@@ -19,8 +19,6 @@ from external sources posting the data via some API
 
 == Monitor ==
 
-* format large numbers with M/G/T suffixes
-
 == Search ==
 
 * smart (?) search

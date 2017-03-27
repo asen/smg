@@ -59,9 +59,23 @@ object SMGState extends Enumeration {
     sb.toString()
   }
 
-  private val myFormatter = new DecimalFormat("#.######")
+  private val mySmallFormatter = new DecimalFormat("#.######")
+  private val myBigFormatter = new DecimalFormat("#.###")
 
-  def numFmt(num: Double): String = if (num.isNaN) "NaN" else myFormatter.format(num)
+  def numFmt(num: Double, mu: Option[String]): String = if (num.isNaN) "NaN" else {
+    val (toFmt, metricPrefix, myFormatter) = if (math.abs(num) > 1000000000) {
+      (num / 1000000000, "G", myBigFormatter)
+    } else if (math.abs(num) > 1000000) {
+      (num / 1000000, "M", myBigFormatter)
+    } else if (math.abs(num) > 1000) {
+      (num / 1000, "K", myBigFormatter)
+    } else if (math.abs(num) > 1) {
+      (num, "", myBigFormatter)
+    } else {
+      (num, "", mySmallFormatter)
+    }
+    myFormatter.format(toFmt) + metricPrefix + mu.getOrElse("")
+  }
 
 
   private val severityChars = Map(

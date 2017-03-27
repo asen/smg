@@ -72,6 +72,7 @@ class SpikerSpec extends Specification {
 
   val specialCase = (1 to ltMaxMinutes).map(_ => rnd.nextInt(10)) ++ Seq(100, 100) ++ (1 to ltMaxMinutes).map(_ => rnd.nextInt(10))
 
+  def myNumFmt(n: Double) = SMGState.numFmt(n, None)
 
   def testData(data: Seq[Int], debug: Boolean = false) = {
     val o = new SMGMonValueMovingStats("blah", 0, 60)
@@ -85,7 +86,7 @@ class SpikerSpec extends Specification {
       if (debug) {
         println(o.serialize)
       }
-      val r = aThresh.checkAlert(o, stMaxMinutes, ltMaxMinutes, SMGState.numFmt)
+      val r = aThresh.checkAlert(o, stMaxMinutes, ltMaxMinutes, myNumFmt)
       if (r.isDefined){
         //          println(o.serialize)
         spikes += 1
