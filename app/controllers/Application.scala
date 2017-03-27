@@ -20,16 +20,6 @@ import play.api.mvc.Cookie
 import play.api.mvc.DiscardingCookie
 
 
-case class DashboardExtraParams (
-                                  period: String,
-                                  cols: Int,
-                                  rows: Int,
-                                  pg: Int,
-                                  agg: Option[String],
-                                  xRemoteAgg: Boolean
-                                )
-
-
 @Singleton
 class Application  @Inject() (actorSystem: ActorSystem,
                               smg: GrapherApi,
@@ -124,7 +114,16 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   private def optStr2OptDouble(opt: Option[String]): Option[Double] = if (opt.isDefined && (opt.get != "")) Some(opt.get.toDouble) else None
-  
+
+  case class DashboardExtraParams (
+                                    period: String,
+                                    cols: Int,
+                                    rows: Int,
+                                    pg: Int,
+                                    agg: Option[String],
+                                    xRemoteAgg: Boolean
+                                  )
+
   /**
     *
     * @param ix - optional index id to be used (matching to that index id filter will be used)

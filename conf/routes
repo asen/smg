@@ -65,8 +65,6 @@ POST    /api/graph          controllers.Api.graph
 POST    /api/agg            controllers.Api.agg
 GET     /api/rrd/:oid       controllers.Api.downloadRrd(oid: String)
 
-# /monitor/problems is deprecated
-GET     /api/monitor/problems   controllers.Api.monitorProblems(ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
 GET     /api/monitor/states     controllers.Api.monitorStates(ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
 GET     /api/monitor/silenced   controllers.Api.monitorSilencedStates()
 GET     /api/monitor/trees      controllers.Api.monitorTrees(rx: Option[String], rxx: Option[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rid: Option[String], pg: Int ?= 0, lmt: Int ?= 200)

@@ -225,18 +225,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
       ackd.getOrElse("off") == "on", slncd.getOrElse("off") == "on")
     Ok(Json.toJson(logs))
   }
-
-  // TODO XXX deprecated
-  def monitorProblems(ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String]) = Action {
-    val myMs = ms.map(s => SMGState.withName(s)).getOrElse(SMGState.E_ANOMALY)
-    val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(myMs),
-      includeSoft =  soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
-      includeSilenced = slncd.getOrElse("off") == "on"
-    )
-    val states = monitorApi.localStates(flt, includeInherited = false)
-    Ok(Json.toJson(states))
-  }
-
+  
   def monitorStates(ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String]) = Action {
     val myMs = ms.map(s => SMGState.withName(s)).getOrElse(SMGState.E_ANOMALY)
     val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(myMs),

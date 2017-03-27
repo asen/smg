@@ -520,28 +520,6 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
-  def monitorProblems(flt: SMGMonFilter): Future[Seq[SMGMonState]] = {
-    val params = s"?" + flt.asUrlParams
-    lazy val errRet = Seq(SMGMonStateGlobal("Remote data unavailable", remote.id,
-      SMGState((System.currentTimeMillis() / 1000).toInt, SMGState.E_SMGERR, "data unavailable")))
-    ws.url(remote.url + API_PREFIX + "monitor/problems" + params).
-      withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
-      Try {
-        Json.parse(resp.body).as[Seq[SMGMonState]]
-      }.recover {
-        case x => {
-          log.ex(x, "remote monitor/problems parse error: " + remote.id)
-          errRet
-        }
-      }.get
-    }.recover {
-      case x => {
-        log.ex(x, "remote monitor/problems fetch error: " + remote.id)
-        errRet
-      }
-    }
-  }
-
   def monitorStates(flt: SMGMonFilter): Future[SMGMonitorStatesResponse] = {
     val params = s"?" + flt.asUrlParams
     lazy val errRet = SMGMonitorStatesResponse( remote,

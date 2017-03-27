@@ -11,9 +11,6 @@ from external sources posting the data via some API
 
 * filter to hide empty graphs
 
-* Remove period(=24h), cols(=6) and rows(=10) from /dash form params/URL
-when same as default
-
 * support "tags" (?) - be able to filter by tag.
 
 * backups/replication (?) Currently can just copy out the rrd dir for a backup (and the conf - if not generated).
@@ -21,8 +18,6 @@ when same as default
 * login system (?)
 
 == Monitor ==
-
-* cleanup/remove deprecated monitorProblems API
 
 * format large numbers with M/G/T suffixes
 

@@ -296,28 +296,6 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       ret.filter(!_.isInherited)
   }
 
-  override def problems(remoteId: Option[String], flt: SMGMonFilter): Future[Seq[(SMGRemote, Seq[SMGMonState])]] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
-    val futs = ListBuffer[(Future[(SMGRemote, Seq[SMGMonState])])]()
-    if (remoteId.isEmpty || remoteId.get == SMGRemote.wildcard.id) {
-      futs += Future {
-        (SMGRemote.local, localStates(flt, includeInherited = false))
-      }
-      configSvc.config.remotes.foreach { rmt =>
-        futs += remotes.monitorProblems(rmt.id, flt).map((rmt,_))
-      }
-    } else if (remoteId.get == SMGRemote.local.id) {
-      futs += Future {
-        (SMGRemote.local, localStates(flt, includeInherited = false))
-      }
-    } else {
-      val rmtOpt = configSvc.config.remotes.find(_.id == remoteId.get)
-      if (rmtOpt.isDefined)
-        futs += remotes.monitorProblems(rmtOpt.get.id, flt).map((rmtOpt.get,_))
-    }
-    Future.sequence(futs.toList)
-  }
-
   override def states(remoteId: Option[String], flt: SMGMonFilter): Future[Seq[SMGMonitorStatesResponse]] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
     val futs = ListBuffer[(Future[SMGMonitorStatesResponse])]()

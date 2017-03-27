@@ -149,17 +149,6 @@ trait SMGRemotesApi {
     */
   def monitorRunTree(remoteId: String, root: Option[String]): Future[Map[Int,Seq[SMGFetchCommandTree]]]
 
-
-  /**
-    * XXX TODO Deprecated
-    * remote call to get current problems
-    * @param remoteId
-    * @param flt
-    * @return
-    */
-  def monitorProblems(remoteId: String, flt: SMGMonFilter): Future[Seq[SMGMonState]]
-
-
   /**
     * remote call to get current (problem) states
     * @param remote
@@ -482,13 +471,6 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     if (clientForId(remoteId).nonEmpty)
       clientForId(remoteId).get.monitorRunTree(root)
     else Future { Map() }
-  }
-
-  override def monitorProblems(remoteId: String, flt: SMGMonFilter): Future[Seq[SMGMonState]] = {
-    if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorProblems(flt)
-    else Future { Seq() }
-
   }
 
   /**
