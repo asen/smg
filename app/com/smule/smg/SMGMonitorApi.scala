@@ -63,13 +63,13 @@ object SMGState extends Enumeration {
   private val myBigFormatter = new DecimalFormat("#.###")
 
   def numFmt(num: Double, mu: Option[String]): String = if (num.isNaN) "NaN" else {
-    val (toFmt, metricPrefix, myFormatter) = if (math.abs(num) > 1000000000) {
+    val (toFmt, metricPrefix, myFormatter) = if (math.abs(num) >= 1000000000) {
       (num / 1000000000, "G", myBigFormatter)
-    } else if (math.abs(num) > 1000000) {
+    } else if (math.abs(num) >= 1000000) {
       (num / 1000000, "M", myBigFormatter)
-    } else if (math.abs(num) > 1000) {
+    } else if (math.abs(num) >= 1000) {
       (num / 1000, "K", myBigFormatter)
-    } else if (math.abs(num) > 1) {
+    } else if (math.abs(num) >= 1) {
       (num, "", myBigFormatter)
     } else {
       (num, "", mySmallFormatter)
