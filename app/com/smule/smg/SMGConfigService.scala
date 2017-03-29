@@ -46,15 +46,6 @@ trait SMGConfigService {
     */
   val useInternalScheduler: Boolean
 
-
-  /**
-    * XXX looks like java is leaking direct memory buffers (or possibly - just slowing
-    * down external commands when reclaiming these on the fly) when reloading conf.
-    * This is an attempt to fix that after realizing that a "manual gc" via jconsole clears overlap issues.
-    * This method can be disabled via application.conf
-    */
-  def callSystemGc(ctx: String): Unit
-
   /**
   * Configured (in application.conf) plugins
   */
@@ -95,6 +86,8 @@ trait SMGConfigService {
   * @param lsnr - the object reference to register
   */
   def registerReloadListener(lsnr: SMGConfigReloadListener): Unit
+
+  def notifyReloadListeners(ctx: String): Unit
 
   /**
   * Get all applicable to the provided object value (at index vix) AlertConfigs (a.k.a. checks)
@@ -195,7 +188,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
 
   private val callSystemGcOnReload: Boolean = configuration.getBoolean("smg.callSystemGcOnReload").getOrElse(true)
 
-  override def callSystemGc(ctx: String): Unit = {
+  /**
+    * XXX looks like java is leaking direct memory buffers (or possibly - just slowing
+    * down external commands when reclaiming these on the fly) when reloading conf.
+    * This is an attempt to fix that after realizing that a "manual gc" via jconsole clears overlap issues.
+    * This method can be disabled via application.conf
+    */
+  private def callSystemGc(ctx: String): Unit = {
     // TODO synchronize ?
     if (callSystemGcOnReload) {
       // XXX looks like java is leaking direct memory buffers (or possibly - just slowing
@@ -264,6 +263,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
   }
   def reloadListerenrs: List[SMGConfigReloadListener] = myConfigReloadListeners.synchronized(myConfigReloadListeners.toList)
 
+  override def notifyReloadListeners(ctx: String): Unit = {
+    val myrlsnrs = reloadListerenrs
+    Try(myrlsnrs.foreach(_.reload()))
+    log.info(s"ConfigService.notifyReloadListeners($ctx) - notified ${myrlsnrs.size} listeners")
+    callSystemGc(ctx)
+  }
+
   /**
   * @inheritdoc
   */
@@ -297,9 +303,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
                 " imgDir=" + newConf.imgDir + " urlPrefix=" + newConf.urlPrefix +
                 " objectsCount=" + newConf.rrdObjects.size +
                 " intervals=" + newConf.intervals.toList.sorted.mkString(","))
-        Try(reloadListerenrs.foreach(_.reload()))
-
-        callSystemGc("ConfigService.reload")
+        notifyReloadListeners("ConfigService.reload")
       } finally {
         reloadIsRunning.set(false)
       }

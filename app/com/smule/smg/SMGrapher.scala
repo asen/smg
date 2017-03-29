@@ -27,7 +27,8 @@ import scala.concurrent.{Await, Future}
 @Singleton
 class SMGrapher @Inject() (configSvc: SMGConfigService,
                            actorSystem: ActorSystem,
-                           val remotes: SMGRemotesApi
+                           val remotes: SMGRemotesApi,
+                           val searchCache: SMGSearchCache
                           ) extends GrapherApi {
 
   // TODO need to rethink dependencies (who creates the plugins) to get rid of this
@@ -309,42 +310,11 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   }
 
 
+  // TODO use the one from searchCache?
   private def allIndexes: Seq[SMGIndex] = configSvc.config.indexes ++
     configSvc.config.remotes.flatMap { rmt => // preserving order
       remotes.byId(rmt.id).map(_.indexes).getOrElse(Seq())
     }
-
-  private def allViewObjects: Seq[SMGObjectView] = configSvc.config.viewObjects ++
-    configSvc.config.remotes.flatMap { rmt => // preserving order
-      remotes.byId(rmt.id).map(_.viewObjects).getOrElse(Seq())
-    }
-
-  override def search(q: String, maxResults: Int): Future[Seq[SMGSearchResult]] = {
-    Future {
-      // search through
-      // all indexes (title/desc)
-      // objects (title/labels/command)
-      val sq = new SMGSearchQuery(q)
-      if (sq.isEmpty)
-        Seq()
-      else {
-        val ret = ListBuffer[SMGSearchResult]()
-        var cnt = 0
-        for (ix <- allIndexes; if cnt < maxResults; if sq.indexMatches(ix)) {
-          ret += SMGSearchResultIndex(ix, Seq()) // TODO get matching objects
-          cnt += 1
-        }
-        if (cnt < maxResults) {
-          for (ov <- allViewObjects; if cnt < maxResults; if sq.objectMatches(ov)) {
-            ret += SMGSearchResultObject(ov)
-            cnt += 1
-          }
-        }
-        ret.toList
-      }
-    }(ExecutionContexts.rrdGraphCtx)
-  }
-
 
   private def getMatchingIndexes(ovs: Seq[SMGObjectView], allIxes: Seq[SMGIndex]): Seq[SMGIndex] = {
     ovs.flatMap { ov =>
@@ -367,4 +337,5 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val nonAgs = if (ov.isAgg) ov.asInstanceOf[SMGAggObjectView].objs else Seq(ov)
     getMatchingIndexes(nonAgs, allIndexes)
   }
+
 }

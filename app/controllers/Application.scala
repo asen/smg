@@ -19,6 +19,8 @@ import scala.concurrent.{Await, Future}
 import play.api.mvc.Cookie
 import play.api.mvc.DiscardingCookie
 
+import play.api.libs.json._
+
 
 @Singleton
 class Application  @Inject() (actorSystem: ActorSystem,
@@ -574,20 +576,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  val DEFAULT_SEARCH_RESULTS_LIMIT = 500
-
-  def search(q: Option[String], lmt: Option[Int]): Action[AnyContent] = Action.async { implicit request =>
-    val maxRes = lmt.getOrElse(DEFAULT_SEARCH_RESULTS_LIMIT)
-    smg.search(q.getOrElse(""), maxRes + 1).map { sres =>
-      Ok(views.html.search(q = q.getOrElse(""),
-        res = sres.take(maxRes),
-        hasMore = sres.size == maxRes + 1,
-        lmt = maxRes,
-        defaultLmt = DEFAULT_SEARCH_RESULTS_LIMIT,
-        plugins = configSvc.plugins))
-    }
-  }
-
   val DEFAULT_INDEX_HEATMAP_MAX_SIZE = 300
 
   def monitorIndexSvg(ixid: String): Action[AnyContent] = Action.async {
@@ -890,5 +878,48 @@ class Application  @Inject() (actorSystem: ActorSystem,
         }
       }
     }
+  }
+
+  val JSON_PERIODS_RESPONSE = Ok(Json.toJson(GrapherApi.detailPeriods))
+
+  def jsonPeriods() = Action {
+    JSON_PERIODS_RESPONSE
+  }
+
+  val DEFAULT_SEARCH_RESULTS_LIMIT = 500
+
+  def search(q: Option[String], lmt: Option[Int]): Action[AnyContent] = Action { implicit request =>
+    val maxRes = lmt.getOrElse(DEFAULT_SEARCH_RESULTS_LIMIT)
+    val sres = smg.searchCache.search(q.getOrElse(""), maxRes + 1)
+    Ok(views.html.search(q = q.getOrElse(""),
+      res = sres.take(maxRes),
+      hasMore = sres.size == maxRes + 1,
+      lmt = maxRes,
+      defaultLmt = DEFAULT_SEARCH_RESULTS_LIMIT,
+      plugins = configSvc.plugins))
+  }
+
+  def jsonTrxTokens(q: String, remote: Option[String]) = Action {
+    val rmtId = remote.getOrElse("")
+    val sxes = smg.searchCache.getTrxTokens(q, rmtId)
+    Ok(Json.toJson(sxes))
+  }
+
+  def jsonRxTokens(q: String, remote: Option[String]) = Action {
+    val rmtId = remote.getOrElse("")
+    val sxes = smg.searchCache.getRxTokens(q, rmtId)
+    Ok(Json.toJson(sxes))
+  }
+
+  def jsonSxTokens(q: String, remote: Option[String]) = Action {
+    val rmtId = remote.getOrElse("")
+    val sxes = smg.searchCache.getSxTokens(q, rmtId)
+    Ok(Json.toJson(sxes))
+  }
+
+  def jsonPxTokens(q: String, remote: Option[String]) = Action {
+    val rmtId = remote.getOrElse("")
+    val pxes = smg.searchCache.getPxTokens(q, rmtId)
+    Ok(Json.toJson(pxes))
   }
 }

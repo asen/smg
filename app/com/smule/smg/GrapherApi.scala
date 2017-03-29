@@ -131,13 +131,6 @@ trait GrapherApi {
   def fetchAgg(aobj: SMGAggObjectView, params: SMGRrdFetchParams): Future[Seq[SMGRrdRow]]
 
   /**
-    * "smart" search
-    * @param q
-    * @return
-    */
-  def search(q: String, maxResults: Int): Future[Seq[SMGSearchResult]]
-
-  /**
     * Get all indexes which would match this object view
     * @param ov
     * @return
@@ -146,6 +139,8 @@ trait GrapherApi {
 
   // convenience reference to the remotesApi
   def remotes: SMGRemotesApi
+
+  def searchCache: SMGSearchCache
 }
 
 /**

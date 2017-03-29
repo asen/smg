@@ -9,7 +9,6 @@ GET     /ci             controllers.Application.index(remote :String ?= "*", lvl
 GET     /autoindex      controllers.Application.autoindex(rt: String ?= "", el: Int ?= 1)
 GET     /autoindex/     controllers.Application.autoindex(rt: String ?= "", el: Int ?= 1)
 GET     /autoindex/:rt  controllers.Application.autoindex(rt: String, el: Int ?= 1)
-# GET     /dash           controllers.Application.dashboard(ix: Option[String], px: Option[String], sx: Option[String], rx: Option[String], rxx: Option[String], trx: Option[String], remote: Option[String], agg: Option[String], period: String ?= "24h", pl: Option[String], step: Option[String], cols: Int ?= 6, rows: Int ?= 10, pg: Int ?= 0, xagg: String ?= "", xsort: Int ?= 0, dpp: String ?= "", d95p: String ?= "", maxy: Option[String])
 GET     /dash           controllers.Application.dash()
 POST    /dash           controllers.Application.dash()
 GET     /show/:oid      controllers.Application.show(oid: String, cols: Int ?= 6, dpp: String ?= "", d95p: String ?= "", maxy: Option[String])
@@ -28,23 +27,29 @@ GET     /monitor/heatmap     controllers.Application.monitorHeatmap
 GET     /monitor/log         controllers.Application.monitorLog(remote: String ?= "*", p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
 GET     /monitor/runtree     controllers.Application.monitorRunTree(remote: String ?= "", root: Option[String], lvls: Option[Int])
 
-GET    /monitor/ack          controllers.Application.monitorAck(id: String, curl: String)
-GET    /monitor/unack        controllers.Application.monitorUnack(id: String, curl: String)
-GET    /monitor/slnc         controllers.Application.monitorSilence(id: String, slunt: String, curl: String)
-GET    /monitor/unslnc       controllers.Application.monitorUnsilence(id: String, curl: String)
+GET     /monitor/ack          controllers.Application.monitorAck(id: String, curl: String)
+GET     /monitor/unack        controllers.Application.monitorUnack(id: String, curl: String)
+GET     /monitor/slnc         controllers.Application.monitorSilence(id: String, slunt: String, curl: String)
+GET     /monitor/unslnc       controllers.Application.monitorUnsilence(id: String, curl: String)
 
-POST   /monitor/ackList       controllers.Application.monitorAckList()
-POST   /monitor/slncList      controllers.Application.monitorSilenceList()
+POST    /monitor/ackList       controllers.Application.monitorAckList()
+POST    /monitor/slncList      controllers.Application.monitorSilenceList()
 
-GET    /monitor/slncIdx       controllers.Application.monitorSilenceIdx(ix: String, slunt: String, curl: String)
+GET     /monitor/slncIdx       controllers.Application.monitorSilenceIdx(ix: String, slunt: String, curl: String)
 
-GET    /monitor/mute         controllers.Application.monitorMute(remote: String, curl: String)
-GET    /monitor/unmute       controllers.Application.monitorUnmute(remote: String, curl: String)
+GET     /monitor/mute         controllers.Application.monitorMute(remote: String, curl: String)
+GET     /monitor/unmute       controllers.Application.monitorUnmute(remote: String, curl: String)
 
 GET     /proxy/:remote/*path  controllers.Application.proxy(remote: String, path: String)
 
-GET     /inspect/:id       controllers.Application.inspect(id: String)
+GET     /inspect/:id          controllers.Application.inspect(id: String)
 
+# JSON response for JS UI
+GET     /json/periods         controllers.Application.jsonPeriods()
+GET     /json/trxtokens       controllers.Application.jsonTrxTokens(q: String ?= "", remote: Option[String])
+GET     /json/rxtokens        controllers.Application.jsonRxTokens(q: String ?= "", remote: Option[String])
+GET     /json/pxtokens        controllers.Application.jsonPxTokens(q: String ?= "", remote: Option[String])
+GET     /json/sxtokens        controllers.Application.jsonSxTokens(q: String ?= "", remote: Option[String])
 
 # SVG response
 GET     /monitor/indexSvg    controllers.Application.monitorIndexSvg(ixid: String)

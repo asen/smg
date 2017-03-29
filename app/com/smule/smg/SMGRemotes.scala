@@ -300,7 +300,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     }
     Future.sequence(futs.toList).map { bools =>
       if (bools.exists(x => x))
-        configSvc.callSystemGc("SMGRemotes.fetchConfigs")
+        configSvc.notifyReloadListeners("SMGRemotes.fetchConfigs")
     }
   }
 
@@ -316,7 +316,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     if (cli.isDefined){
       cli.get.fetchConfig.map { copt =>
         if(copt.isDefined) cachedConfigs(slaveId) = copt
-        configSvc.callSystemGc(s"SMGRemotes.fetchConfigs($slaveId)")
+        configSvc.notifyReloadListeners(s"SMGRemotes.fetchConfigs($slaveId)")
       }
     } else {
       log.warn(s"SMGRemotes.fetchSlaveConfig($slaveId) - client not defined")

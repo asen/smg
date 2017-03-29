@@ -17,9 +17,10 @@ class SMGModule(environment: Environment, configuration: Configuration) extends 
 
   override def configure(): Unit = {
     bind(classOf[SMGConfigService]).to(classOf[SMGConfigServiceImpl])
+    bind(classOf[SMGRemotesApi]).to(classOf[SMGRemotes])
+    bind(classOf[SMGSearchCache]).to(classOf[SMGSearchCacheImpl])
     bind(classOf[GrapherApi]).to(classOf[SMGrapher])
     bind(classOf[SMGSchedulerApi]).to(classOf[SMGScheduler])
-    bind(classOf[SMGRemotesApi]).to(classOf[SMGRemotes])
     bind(classOf[SMGMonitorLogApi]).to(classOf[SMGMonitorLog])
     bind(classOf[SMGMonNotifyApi]).to(classOf[SMGMonNotifySvc])
     bind(classOf[SMGMonitorApi]).to(classOf[SMGMonitor])

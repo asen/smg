@@ -2,9 +2,10 @@
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.GraphOptions
 
-@(flt: SMGFilter, period: String, cols: Int, rows: Int, predefPeriods: Seq[String],
+@(flt: SMGFilter, period: String, cols: Int, rows: Int,
         availRemotes: Seq[SMGRemote], aggOp: Option[String], showXagg: Boolean, xagg: Boolean,
         gopts: GraphOptions, maxUrlSize: Int, defaultPeriod: String, defaultCols: Int, defaultRows: Int)
+
 
 <form id="smgFilterForm" method="GET" action="/dash" class="filter-form">
 
@@ -13,19 +14,14 @@
       <h3 class="panel-title">Filter: @flt.humanText</h3>
     </div>
     <div class="panel-body">
-      <datalist id='periodsList'>
-      @for( p <- predefPeriods) {
-        <option value='@p'>
-        }
-      </datalist>
 
       @if(availRemotes.nonEmpty) {
       <div class="form-group form-group-rmt">
         <label class="manualsubmit-lbl"
                title="Display only objects from the specifed remote. Use * to match all remotes.">Remote filter:</label>
         <br />
-        <select name="remote" class="select-remote">
-          @for( r <- availRemotes) {
+        <select id="smg-filter-remote" name="remote" class="select-remote">
+          @for(r <- availRemotes) {
           <option value='@r.id' @if(r.id == flt.remote.getOrElse("")){ selected } >@if(r.id == ""){Local}else{@r.id}</option>
           }
         </select>
@@ -33,31 +29,46 @@
       }
 
       <div class="form-group">
-        <label class="manualsubmit-lbl"
+        <label class="manualsubmit-lbl" for="smg-filter-trx"
                title="Display only objects which have graph object id, title, graph labels or units
 matching all of the provided space separated case insensitive regular expressions">Text regex filters:</label>
-        <input class="form-control clearable" type="text" name="trx" size="30" value='@flt.trx' >
+        <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Clear filter" onclick="clearElem('smg-filter-trx');" />
+        <input type="text" class="form-control"
+               id="smg-filter-trx"
+               name="trx" size="30" value='@flt.trx' >
       </div>
 
       <div class="form-group">
-        <label class="manualsubmit-lbl"
+        <label class="manualsubmit-lbl" for="smg-filter-px"
                title="Display only objects which have ids having the specified prefix (NOT regex)">Prefix filter:</label>
-        <input class="form-control clearable" type="text" name="px" value='@flt.px' >
+        <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Clear filter" onclick="clearElem('smg-filter-px');" />
+        <input type="text" class="form-control"
+               id="smg-filter-px"
+               name="px" value='@flt.px' >
       </div>
       <div class="form-group">
-        <label class="manualsubmit-lbl"
+        <label class="manualsubmit-lbl" for="smg-filter-sx"
                title="Display only objects which have ids having the specified suffix (NOT regex)">Suffix filter:</label>
-        <input class="form-control clearable" type="text" name="sx" value='@flt.sx' >
+        <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Clear filter" onclick="clearElem('smg-filter-sx');" />
+        <input type="text" class="form-control"
+               id="smg-filter-sx"
+               name="sx" value='@flt.sx' >
       </div>
       <div class="form-group">
-        <label class="manualsubmit-lbl"
+        <label class="manualsubmit-lbl" for="smg-filter-rx"
                title="Display only objects which have ids matching the specified case insensitive regular expression">Regex filter:</label>
-        <input class="form-control clearable" type="text" name="rx" value='@flt.rx' >
+        <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Clear filter" onclick="clearElem('smg-filter-rx');" />
+        <input type="text" class="form-control"
+               id="smg-filter-rx"
+               name="rx" value='@flt.rx' >
       </div>
       <div class="form-group">
-        <label class="manualsubmit-lbl"
+        <label class="manualsubmit-lbl" for="smg-filter-rxx"
                title="Filter out objects which have ids matching the specified case insensitive regular expression">Regex exclude filter:</label>
-        <input class="form-control clearable" type="text" name="rxx" value='@flt.rxx' >
+        <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Clear filter" onclick="clearElem('smg-filter-rxx');" />
+        <input type="text" class="form-control"
+               id="smg-filter-rxx"
+               name="rxx" value='@flt.rxx' >
       </div>
 
       <div class="form-group">
@@ -75,54 +86,69 @@ matching all of the provided space separated case insensitive regular expression
 
 
       <div class="form-group">
-        <label class="autosubmit-lbl"
+        <label class="autosubmit-lbl" for="smg-filter-period"
                title="Period (time since) to cover in the graphs.
 Changing this reloads the page.">Period since:</label>
-        <input class="form-control" size="9" type="text" name="period" value="@period" list="periodsList"
+        <input class="form-control" type="text"
+               id="smg-filter-period"
+               size="9" name="period" value="@period"
                onchange="mySubmitOnChange(this);">
       </div>
 
       <div class="form-group">
-        <label class="autosubmit-lbl"
+        <label class="autosubmit-lbl" for="smg-filter-pl"
                title="Optional period range (length) to cover in the graphs. Default is the entire range until current time.
 Changing this reloads the page.">Period len:</label>
-        <input class="form-control" size="9" type="text" name="pl" value="@gopts.pl" list="periodsList"
+        <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Remove option" onclick="clearElem('smg-filter-pl');" />
+        <input class="form-control" type="text"
+               id="smg-filter-pl"
+               size="9" name="pl" value="@gopts.pl"
                onchange="mySubmitOnChange(this);">
       </div>
 
       <div class="form-group">
-        <label class="autosubmit-lbl"
+        <label class="autosubmit-lbl" for="smg-filter-step"
                title="Requested graphs step (resolution). Specified in seconds (as number), minutes (e.g. 5m) or hours (e.g. 5h).
 Changing this reloads the page.">Step:</label>
-        <input class="form-control" size="9" type="text" name="step" value="@gopts.step" onchange="mySubmitOnChange(this);">
+        <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Remove option" onclick="clearElem('smg-filter-step');" />
+        <input class="form-control" type="text" id="smg-filter-step"
+               size="9" name="step" value="@gopts.step" onchange="mySubmitOnChange(this);">
       </div>
 
       <div class="form-group">
-        <label class="autosubmit-lbl"
+        <label class="autosubmit-lbl" for="smg-filter-maxy"
                title="Requested graphs Y scale (max).
 Changing this reloads the page.">MaxY:</label>
-        <input class="form-control" size="12" type="text" name="maxy" value="@gopts.maxY" onchange="mySubmitOnChange(this);">
+        <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Remove option" onclick="clearElem('smg-filter-maxy');" />
+        <input class="form-control" type="text" id="smg-filter-maxy"
+               size="12" name="maxy" value="@gopts.maxY" onchange="mySubmitOnChange(this);">
       </div>
 
       <div class="form-group">
-        <label class="autosubmit-lbl" title="How many graphs per row to display on the page.
+        <label class="autosubmit-lbl" for="smg-filter-cols"
+               title="How many graphs per row to display on the page.
 Changing this reloads the page.">Columns:</label>
-        <input class="form-control colsInput" type="number" step="1" name="cols" value='@cols'
+        <input class="form-control colsInput" type="number" id="smg-filter-cols"
+               step="1" name="cols" value='@cols'
                onchange="mySubmitOnChange(this);" />
       </div>
       <div class="form-group">
-        <label class="autosubmit-lbl" title="Max rows of graphs to display on the page.
+        <label class="autosubmit-lbl" for="smg-filter-rows"
+               title="Max rows of graphs to display on the page.
 Changing this reloads the page.">Rows:</label>
-        <input class="form-control rowsInput" type="number" step="1" name="rows" value='@rows'
+        <input class="form-control rowsInput" type="number" id="smg-filter-rows"
+               step="1" name="rows" value='@rows'
                onchange="mySubmitOnChange(this);" />
       </div>
 
       <div class="form-group">
-        <label class="autosubmit-lbl"
+        <label class="autosubmit-lbl" for="smg-filter-xsort"
             title="Sort the DISPLAYED on the page graphs to be grouped by graphed variables and then within each group -
 sort by the average value with specified 1-based index.0 means default order.
 Changing this reloads the page.">X-Sort:</label>
-        <input class="form-control" style="width: 4em" type="number" step="1" name="xsort" value='@{gopts.xsort.getOrElse(0)}'
+        <input class="form-control" type="number" id="smg-filter-xsort"
+               style="width: 4em"
+               step="1" name="xsort" value='@{gopts.xsort.getOrElse(0)}'
                onchange="mySubmitOnChange(this);" />
       </div>
 
@@ -178,6 +204,9 @@ By default aggregation happens per-remote instance">Cross-Remote:</label>
                           ((this.name == "cols") && ($(this).val() == "@defaultCols")) ||
                           ((this.name == "rows") && ($(this).val() == "@defaultRows"))
                           ;
+          if (!this.disabled && this.id) {
+            gl_searchHistoryManager.addHistory(this.id, this.value);
+          }
       });
 
       //estimate URL size and use POST if url would be too long
@@ -214,6 +243,16 @@ By default aggregation happens per-remote instance">Cross-Remote:</label>
   }
 
   $('form#smgFilterForm').submit(disableEmptyInputs);
+
+  smgAutocompleteSetup('smg-filter-trx',    '/json/trxtokens');
+  smgAutocompleteSetup('smg-filter-px',     '/json/pxtokens');
+  smgAutocompleteSetup('smg-filter-sx',     '/json/sxtokens');
+  smgAutocompleteSetup('smg-filter-rx',     '/json/rxtokens');
+  smgAutocompleteSetup('smg-filter-rxx',    '/json/rxtokens');
+  smgAutocompleteSetup('smg-filter-period', '/json/periods');
+  smgAutocompleteSetup('smg-filter-pl',     '/json/periods');
+  smgAutocompleteSetup('smg-filter-step',   '');
+  smgAutocompleteSetup('smg-filter-maxy',   '');
 </script>
 
 

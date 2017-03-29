@@ -21,16 +21,17 @@ Click "Search" (or hit Enter) to treat these as words and find matching indexes 
 
 Click "Graphs text regex filter" to treat these as regexes and display matching graphs directly'>Search</h3>
   (<label>Limit:</label> <input id="inpL" type="text" name="lmt" size="4" value="@lmt" />)
-  <input id="inpQ" type="text" class="clearable" name="q" size="100" value="@q"
+  <input id="inpQ" type="text" name="q" size="100" value="@q"
          title='Enter words or regexes prefixed with () and click "Search" (or hit Enter) to find indexes and objects.
 Enter regex(es) and click "Graphs text regex filter" to display matching graphs directly' autofocus />
+  <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Clear filter" onclick="clearElem('inpQ');" />
   <input type="submit" value="Search" title="Find indexes and objects matching the query words"/>
   <input type="button" value="Graphs text regex filter" onclick="submitTrxForm();"
          title="Treat the query words as regexes and display matching graphs directly"/>
 </form>
 
 <form id="trxForm" method="GET" action="/dash">
-  <input type="hidden" name="remote" value="*" />
+  <input id="smg-filter-remote" type="hidden" name="remote" value="*" />
   <input id="trxQ" type="hidden" name="trx" value="" />
 </form>
 
@@ -40,6 +41,9 @@ Enter regex(es) and click "Graphs text regex filter" to display matching graphs 
       $(':input', this).each(function() {
          //!($(this).val()) ||
          this.disabled = ((this.name == "lmt") && ($(this).val() == @defaultLmt))
+         if (!this.disabled && this.id) {
+            gl_searchHistoryManager.addHistory(this.id, this.value);
+         }
       });
   };
 
@@ -54,6 +58,8 @@ Enter regex(es) and click "Graphs text regex filter" to display matching graphs 
     }
     return false
   }
+
+  smgAutocompleteSetup('inpQ', '/json/trxtokens');
 </script>
   <h4>Or check the <a href="/ci" title="List of configured top-level indexes">Configured indexes</a> or
     the <a href="/autoindex" title="List of automatically discovered from object ids indexes">Automatic index</a>
