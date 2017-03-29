@@ -310,11 +310,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   }
 
 
-  // TODO use the one from searchCache?
-  private def allIndexes: Seq[SMGIndex] = configSvc.config.indexes ++
-    configSvc.config.remotes.flatMap { rmt => // preserving order
-      remotes.byId(rmt.id).map(_.indexes).getOrElse(Seq())
-    }
+  private def allIndexes: Seq[SMGIndex] = searchCache.getAllIndexes
 
   private def getMatchingIndexes(ovs: Seq[SMGObjectView], allIxes: Seq[SMGIndex]): Seq[SMGIndex] = {
     ovs.flatMap { ov =>

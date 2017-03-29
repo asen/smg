@@ -11,6 +11,8 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   */
 trait SMGSearchCache extends SMGConfigReloadListener {
 
+  def getAllIndexes: Seq[SMGIndex]
+
   def search(q: String, maxResults: Int): Seq[SMGSearchResult]
 
   def getRxTokens(suffixFlt: String, rmtId: String): Seq[String]
@@ -107,7 +109,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   }
 
   override def reload(): Unit = {
-    log.debug("SMGSearchCache.reload")
+    log.info("SMGSearchCache.reload - BEGIN")
     val newIndexes = getAllIndexes
     val byRemote = getAllViewObjectsByRemote
     val pxesByRemote = mutable.Map[String, Array[Seq[String]]]()
@@ -145,9 +147,10 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
       sxesByRemote = sxesByRemote.toMap,
       tknsByRemote = tknsByRemote.toMap
     )
+    log.info(s"SMGSearchCache.reload - END (allIndexes.size=${cache.allIndexes.size}, allViewObject.size=${cache.allViewObjects.size})")
   }
 
-  private def getAllIndexes: Seq[SMGIndex] = configSvc.config.indexes ++
+  override def getAllIndexes: Seq[SMGIndex] = configSvc.config.indexes ++
     configSvc.config.remotes.flatMap { rmt => // preserving order
       remotesApi.byId(rmt.id).map(_.indexes).getOrElse(Seq())
     }

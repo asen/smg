@@ -265,7 +265,15 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
 
   override def notifyReloadListeners(ctx: String): Unit = {
     val myrlsnrs = reloadListerenrs
-    Try(myrlsnrs.foreach(_.reload()))
+    myrlsnrs.foreach { lsnr =>
+      try {
+        lsnr.reload()
+      } catch {
+        case t: Throwable => {
+          log.ex(t, s"ConfigService.notifyReloadListeners($ctx): exception in reload from lsnr=$lsnr")
+        }
+      }
+    }
     log.info(s"ConfigService.notifyReloadListeners($ctx) - notified ${myrlsnrs.size} listeners")
     callSystemGc(ctx)
   }
