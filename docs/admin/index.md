@@ -240,6 +240,10 @@ its value as a filesystem "glob" (and possibly expand that to multiple
 files) and then process each of the files yielded from the glob as
 regular config files (these can have more $includes too)
 
+- **$search-max-levels**: _10_ - how many levels )of dotted tokens) to
+support in autocomplete. Lower to 2-3 or less if you run a cluster
+with hundreds of thousands of objects.
+
 <a name="index-tree-levels">
 
 - **$index-tree-levels**: _1_ - How many levels of indexes to 
@@ -247,8 +251,12 @@ display by default on the Configured Indexes page. The default value
 of 1 means to display only top level indexes, 2 would also display
 their children etc. Valid values are between 1 and 5.
 
+<a name="run-tree-levels">
+
 - **$run-tree-levels-display**: _1_ - Same as $index-tree-levels but applies
-to monitor state run trees.
+to monitor state run trees. How many levels of fetch commands to
+display by default on the top level Run trees page.
+
 
 - **$max-url-size**: _8000_ - The maximum url size supported by browsers. SMG
 will use POST requests (instead of GET) if a filter URL would exceed that 
@@ -296,12 +304,6 @@ to each other (possibly via other ones). Currently SMG will reject
 the config update if circular parent depenencies in the run-tree are
 detected (detection is simply having a hard limit of max 10 parent
 levels when constructing the run trees).
-
-<a name="run-tree-levels">
-
-- **$run-tree-levels-display**: _1_ - How many levels of fetch commands to 
-display by default on the top level Run trees page.
-
 
 <a name="remote" />
 

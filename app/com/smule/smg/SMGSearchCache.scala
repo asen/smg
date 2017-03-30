@@ -34,8 +34,6 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
 
   private val MAX_TOKENS_RESULTS = 100
 
-  private val MAX_TOKENS_LEVELS = 3
-
   private val STARTS_WITH_DIGIT_RX = "^\\d+".r
 
   private val SORT_IGNORE_CHARS_RX = "[^a-zA-Z0-9]".r
@@ -118,7 +116,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
         extendArrayBuf(newPxesByLevel, arrLen)
         extendArrayBuf(newSxesByLevel, arrLen)
         extendArrayBuf(newTknsByLevel, arrLen)
-        val maxLevels = Math.min(arrLen, MAX_TOKENS_LEVELS)
+        val maxLevels = Math.min(arrLen, configSvc.config.searchCacheMaxLevels)
         (0 until maxLevels).foreach { ix =>
           val addDot = if (ix == arrLen - 1) "" else "."
           newPxesByLevel(ix).add(arr.take(ix + 1).mkString(".") + addDot)
