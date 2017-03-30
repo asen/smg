@@ -99,6 +99,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
 
   private def realReload(): Unit = {
     log.info("SMGSearchCache.reload - BEGIN")
+    var maxMaxLevels = 0
     val newIndexes = getAllIndexes
     val byRemote = getAllViewObjectsByRemote
     val pxesByRemote = mutable.Map[String, Array[Seq[String]]]()
@@ -117,6 +118,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
         extendArrayBuf(newSxesByLevel, arrLen)
         extendArrayBuf(newTknsByLevel, arrLen)
         val maxLevels = Math.min(arrLen, configSvc.config.searchCacheMaxLevels)
+        if (maxLevels > maxMaxLevels) maxMaxLevels = maxLevels
         (0 until maxLevels).foreach { ix =>
           val addDot = if (ix == arrLen - 1) "" else "."
           newPxesByLevel(ix).add(arr.take(ix + 1).mkString(".") + addDot)
@@ -141,8 +143,9 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
       tknsByRemote = tknsByRemote.toMap,
       wordsDict = mySortIterable(wordsDict)
     )
-    log.info(s"SMGSearchCache.reload - END (indexes: ${cache.allIndexes.size}, " +
-      s"objects: ${cache.allViewObjects.size}) words: ${wordsDict.size}")
+    log.info(s"SMGSearchCache.reload - END: indexes: ${cache.allIndexes.size}, " +
+      s"objects: ${cache.allViewObjects.size}, words: ${wordsDict.size}, " +
+      s"max levels: $maxMaxLevels/${configSvc.config.searchCacheMaxLevels}")
   }
 
 
