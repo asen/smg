@@ -240,7 +240,7 @@ its value as a filesystem "glob" (and possibly expand that to multiple
 files) and then process each of the files yielded from the glob as
 regular config files (these can have more $includes too)
 
-- **$search-max-levels**: _10_ - how many levels )of dotted tokens) to
+- **$search-max-levels**: _10_ - how many levels (of dotted tokens) to
 support in autocomplete. Lower to 2-3 or less if you run a cluster
 with hundreds of thousands of objects.
 
