@@ -907,8 +907,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   def jsonRxTokens(q: String, remote: Option[String]) = Action {
     val rmtId = remote.getOrElse("")
-    val sxes = smg.searchCache.getRxTokens(q, rmtId)
-    Ok(Json.toJson(sxes))
+    val rxes = smg.searchCache.getRxTokens(q, rmtId)
+    Ok(Json.toJson(rxes))
   }
 
   def jsonSxTokens(q: String, remote: Option[String]) = Action {

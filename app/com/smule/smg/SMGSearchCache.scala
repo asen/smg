@@ -42,7 +42,8 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
                                  allViewObjects: Seq[SMGObjectView],
                                  pxesByRemote: Map[String, Array[Seq[String]]],
                                  sxesByRemote: Map[String, Array[Seq[String]]],
-                                 tknsByRemote: Map[String, Array[Seq[String]]]
+                                 tknsByRemote: Map[String, Array[Seq[String]]],
+                                 wordsDict: Seq[String]
 
   )
 
@@ -60,7 +61,8 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
         allViewObjects = Seq(),
         pxesByRemote = Map(),
         sxesByRemote = Map(),
-        tknsByRemote = Map()
+        tknsByRemote = Map(),
+        wordsDict = Seq()
       )
     }
   }
@@ -77,29 +79,19 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     val ns1isnum = STARTS_WITH_DIGIT_RX.findFirstMatchIn(ns1).isDefined
     val ns2 = SORT_IGNORE_CHARS_RX.replaceAllIn(s2, "")
     val ns2isnum = STARTS_WITH_DIGIT_RX.findFirstMatchIn(ns2).isDefined
-    if (ns1isnum == ns2isnum)
-      ns1.toLowerCase < ns2.toLowerCase
-    else if (ns1isnum)
+    if (ns1isnum == ns2isnum) {
+      if (ns1 == ns2)
+        s1.toLowerCase < s2.toLowerCase
+      else
+        ns1.toLowerCase < ns2.toLowerCase
+    } else if (ns1isnum)
       false
     else
       true
   }
 
-  def mySortSet(in: mutable.Set[String]): Seq[String] = {
+  private def mySortIterable(in: Iterable[String]): Seq[String] = {
     in.toSeq.sortWith(sortNumbersAfterLetters)
-  }
-
-  private def mergeRemotesData(toMerge: mutable.Map[String, Array[Seq[String]]]): Array[Seq[String]] = {
-    if (toMerge.isEmpty) {
-      return Array()
-    }
-    val maxLength = toMerge.values.maxBy(_.length).length
-    (0 until maxLength).map { ix =>
-      val sets = toMerge.values.map(arr => if (ix < arr.length) arr(ix) else Set[String]())
-      sets.foldLeft(mutable.Set[String]()) { (soFar, newSet) => soFar ++ newSet }
-    }.map { s =>
-      mySortSet(s)
-    }.toArray
   }
 
   private def tokensAtLevel(arr: Array[String], level: Int) = {
@@ -115,6 +107,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     val pxesByRemote = mutable.Map[String, Array[Seq[String]]]()
     val sxesByRemote = mutable.Map[String, Array[Seq[String]]]()
     val tknsByRemote = mutable.Map[String, Array[Seq[String]]]()
+    val wordsDict = mutable.Set[String]()
     byRemote.foreach { case (rmtId, newViewObjects) =>
       val newPxesByLevel = ArrayBuffer[mutable.Set[String]]()
       val newSxesByLevel = ArrayBuffer[mutable.Set[String]]()
@@ -132,23 +125,29 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
           newSxesByLevel(ix).add(addDot + arr.takeRight(ix + 1).mkString("."))
           newTknsByLevel(ix) ++= tokensAtLevel(arr, ix + 1)
         }
+
+        ov.searchText.split("[\\s\\.]+").foreach { wrd =>
+          wordsDict += wrd
+        }
       }
-      pxesByRemote(rmtId) = newPxesByLevel.map(mySortSet).toArray
-      sxesByRemote(rmtId) = newSxesByLevel.map(mySortSet).toArray
-      tknsByRemote(rmtId) = newTknsByLevel.map(mySortSet).toArray
+      pxesByRemote(rmtId) = newPxesByLevel.map(mySortIterable).toArray
+      sxesByRemote(rmtId) = newSxesByLevel.map(mySortIterable).toArray
+      tknsByRemote(rmtId) = newTknsByLevel.map(mySortIterable).toArray
     }
-    pxesByRemote(SMGRemote.wildcard.id) = mergeRemotesData(pxesByRemote)
-    sxesByRemote(SMGRemote.wildcard.id) = mergeRemotesData(sxesByRemote)
-    tknsByRemote(SMGRemote.wildcard.id) = mergeRemotesData(tknsByRemote)
+
     cache = SMGSearchCacheData(
       allIndexes = newIndexes,
       allViewObjects = byRemote.flatMap(_._2),
       pxesByRemote = pxesByRemote.toMap,
       sxesByRemote = sxesByRemote.toMap,
-      tknsByRemote = tknsByRemote.toMap
+      tknsByRemote = tknsByRemote.toMap,
+      wordsDict = mySortIterable(wordsDict)
     )
-    log.info(s"SMGSearchCache.reload - END (allIndexes.size=${cache.allIndexes.size}, allViewObject.size=${cache.allViewObjects.size})")
+    log.info(s"SMGSearchCache.reload - END (indexes: ${cache.allIndexes.size}, " +
+      s"objects: ${cache.allViewObjects.size}) words: ${wordsDict.size}")
   }
+
+  private def allRemotes : Seq[SMGRemote] = SMGRemote.local :: configSvc.config.remotes.toList
 
   override def getAllIndexes: Seq[SMGIndex] = configSvc.config.indexes ++
     configSvc.config.remotes.flatMap { rmt => // preserving order
@@ -189,15 +188,23 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     if (flt.endsWith(".")) arr.length + 1 else arr.length
   }
 
+
   private def getAllTokensForRemote(rmtId: String,
                                     levels: Int,
                                     byRemote: Map[String, Array[Seq[String]]],
                                     fltFn: (String) => Boolean): Seq[String] = {
-    val arr = byRemote.getOrElse(rmtId, Array())
-    if (arr.isEmpty)
-      return Seq[String]()
-    val myLevels = if (arr.length < levels) arr.length else levels
-    arr(myLevels - 1).filter(fltFn).take(MAX_TOKENS_RESULTS)
+    if (rmtId == SMGRemote.wildcard.id) { // combine the results from all remotes
+      val combinedSeq = allRemotes.flatMap { rmt =>
+        getAllTokensForRemote(rmt.id, levels, byRemote, fltFn)
+      }.distinct
+      mySortIterable(combinedSeq).take(MAX_TOKENS_RESULTS)
+    } else {
+      val arr = byRemote.getOrElse(rmtId, Array())
+      if (arr.isEmpty)
+        return Seq[String]()
+      val myLevels = if (arr.length < levels) arr.length else levels
+      arr(myLevels - 1).filter(fltFn).take(MAX_TOKENS_RESULTS)
+    }
   }
 
   private def getTokensCommon(rawFlt: String, rmtId: String, byRemote: Map[String,Array[Seq[String]]]) = {
@@ -208,11 +215,22 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     })
   }
 
-  override def getTrxTokens(trxFlt: String, rmtId: String): Seq[String] = {
+
+  private def getWordTokensForRemote(rmtId: String,
+                                    byRemote: Map[String, Seq[String]],
+                                    fltFn: (String) => Boolean): Seq[String] = {
+    val arr = byRemote.getOrElse(rmtId, Seq())
+    arr.filter(fltFn).take(MAX_TOKENS_RESULTS)
+  }
+
+  override def getTrxTokens(rawFlt: String, rmtId: String): Seq[String] = {
+    val trxFlt = rawFlt.trim()
     val words = trxFlt.split("\\s+")
     val flt = words.last
     val px = words.dropRight(1).mkString(" ")
-    getTokensCommon(flt, rmtId, cache.tknsByRemote).map { tkn => px + " " + tkn}
+    val tokenResults = getTokensCommon(flt, rmtId, cache.tknsByRemote)
+    val wordResults = cache.wordsDict.filter { _.toLowerCase.contains(flt.toLowerCase) }.take(MAX_TOKENS_RESULTS)
+    mySortIterable((tokenResults ++ wordResults).toSet).take(MAX_TOKENS_RESULTS).map { tkn => px + " " + tkn}
   }
 
   override def getPxTokens(flt: String, rmtId: String): Seq[String] = {

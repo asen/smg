@@ -72,9 +72,10 @@ function smgAutocompleteSetup(inputId, dataUrl) {
        }
 
        var onData = function(data) {
+           //console.log(data)
            var localData = gl_searchHistoryManager.getHistory(inputId)
-           var historyResults = $.ui.autocomplete.filter(localData, request.term).slice(0, MAX_LOCAL_ITEMS);
-           var results = $.ui.autocomplete.filter(data, request.term).slice(0, MAX_REMOTE_ITEMS);
+           var historyResults = $.ui.autocomplete.filter(localData, request.term.trim()).slice(0, MAX_LOCAL_ITEMS);
+           var results = $.ui.autocomplete.filter(data, request.term.trim()).slice(0, MAX_REMOTE_ITEMS);
            if ( (historyResults.length > 0) && (results.length > 0) ) {
              historyResults.push(SEPARATOR)
            }
