@@ -4,6 +4,7 @@ import javax.inject.{Inject, Singleton}
 
 import scala.collection.{SortedSet, mutable}
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.concurrent.Future
 
 
 /**
@@ -33,6 +34,8 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
 
   private val MAX_TOKENS_RESULTS = 100
 
+  private val MAX_TOKENS_LEVELS = 3
+
   private val STARTS_WITH_DIGIT_RX = "^\\d+".r
 
   private val SORT_IGNORE_CHARS_RX = "[^a-zA-Z0-9]".r
@@ -47,25 +50,21 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
 
   )
 
+  private var cache: SMGSearchCacheData = SMGSearchCacheData(
+      allIndexes = Seq(),
+      allViewObjects = Seq(),
+      pxesByRemote = Map(),
+      sxesByRemote = Map(),
+      tknsByRemote = Map(),
+      wordsDict = Seq()
+    )
 
-  private var cache: SMGSearchCacheData = null
+  private var reloadsRunning = 0
+  private val MAX_RELOADS = 2
 
   configSvc.registerReloadListener(this);
-  try {
-    reload(); // reload on initialization, config svc wil call us later
-  } catch {
-    case t: Throwable => {
-      log.ex(t, "Error loading search cache")
-      cache = SMGSearchCacheData(
-        allIndexes = Seq(),
-        allViewObjects = Seq(),
-        pxesByRemote = Map(),
-        sxesByRemote = Map(),
-        tknsByRemote = Map(),
-        wordsDict = Seq()
-      )
-    }
-  }
+  reload(); // launch a reload on initialization, config svc wil call us later on reloads
+
 
   private def extendArrayBuf(ab: ArrayBuffer[mutable.Set[String]], sz: Int) = {
     while (ab.size < sz) {
@@ -100,7 +99,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     }.toSet
   }
 
-  override def reload(): Unit = {
+  private def realReload(): Unit = {
     log.info("SMGSearchCache.reload - BEGIN")
     val newIndexes = getAllIndexes
     val byRemote = getAllViewObjectsByRemote
@@ -119,7 +118,8 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
         extendArrayBuf(newPxesByLevel, arrLen)
         extendArrayBuf(newSxesByLevel, arrLen)
         extendArrayBuf(newTknsByLevel, arrLen)
-        arr.indices.foreach { ix =>
+        val maxLevels = Math.min(arrLen, MAX_TOKENS_LEVELS)
+        (0 until maxLevels).foreach { ix =>
           val addDot = if (ix == arrLen - 1) "" else "."
           newPxesByLevel(ix).add(arr.take(ix + 1).mkString(".") + addDot)
           newSxesByLevel(ix).add(addDot + arr.takeRight(ix + 1).mkString("."))
@@ -145,6 +145,29 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     )
     log.info(s"SMGSearchCache.reload - END (indexes: ${cache.allIndexes.size}, " +
       s"objects: ${cache.allViewObjects.size}) words: ${wordsDict.size}")
+  }
+
+
+  override def reload(): Unit = {
+    // do actual reloads in the background, one at a time, never more than 2
+    if (reloadsRunning < MAX_RELOADS ) {
+      reloadsRunning += 1
+      Future {
+        try {
+          this.synchronized { //only run one at a time
+            realReload()
+          }
+        } catch {
+          case t: Throwable => {
+            log.ex(t, s"Exception in SMGSearchCache.reload (reloadsRunning=$reloadsRunning)")
+          }
+        } finally {
+          reloadsRunning -= 1
+        }
+      }(ExecutionContexts.defaultCtx)
+    } else {
+      log.error(s"SMGSearchCache.reload: aborting due to reloadsRunning=$reloadsRunning (max=$MAX_RELOADS)")
+    }
   }
 
   private def allRemotes : Seq[SMGRemote] = SMGRemote.local :: configSvc.config.remotes.toList
