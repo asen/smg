@@ -7,6 +7,7 @@ import scala.concurrent.ExecutionContext
 
 /**
   * Created by asen on 7/5/16.
+  * This is a skeleton for an example plugin which can process SMG monitoring data
   */
 class SMGLiveMonPlugin(val pluginId: String,
                         val interval: Int,
