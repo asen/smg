@@ -46,7 +46,6 @@ class SMGRrdCheckPlugin (val pluginId: String,
         if (!processTuneRequest(ou.get, vix, httpParams("nm"), v)) {
           errors += s"Tune request failed: ${ou.get.id}[$vix], ${httpParams("nm")}=${v.toString}, check logs for details"
         }
-        invalidateBgCheckResults()
       } else if (aopt.get == "bgcheck" ) {
         if (!launchBgCheck)
           errors += "Bg check/fix is aleady running"
@@ -55,7 +54,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
           errors += "Bg check/fix is aleady running"
       }
       else errors += s"Invalid action or object id: ${aopt.get} ${ou.map(_.id).getOrElse("")}"
-
+      invalidateBgCheckResults()
     }
     renderHtmlContent(ou, errors.toList)
   }
