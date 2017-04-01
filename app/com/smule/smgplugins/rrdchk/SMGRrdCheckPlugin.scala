@@ -46,9 +46,13 @@ class SMGRrdCheckPlugin (val pluginId: String,
         if (!processTuneRequest(ou.get, vix, httpParams("nm"), v)) {
           errors += s"Tune request failed: ${ou.get.id}[$vix], ${httpParams("nm")}=${v.toString}, check logs for details"
         }
+        invalidateBgCheckResults()
       } else if (aopt.get == "bgcheck" ) {
         if (!launchBgCheck)
-          errors += "Bg check is aleady running"
+          errors += "Bg check/fix is aleady running"
+      } else if (aopt.get == "bgfix" ) {
+        if (!launchBgFix)
+          errors += "Bg check/fix is aleady running"
       }
       else errors += s"Invalid action or object id: ${aopt.get} ${ou.map(_.id).getOrElse("")}"
 
@@ -177,18 +181,36 @@ class SMGRrdCheckPlugin (val pluginId: String,
   private var lastBgCheckResult = List[SMGRrdCheckInfo]()
   private var lastBgCheckTime: Option[Int] = None
 
+  private def invalidateBgCheckResults(): Unit = {
+    lastBgCheckTime = None
+    lastBgCheckResult = List()
+  }
+
   private def bgCheckRunningForm = if (checkRunning) {
     <div>
       <font color="red">
-        <strong>Background check is running at the moment </strong>
+        <strong>Background check/fix is running at the moment </strong>
       </font>
       <a href="">Refresh</a>
     </div>
   } else {
     <div>
       <form method="POST">
-        {hiddenInput("a", "bgcheck")}<input type="Submit" value="Start background check"/>
+        {hiddenInput("a", "bgcheck")}
+        <input type="Submit" value="Start background check"/>
       </form>
+      {
+        if (lastBgCheckResult.nonEmpty) {
+          <form method="POST" onsubmit="return confirm('Are you sure you want to fix ALL reported issues?')">
+            {hiddenInput("a", "bgfix")}
+            <input type="Submit"
+                   value="Fix ALL background check issues"
+            />
+          </form>
+        } else {
+          <p></p>
+        }
+      }
     </div>
   }
 
@@ -214,7 +236,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
     <div>
       {
         if (lastBgCheckTime.isEmpty) {
-          <h4 align="center">No background check run info available</h4>
+          <h4 align="center">No valid background check run info available</h4>
         } else {
           <h4 align="center">Last background check run at
             {SMGState.formatTss(lastBgCheckTime.get)}
@@ -243,6 +265,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
     log.info("runBgCheck - FINISHED")
   }
 
+
   private def launchBgCheck: Boolean = {
     if (checkAndSetRunning){
       Future {
@@ -259,6 +282,62 @@ class SMGRrdCheckPlugin (val pluginId: String,
       true
     } else false
   }
+
+  private def bgFixIssues(info: SMGRrdCheckInfo): Unit = {
+    if (info.vars.size != info.ou.vars.size){
+      log.error(s"runBgFix - can not fix discrepancy in number of variables: ${info.ou.id}")
+      return
+    }
+    info.vars.zipWithIndex.foreach { t =>
+      val vi = t._1
+      val ix = t._2
+      val v = info.ou.vars(ix)
+      val confMax = v.getOrElse("max", "NaN").toDouble
+      if (vi.max.toString != confMax.toString){
+        val success = SMGRrdCheckUtil.rrdTune(smgConfSvc, info.ou.rrdFile.get, "max", ix, confMax)
+        log.info(s"runBgFix - tuned ${info.ou.id}[$ix] max=$confMax oldMax=${vi.max} success=$success")
+      }
+      val confMin = v.getOrElse("min", "0.0").toDouble
+      if (vi.min.toString != confMin.toString){
+        val success = SMGRrdCheckUtil.rrdTune(smgConfSvc, info.ou.rrdFile.get, "min", ix, confMin)
+        log.info(s"runBgFix - tuned ${info.ou.id}[$ix] min=$confMin oldMin=${vi.min} success=$success")
+      }
+    }
+  }
+
+  private def runBgFix(): Unit = {
+    if (lastBgCheckResult.isEmpty) {
+      log.info("runBgFix - no results to fix")
+      return
+    }
+    log.info("runBgFix - START")
+    lastBgCheckResult.foreach { info =>
+      val freshInfo = SMGRrdCheckUtil.rrdInfo(smgConfSvc, info.ou)
+      if (!info.isOk) bgFixIssues(freshInfo)
+    }
+    lastBgCheckResult = List()
+    lastBgCheckTime = None
+    log.info("runBgFix - FINISHED")
+  }
+
+  private def launchBgFix: Boolean = {
+    if (checkAndSetRunning){
+      Future {
+        try {
+          runBgFix()
+          runBgCheck() // run a new check right after the fix
+        } catch {
+          case t: Throwable => {
+            log.ex(t, "Unexpected error from runBgFix/runBgCheck")
+          }
+        } finally {
+          finished()
+        }
+      } (ExecutionContexts.defaultCtx)
+      true
+    } else false
+  }
+
 
   private def renderHtmlContent(ou: Option[SMGObjectUpdate], errors: Seq[String]) = {
     <div>

@@ -58,6 +58,7 @@ object SMGRrd {
       GPRINT_NUM_FORMAT + v("mu").replaceAll("%","%%")
     else GPRINT_NUM_FORMAT
 
+  //TODO - insert a + after the E instead? rrdtool doesn't like 2.5E9 (treats it as 2.5)
   def numRrdFormat(x: Double): String = if ((x % 1) == 0) x.toLong.toString else "%f".format(x)
 
   val LABEL_LEN = 16
