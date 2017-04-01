@@ -40,7 +40,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
     val ou: Option[SMGObjectUpdate] = ouFromParams(httpParams)
     val errors = ListBuffer[String]()
     if (aopt.isDefined) {
-      invalidateBgCheckResults()
+      lastBgCheckTime = None // invalidate current results as far as display is concerned
       if (aopt.get == "tune" && ou.isDefined) {
         val vix = httpParams("vix").toInt
         val v = httpParams("v").toDouble
@@ -171,11 +171,6 @@ class SMGRrdCheckPlugin (val pluginId: String,
 
   private var lastBgCheckResult = List[SMGRrdCheckInfo]()
   private var lastBgCheckTime: Option[Int] = None
-
-  private def invalidateBgCheckResults(): Unit = {
-    lastBgCheckTime = None
-    lastBgCheckResult = List()
-  }
 
   private def bgCheckRunningForm = if (checkRunning) {
     <div>
