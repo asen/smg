@@ -380,7 +380,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
     val rrdTool = "rrdtool"
     val imgDir = "public/smg"
     val urlPrefix: String = "/assets/smg"
-    val intervals = mutable.Set[Int](plugins.map(_.interval):_*)
+    val intervals = mutable.Set[Int](plugins.map(_.interval).filter(_ != 0):_*)
     val preFetches = mutable.Map[String, SMGPreFetchCmd]()
     val notifyCommands = mutable.Map[String, SMGMonNotifyCmd]()
     val remotes = ListBuffer[SMGRemote]()
