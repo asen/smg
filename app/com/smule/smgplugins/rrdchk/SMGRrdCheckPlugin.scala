@@ -177,7 +177,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
       <font color="red">
         <strong>Background check/fix is running at the moment </strong>
       </font>
-      <a href="">Refresh</a>
+      <a href="?">Refresh</a>
     </div>
   } else {
     <div>
@@ -348,8 +348,13 @@ class SMGRrdCheckPlugin (val pluginId: String,
           <div>{ bgCheckListResults }</div>
         </div>
       } else {
-        <div>
-          <div><a href="?">Show Background check results</a></div>
+        <div>{
+            if (lastBgCheckTime.nonEmpty) {
+              <p><a href="?">Show Background check results</a></p>
+            } else {
+              <p></p>
+            }
+          }
           {rrdInfoHtml(ou.get)}
         </div>
       }}
