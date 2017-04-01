@@ -125,6 +125,12 @@ class SMGRrdCheckPlugin (val pluginId: String,
     </li>
   }
 
+  private def linkElem(href: String, txt: String) = scala.xml.Unparsed(s"<a href='$href'>$txt</a>")
+
+  private def rrdInfoDetailLink(info: SMGRrdCheckInfo) = {
+    <p>{linkElem("?oid=" + info.ou.id, "Show Details")}</p><hr/>
+  }
+
   private def rrdInfoItemHtml(info: SMGRrdCheckInfo) = {
     <div>
       <h4>
@@ -148,11 +154,15 @@ class SMGRrdCheckPlugin (val pluginId: String,
         {info.vars.zipWithIndex.map(t => varPropsLi(info.ou, t._2, t._1))}
       </ul>
     }}
-    </div> <hr/>
-      <h4 align="center">Raw rrdtool info output below</h4>
-      <pre>
-        {scala.xml.Unparsed(info.raw.mkString("\n"))}
-      </pre>
+    </div>
+  }
+
+  private def rrdInfoItemRawOutput(info: SMGRrdCheckInfo) = {
+    <hr/>
+    <h4 align="center">Raw rrdtool info output below</h4>
+    <pre>
+      {scala.xml.Unparsed(info.raw.mkString("\n"))}
+    </pre>
   }
 
   private def rrdInfoHtml(ou: SMGObjectUpdate) = {
@@ -160,7 +170,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
       <p>ERROR: No rrd file defined</p>
     } else {
       val info = SMGRrdCheckUtil.rrdInfo(smgConfSvc, ou)
-      rrdInfoItemHtml(info)
+      rrdInfoItemHtml(info) ++ rrdInfoItemRawOutput(info)
     }
   }
 
@@ -195,7 +205,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
   } else {
     <div>
     <ul>
-      { lastBgCheckResult.map(bgCheckIssue) }
+      { lastBgCheckResult.map(info => bgCheckIssue(info) ++ rrdInfoDetailLink(info)) }
     </ul>
     </div>
   }
