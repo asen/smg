@@ -523,7 +523,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   def pluginIndex(pluginId: String): Action[AnyContent] = Action { implicit request =>
-    val httpParams = request.queryString.map { case (k,v) => k -> v.mkString }
+    val httpParams = (if (request.method == "POST") {
+      request.body.asFormUrlEncoded.getOrElse(Map())
+    } else {
+      request.queryString
+    }).map { case (k,v) => k -> v.mkString }
     configSvc.plugins.find( p => p.pluginId == pluginId) match {
       case Some(plugin) => {
         Ok(views.html.pluginIndex(plugin, plugin.htmlContent(httpParams), configSvc.plugins))

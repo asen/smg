@@ -57,6 +57,7 @@ POST    /monitor/objectsSvg  controllers.Application.monitorObjectsSvgHtml()
 
 # plugin routes
 GET     /plugin/:pluginId  controllers.Application.pluginIndex(pluginId: String)
+POST    /plugin/:pluginId  controllers.Application.pluginIndex(pluginId: String)
 
 # API (json response) calls
 GET     /api/config         controllers.Api.config
