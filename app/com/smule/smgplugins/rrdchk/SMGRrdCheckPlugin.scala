@@ -40,6 +40,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
     val ou: Option[SMGObjectUpdate] = ouFromParams(httpParams)
     val errors = ListBuffer[String]()
     if (aopt.isDefined) {
+      invalidateBgCheckResults()
       if (aopt.get == "tune" && ou.isDefined) {
         val vix = httpParams("vix").toInt
         val v = httpParams("v").toDouble
@@ -54,7 +55,6 @@ class SMGRrdCheckPlugin (val pluginId: String,
           errors += "Bg check/fix is aleady running"
       }
       else errors += s"Invalid action or object id: ${aopt.get} ${ou.map(_.id).getOrElse("")}"
-      invalidateBgCheckResults()
     }
     renderHtmlContent(ou, errors.toList)
   }
