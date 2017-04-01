@@ -58,9 +58,11 @@ object SMGRrd {
       GPRINT_NUM_FORMAT + v("mu").replaceAll("%","%%")
     else GPRINT_NUM_FORMAT
 
+  def numRrdFormat(x: Double): String = if ((x % 1) == 0) x.toLong.toString else "%f".format(x)
+
   val LABEL_LEN = 16
 
-  def lblFmt(lbl:String) = {
+  def lblFmt(lbl:String): String = {
     // TODO sanitize/ escape single quotes
     val pad = if (lbl.length < LABEL_LEN) " " * (LABEL_LEN - lbl.length) else ""
     lbl + pad
@@ -868,7 +870,7 @@ class SMGRrdUpdate(val rrdConf: SMGRrdConfig, val obju: SMGObjectUpdate, val con
     val c = new mutable.StringBuilder(rrdConf.rrdTool).append(" update ")
     if (rrdConf.rrdToolSocket.nonEmpty) c.append("--daemon unix:").append(rrdConf.rrdToolSocket.get).append(" ")
     c.append(rrdFname)
-    c.append(" ").append(tss).append(":").append(vals.map{ x => if ((x % 1) == 0) x.toLong.toString else "%f".format(x)}.mkString(":"))
+    c.append(" ").append(tss).append(":").append(vals.map{ x => numRrdFormat(x)}.mkString(":"))
     c.toString
   }
 }
