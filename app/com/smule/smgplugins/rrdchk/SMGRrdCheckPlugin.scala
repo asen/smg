@@ -86,17 +86,9 @@ class SMGRrdCheckPlugin (val pluginId: String,
 
   private def goodBad(rrdVal: Any, ouVar: Any) = {
     if (rrdVal.toString == ouVar.toString) {
-      <font color="green">conf=
-        {ouVar.toString}
-        == rrd=
-        {rrdVal.toString}
-      </font>
+      <font color="green">conf={ouVar.toString} == rrd={rrdVal.toString}</font>
     } else {
-      <font color="red">conf=
-        {ouVar.toString}
-        != rrd=
-        {rrdVal.toString}
-      </font>
+      <font color="red">conf={ouVar.toString} != rrd={rrdVal.toString}</font>
     }
   }
 
