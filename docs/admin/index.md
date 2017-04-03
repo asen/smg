@@ -189,7 +189,22 @@ graphs page.
 - **$rrd\_dir**: _"smgrrd"_ - directory where to store your rrd files. 
 You probably want to change this on any production installation
 (for more demanding setups, may want to put that dir on an SSD drive).
-That dir must be writabe by the SMG user.
+That dir must be writabe by the SMG user. This must be defined before
+object definitions in the config (and one can specify it multiple
+times, changing the location for subequently defined objects)
+
+- **$default-interval** - _60_ - default update interval for objects 
+not specifying it. This must be defined in the config before object 
+definitions lacking interval setting (and one can specify it multiple 
+times, changing the value for subequently defined objects) if one wants
+to change it from the default.
+
+- **$default-timeout** - _30_ - default timeout for object fetch
+commands (when retrieving data for updates) not specifying it.
+This must be defined in the config before object definitions lacking 
+interval setting (and one can specify it multiple times, changing the 
+value for subequently defined objects) if one wants to change it 
+from the default.
 
 <a name="img_dir" />
 
@@ -503,8 +518,9 @@ which could look like this:
   command: "smgscripts/mac_localhost_sysload.sh"        # mandatory command outputting values
   timeout: 30                                           # optional - fetch command timeout, default 30
   title: "Localhost sysload (1/5/15 min)"               # optional title - object id will be used if no title is present
-  interval: 60                                          # optional - default is 300
-  rrdType: GAUGE                                        # optional - default is GAUGE. Can be COUNTER etc (check rrdtool docs)
+  interval: 60                                          # optional - default is 60
+  rrd_type: GAUGE                                       # optional - default is GAUGE. Can be COUNTER etc (check rrdtool docs)
+  rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
   pre_fetch: some_pf_id                                 # optional - specify pre_fetch command id.
   vars:                                                 # mandatory list of all variables to graph
@@ -611,8 +627,22 @@ graphs.
 - **title**: - free form text description of the object. If not 
 specified, the object id will be used as a title.
 
-- **rrdType**: (default - GAUGE) - can be COUNTER, DERIVE etc, check 
-rrdtool docs for other options.
+- **rrd_type**: (default - GAUGE) - can be COUNTER, DERIVE etc, check 
+rrdtool docs for other options. Note that originally SMG used rrdType
+for this property which is inconsistent with the rest. SMG will still
+try to read rrdType if rrd_type is not present, for backwards 
+compatibility.
+
+- **rrd_init_source**: (no default) - if defined SMG will pass 
+--source <val> to rrdtool create. This can be used to rebuild some
+rrd using different step/RRAs etc. E.g. update the conf and also
+specify rrd_init_source: <object_id>.old, then rename the actual
+rrd file from <object_id>.rrd to <object_id>.old. On the next run
+SMG will re-create the rrd using the newly specified config and
+populate the data from the pre-existing values. Check rrdtool docs 
+for more information and caveats (Note: this feature requires 
+recent rrdtool version supporting the --source option, 1.5.5+ is
+known to work)
 
 - **stack**: (default - false) - if set to true - stack graph lines on 
 top of each other.

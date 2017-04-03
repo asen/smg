@@ -28,6 +28,10 @@ trait SMGConfigReloadListener {
   * An interface for a service managing the local SMG config, to beinjected by Guice
   */
 trait SMGConfigService {
+
+  val defaultInterval: Int = 60 // seconds
+  val defaultTimeout: Int = 30  // seconds
+
   /**
     * Get the current configuration as cached during startup or previous reload.
     *
@@ -539,7 +543,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       } else {
         try {
           val ymap = t._2.asInstanceOf[java.util.Map[String, Object]]
-          if (ymap.contains("ref")) {
+          // check if we are defining a graph object vs rrd object (former instances reference the later)
+          if (ymap.contains("ref")) { // a graph object
             val refid = ymap.get("ref").asInstanceOf[String]
             if (!objectUpdateIds.contains(refid)){
               log.error("SMGConfigServiceImpl.processObject(" + confFile +
@@ -547,7 +552,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
             } else {
               val refobj = objectIds(refid)
               val refUpdateObj = objectUpdateIds.get(refid)
-              val obj = new SMGraphObject(oid, refobj.interval, refobj.vars,
+              val obj = SMGraphObject(oid, refobj.interval, refobj.vars,
                 ymap.getOrElse("cdef_vars", new java.util.ArrayList[java.util.Map[String, Object]]() ).
                   asInstanceOf[java.util.ArrayList[java.util.Map[String, Object]]].toList.map(
                     (m: java.util.Map[String,Object]) => m.map { t => (t._1, t._2.toString) }.toMap
@@ -559,7 +564,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
               objectIds(oid) = obj
               allViewObjectsConf += obj
             }
-          } else {
+          } else { //no ref - plain rrd object
             val rraDef = if (ymap.contains("rra")) {
                 val rid = ymap.get("rra").toString
                 if (rraDefs.contains(rid)){
@@ -596,16 +601,24 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
             val ymapFilteredVars = ymapVars.map { m =>
               m.filter(t => !(SMGMonVarAlertConf.isAlertKey(t._1) || SMGMonVarNotifyConf.isNotifyKey(t._1)) )
             }
-            val obj = new SMGRrdObject(oid,
-                SMGCmd(ymap("command").toString, ymap.getOrElse("timeout", 30).asInstanceOf[Int]), // TODO get 30 from a val
-                ymapFilteredVars,
-                ymap.getOrElse("title", oid).toString,
-                ymap.getOrElse("rrdType", "GAUGE").toString,
-                ymap.getOrElse("interval", 300).asInstanceOf[Int], // TODO get 300 from a val
-                ymap.getOrElse("stack", false).asInstanceOf[Boolean],
-                if (ymap.contains("pre_fetch")) Some(ymap.get("pre_fetch").toString) else None,
-                Some(rrdDir + "/" + oid + ".rrd"),
-                rraDef
+            // XXX support for both rrdType (deprecated) and rrd_type syntax
+            val myRrdType = if (ymap.contains("rrd_type"))
+                ymap("rrd_type").toString
+              else ymap.getOrElse("rrdType", "GAUGE").toString
+            val myDefaultInterval = globalConf.getOrElse("$default-interval", defaultInterval.toString).toInt
+            val myDefaultTimeout = globalConf.getOrElse("$default-timeout", defaultTimeout.toString).toInt
+            val obj = SMGRrdObject(
+                id = oid,
+                command = SMGCmd(ymap("command").toString, myDefaultTimeout),
+                vars = ymapFilteredVars,
+                title = ymap.getOrElse("title", oid).toString,
+                rrdType = myRrdType,
+                interval = ymap.getOrElse("interval", myDefaultInterval).asInstanceOf[Int],
+                stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
+                preFetch = if (ymap.contains("pre_fetch")) Some(ymap.get("pre_fetch").toString) else None,
+                rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
+                rraDef = rraDef,
+                rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap.get("rrd_init_source").toString) else None
               )
             objectIds(oid) = obj
             objectUpdateIds(oid) = obj

@@ -20,7 +20,8 @@ class TestConfigSvc() extends SMGConfigService {
     stack = false,
     preFetch = pfId,
     rrdFile = Some(s"test-out/$oid.rrd"),
-    rraDef = None
+    rraDef = None,
+    None
   )
 
   override def config: SMGLocalConfig = SMGLocalConfig(

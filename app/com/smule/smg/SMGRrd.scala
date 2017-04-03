@@ -1,10 +1,10 @@
 package com.smule.smg
 
 import java.io.File
+import java.nio.file.Paths
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.Try
 
 /**
  * Created by asen on 10/22/15.
@@ -838,23 +838,29 @@ class SMGRrdUpdate(val rrdConf: SMGRrdConfig, val obju: SMGObjectUpdate, val con
     }
   }
 
-  private def rrdMinutesSteps(v:Int):Int = (v * 60) / obju.interval
-  private def rrdDaysRows(v:Int, steps: Int):Int = {
-      val mySteps = if (steps == 0) 1 else steps
-      ((3600 * 24) / (obju.interval * mySteps)) * v
-  }
-
-//  86400 seconds [1 day] / 300 seconds [5 minutes`] = 288 rows
-//  1 week [ = 604800 seconds ] in 15 minutes [ = 900 seconds ] = 604800/900 = 672 rows
-
   private def rrdCreateCommand(ts:Option[Int]): String = {
     val c = new mutable.StringBuilder(rrdConf.rrdTool).append(" create ").append(rrdFname)
     c.append(" --step ").append(obju.interval)
-    c.append(" --start ")
-    if (ts.isEmpty)
-      c.append("-").append(obju.interval * 2)
-    else
-      c.append((ts.get - (obju.interval * 2)).toString)
+    if (obju.rrdInitSource.isDefined) {
+      val fn = obju.rrdInitSource.get
+      val absfn = if (fn.contains(File.separator)) {
+        fn
+      } else { // assume same dir as original if conf value does not contain directory parts
+        Paths.get(new File(rrdFname).getParent, fn).toString
+      }
+      if (new File(absfn).exists()){
+        c.append(s" --source $absfn")
+      } else {
+        //swallow
+        log.warn(s"rrdCreateCommand: non-existing init source ($absfn) when creating rrd for ${obju.id} ($rrdFname)")
+      }
+    } else {
+      c.append(" --start ")
+      if (ts.isEmpty)
+        c.append("-").append(obju.interval * 2)
+      else
+        c.append((ts.get - (obju.interval * 2)).toString)
+    }
 //    c.append(" --no-overwrite")
     val lbl = new LabelMaker()
     obju.vars.foreach { (v: Map[String, String]) =>

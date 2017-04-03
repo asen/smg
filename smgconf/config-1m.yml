@@ -23,7 +23,7 @@
   pre_fetch: host_localhost_up
   command: "smgscripts/mac_localhost_sysload.sh"
   interval: 60
-  rrdType: GAUGE
+  rrd_type: GAUGE
   vars:
     - label: 1min
 #      alert-spike: ""
@@ -35,7 +35,7 @@
   pre_fetch: fail_randomly
   command: "smgscripts/mac_localhost_sysload.sh"
   interval: 60
-  rrdType: GAUGE
+  rrd_type: GAUGE
   vars:
     - label: 1min_x100
       cdef: "$ds,100,*"
@@ -49,7 +49,7 @@
   command: "echo 2 && echo 1"
 #  options:
   interval: 60
-  rrdType: GAUGE
+  rrd_type: GAUGE
   vars:
     - label: val1
     - label: val2
@@ -60,7 +60,7 @@
   title: "A dummy graph with 3 vals"
 #  options:
   interval: 60
-#  rrdType: COUNTER
+#  rrd_type: COUNTER
   vars:
     - label: val31
       min: 0
@@ -87,7 +87,7 @@
   command: "echo 2 && echo 1"
 #  options:
   interval: 60
-  rrdType: GAUGE
+  rrd_type: GAUGE
   vars:
     - label: val1
 
@@ -96,7 +96,7 @@
   command: "date +%s"
 #  options:
   interval: 60
-  rrdType: COUNTER
+  rrd_type: COUNTER
   vars:
     - label: sec/sec
       max: 1.01
@@ -106,7 +106,8 @@
   command: "smgscripts/print-series.rb smgscripts/print-series-test.txt"
 #  options:
   interval: 60
-  rrdType: GAUGE
+  rrd_type: GAUGE
+  rrd_init_source: localhost.spike.check.rrd.old
   vars:
     - label: num
       alert-spike: ""
@@ -117,7 +118,7 @@
   command: "echo 1 && echo 2"
 #  options:
   interval: 60
-  rrdType: GAUGE
+  rrd_type: GAUGE
   vars:
     - label: val1
       cdef: "$ds,10,*"
@@ -136,7 +137,7 @@
   command: "echo 3 && echo 4"
 #  options:
   interval: 60
-  rrdType: GAUGE
+  rrd_type: GAUGE
   vars:
     - label: val1
       cdef: "$ds,10,*"

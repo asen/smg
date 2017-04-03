@@ -25,7 +25,8 @@ case class SMGRrdObject(id: String,
                         stack: Boolean,
                         preFetch: Option[String],
                         rrdFile: Option[String],
-                        rraDef: Option[SMGRraDef]
+                        rraDef: Option[SMGRraDef],
+                        override val rrdInitSource: Option[String]
                        ) extends SMGObjectView with SMGObjectUpdate with SMGFetchCommand {
 
 
@@ -51,7 +52,7 @@ case class SMGRrdObject(id: String,
 
   override val isAgg = false
 
-  override val graphVarsIndexes = vars.indices.toList
+  override val graphVarsIndexes: List[Int] = vars.indices.toList
 
   override val cdefVars: List[Map[String, String]] = List()
 
