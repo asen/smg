@@ -609,7 +609,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
             val myDefaultTimeout = globalConf.getOrElse("$default-timeout", defaultTimeout.toString).toInt
             val obj = SMGRrdObject(
                 id = oid,
-                command = SMGCmd(ymap("command").toString, myDefaultTimeout),
+                command = SMGCmd(ymap("command").toString, ymap.getOrElse("timeout", myDefaultTimeout).asInstanceOf[Int]),
                 vars = ymapFilteredVars,
                 title = ymap.getOrElse("title", oid).toString,
                 rrdType = myRrdType,
