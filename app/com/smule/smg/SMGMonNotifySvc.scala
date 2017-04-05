@@ -265,14 +265,10 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     } else {
       val akey = monState.alertKey
       val toNotify = ncmds.distinct
-      runStateCommandsAsync(monState, toNotify, isRepeat = false, isImprovement).map { sent =>
-        if (sent) {
-          val allNotified = toNotify.toSet ++ activeAlerts.getOrElse(akey, List()).toSet
-          activeAlerts(akey) = allNotified.toList
-          activeAlertsLastTs(akey) = SMGRrd.tssNow
-        }
-        sent
-      }
+      val allNotified = toNotify.toSet ++ activeAlerts.getOrElse(akey, List()).toSet
+      activeAlerts(akey) = allNotified.toList
+      activeAlertsLastTs(akey) = SMGRrd.tssNow
+      runStateCommandsAsync(monState, toNotify, isRepeat = false, isImprovement)
     }
   }
 
