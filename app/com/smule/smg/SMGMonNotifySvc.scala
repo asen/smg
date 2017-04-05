@@ -166,7 +166,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
   }
 
   private def sendThrottledMsg(addNcmds: Seq[SMGMonNotifyCmd], cnt: Int, maxCnt: Int, throttledUntil: Int): Future[Boolean] = {
-    val msgSubj = s"THROTTLED $remoteSubjStr message rate ($cnt) exceeded $maxCnt msgs/$throttleInterval sec"
+    val msgSubj = s"THROTTLED $remoteSubjStr message rate ($cnt) reached $maxCnt msgs/$throttleInterval sec"
     if (isMuted) {
       log.warn(s"SMGMonNotifySvc.notify: Muted state prevents sending of throttle messages with subj: $msgSubj")
       return Future { true }
@@ -265,10 +265,14 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     } else {
       val akey = monState.alertKey
       val toNotify = ncmds.distinct
-      val allNotified = toNotify.toSet ++ activeAlerts.getOrElse(akey, List()).toSet
-      activeAlerts(akey) = allNotified.toList
-      activeAlertsLastTs(akey) = SMGRrd.tssNow
-      runStateCommandsAsync(monState, toNotify, isRepeat = false, isImprovement)
+      runStateCommandsAsync(monState, toNotify, isRepeat = false, isImprovement).map { sent =>
+        if (sent) {
+          val allNotified = toNotify.toSet ++ activeAlerts.getOrElse(akey, List()).toSet
+          activeAlerts(akey) = allNotified.toList
+          activeAlertsLastTs(akey) = SMGRrd.tssNow
+        }
+        sent
+      }
     }
   }
 
