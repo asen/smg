@@ -76,11 +76,11 @@ case class SMGLocalConfig(
 
   val globalNotifyBackoff: Int = globals.get("$notify-backoff").flatMap{ s =>
     SMGRrd.parsePeriod(s)
-  }.getOrElse(SMGMonVarNotifyConf.DEFAULT_NOTIFY_BACKOFF)
+  }.getOrElse(SMGMonNotifyConf.DEFAULT_NOTIFY_BACKOFF)
 
   val globalNotifyStrikes: Int = globals.get("$notify-strikes").map { s =>
     Math.max(s.toInt,1)
-  }.getOrElse(SMGMonVarNotifyConf.DEFAULT_NOTIFY_STRIKES)
+  }.getOrElse(SMGMonNotifyConf.DEFAULT_NOTIFY_STRIKES)
 
 
   val notifyBaseUrl: String = globals.getOrElse("$notify-baseurl", "http://localhost:9000")

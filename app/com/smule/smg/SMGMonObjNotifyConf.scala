@@ -4,19 +4,19 @@ package com.smule.smg
   * Created by asen on 8/30/16.
   */
 
-case class SMGMonVarNotifyConf(src: SMGMonAlertConfSource.Value,
-                               srcId: String,
-                               crit: Seq[String],
-                               unkn: Seq[String],
-                               warn: Seq[String],
-                               spike: Seq[String],
-                               notifyBackoff: Option[Int],
-                               notifyDisable: Boolean,
-                               notifyStrikes: Int
+case class SMGMonNotifyConf(src: SMGMonAlertConfSource.Value,
+                            srcId: String,
+                            crit: Seq[String],
+                            unkn: Seq[String],
+                            warn: Seq[String],
+                            spike: Seq[String],
+                            notifyBackoff: Option[Int],
+                            notifyDisable: Boolean,
+                            notifyStrikes: Option[Int]
                              )
 
 
-object SMGMonVarNotifyConf {
+object SMGMonNotifyConf {
 
   val log = SMGLogger
 
@@ -34,7 +34,7 @@ object SMGMonVarNotifyConf {
     "notify-strikes"
   )
 
-  def fromVarMap(src: SMGMonAlertConfSource.Value, srcId: String, vMap: Map[String, String]): Option[SMGMonVarNotifyConf] = {
+  def fromVarMap(src: SMGMonAlertConfSource.Value, srcId: String, vMap: Map[String, String]): Option[SMGMonNotifyConf] = {
     val matchingKeys = vMap.keySet.intersect(NOTIFY_KEYS)
     if (matchingKeys.isEmpty)
       None
@@ -45,18 +45,18 @@ object SMGMonVarNotifyConf {
       val notifySpike = vMap.get("notify-anom").map { v => v.split("\\s*,\\s*").toSeq }.getOrElse(Seq())
       val notifyBackoff = vMap.get("notify-backoff").flatMap { v => SMGRrd.parsePeriod(v) }
       val notifyDisable = vMap.getOrElse("notify-disable", "false") == "true"
-      val notifyStrikes = vMap.get("notify-strikes").map(_.toInt).getOrElse(DEFAULT_NOTIFY_STRIKES)
-      Some(SMGMonVarNotifyConf(src, srcId, notifyCrit, notifyUnk, notifyWarn, notifySpike, notifyBackoff,
-        notifyDisable, Math.max(notifyStrikes,1)))
+      val notifyStrikes = vMap.get("notify-strikes").map(_.toInt)
+      Some(SMGMonNotifyConf(src, srcId, notifyCrit, notifyUnk, notifyWarn, notifySpike, notifyBackoff,
+        notifyDisable, notifyStrikes))
     }
   }
 
   def isNotifyKey(k: String): Boolean = k.startsWith("notify-")
 }
 
-case class SMGMonObjNotifyConf(private val varConfs: Map[Int, Seq[SMGMonVarNotifyConf]]) {
+case class SMGMonObjNotifyConf(private val varConfs: Map[Int, Seq[SMGMonNotifyConf]]) {
 
-  def varConf(ix: Int): Seq[SMGMonVarNotifyConf] = varConfs.getOrElse(ix, Seq())
+  def varConf(ix: Int): Seq[SMGMonNotifyConf] = varConfs.getOrElse(ix, Seq())
 
   def getIsDisabledAndBackoff(ix: Option[Int]):(Boolean, Option[Int]) = {
     val confs = if (ix.isDefined) varConf(ix.get) else varConfs.values.flatten

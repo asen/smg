@@ -402,6 +402,40 @@ trait SMGMonBaseFetchState extends SMGMonInternalState {
   def processSuccess(ts: Int, isInherited: Boolean): Unit = {
     addState(SMGState(ts, SMGState.OK, "OK"), isInherited)
   }
+
+  protected def pfNotifyCmdsAndBackoff(myConfigSvc: SMGConfigService,
+                                       myNotifyConf: Option[SMGMonNotifyConf],
+                                       ous: Seq[SMGObjectUpdate]
+                                      ): (Seq[SMGMonNotifyCmd], Int) = {
+    if (myNotifyConf.isDefined) {
+      val ncmds = if (myNotifyConf.get.notifyDisable)
+        Seq()
+      else
+        myNotifyConf.get.unkn.map(s => myConfigSvc.config.notifyCommands.get(s)).filter(_.isDefined).map(_.get)
+      val backoff = myNotifyConf.get.notifyBackoff.getOrElse(myConfigSvc.config.globalNotifyBackoff)
+      (ncmds, backoff)
+    } else {
+      val tuples = ous.
+        map(ou => myConfigSvc.objectVarNotifyCmdsAndBackoff(ou, None, SMGMonNotifySeverity.UNKNOWN))
+      val backoff = tuples.map(_._2).max
+      val ncmds = tuples.flatMap(_._1).distinct
+      (ncmds, backoff)
+    }
+  }
+
+  protected def pfMaxHardErrorCount(myConfigSvc: SMGConfigService,
+                                     myNotifyConf: Option[SMGMonNotifyConf],
+                                     ous: Seq[SMGObjectUpdate]): Int = {
+    if (myNotifyConf.isDefined) {
+      myNotifyConf.get.notifyStrikes.getOrElse(myConfigSvc.config.globalNotifyStrikes)
+    } else {
+      if (ous.isEmpty) {
+        myConfigSvc.config.globalNotifyStrikes
+      } else {
+        ous.map { ou => myConfigSvc.objectVarNotifyStrikes(ou, None) }.min
+      }
+    }
+  }
 }
 
 class SMGMonObjState(var ou: SMGObjectUpdate,
@@ -420,12 +454,11 @@ class SMGMonObjState(var ou: SMGObjectUpdate,
   override def text: String = s"${ou.id}: ${ou.title}: $currentStateDesc"
 
   override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
-    lazy val mntype = SMGMonNotifySeverity.fromStateValue(currentStateVal)
-    configSvc.objectVarNotifyCmdsAndBackoff(ou, None, mntype)
+    pfNotifyCmdsAndBackoff(configSvc, ou.notifyConf, Seq(ou))
   }
 
   override protected def getMaxHardErrorCount: Int = {
-    configSvc.objectVarNotifyStrikes(ou, None)
+    pfMaxHardErrorCount(configSvc, ou.notifyConf, Seq(ou))
   }
 
 }
@@ -461,21 +494,11 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
   override def alertKey: String = pfCmd.id
 
   override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
-    val tuples = myObjectUpdates.
-      map(ou => configSvc.objectVarNotifyCmdsAndBackoff(ou, None, SMGMonNotifySeverity.UNKNOWN))
-    lazy val backoff = tuples.map(_._2).max
-    lazy val ncmds = tuples.flatMap(_._1).distinct
-    (ncmds, backoff)
+    pfNotifyCmdsAndBackoff(configSvc, pfCmd.notifyConf, myObjectUpdates)
   }
 
   override def getMaxHardErrorCount: Int = {
-    val objsNotifyStrikes = configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval)).map { ou =>
-      configSvc.objectVarNotifyStrikes(ou, None)
-    }
-    if (objsNotifyStrikes.nonEmpty) objsNotifyStrikes.min else {
-      log.debug(s"SMGMonPfState.getPfMaxHardErrorCount(${pfCmd.id}): empty objsNotifyStrikes seq")
-      configSvc.config.globalNotifyStrikes
-    }
+    pfMaxHardErrorCount(configSvc, pfCmd.notifyConf, myObjectUpdates)
   }
 }
 

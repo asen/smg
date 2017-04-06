@@ -14,7 +14,9 @@ package com.smule.smg
 case class SMGPreFetchCmd(id: String,
                           command: SMGCmd,
                           preFetch: Option[String],
-                          override val ignoreTs: Boolean) extends SMGFetchCommand {
+                          override val ignoreTs: Boolean,
+                          notifyConf: Option[SMGMonNotifyConf]
+                         ) extends SMGFetchCommand {
   val isRrdObj = false
 }
 

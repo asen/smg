@@ -26,7 +26,8 @@ case class SMGRrdObject(id: String,
                         preFetch: Option[String],
                         rrdFile: Option[String],
                         rraDef: Option[SMGRraDef],
-                        override val rrdInitSource: Option[String]
+                        override val rrdInitSource: Option[String],
+                        notifyConf: Option[SMGMonNotifyConf]
                        ) extends SMGObjectView with SMGObjectUpdate with SMGFetchCommand {
 
 

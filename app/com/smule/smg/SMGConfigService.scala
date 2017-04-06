@@ -169,7 +169,7 @@ trait SMGConfigService {
         if (seq.isEmpty)
           config.globalNotifyStrikes
         else
-          seq.map(_.notifyStrikes).min
+          seq.map(_.notifyStrikes.getOrElse(config.globalNotifyStrikes)).min
       }.getOrElse(config.globalNotifyStrikes)
     }.min
     Math.max(ret,1)
@@ -373,13 +373,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
     val objectIds = mutable.Map[String, SMGObjectView]()
     val objectUpdateIds = mutable.Map[String, SMGObjectUpdate]()
     val indexAlertConfs = ListBuffer[(SMGConfIndex, String, SMGMonVarAlertConf)]()
-    val indexNotifyConfs = ListBuffer[(SMGConfIndex, String, SMGMonVarNotifyConf)]()
+    val indexNotifyConfs = ListBuffer[(SMGConfIndex, String, SMGMonNotifyConf)]()
     var indexConfs = ListBuffer[SMGConfIndex]()
     val indexIds = mutable.Set[String]()
     val indexMap = mutable.Map[String,ListBuffer[String]]()
     val hiddenIndexConfs = mutable.Map[String, SMGConfIndex]()
     val objectAlertConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonVarAlertConf]]]()
-    val objectNotifyConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonVarNotifyConf]]]()
+    val objectNotifyConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonNotifyConf]]]()
     var rrdDir = "smgrrd"
     val rrdTool = "rrdtool"
     val imgDir = "public/smg"
@@ -397,7 +397,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       objectAlertConfMaps(oid)(ix) += ac
     }
 
-    def addNotifyConf(oid: String, ix: Int, nc: SMGMonVarNotifyConf) = {
+    def addNotifyConf(oid: String, ix: Int, nc: SMGMonNotifyConf) = {
       if (!objectNotifyConfMaps.contains(oid)) objectNotifyConfMaps(oid) = mutable.Map()
       if (!objectNotifyConfMaps(oid).contains(ix)) objectNotifyConfMaps(oid)(ix) = ListBuffer()
       objectNotifyConfMaps(oid)(ix) += nc
@@ -420,7 +420,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
           val parentPfStr = yamlMap.getOrElse("pre_fetch", "").toString
           val parentPf = if (parentPfStr == "") None else Some(parentPfStr)
           val ignoreTs = yamlMap.contains("ignorets") && (yamlMap.get("ignorets").toString != "false")
-          preFetches(id) = SMGPreFetchCmd(id, cmd, parentPf, ignoreTs)
+          val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, id, yamlMap.toMap.map(kv => (kv._1, kv._2.toString)))
+          preFetches(id) = SMGPreFetchCmd(id, cmd, parentPf, ignoreTs, notifyConf)
         }
       } else {
         log.error("SMGConfigServiceImpl.processPrefetch(" + confFile + "): CONFIG_ERROR: $pre_fetch yamlMap does not have command and id: " + yamlMap.toString)
@@ -520,7 +521,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
               val src = if (isHidden) SMGMonAlertConfSource.HINDEX else SMGMonAlertConfSource.INDEX
               val ac = SMGMonVarAlertConf.fromVarMap(src, idx.id, sm)
               if (ac.isDefined) indexAlertConfs += Tuple3(idx, sm.getOrElse("label","ds" + idx), ac.get)
-              val nc = SMGMonVarNotifyConf.fromVarMap(src, idx.id, sm)
+              val nc = SMGMonNotifyConf.fromVarMap(src, idx.id, sm)
               if (nc.isDefined) indexNotifyConfs += Tuple3(idx, sm.getOrElse("label","ds" + idx), nc.get)
             }
           }
@@ -592,14 +593,14 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
             ymapVars.zipWithIndex.foreach { t =>
               val ix = t._2
               val m = t._1
-              val nc = SMGMonVarNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m)
+              val nc = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m)
               if (nc.isDefined) {
                 addNotifyConf(oid, ix, nc.get)
               }
             }
             // exclude alert- and notify- defs from the vars maps so it is not passed around remotes and does not mess up aggregation
             val ymapFilteredVars = ymapVars.map { m =>
-              m.filter(t => !(SMGMonVarAlertConf.isAlertKey(t._1) || SMGMonVarNotifyConf.isNotifyKey(t._1)) )
+              m.filter(t => !(SMGMonVarAlertConf.isAlertKey(t._1) || SMGMonNotifyConf.isNotifyKey(t._1)) )
             }
             // XXX support for both rrdType (deprecated) and rrd_type syntax
             val myRrdType = if (ymap.contains("rrd_type"))
@@ -607,6 +608,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
               else ymap.getOrElse("rrdType", "GAUGE").toString
             val myDefaultInterval = globalConf.getOrElse("$default-interval", defaultInterval.toString).toInt
             val myDefaultTimeout = globalConf.getOrElse("$default-timeout", defaultTimeout.toString).toInt
+            val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, ymap.toMap.map(kv => (kv._1, kv._2.toString)))
             val obj = SMGRrdObject(
                 id = oid,
                 command = SMGCmd(ymap("command").toString, ymap.getOrElse("timeout", myDefaultTimeout).asInstanceOf[Int]),
@@ -618,7 +620,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
                 preFetch = if (ymap.contains("pre_fetch")) Some(ymap.get("pre_fetch").toString) else None,
                 rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
                 rraDef = rraDef,
-                rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap.get("rrd_init_source").toString) else None
+                rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap.get("rrd_init_source").toString) else None,
+                notifyConf = notifyConf
               )
             objectIds(oid) = obj
             objectUpdateIds(oid) = obj

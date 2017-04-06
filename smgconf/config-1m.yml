@@ -12,6 +12,7 @@
   id: host_localhost_up
   command: "ping -c 1 localhost >/dev/null"
   ignorets: true
+  notify-unkn: mail-asen
 
 - $pre_fetch:
   id: fail_randomly

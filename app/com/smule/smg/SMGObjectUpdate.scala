@@ -24,5 +24,7 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
 
   override def searchVars: List[Map[String, String]] = vars
 
+  def notifyConf: Option[SMGMonNotifyConf]
+
   val rrdInitSource: Option[String] = None
 }

@@ -21,6 +21,7 @@ class TestConfigSvc() extends SMGConfigService {
     preFetch = pfId,
     rrdFile = Some(s"test-out/$oid.rrd"),
     rraDef = None,
+    None,
     None
   )
 
@@ -44,7 +45,7 @@ class TestConfigSvc() extends SMGConfigService {
     imgDir = "test-out",
     urlPrefix = "",
     intervals = Set(60),
-    preFetches = Map("test.prefetch" -> SMGPreFetchCmd("test.prefetch", SMGCmd("echo 0"), None, false)),
+    preFetches = Map("test.prefetch" -> SMGPreFetchCmd("test.prefetch", SMGCmd("echo 0"), None, false, None)),
     remotes = Seq(),
     remoteMasters = Seq(),
     pluginObjects = Map(),
