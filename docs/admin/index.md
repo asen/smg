@@ -284,9 +284,12 @@ one does not care about Android and IE.
 - **$pre\_fetch**: pre\_fetch is special and it is not a simple name ->
 value pair. A $pre_fetch defines an unique **id** and a **command** to 
 execute, together with an optional **timeout** for the command 
-(30 seconds by default) and an optional "parent" pre_fetch id. 
-Here are two example pre_fetch definitions, one referencing the 
-other as a parent:
+(30 seconds by default) and an optional "parent" pre_fetch id.
+Pre fetch also supports **notify-xxx**: - these are multiple properties
+which define monitoring alert notifications (check [monitoring config](#monitoring)
+for details). Note that from the per-leve specifiers only notify-unkn
+is relevant at this level. Here are two example pre_fetch definitions, one
+referencing the other as a parent:
 
 <blockquote>
 <pre>
@@ -294,6 +297,7 @@ other as a parent:
     - $pre_fetch:
       id: host.host1.up
       command: "ping -c 1 host1 >/dev/null"
+      notify-unnkn: mail-asen, notif-pd
       timeout: 5
           
     - $pre_fetch:
@@ -523,6 +527,7 @@ which could look like this:
   rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
   pre_fetch: some_pf_id                                 # optional - specify pre_fetch command id.
+  notify-unkn: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
   vars:                                                 # mandatory list of all variables to graph
     - label: sl1min                                     # the variable label. 
       min: 0                                            # optional - min accepted rrd value, default 0
@@ -653,6 +658,11 @@ top of each other.
 - **rra**: (default - None) - specify a [$rra\_def id](#rra_def) to use
 for this object. By default SMG will pick one based on object interval.
  
+- **notify-xxx**: - these are multiple properties which define
+monitoring alert notifications. Check [monitoring config](#monitoring)
+for details. Note that from the per-leve specifiers only notify-unkn
+is relevant at this level.
+
 <a name="view-objects" />
 
 ### View objects
