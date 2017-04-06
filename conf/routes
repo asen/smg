@@ -15,7 +15,7 @@ GET     /show/:oid      controllers.Application.show(oid: String, cols: Int ?= 6
 GET     /fetch/:oid     controllers.Application.fetch(oid: String, r: Option[Int], s: Option[String], e: Option[String], d: Boolean ?= false)
 GET     /showAgg        controllers.Application.showAgg(ids:String, op:String, title:Option[String], cols: Int ?= 6, dpp: String ?= "", d95p: String ?= "", maxy: Option[String])
 GET     /fetchAgg       controllers.Application.fetchAgg(ids:String, op:String, r:Option[Int], s: Option[String], e: Option[String], d:Boolean ?= false)
-POST    /run/:interval  controllers.Application.runJob(interval: Int)
+POST    /run/:interval  controllers.Application.runJob(interval: Int, id: Option[String])
 POST    /reload         controllers.Application.reloadConf
 GET     /reload         controllers.Application.reloadConf
 GET     /user/settings       controllers.Application.userSettings()

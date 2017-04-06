@@ -502,9 +502,16 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param interval - interval for which to run the update job
     * @return
     */
-  def runJob(interval: Int): Action[AnyContent] = Action {
-    smg.run(interval)
-    Ok("OK")
+  def runJob(interval: Int, id: Option[String]): Action[AnyContent] = Action {
+    if (id.isEmpty || (id.get == "")) {
+      smg.run(interval)
+      Ok("OK")
+    } else {
+      if (smg.runCommandsTree(interval, id.get))
+        Ok(s"OK - sent message for ${id.get}")
+      else
+        NotFound(s"ERROR - did not find commands tree with root ${id.get}")
+    }
   }
 
   /**

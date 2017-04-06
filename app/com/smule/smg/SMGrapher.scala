@@ -57,13 +57,28 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
     Future {
       commandTrees.foreach { fRoot =>
-        updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(conf.rrdConf, interval, Seq(fRoot), None)
+        updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(conf.rrdConf, interval, Seq(fRoot), None, updateCounters = true)
         log.debug("SMGrapher.run(interval=" + interval + "): Sent fetch update message for: " + fRoot.node)
       }
       log.info("SMGrapher.run(interval=" + interval + "): sent messages for " + sz + " fetch commands")
       configSvc.plugins.foreach { p =>
         if (p.interval == interval) p.run()
       }
+    }
+  }
+
+  override def runCommandsTree(interval: Int, cmdId: String): Boolean = {
+    val conf = configSvc.config
+    val commandTrees = conf.fetchCommandsTree(interval)
+    val topLevel = commandTrees.find(t => t.findTree(cmdId).isDefined)
+    if (topLevel.isDefined){
+      val root = topLevel.get.findTree(cmdId).get
+      updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(conf.rrdConf, interval, Seq(root), None, updateCounters = false)
+      log.info(s"SMGrapher.runCommandsTree(interval=$interval): Sent fetch update message for: " + root.node)
+      true
+    } else {
+      log.warn(s"SMGrapher.runCommandsTree(interval=$interval): could not find commands tree with root id $cmdId")
+      false
     }
   }
 

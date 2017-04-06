@@ -35,13 +35,15 @@ case class GraphOptions(step: Option[Int] = None,
 trait GrapherApi {
 
   //convenience ref
-  val detailPeriods = GrapherApi.detailPeriods
+  val detailPeriods: List[String] = GrapherApi.detailPeriods
 
   /**
     * Execute a fetch + update run for given interval (to be called regularly by scheduler)
     * @param interval - interval in seconds
     */
   def run(interval:Int):Unit
+
+  def runCommandsTree(interval: Int, cmdId: String): Boolean
 
   /**
     * Get Top Level configured indexes, grouped by remote
