@@ -585,11 +585,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
         val hstate =  monitorApi.inspectObject(ov.get)
         val pfs = if (ou.get.preFetch.isDefined) {
           val lb = ListBuffer[(SMGPreFetchCmd, String)]()
-          var cur = configSvc.config.preFetches.get(ou.get.preFetch.get)
+          var cur = configSvc.config.findPreFetchCmd(ou.get.preFetch.get)
           while (cur.isDefined) {
-            val pfState = monitorApi.inspectPf(cur.get.id, ou.get.interval).getOrElse("ERROR: No state available")
-            lb += ((cur.get, pfState))
-            cur = cur.get.preFetch.flatMap(pfId => configSvc.config.preFetches.get(pfId))
+            val pfState = monitorApi.inspectPf(cur.get._1.id, ou.get.interval).getOrElse("ERROR: No state available")
+            lb += ((cur.get._1, cur.get._2.map(plid => s"(Plugin: $plid) ").getOrElse("") + pfState))
+            cur = cur.get._1.preFetch.flatMap(ppf => configSvc.config.findPreFetchCmd(ppf))
           }
           lb.toList.reverse
         } else List()

@@ -231,4 +231,20 @@ case class SMGLocalConfig(
     ret.toList
   }
 
+  /**
+    * Lookup the given pfId in preFetches or pluginPreFetches
+    * @param pfId - id to lookup
+    * @return - if found - Some tuple of the SMGPreFetchCmd and the (optional) pluginId for which the id was found
+    */
+  def findPreFetchCmd(pfId: String): Option[(SMGPreFetchCmd, Option[String])] = {
+    if (preFetches.contains(pfId))
+      Some((preFetches(pfId), None))
+    else
+      pluginPreFetches.find { case (plid, pfs) =>
+        pfs.contains(pfId)
+      }.map { case (plid, pfs) =>
+        (pfs(pfId), Some(plid))
+      }
+  }
+
 }
