@@ -574,7 +574,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val ou = if (ov.isDefined) ov.get.refObj else None
       if (ou.isDefined) {
         val ac = configSvc.config.objectAlertConfs.get(ou.get.id)
-        val nc = configSvc.config.objectNotifyConfs.get(ou.get.id)
+        val ncUnk = ou.get.notifyConf
+        val nc  = configSvc.config.objectNotifyConfs.get(ou.get.id)
         val ncmds = SMGMonNotifySeverity.values.toList.map { v =>
           val cmdBackoff = configSvc.objectVarNotifyCmdsAndBackoff(ou.get, None, v)
           (v, cmdBackoff._1, cmdBackoff._2)
@@ -582,7 +583,17 @@ class Application  @Inject() (actorSystem: ActorSystem,
         val notifyStrikesObj = configSvc.objectVarNotifyStrikes(ou.get, None)
         val notifyStrikesVars = ou.get.vars.indices.map( vix => configSvc.objectVarNotifyStrikes(ou.get, Some(vix)))
         val hstate =  monitorApi.inspectObject(ov.get)
-        Ok(views.html.inspectObject(ov.get, ac, nc, ncmds, Seq(notifyStrikesObj) ++ notifyStrikesVars, hstate))
+        val pfs = if (ou.get.preFetch.isDefined) {
+          val lb = ListBuffer[(SMGPreFetchCmd, String)]()
+          var cur = configSvc.config.preFetches.get(ou.get.preFetch.get)
+          while (cur.isDefined) {
+            val pfState = monitorApi.inspectPf(cur.get.id, ou.get.interval).getOrElse("ERROR: No state available")
+            lb += ((cur.get, pfState))
+            cur = cur.get.preFetch.flatMap(pfId => configSvc.config.preFetches.get(pfId))
+          }
+          lb.toList.reverse
+        } else List()
+        Ok(views.html.inspectObject(ov.get, pfs, ac, ncUnk, nc, ncmds, Seq(notifyStrikesObj) ++ notifyStrikesVars, hstate))
       } else NotFound("Object not found")
     }
   }

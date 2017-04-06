@@ -1,16 +1,36 @@
 @import com.smule.smg.SMGObjectView
 @import com.smule.smg.SMGMonObjAlertConf
+@import com.smule.smg.SMGMonNotifyConf
 @import com.smule.smg.SMGMonObjNotifyConf
 @import com.smule.smg.SMGMonNotifyCmd
 @import com.smule.smg.SMGMonNotifySeverity
-@(ov:SMGObjectView, acs: Option[SMGMonObjAlertConf], ncs: Option[SMGMonObjNotifyConf], ncmds: Seq[(SMGMonNotifySeverity.Value, Seq[SMGMonNotifyCmd], Int)], nstrikes: Seq[Int], hstate: Option[String])
+@import com.smule.smg.SMGPreFetchCmd
+@(ov:SMGObjectView, pfs: List[(SMGPreFetchCmd, String)], acs: Option[SMGMonObjAlertConf], ncUnk: Option[SMGMonNotifyConf], nc: Option[SMGMonObjNotifyConf],
+  ncmds: Seq[(SMGMonNotifySeverity.Value, Seq[SMGMonNotifyCmd], Int)], nstrikes: Seq[Int], hstate: Option[String])
 
 <h3>Object View</h3>
 <p>@ov</p>
 
 <h3>Ref Object Update</h3>
+
+@if(pfs.isEmpty) {
+<h4>No pre_fetch commands defined</h4>
+} else {
+<h4>pre_fetch commands</h4>
+<ul>
+  @for(pf <- pfs){
+  <li>
+    <p>@{pf._1}</p>
+    <p>State: @{pf._2}</p>
+  </li>
+  }
+</ul>
+}
+
+<h4>Object</h4>
+
 <p>@if(ov.refObj.isDefined){
-  @ov.refObj.get
+<ul><li>@ov.refObj.get</li></ul>
   } else {
     No ref object defined
   }</p>
@@ -26,10 +46,17 @@
 
 <h3>Object Notify Confs</h3>
 <p>
-  @if(ncs.isEmpty){
-  No notification confs defined
+  @if(ncUnk.isEmpty){
+  No notification conf for object UNKNOWN state
   } else {
-  @ncs.get
+  @ncUnk.get
+  }
+</p>
+<p>
+  @if(nc.isEmpty){
+  No notification conf for object
+  } else {
+  @nc.get
   }
 </p>
 <p>

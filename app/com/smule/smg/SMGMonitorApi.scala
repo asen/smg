@@ -571,5 +571,6 @@ trait SMGMonitorApi {
 
 
   def inspectObject(ov:SMGObjectView): Option[String]
+  def inspectPf(pfId: String, interval: Int): Option[String]
 
 }

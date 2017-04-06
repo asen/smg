@@ -463,6 +463,12 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     } else Some(strSeq.mkString("\n"))
   }
 
+  override def inspectPf(pfId: String, interval: Int): Option[String] = {
+    val stateId = SMGMonPfState.stateId(pfId, interval)
+    allMonitorStatesById.get(stateId).map(_.serialize.toString())
+  }
+
+
   private def deserializeObjectsState(stateStr: String): Int = {
     var cnt = 0
     val jsm = Json.parse(stateStr).as[Map[String, JsValue]]
