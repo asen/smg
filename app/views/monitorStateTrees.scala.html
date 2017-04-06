@@ -19,7 +19,7 @@
     <input type="number" id="limit" name="lmt" value="@{limit}" min="2" max="9999" onchange="mySubmitOnChange(this);">
     @if(availRemotes.nonEmpty){
     <label class="autosubmit-lbl">Remote filter:</label>
-    <select name="remote" class="select-remote" onchange="remoteChanged(this);" >
+    <select id='smg-filter-remote' name="remote" class="select-remote" onchange="remoteChanged(this);" >
       @for( rid <- availRemotes ) {
       <option value='@rid' @if(rid == rmtId){ selected } >@if(rid == ""){Local}else{@rid}</option>
       }
@@ -61,6 +61,9 @@
 
 <!-- strip empty params from the form so that urls are less cluttered -->
 <script language="JavaScript">
+
+    smgAutocompleteSetup('inpRx',     '/json/cmdtokens');
+    smgAutocompleteSetup('inpRxx',    '/json/cmdtokens');
 
     function remoteChanged(elem) {
       document.getElementById("treeRoot").value = "" ;

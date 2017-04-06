@@ -912,25 +912,32 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   def jsonTrxTokens(q: String, remote: Option[String]) = Action {
     val rmtId = remote.getOrElse("")
-    val sxes = smg.searchCache.getTrxTokens(q, rmtId)
-    Ok(Json.toJson(sxes))
+    val tkns = smg.searchCache.getTrxTokens(q, rmtId)
+    Ok(Json.toJson(tkns))
   }
 
   def jsonRxTokens(q: String, remote: Option[String]) = Action {
     val rmtId = remote.getOrElse("")
-    val rxes = smg.searchCache.getRxTokens(q, rmtId)
-    Ok(Json.toJson(rxes))
+    val tkns = smg.searchCache.getRxTokens(q, rmtId)
+    Ok(Json.toJson(tkns))
   }
 
   def jsonSxTokens(q: String, remote: Option[String]) = Action {
     val rmtId = remote.getOrElse("")
-    val sxes = smg.searchCache.getSxTokens(q, rmtId)
-    Ok(Json.toJson(sxes))
+    val tkns = smg.searchCache.getSxTokens(q, rmtId)
+    Ok(Json.toJson(tkns))
   }
 
   def jsonPxTokens(q: String, remote: Option[String]) = Action {
     val rmtId = remote.getOrElse("")
-    val pxes = smg.searchCache.getPxTokens(q, rmtId)
-    Ok(Json.toJson(pxes))
+    val tkns = smg.searchCache.getPxTokens(q, rmtId)
+    Ok(Json.toJson(tkns))
   }
+
+  def jsonCmdTokens(q: String, remote: Option[String]) = Action {
+    val rmtId = remote.getOrElse("")
+    val tkns = smg.searchCache.getPfRxTokens(q, rmtId)
+    Ok(Json.toJson(tkns))
+  }
+
 }

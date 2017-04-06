@@ -170,6 +170,10 @@ case class SMGLocalConfig(
     fetchCommandTrees.getOrElse(interval, Seq())
   }
 
+  def fetchCommandsTreesByInterval: Map[Int,Seq[SMGFetchCommandTree]] = {
+    intervals.map(i => (i, fetchCommandsTree(i))).filter(_._2.nonEmpty).toMap
+  }
+
   /**
     * Get all fetch command trees (can be one per interval) having the provided root id
     * if root is None - return all command trees

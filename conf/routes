@@ -50,6 +50,7 @@ GET     /json/trxtokens       controllers.Application.jsonTrxTokens(q: String ?=
 GET     /json/rxtokens        controllers.Application.jsonRxTokens(q: String ?= "", remote: Option[String])
 GET     /json/pxtokens        controllers.Application.jsonPxTokens(q: String ?= "", remote: Option[String])
 GET     /json/sxtokens        controllers.Application.jsonSxTokens(q: String ?= "", remote: Option[String])
+GET     /json/cmdtokens       controllers.Application.jsonCmdTokens(q: String ?= "", remote: Option[String])
 
 # SVG response
 GET     /monitor/indexSvg    controllers.Application.monitorIndexSvg(ixid: String)

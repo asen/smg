@@ -16,13 +16,16 @@ trait SMGSearchCache extends SMGConfigReloadListener {
 
   def search(q: String, maxResults: Int): Seq[SMGSearchResult]
 
-  def getRxTokens(suffixFlt: String, rmtId: String): Seq[String]
+  def getRxTokens(flt: String, rmtId: String): Seq[String]
 
-  def getTrxTokens(suffixFlt: String, rmtId: String): Seq[String]
+  def getTrxTokens(flt: String, rmtId: String): Seq[String]
 
-  def getSxTokens(suffixFlt: String, rmtId: String): Seq[String]
+  def getSxTokens(flt: String, rmtId: String): Seq[String]
 
-  def getPxTokens(prefixFlt: String, rmtId: String): Seq[String]
+  def getPxTokens(flt: String, rmtId: String): Seq[String]
+
+  def getPfRxTokens(flt: String, rmtId: String): Seq[String]
+
 }
 
 
@@ -56,6 +59,8 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
       tknsByRemote = Map(),
       wordsDict = Seq()
     )
+
+  private var cmdTknsByRemote: Map[String, Array[Seq[String]]] = Map()
 
   private var reloadsRunning = 0
   private val MAX_RELOADS = 2
@@ -97,8 +102,82 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     }.toSet
   }
 
+
+  private def getIdsFromRunTrees(m: Map[Int,Seq[SMGFetchCommandTree]]): Seq[String] = {
+
+    def treeToIds(rt: SMGFetchCommandTree) : Seq[String] = {
+      Seq[String](rt.node.id) ++ rt.children.flatMap(c => treeToIds(c))
+    }
+
+    m.flatMap { kv =>
+      kv._2.flatMap { rt =>
+        treeToIds(rt)
+      }
+    }.toSeq.distinct
+  }
+
+  private def getRunTreeIdsByRemote: Future[Map[String, Seq[String]]] = {
+    implicit val ec = ExecutionContexts.defaultCtx
+    val localFut = Future {
+      ("", configSvc.config.fetchCommandsTreesByInterval)
+    }
+    val remoteFuts = configSvc.config.remotes.map { rmt =>
+      remotesApi.monitorRunTree(rmt.id, None).map(m => (rmt.id, m))
+    }
+    Future.sequence(Seq(localFut) ++ remoteFuts).map { byRemoteSeq =>
+       byRemoteSeq.map( kv => (kv._1, getIdsFromRunTrees(kv._2))).toMap
+    }
+  }
+
+  private def tokenizeId(oid: String,
+                         tgts: Seq[(
+                           ArrayBuffer[mutable.Set[String]],
+                             (Array[String], Int, String) => Unit
+                           )]) = {
+    val lid = SMGRemote.localId(oid)
+    val arr = lid.split("\\.")
+    val arrLen = arr.length
+    val maxLevels = Math.min(arrLen, configSvc.config.searchCacheMaxLevels)
+    tgts.foreach { tgt =>
+      extendArrayBuf(tgt._1, maxLevels)
+    }
+    (0 until maxLevels).foreach { ix =>
+      val addDot = if (ix == arrLen - 1) "" else "."
+      tgts.foreach { tgt =>
+        tgt._2(arr, ix, addDot)
+      }
+    }
+    maxLevels
+  }
+
+  private def reloadCmdTokensAsync(): Unit = {
+    implicit val ec = ExecutionContexts.defaultCtx
+    getRunTreeIdsByRemote.map { byRemote =>
+      log.info(s"SMGSearchCache.reloadCmdTokensAsync - received remotes data (${byRemote.keys.size})")
+      var maxMaxLevels = 0
+      val tknsByRemote = mutable.Map[String, Array[Seq[String]]]()
+      byRemote.foreach { case (rmtId, cmdIds) =>
+        val newTknsByLevel = ArrayBuffer[mutable.Set[String]]()
+        cmdIds.foreach { cmdId =>
+          val ml = tokenizeId(cmdId, Seq(
+            (newTknsByLevel,
+              { (arr: Array[String], ix: Int, addDot: String) =>
+                newTknsByLevel(ix) ++= tokensAtLevel(arr, ix + 1) }
+            )
+          ))
+          maxMaxLevels = Math.max(maxMaxLevels, ml)
+        }
+        tknsByRemote(rmtId) = newTknsByLevel.map(mySortIterable).toArray
+      }
+      cmdTknsByRemote = tknsByRemote.toMap
+      log.info(s"SMGSearchCache.reloadCmdTokensAsync - END: " +
+        s"max levels: $maxMaxLevels/${configSvc.config.searchCacheMaxLevels}")
+    }
+  }
+
   private def realReload(): Unit = {
     log.info("SMGSearchCache.reload - BEGIN")
+    reloadCmdTokensAsync()
     var maxMaxLevels = 0
     val newIndexes = getAllIndexes
     val byRemote = getAllViewObjectsByRemote
@@ -111,24 +190,24 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
       val newSxesByLevel = ArrayBuffer[mutable.Set[String]]()
       val newTknsByLevel = ArrayBuffer[mutable.Set[String]]()
       newViewObjects.foreach { ov =>
-        val lid = SMGRemote.localId(ov.id)
-        val arr = lid.split("\\.")
-        val arrLen = arr.length
-        extendArrayBuf(newPxesByLevel, arrLen)
-        extendArrayBuf(newSxesByLevel, arrLen)
-        extendArrayBuf(newTknsByLevel, arrLen)
-        val maxLevels = Math.min(arrLen, configSvc.config.searchCacheMaxLevels)
-        if (maxLevels > maxMaxLevels) maxMaxLevels = maxLevels
-        (0 until maxLevels).foreach { ix =>
-          val addDot = if (ix == arrLen - 1) "" else "."
-          newPxesByLevel(ix).add(arr.take(ix + 1).mkString(".") + addDot)
-          newSxesByLevel(ix).add(addDot + arr.takeRight(ix + 1).mkString("."))
-          newTknsByLevel(ix) ++= tokensAtLevel(arr, ix + 1)
-        }
-
+        val ml = tokenizeId(ov.id, Seq(
+          (newPxesByLevel,
+            { (arr: Array[String], ix: Int, addDot: String) =>
+              newPxesByLevel(ix).add(arr.take(ix + 1).mkString(".") + addDot) }
+          ),
+          (newSxesByLevel,
+            { (arr: Array[String], ix: Int, addDot: String) =>
+              newSxesByLevel(ix).add(addDot + arr.takeRight(ix + 1).mkString(".")) }
+          ),
+          (newTknsByLevel,
+            { (arr: Array[String], ix: Int, addDot: String) =>
+              newTknsByLevel(ix) ++= tokensAtLevel(arr, ix + 1) }
+          )
+        ))
         ov.searchText.split("[\\s\\.]+").foreach { wrd =>
           wordsDict += wrd
         }
+        maxMaxLevels = Math.max(maxMaxLevels, ml)
       }
       pxesByRemote(rmtId) = newPxesByLevel.map(mySortIterable).toArray
       sxesByRemote(rmtId) = newSxesByLevel.map(mySortIterable).toArray
@@ -269,4 +348,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     getTokensCommon(flt, rmtId, cache.tknsByRemote)
   }
 
+  override def getPfRxTokens(flt: String, rmtId: String): Seq[String] = {
+    getTokensCommon(flt, rmtId, cmdTknsByRemote)
+  }
 }
