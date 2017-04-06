@@ -266,7 +266,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
     Future.sequence(futs).map { maps =>
       val nonAgsMap = if (maps.isEmpty) {
-        log.error("objectViewStates: maps.isEmpty")
+        if (ovs.nonEmpty)
+          log.error(s"objectViewStates: maps.isEmpty: ovs.size=${ovs.size}, ovs.head.id=${ovs.head.id}")
         Map[String,Seq[SMGMonState]]()
       } else if (maps.tail.isEmpty)
         maps.head
