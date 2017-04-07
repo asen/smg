@@ -40,6 +40,8 @@ GET     /monitor/slncIdx       controllers.Application.monitorSilenceIdx(ix: Str
 GET     /monitor/mute         controllers.Application.monitorMute(remote: String, curl: String)
 GET     /monitor/unmute       controllers.Application.monitorUnmute(remote: String, curl: String)
 
+POST    /monitor/saveStates   controllers.Application.monitorSaveStates()
+
 GET     /proxy/:remote/*path  controllers.Application.proxy(remote: String, path: String)
 
 GET     /inspect/:id          controllers.Application.inspect(id: String)

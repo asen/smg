@@ -875,6 +875,32 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  private val saveStatesSyncObject = new Object()
+  private var saveStatesIsRunning: Boolean = false
+
+  def monitorSaveStates(): Action[AnyContent] = Action {
+    val shouldRun = (!actorSystem.isTerminated) && saveStatesSyncObject.synchronized {
+      if (saveStatesIsRunning) {
+        false
+      } else {
+        saveStatesIsRunning = true
+        true
+      }
+    }
+    if (shouldRun) {
+      Future {
+        try {
+          monitorApi.saveStateToDisk()
+        } finally {
+          saveStatesIsRunning = false
+        }
+      }
+      Ok("OK: saveStateToDisk started\n")
+    } else {
+      NotFound("ERROR: saveStateToDisk is already running or system is terminated\n")
+    }
+  }
+
   /**
     * proxy GET requests to "slave" SMG instances (for images etc).
     * Note that it is better to setup a "native" reverse proxy (e.g. apache/nginx) in front of
