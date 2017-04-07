@@ -85,8 +85,12 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
     def tick(): Unit = {
       // do this first
       val tickTsSecs = SMGRrd.tssNow
-      var flushed = false
+      if (isShuttingDown.get() || system.isTerminated) {
+        log.info("SMGScheduler.tick: (shutting down) " + tickTsSecs)
+        return
+      }
       log.info("SMGScheduler.tick: " + tickTsSecs)
+      var flushed = false
       for (i <- intervals.toSeq.sorted) {
         if (tickTsSecs % i < MAX_TICK_JITTER) { // allow it to be up to MAX_TICK_JITTER second(s) late
           if (!flushed) {
@@ -100,13 +104,8 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
           }
         }
       }
-      if ((!isShuttingDown.get()) && (!system.isTerminated)) {
-        system.scheduler.scheduleOnce(timeToNextTick)(tick())
-        if (tickTsSecs % 3600 < MAX_TICK_JITTER) {  // hourly maintenance tasks
-          monitorApi.saveStateToDisk()
-        }
-        notifyApi.tick()
-      }
+      system.scheduler.scheduleOnce(timeToNextTick)(tick())
+      notifyApi.tick()
     }
 
     system.scheduler.scheduleOnce(timeToNextTick)(tick())
