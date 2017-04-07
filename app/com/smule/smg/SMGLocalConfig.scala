@@ -59,7 +59,7 @@ case class SMGLocalConfig(
   
   private val pluginsUpdateObjects = pluginObjects.flatMap(t => pluginUpdateObjects(t._1))
 
-  val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++ pluginsUpdateObjects
+  val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++ rrdAggObjects ++ pluginsUpdateObjects
 
   val updateObjectsById: Map[String, SMGObjectUpdate] = updateObjects.groupBy(_.id).map(t => (t._1,t._2.head))
 
