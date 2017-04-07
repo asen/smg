@@ -67,7 +67,7 @@ case class SMGAggObject(id: String,
                          title: String ) extends SMGAggObjectView {
   override val refObj: Option[SMGObjectUpdate] = None
 
-  override lazy val rrdType = objs.map(_.rrdType).distinct.mkString(",")
+  override lazy val rrdType: String = objs.map(_.rrdType).distinct.mkString(",")
 }
 
 /**

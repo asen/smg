@@ -51,7 +51,6 @@
     - localhost.sysload
     - localhost.sysload2
 
-
 - localhost.dummy:
   title: "A dummy graph for this host"
   command: "echo 2 && echo 1"
