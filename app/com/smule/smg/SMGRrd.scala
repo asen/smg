@@ -815,7 +815,8 @@ class SMGRrdUpdate(val rrdConf: SMGRrdConfig, val obju: SMGObjectUpdate, val con
         case cex: SMGCmdException => {
           log.error("Failed fetch command [" + obju.id + "]: " + cex.getMessage)
           configSvc.sendObjMsg(
-            SMGDFObjMsg(ts.getOrElse(tssNow), obju, List(), cex.exitCode, List(cex.stdout, cex.stderr))
+            SMGDFObjMsg(ts.getOrElse(tssNow), obju, List(), cex.exitCode,
+              List(cex.cmdStr + s" (${cex.timeoutSec})", cex.stdout, cex.stderr))
           )
           return List()
         }
