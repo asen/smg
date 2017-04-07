@@ -19,6 +19,27 @@ class SMGUpdateActor(configSvc: SMGConfigService) extends Actor {
 
   val log = SMGLogger
 
+  private def updateRrdAggObjects(interval: Int): Unit = {
+    val toUpdate = configSvc.config.rrdAggObjects.filter(_.interval == interval)
+    if (toUpdate.nonEmpty) {
+      log.info("SMGUpdateActor.updateRrdAggObjects: - BEGIN")
+      toUpdate.foreach { obj =>
+        try {
+          log.debug("SMGUpdateActor.updateRrdAggObjects: " + obj)
+          // log.info("--- In the future ---")
+          val rrd = new SMGRrdUpdate(obj, configSvc)
+          rrd.createOrUpdate(None)
+        } catch {
+          case ex: Throwable => {
+            obj.invalidateCachedValues()
+            log.ex(ex, "SMGUpdateActor.updateRrdAggObjects: got an error while updating " + obj)
+          }
+        }
+      }
+      log.info(s"SMGUpdateActor.updateRrdAggObjects: - END (${toUpdate.size} objects updated)")
+    }
+  }
+
   override def receive: Receive = {
     case SMGUpdateObjectMessage(rrdConf:SMGRrdConfig, objs:Seq[SMGObjectUpdate],
                                 ts: Option[Int], updateCounters: Boolean) => {
@@ -31,14 +52,16 @@ class SMGUpdateActor(configSvc: SMGConfigService) extends Actor {
             try {
               log.debug("SMGUpdateActor Future: updating " + obj)
               // log.info("--- In the future ---")
-              val rrd = new SMGRrdUpdate(rrdConf, obj, configSvc)
+              val rrd = new SMGRrdUpdate(obj, configSvc)
               rrd.createOrUpdate(ts)
             } catch {
               case ex: Throwable => {
+                obj.invalidateCachedValues()
                 log.ex(ex, "SMGUpdateActor got an error while updating " + obj)
               }
             } finally {
               if (updateCounters && SMGRunStats.incIntervalCount(obj.interval)) {
+                updateRrdAggObjects(obj.interval)
                 rrdConf.flushSocket()
               }
             }
@@ -46,6 +69,7 @@ class SMGUpdateActor(configSvc: SMGConfigService) extends Actor {
         }(ecForInterval(objs.head.interval))
       }
     }
+
     case SMGUpdateFetchMessage(rrdConf:SMGRrdConfig, interval:Int, fRoots: Seq[SMGFetchCommandTree],
                                ts: Option[Int], updateCounters: Boolean) => {
       log.debug("SMGUpdateActor received SMGUpdateFetchMessage for " + fRoots.size + " commands")
@@ -86,8 +110,14 @@ class SMGUpdateActor(configSvc: SMGConfigService) extends Actor {
                   val errTs = SMGRrd.tssNow
                   val errLst = List(pf.command.str + s" (${pf.command.timeoutSec})", ex.stdout, ex.stderr)
                   configSvc.sendPfMsg(SMGDFPfMsg(errTs, pf.id, interval, leafObjs, ex.exitCode, errLst, None))
-                  if (updateCounters)
-                    (1 to fRoot.size).foreach(_ => SMGRunStats.incIntervalCount(interval))
+                  if (updateCounters) {
+                    fRoot.allNodes.foreach { cmd =>
+                      SMGRunStats.incIntervalCount(interval)
+                      if (cmd.isRrdObj) {
+                        cmd.asInstanceOf[SMGObjectUpdate].invalidateCachedValues()
+                      }
+                    }
+                  }
                 }
               }
             } catch {

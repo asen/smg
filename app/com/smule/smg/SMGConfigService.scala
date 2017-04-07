@@ -412,8 +412,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]]
       if (yamlMap.contains("id") && yamlMap.contains("command")) {
         val id = yamlMap.get("id").toString
-        if (preFetches.contains(id) || objectIds.contains(id)) {
-          log.error("SMGConfigServiceImpl.processPrefetch(" + confFile + "): CONFIG_ERROR: id already defined (ignoring): " +
+        if (!validateOid(id)) {
+          log.error("SMGConfigServiceImpl.processPrefetch(" + confFile + "): CONFIG_ERROR: id invalid or already defined (ignoring): " +
             id +":" + yamlMap.toString)
         } else {
           val cmd = SMGCmd(yamlMap.get("command").toString, yamlMap.getOrElse("timeout", 30).asInstanceOf[Int]) //  TODO get 30 from a val
@@ -532,15 +532,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       }
     }
 
-    def validateOid(oid: String): Boolean = oid.matches("^[\\w\\._-]+$")
+    def validateOid(oid: String): Boolean = oid.matches("^[\\w\\._-]+$") && 
+      (!objectIds.contains(oid)) && (!preFetches.contains(oid))
 
     def processObject( t: (String,Object), confFile: String ): Unit = {
       val oid = t._1
       if (!validateOid(oid)){
-        log.error("SMGConfigServiceImpl.processObject(" + confFile + "): CONFIG_ERROR: Skipping object with invalid id: " + oid)
-      } else if (objectIds.contains(oid) || preFetches.contains(oid)) {
-        log.error("SMGConfigServiceImpl.processObject(" + confFile + "): CONFIG_ERROR: Skipping duplicate object with id: " + oid)
-        //throw new Exception("Duplicate object id: " + t._1)
+        log.error("SMGConfigServiceImpl.processObject(" + confFile + "): CONFIG_ERROR: Skipping object with invalid or duplicate id: " + oid)
       } else {
         try {
           val ymap = t._2.asInstanceOf[java.util.Map[String, Object]]
@@ -635,6 +633,63 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       }
     }
 
+    def processAggObject( t: (String,Object), confFile: String ): Unit = {
+      val oid =  t._1.substring(1)
+      if (!validateOid(oid)){
+        log.error("SMGConfigServiceImpl.processAggObject(" + confFile + "): CONFIG_ERROR: Skipping object with invalid or duplicate id: " + oid)
+      } else {
+        try {
+          val ymap = t._2.asInstanceOf[java.util.Map[String, Object]]
+          val confOp = ymap.getOrDefault("op", "SUM")
+          val op = confOp match {
+            case "SUMN" => "SUMN"
+            case "AVG"  => "AVG"
+            case "SUM" => "SUM"
+            case _ => {
+              log.warn(s"SMGConfigServiceImpl.processAggObject($confFile): CONFIG_WARNING: unsupported agg op for $oid, assuming SUM")
+              "SUM"
+            }
+          }
+          if (ymap.contains("ids")){
+            val ids = ymap("ids").asInstanceOf[util.ArrayList[String]].toList
+            val objOpts = ids.map { ovid =>
+              val ret = objectIds.get(ovid).flatMap(_.refObj)
+              if (ret.isEmpty) {
+                log.error(s"SMGConfigServiceImpl.processAggObject($confFile): CONFIG_ERROR: agg object references " +
+                  s"undefined id: $oid, ref id=$ovid (will be ignored)")
+              }
+              ret
+            }
+            if (objOpts.nonEmpty && objOpts.forall(_.isDefined)){
+              val objs = objOpts.map(_.get)
+              val rrdAggObj = SMGRrdAggObject(
+                id = oid,
+                ous = objs,
+                aggOp = op,
+                vars = objs.head.vars,
+                title = ymap.getOrElse("title", oid).toString,
+                rrdType = objs.head.rrdType,
+                interval = objs.head.interval,
+                stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
+                rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
+                rraDef = objs.head.rraDef,
+                rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap.get("rrd_init_source").toString) else None,
+                notifyConf = None // TODO
+              )
+              objectIds(oid) = rrdAggObj
+              objectUpdateIds(oid) = rrdAggObj
+              allViewObjectsConf += rrdAggObj
+            } // else - error already logged
+          } else {
+            log.warn(s"SMGConfigServiceImpl.processAggObject($confFile): CONFIG_ERROR: agg object definition without ids: $oid, ignoring")
+          }
+        } catch {
+          case x : ClassCastException => log.error("SMGConfigServiceImpl.processAggObject(" + confFile +
+            "): CONFIG_ERROR:: bad object tuple (" + t.toString + ") ex: " + x.toString)
+        }
+      }
+    }
+
     def parseConf(confFile: String): Unit = {
       val t0 = System.currentTimeMillis()
       log.debug("SMGConfigServiceImpl.parseConf(" + confFile + "): Starting at " + t0)
@@ -666,6 +721,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
                 processIndex(t, isHidden = false, confFile)
               } else if (t._1.startsWith("~")) { // a "hidden" index def
                 processIndex(t, isHidden = true, confFile)
+              } else if (t._1.startsWith("+")) { // an aggregate object def
+                processAggObject(t, confFile)
               } else { // an object def
                 processObject(t, confFile)
               }

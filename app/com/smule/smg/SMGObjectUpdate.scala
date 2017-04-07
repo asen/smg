@@ -14,6 +14,9 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
   def isCounter: Boolean = (rrdType != "GAUGE") && (rrdType != "ABSOLUTE")
 
   def fetchValues: List[Double]
+  def cachedValues: List[Double]
+  def invalidateCachedValues(): Unit
+
   val preFetch: Option[String]
   val rrdFile: Option[String]
   val rraDef: Option[SMGRraDef]

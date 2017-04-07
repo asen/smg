@@ -37,19 +37,53 @@ case class SMGRrdObject(id: String,
 
   private val log = SMGLogger
 
-  override def fetchValues: List[Double] = {
-    val out = SMGCmd.runCommand(this.command.str, this.command.timeoutSec)
-    val ret = for (ln <- out.take(this.vars.size)) yield { ln.toDouble }
-    if (ret.size < this.vars.size) {
-      val errMsg = "Bad output from external command - less lines than expected (" + ret.size + "<" + this.vars.size  + ")"
-      log.error(errMsg)
-      log.error(out)
-      throw new SMGCmdException(this.command.str, this.command.timeoutSec, -1, out.mkString("\n"), errMsg)
-    }
-    ret
+  private val nanList = vars.map(v => Double.NaN)
+
+  private var myPrevCachedValues = nanList
+  private var myCachedValues = nanList
+
+  override def cachedValues: List[Double] = {
+    if (isCounter) {
+      val deltas = myCachedValues.zip(myPrevCachedValues).map { case (cur, prev) => cur - prev }
+      val isGood = deltas.zip(vars).forall { case (delta, v) =>
+        (!delta.isNaN) && (delta > v.getOrElse("min", "0.0").toDouble) && v.get("max").forall(_.toDouble >= delta)
+      }
+      if (isGood)
+        myCachedValues
+      else
+        nanList
+    } else
+      myCachedValues
   }
 
-  val rrdDir = None
+  override def invalidateCachedValues(): Unit = {
+    myPrevCachedValues = myCachedValues
+    myCachedValues = nanList
+  }
+
+  override def fetchValues: List[Double] = {
+    try {
+      val out = SMGCmd.runCommand(this.command.str, this.command.timeoutSec)
+      val ret = for (ln <- out.take(this.vars.size)) yield {
+        ln.toDouble
+      }
+      if (ret.size < this.vars.size) {
+        val errMsg = "Bad output from external command - less lines than expected (" + ret.size + "<" + this.vars.size + ")"
+        log.error(errMsg)
+        log.error(out)
+        throw SMGCmdException(this.command.str, this.command.timeoutSec, -1, out.mkString("\n"), errMsg)
+      }
+      myPrevCachedValues = myCachedValues
+      myCachedValues = ret
+      ret
+    } catch {
+      case t: Throwable => {
+        myPrevCachedValues = myCachedValues
+        myCachedValues = nanList
+        throw t
+      }
+    }
+  }
 
   override val isAgg = false
 

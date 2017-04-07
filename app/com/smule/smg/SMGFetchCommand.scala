@@ -44,7 +44,9 @@ case class SMGFetchCommandTree(node: SMGFetchCommand, children: Seq[SMGFetchComm
 
   def size: Int = if (isLeaf) 1 else children.map(_.size).sum + 1
 
-  def leafNodes: Seq[SMGFetchCommand] = if (isLeaf) List(node) else children.flatMap(_.leafNodes)
+  def leafNodes: Seq[SMGFetchCommand] = if (isLeaf) Seq(node) else children.flatMap(_.leafNodes)
+
+  def allNodes:  Seq[SMGFetchCommand] = Seq(node) ++ children.flatMap(_.allNodes)
 
   def findTree(cmdId: String): Option[SMGFetchCommandTree] = {
     if (cmdId == node.id)

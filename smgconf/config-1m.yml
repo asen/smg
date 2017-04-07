@@ -45,6 +45,13 @@
     - label: 15min_x100
       cdef: "$ds,100,*"
 
+- +localhost.agg:
+  op: SUM
+  ids:
+    - localhost.sysload
+    - localhost.sysload2
+
+
 - localhost.dummy:
   title: "A dummy graph for this host"
   command: "echo 2 && echo 1"

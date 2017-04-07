@@ -330,6 +330,50 @@ object SMGRrd {
     replacedRpnStr.split(",").foreach(st.push)
     evalRpn(st)
   }
+
+  def mergeValues(op: String, nums: List[List[Double]]): List[Double] = {
+    op match {
+      case "GROUP" => groupNumbers(nums)
+      case "STACK" => groupNumbers(nums)
+      case "SUM" => sumNumbers(nums, nanAs0 = false)
+      case "SUMN" => sumNumbers(nums, nanAs0 = true)
+      // SUMNAN is deprecated use SUMN instead
+      case "SUMNAN" => sumNumbers(nums, nanAs0 = true)
+      case "AVG" => averageNumbers( nums )
+      case s : String => throw new RuntimeException("Invalid op: " + s)
+    }
+  }
+
+  private def sumNumbers(inp: List[List[Double]], nanAs0: Boolean) : List[Double] = {
+    val ret = Array[Double](inp.head.map(n => if (nanAs0 && n.isNaN) 0.0 else n):_*)
+    inp.tail.foreach { lst =>
+      lst.zipWithIndex.foreach { t =>
+        ret(t._2) += (if (nanAs0 && t._1.isNaN ) 0.0 else t._1)
+      }
+    }
+    ret.toList
+  }
+
+  private def averageNumbers(inp: List[List[Double]]) : List[Double] = {
+    val ret = new Array[Double](inp.head.size)
+    val counts = new Array[Int](inp.head.size)
+    inp.foreach { lst =>
+      lst.zipWithIndex.foreach { t =>
+        if ( !t._1.isNaN ) {
+          ret(t._2) += t._1
+          counts(t._2) += 1
+        }
+      }
+    }
+    ret.toList.zipWithIndex.map { t =>
+      if (counts(t._2) == 0) Double.NaN else t._1 / counts(t._2)
+    }
+  }
+
+  private def groupNumbers(inp: List[List[Double]]) : List[Double] = {
+    inp.flatten
+  }
+
 }
 
 
@@ -725,60 +769,23 @@ class SMGRrdFetchAgg(val rrdConf: SMGRrdConfig, val aggobj: SMGAggObjectView) {
     byTs.keys.toList.sorted.map { ts =>
       val toMerge = byTs(ts)
       val nums = toMerge.toList.map(_.vals)
-      val rowVals = op match {
-        case "GROUP" => groupNumbers(nums)
-        case "STACK" => groupNumbers(nums)
-        case "SUM" => sumNumbers(nums, nanAs0 = false)
-        case "SUMN" => sumNumbers(nums, nanAs0 = true)
-        // SUMNAN is deprecated use SUMN instead
-        case "SUMNAN" => sumNumbers(nums, nanAs0 = true)
-        case "AVG" => averageNumbers( nums )
-        case s : String => throw new RuntimeException("Invalid op: " + s)
-      }
-      SMGRrdRow(ts, rowVals )
+      val rowVals = mergeValues(op, nums)
+      SMGRrdRow(ts, rowVals)
     }
   }
 
-  private def sumNumbers(inp: List[List[Double]], nanAs0: Boolean) : List[Double] = {
-    val ret = Array[Double](inp.head.map(n => if (nanAs0 && n.isNaN) 0.0 else n):_*)
-    inp.tail.foreach { lst =>
-      lst.zipWithIndex.foreach { t =>
-        ret(t._2) += (if (nanAs0 && t._1.isNaN ) 0.0 else t._1)
-      }
-    }
-    ret.toList
-  }
-
-  private def averageNumbers(inp: List[List[Double]]) : List[Double] = {
-    val ret = new Array[Double](inp.head.size)
-    val counts = new Array[Int](inp.head.size)
-    inp.foreach { lst =>
-      lst.zipWithIndex.foreach { t =>
-        if ( !t._1.isNaN ) {
-          ret(t._2) += t._1
-          counts(t._2) += 1
-        }
-      }
-    }
-    ret.toList.zipWithIndex.map { t =>
-      if (counts(t._2) == 0) Double.NaN else t._1 / counts(t._2)
-    }
-  }
-
-  private def groupNumbers(inp: List[List[Double]]) : List[Double] = {
-    inp.flatten
-  }
 
 }
 
 /**
   * Class encapsulating updating SMGObjects
-  *
-  * @param rrdConf - rrdtool config
-  * @param obju - object config
+  * @param obju
+  * @param configSvc
   */
-class SMGRrdUpdate(val rrdConf: SMGRrdConfig, val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
+class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
   import SMGRrd._
+
+  val rrdConf: SMGRrdConfig = configSvc.config.rrdConf
 
   private val rrdFname = obju.rrdFile.get
 
