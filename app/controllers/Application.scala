@@ -529,7 +529,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val myNewConf = configSvc.config
     val retStr = if (myNewConf.allErrors.isEmpty)
       s"OK - no issues detected (${myNewConf.viewObjects.size} view objects defined)"
-    else "WARNING - some issues detected (${myNewConf.viewObjects.size} view objects defined):\n\n" +
+    else s"WARNING - some issues detected (${myNewConf.viewObjects.size} view objects defined):\n\n" +
       configSvc.config.allErrors.mkString("\n")
     Ok(retStr)
   }
