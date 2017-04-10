@@ -46,6 +46,8 @@ case class SMGLocalConfig(
 
   val rrdAggObjects: Seq[SMGRrdAggObject] = confViewObjects.filter(_.isInstanceOf[SMGRrdAggObject]).map(_.asInstanceOf[SMGRrdAggObject])
 
+  val rrdAggObjectsByInterval: Map[Int, Seq[SMGRrdAggObject]] = rrdAggObjects.groupBy(_.interval)
+
   override val viewObjects: Seq[SMGObjectView] = confViewObjects ++ pluginObjects.flatMap(t => t._2)
 
   override val viewObjectsById: Map[String, SMGObjectView] = viewObjects.groupBy(o => o.id).map( t => (t._1, t._2.head) )

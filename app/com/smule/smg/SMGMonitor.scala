@@ -172,7 +172,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def receiveObjMsg(msg: SMGDFObjMsg): Unit = {
-    log.debug("SMGMonitor: receive: " + msg)
+    log.debug(s"SMGMonitor: receive: SMGDFObjMsg: ${msg.obj.id} (${msg.obj.interval}/${msg.obj.pluginId})")
     val objState = getOrCreateObjState(msg.obj)
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       // process object error
@@ -194,7 +194,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def receivePfMsg(msg: SMGDFPfMsg): Unit = {
-    log.debug("SMGMonitor: receive: " + msg)
+    log.debug(s"SMGMonitor: receive: SMGDFPfMsg: ${msg.pfId} (${msg.interval}/${msg.pluginId})")
     val pf = if (msg.pluginId.isEmpty)
       configSvc.config.preFetches.get(msg.pfId)
     else
@@ -218,10 +218,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
-  //val runErrorMaxStrikes = 2 // TODO read from config?
-
   override def receiveRunMsg(msg: SMGDFRunMsg): Unit = {
-    log.debug("SMGMonitor: receive: " + msg)
+    log.debug(s"SMGMonitor: receive: SMGDFRunMsg: ${msg.interval} isOverlap=${msg.isOverlap}")
     val runState: SMGMonRunState = getOrCreateRunState(msg.interval, msg.pluginId)
     if (msg.isOverlap) {
       runState.processOverlap(msg.ts)

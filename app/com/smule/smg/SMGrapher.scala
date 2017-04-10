@@ -48,8 +48,37 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val conf = configSvc.config
     val commandTrees = conf.fetchCommandsTree(interval)
     val sz = if (commandTrees.isEmpty) 0 else commandTrees.map(_.size).sum
-    if (!SMGRunStats.resetInterval(interval, sz)) {
-      log.error("SMGrapher.run(interval=" + interval + "): Overlapping runs detected - aborting")
+    if (sz == 0) {
+      log.info(s"SMGrapher.run(interval=$interval): No commands to execute")
+      return
+    }
+    val aggObjectUpdates = conf.rrdAggObjectsByInterval.getOrElse(interval, Seq())
+
+    // single stage counter if no aggregate object updates are defined, two stages otherwise
+    val stages = if (aggObjectUpdates.isEmpty) {
+      Array(SMGRunStageDef(sz, { () =>
+        configSvc.config.rrdConf.flushSocket()
+        log.info(s"SMGrapher.run(interval=$interval): run completed with $sz commands executed")
+      }))
+    } else {
+      val aggsSz = aggObjectUpdates.size
+      Array(
+        SMGRunStageDef(sz, { () =>
+          aggObjectUpdates.foreach { obj =>
+            updateActor ! SMGUpdateActor.SMGUpdateObjectMessage(obj, None, updateCounters = true)
+          }
+          log.debug(s"SMGrapher.run(interval=$interval): stage 0 done ($sz objects). " +
+            s"Sent messages for $aggsSz aggregate objects")
+        }),
+        SMGRunStageDef(aggsSz, { () =>
+          configSvc.config.rrdConf.flushSocket()
+          log.info(s"SMGrapher.run(interval=$interval): run completed: $sz commands, $aggsSz agg objects")
+        })
+      )
+    }
+
+    if (!SMGStagedRunCounter.resetInterval(interval, stages)) {
+      log.error(s"SMGrapher.run(interval=$interval): Overlapping runs detected - aborting")
       configSvc.sendRunMsg(SMGDFRunMsg(interval, List("Overlapping runs detected"), None))
       return
     } else {
@@ -57,10 +86,10 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
     Future {
       commandTrees.foreach { fRoot =>
-        updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(conf.rrdConf, interval, Seq(fRoot), None, updateCounters = true)
-        log.debug("SMGrapher.run(interval=" + interval + "): Sent fetch update message for: " + fRoot.node)
+        updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(interval, Seq(fRoot), None, updateCounters = true)
+        log.debug(s"SMGrapher.run(interval=$interval): Sent fetch update message for: ${fRoot.node.id}")
       }
-      log.info("SMGrapher.run(interval=" + interval + "): sent messages for " + sz + " fetch commands")
+      log.info(s"SMGrapher.run(interval=$interval): sent messages for $sz fetch commands")
       configSvc.plugins.foreach { p =>
         if (p.interval == interval) p.run()
       }
@@ -73,7 +102,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val topLevel = commandTrees.find(t => t.findTree(cmdId).isDefined)
     if (topLevel.isDefined){
       val root = topLevel.get.findTree(cmdId).get
-      updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(conf.rrdConf, interval, Seq(root), None, updateCounters = false)
+      updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(interval, Seq(root), None, updateCounters = false)
       log.info(s"SMGrapher.runCommandsTree(interval=$interval): Sent fetch update message for: " + root.node)
       true
     } else {
@@ -208,10 +237,10 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
 
 
   // "best effort" caching for auto indexes
-  val autoIndexSyncObj = new Object()
-  var prevLocalObjects = configSvc.config.viewObjects
-  var prevRemoteConfs = remotes.configs
-  var cachedAutoIndex: Option[SMGAutoIndex] = None
+  private val autoIndexSyncObj = new Object()
+  private var prevLocalObjects = configSvc.config.viewObjects
+  private var prevRemoteConfs = remotes.configs
+  private var cachedAutoIndex: Option[SMGAutoIndex] = None
 
   def createAutoIndex: SMGAutoIndex = {
     log.info("SMGrapher.createAutoIndex: Refreshing automatic index ...")
