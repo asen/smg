@@ -32,7 +32,10 @@
 <h4>Object</h4>
 
 <p>@if(ov.refObj.isDefined){
-<ul><li>@ov.refObj.get</li></ul>
+  <ul>
+    <li><p><b>refObj.toString:</b> @ov.refObj.get</p></li>
+    <li><p><b>refObj.inspect:</b> @ov.refObj.get.inspect</p></li>
+  </ul>
   } else {
     No ref object defined
   }</p>

@@ -30,4 +30,17 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
   def notifyConf: Option[SMGMonNotifyConf]
 
   val rrdInitSource: Option[String] = None
+
+  def inspect: String = List(
+    "pluginId" -> pluginId,
+    "interval" -> interval,
+    "id" -> id,
+    "title" -> title,
+    "vars" -> vars,
+    "rrdType" -> rrdType,
+    "preFetch" -> preFetch,
+    "rrdFile" -> rrdFile,
+    "rraDef" -> rraDef,
+    "cachedValues" -> cachedValues
+  ).map { case (k,v) => s"$k=$v"}.mkString(", ")
 }
