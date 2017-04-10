@@ -109,12 +109,20 @@ trait SMGConfigService {
 
 
   /**
-  * Get all applicable to the provided object value (at index vix) Notification configs
-  * @param ou
-  * @param vixOpt
-  * @param atSeverity
-  * @return a tuple of commands to execute together with a backoff time
-  */
+    * Get all applicable to the provided object/value (at optional index vix) Notification commands and backoff
+    * seconds. If there are multiple notification configs defined for the object/vars, combine the commands (a.k.a.
+    * alert recipients) from all. If multiple conflicting backoff periods are specified, the longest one will be used.
+    *
+    * If any of the matching notification confs has notify-disable set to true, notifications are disabled.
+    *
+    * If the object does not have any configured notification confs (whether directly or via index), the default
+    * recipients and backoff will be used.
+    *
+    * @param ou
+    * @param vixOpt
+    * @param atSeverity
+    * @return
+    */
   def objectVarNotifyCmdsAndBackoff(ou: SMGObjectUpdate, vixOpt: Option[Int],
                                     atSeverity: SMGMonNotifySeverity.Value): (Seq[SMGMonNotifyCmd], Int) = {
     val oncOpt = config.objectNotifyConfs.get(ou.id)
@@ -122,7 +130,7 @@ trait SMGConfigService {
     val retCmds = if (isDisabledAndBackoffOpt.exists(_._1)) {
       Seq() // there is a conf and it says disabled
     } else {
-      val objConf = if (oncOpt.isDefined) {
+      val notifCmds = if (oncOpt.isDefined) {
         val vixes = if (vixOpt.isDefined) Seq(vixOpt.get) else ou.vars.indices
         vixes.flatMap { vix =>
           oncOpt.get.varConf(vix).flatMap { vnc =>
@@ -136,9 +144,8 @@ trait SMGConfigService {
           }
         }.distinct.map(s => config.notifyCommands.get(s)).filter(_.isDefined).map(_.get)
       } else
-        Seq()
-      val globalConf = globalNotifyCmds(atSeverity)
-      (globalConf ++ objConf).distinct
+        globalNotifyCmds(atSeverity)
+      notifCmds.distinct
     }
     val notifBackoff = isDisabledAndBackoffOpt.flatMap(_._2).getOrElse(config.globalNotifyBackoff)
     (retCmds, notifBackoff)
@@ -408,6 +415,26 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       for (fn <- expandGlob(glob)) parseConf(fn)
     }
 
+    def checkFetchCommandNotifyConf(pfId: String, notifyConf: Option[SMGMonNotifyConf]): Unit = {
+      if (notifyConf.isDefined){
+        val nc = notifyConf.get
+        val lb = ListBuffer[String]()
+        if (nc.spike.nonEmpty) {
+          lb += s"spike=${nc.spike.mkString(",")}"
+        }
+        if (nc.warn.nonEmpty) {
+          lb += s"warn=${nc.warn.mkString(",")}"
+        }
+        if (nc.crit.nonEmpty) {
+          lb += s"warn=${nc.crit.mkString(",")}"
+        }
+        if (lb.nonEmpty) {
+          log.warn(s"SMGConfigServiceImpl.checkFetchCommandNotifyConf: CONFIG_ERROR: $pfId specifies irrelevant " +
+            s"alert level notification commands (will be ignored): ${lb.mkString(", ")}")
+        }
+      }
+    }
+
     def processPrefetch(t: (String,Object), confFile: String ): Unit = {
       val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]]
       if (yamlMap.contains("id") && yamlMap.contains("command")) {
@@ -421,6 +448,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
           val parentPf = if (parentPfStr == "") None else Some(parentPfStr)
           val ignoreTs = yamlMap.contains("ignorets") && (yamlMap.get("ignorets").toString != "false")
           val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, id, yamlMap.toMap.map(kv => (kv._1, kv._2.toString)))
+          checkFetchCommandNotifyConf(id, notifyConf)
           preFetches(id) = SMGPreFetchCmd(id, cmd, parentPf, ignoreTs, notifyConf)
         }
       } else {
@@ -609,6 +637,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
             val myDefaultInterval = globalConf.getOrElse("$default-interval", defaultInterval.toString).toInt
             val myDefaultTimeout = globalConf.getOrElse("$default-timeout", defaultTimeout.toString).toInt
             val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, ymap.toMap.map(kv => (kv._1, kv._2.toString)))
+            checkFetchCommandNotifyConf(oid, notifyConf)
             val obj = SMGRrdObject(
                 id = oid,
                 command = SMGCmd(ymap("command").toString, ymap.getOrElse("timeout", myDefaultTimeout).asInstanceOf[Int]),
@@ -822,6 +851,6 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
   } // getNewConfig
 
   // register an Akka DeadLetter listener, to detect issues
-  val deadLetterListener = actorSystem.actorOf(Props(classOf[SMGDeadLetterActor]))
+  private val deadLetterListener = actorSystem.actorOf(Props(classOf[SMGDeadLetterActor]))
   actorSystem.eventStream.subscribe(deadLetterListener, classOf[DeadLetter])
 }
