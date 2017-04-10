@@ -76,7 +76,8 @@ class TestConfigSvc() extends SMGConfigService {
     ),
     notifyCommands = Map("test-notify" -> SMGMonNotifyCmd("test-notify", "echo", 30)),
     objectNotifyConfs = Map(),
-    hiddenIndexes = Map()
+    hiddenIndexes = Map(),
+    configErrors = List()
   )
 
   /**

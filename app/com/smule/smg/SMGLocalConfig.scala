@@ -38,9 +38,24 @@ case class SMGLocalConfig(
                            objectAlertConfs: Map[String, SMGMonObjAlertConf],
                            notifyCommands: Map[String,SMGMonNotifyCmd],
                            objectNotifyConfs: Map[String, SMGMonObjNotifyConf],
-                           hiddenIndexes: Map[String, SMGConfIndex]
+                           hiddenIndexes: Map[String, SMGConfIndex],
+                           private val configErrors: List[String] // use allErrors at the bottom instead
                     ) extends SMGConfig {
 
+  private val validationErrors = ListBuffer[String]()
+
+  private val log = SMGLogger
+
+  private def processValidationError(msg: String, isWarn: Boolean = false) = {
+    val marker = if (isWarn) "CONFIG_WARNING" else "CONFIG_ERROR"
+    val mymsg = s"$marker: (validation): $msg"
+    val logmsg = s"SMGLocalConfig.apply: $mymsg"
+    if (isWarn)
+      log.warn(logmsg)
+    else
+      log.error(logmsg)
+    validationErrors += mymsg
+  }
 
   val rrdObjects: Seq[SMGRrdObject] = confViewObjects.filter(_.isInstanceOf[SMGRrdObject]).map(_.asInstanceOf[SMGRrdObject])
 
@@ -131,7 +146,7 @@ case class SMGLocalConfig(
         } else {
           val pf = myPreFetches.get(pfId)
           if (pf.isEmpty) {
-            SMGLogger.error(s"SMGLocalConfig.fetchCommandsTree: non existing pre-fetch id: $pfId")
+            processValidationError(s"buildCommandsTree: non existing pre-fetch id: $pfId")
             ret ++= chldrn
           } else {
             myParents += SMGFetchCommandTree(pf.get, chldrn)
@@ -139,12 +154,13 @@ case class SMGLocalConfig(
         }
       }
       if (myParents.nonEmpty) {
-        recLevel += 1
-        if (recLevel > MAX_RUNTREE_LEVELS) {
-          throw new RuntimeException(s"SMGLocalConfig.fetchCommandsTree: Configuration error - recursion ($recLevel) exceeded $MAX_RUNTREE_LEVELS")
+        if (recLevel > MAX_RUNTREE_LEVELS - 1) {
+          processValidationError(s"buildCommandsTree: CRITICAL: recursion ($recLevel) exceeded $MAX_RUNTREE_LEVELS")
+        } else {
+          recLevel += 1
+          buildTree(myParents.toList.sortBy(_.node.id))
+          recLevel -= 1
         }
-        buildTree(myParents.toList.sortBy(_.node.id))
-        recLevel -= 1
       }
     }
     buildTree(rrdObjs.sortBy(_.id).map(o => SMGFetchCommandTree(o, Seq())))
@@ -251,4 +267,12 @@ case class SMGLocalConfig(
       }
   }
 
+  // validate pre_fetch commands - specifying invalid command id would be ignored
+  rrdObjects.foreach{ obj =>
+    if (obj.preFetch.nonEmpty && preFetches.get(obj.preFetch.get).isEmpty) {
+      processValidationError(s"object specifies non existing pre_fetch id: ${obj.id} - ${obj.preFetch.get}")
+    }
+  }
+
+  val allErrors: List[String] = configErrors ++ validationErrors.toList
 }

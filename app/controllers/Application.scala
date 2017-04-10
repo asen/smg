@@ -526,7 +526,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
       remotes.notifySlaves()
     }
     remotes.fetchConfigs()
-    Ok("OK")
+    val retStr = if (configSvc.config.allErrors.isEmpty)
+      "OK - no issues detected"
+    else "WARNING - some issues detected:\n\n" + configSvc.config.allErrors.mkString("\n")
+    Ok(retStr)
   }
 
   def pluginIndex(pluginId: String): Action[AnyContent] = Action { implicit request =>

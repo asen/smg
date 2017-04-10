@@ -109,12 +109,20 @@ trait SMGConfigService {
 
 
   /**
-  * Get all applicable to the provided object value (at index vix) Notification configs
-  * @param ou
-  * @param vixOpt
-  * @param atSeverity
-  * @return a tuple of commands to execute together with a backoff time
-  */
+    * Get all applicable to the provided object/value (at optional index vix) Notification commands and backoff
+    * seconds. If there are multiple notification configs defined for the object/vars, combine the commands (a.k.a.
+    * alert recipients) from all. If multiple conflicting backoff periods are specified, the longest one will be used.
+    *
+    * If any of the matching notification confs has notify-disable set to true, notifications are disabled.
+    *
+    * If the object does not have any configured notification confs (whether directly or via index), the default
+    * recipients and backoff will be used.
+    *
+    * @param ou
+    * @param vixOpt
+    * @param atSeverity
+    * @return
+    */
   def objectVarNotifyCmdsAndBackoff(ou: SMGObjectUpdate, vixOpt: Option[Int],
                                     atSeverity: SMGMonNotifySeverity.Value): (Seq[SMGMonNotifyCmd], Int) = {
     val oncOpt = config.objectNotifyConfs.get(ou.id)
@@ -122,7 +130,7 @@ trait SMGConfigService {
     val retCmds = if (isDisabledAndBackoffOpt.exists(_._1)) {
       Seq() // there is a conf and it says disabled
     } else {
-      val objConf = if (oncOpt.isDefined) {
+      val notifCmds = if (oncOpt.isDefined) {
         val vixes = if (vixOpt.isDefined) Seq(vixOpt.get) else ou.vars.indices
         vixes.flatMap { vix =>
           oncOpt.get.varConf(vix).flatMap { vnc =>
@@ -136,9 +144,8 @@ trait SMGConfigService {
           }
         }.distinct.map(s => config.notifyCommands.get(s)).filter(_.isDefined).map(_.get)
       } else
-        Seq()
-      val globalConf = globalNotifyCmds(atSeverity)
-      (globalConf ++ objConf).distinct
+        globalNotifyCmds(atSeverity)
+      notifCmds.distinct
     }
     val notifBackoff = isDisabledAndBackoffOpt.flatMap(_._2).getOrElse(config.globalNotifyBackoff)
     (retCmds, notifBackoff)
@@ -390,6 +397,18 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
     val remotes = ListBuffer[SMGRemote]()
     val remoteMasters = ListBuffer[SMGRemote]()
     val rraDefs = mutable.Map[String, SMGRraDef]()
+    val configErrors = ListBuffer[String]()
+
+    def processConfigError(confFile: String, msg: String, isWarn: Boolean = false) = {
+      val marker = if (isWarn) "CONFIG_WARNING" else "CONFIG_ERROR"
+      val mymsg = s"$marker: $confFile: $msg"
+      val logmsg = s"SMGConfigService.getNewConfig: $mymsg"
+      if (isWarn)
+        log.warn(logmsg)
+      else
+        log.error(logmsg)
+      configErrors += mymsg
+    }
 
     def addAlertConf(oid: String, ix: Int, ac: SMGMonVarAlertConf) = {
       if (!objectAlertConfMaps.contains(oid)) objectAlertConfMaps(oid) = mutable.Map()
@@ -408,23 +427,44 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       for (fn <- expandGlob(glob)) parseConf(fn)
     }
 
+    def checkFetchCommandNotifyConf(pfId: String, notifyConf: Option[SMGMonNotifyConf], confFile: String): Unit = {
+      if (notifyConf.isDefined){
+        val nc = notifyConf.get
+        val lb = ListBuffer[String]()
+        if (nc.spike.nonEmpty) {
+          lb += s"spike=${nc.spike.mkString(",")}"
+        }
+        if (nc.warn.nonEmpty) {
+          lb += s"warn=${nc.warn.mkString(",")}"
+        }
+        if (nc.crit.nonEmpty) {
+          lb += s"warn=${nc.crit.mkString(",")}"
+        }
+        if (lb.nonEmpty) {
+          processConfigError(confFile,
+            s"checkFetchCommandNotifyConf: $pfId specifies irrelevant alert level notification commands (will be ignored): ${lb.mkString(", ")}")
+        }
+      }
+    }
+
     def processPrefetch(t: (String,Object), confFile: String ): Unit = {
       val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]]
       if (yamlMap.contains("id") && yamlMap.contains("command")) {
         val id = yamlMap.get("id").toString
         if (!validateOid(id)) {
-          log.error("SMGConfigServiceImpl.processPrefetch(" + confFile + "): CONFIG_ERROR: id invalid or already defined (ignoring): " +
-            id +":" + yamlMap.toString)
+          processConfigError(confFile,
+            s"processPrefetch: id already defined (ignoring): $id: " + yamlMap.toString)
         } else {
           val cmd = SMGCmd(yamlMap.get("command").toString, yamlMap.getOrElse("timeout", 30).asInstanceOf[Int]) //  TODO get 30 from a val
           val parentPfStr = yamlMap.getOrElse("pre_fetch", "").toString
           val parentPf = if (parentPfStr == "") None else Some(parentPfStr)
           val ignoreTs = yamlMap.contains("ignorets") && (yamlMap.get("ignorets").toString != "false")
           val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, id, yamlMap.toMap.map(kv => (kv._1, kv._2.toString)))
+          checkFetchCommandNotifyConf(id, notifyConf, confFile)
           preFetches(id) = SMGPreFetchCmd(id, cmd, parentPf, ignoreTs, notifyConf)
         }
       } else {
-        log.error("SMGConfigServiceImpl.processPrefetch(" + confFile + "): CONFIG_ERROR: $pre_fetch yamlMap does not have command and id: " + yamlMap.toString)
+        processConfigError(confFile, "processPrefetch: $pre_fetch yamlMap does not have command and id: " + yamlMap.toString)
       }
     }
 
@@ -433,13 +473,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       if (yamlMap.contains("id") && yamlMap.contains("command")) {
         val id = yamlMap.get("id").toString
         if (notifyCommands.contains(id)) {
-          log.error("SMGConfigServiceImpl.processNotifyCommand(" + confFile + "): CONFIG_ERROR: id already defined (ignoring): " +
-            id +":" + yamlMap.toString)
+          processConfigError(confFile,
+            s"processNotifyCommand: notify command id already defined (ignoring): $id: " + yamlMap.toString)
         } else {
           notifyCommands(id) = SMGMonNotifyCmd(id, yamlMap.get("command").toString, yamlMap.getOrElse("timeout", 30).asInstanceOf[Int])
         }
       } else {
-        log.error("SMGConfigServiceImpl.processNotifyCommand(" + confFile + "): CONFIG_ERROR: $notify-command yamlMap does not have command and id: " + yamlMap.toString)
+        processConfigError(confFile, "processNotifyCommand: $notify-command yamlMap does not have command and id: " + yamlMap.toString)
       }
     }
 
@@ -451,7 +491,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
         } else
           remotes += SMGRemote(yamlMap.get("id").toString, yamlMap.get("url").toString)
       } else {
-        log.error("SMGConfigServiceImpl.processRemote(" + confFile + "): CONFIG_ERROR: $remote yamlMap does not have id and url: " + yamlMap.toString)
+        processConfigError(confFile, "processRemote: $remote yamlMap does not have id and url: " + yamlMap.toString)
       }
     }
 
@@ -460,13 +500,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       if (yamlMap.contains("id") && yamlMap.contains("rra")) {
         val rid = yamlMap.get("id").toString
         if (rraDefs.contains(rid)) {
-          log.error("SMGConfigServiceImpl.processRraDef(" + confFile + "): CONFIG_ERROR: duplicate $rra_def id: " + rid)
+          processConfigError(confFile, "processRraDef: duplicate $rra_def id: " + rid)
         } else {
           rraDefs(rid) = SMGRraDef(rid, yamlMap.get("rra").asInstanceOf[util.ArrayList[String]].toList)
           log.debug("SMGConfigServiceImpl.processRraDef: Added new rraDef: " + rraDefs(rid))
         }
       } else {
-        log.error("SMGConfigServiceImpl.processRraDef(" + confFile + "): CONFIG_ERROR: $rra_def yamlMap does not have id and rra: " + yamlMap.toString)
+        processConfigError(confFile, "processRraDef: $rra_def yamlMap does not have id and rra: " + yamlMap.toString)
       }
     }
 
@@ -474,8 +514,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       val key = t._1
       val sval = t._2.toString
       if (globalConf.contains(key)) {
-        log.warn(s"SMGConfigServiceImpl.processGlobal($confFile): CONFIG_ERROR: Overwriting duplicate global " +
-          s"value: key=$key oldval=${globalConf(key)} newval=$sval")
+        processConfigError(confFile, "processGlobal: overwriting duplicate global " +
+          s"value: key=$key oldval=${globalConf(key)} newval=$sval", isWarn = true)
       }
       if (key == "$rrd_dir") {
         rrdDir = sval
@@ -487,15 +527,15 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
     def processIndex( t: (String,Object), isHidden: Boolean, confFile: String ): Unit = {
       val idxId = t._1.substring(1)
       if (indexIds.contains(idxId)) {
-        log.error("SMGConfigServiceImpl.processIndex(" + confFile + "): CONFIG_ERROR: Skipping duplicate index with id: " + t._1)
+        processConfigError(confFile, "processIndex: skipping duplicate index with id: " + t._1)
       } else {
         try {
           val ymap = t._2.asInstanceOf[java.util.Map[String, Object]]
           val idx = new SMGConfIndex(idxId, ymap)
           indexIds += idxId
           if (isHidden) {
-            if (hiddenIndexConfs.contains(idxId)) {
-              log.error("SMGConfigServiceImpl.processIndex(" + confFile + "): CONFIG_ERROR: detected duplicate hidden index with id: " + t._1)
+            if (hiddenIndexConfs.contains(idxId)) { // not really possibe
+              processConfigError(confFile, "processIndex: detected duplicate hidden index with id: " + t._1)
             }
             hiddenIndexConfs(idxId) = idx
           } else {
@@ -526,8 +566,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
             }
           }
         } catch {
-          case x : ClassCastException => log.error("SMGConfigServiceImpl.processIndex(" + confFile +
-            "): CONFIG_ERROR:: bad index tuple (" + t.toString + ") ex: " + x.toString)
+          case x : ClassCastException => processConfigError(confFile, s"processIndex: bad index tuple ($t) ex: $x")
         }
       }
     }
@@ -538,7 +577,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
     def processObject( t: (String,Object), confFile: String ): Unit = {
       val oid = t._1
       if (!validateOid(oid)){
-        log.error("SMGConfigServiceImpl.processObject(" + confFile + "): CONFIG_ERROR: Skipping object with invalid or duplicate id: " + oid)
+        processConfigError(confFile, "processObject: skipping object with invalid or duplicate id: " + oid)
       } else {
         try {
           val ymap = t._2.asInstanceOf[java.util.Map[String, Object]]
@@ -546,8 +585,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
           if (ymap.contains("ref")) { // a graph object
             val refid = ymap.get("ref").asInstanceOf[String]
             if (!objectUpdateIds.contains(refid)){
-              log.error("SMGConfigServiceImpl.processObject(" + confFile +
-                "): CONFIG_ERROR: Skipping graph object object with non existing update ref refid=" + refid+ " oid=" + oid)
+              processConfigError(confFile,
+                s"processObject: skipping graph object object with non existing update ref refid=$refid oid=$oid")
             } else {
               val refobj = objectIds(refid)
               val refUpdateObj = objectUpdateIds.get(refid)
@@ -569,8 +608,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
                 if (rraDefs.contains(rid)){
                   rraDefs.get(rid)
                 } else {
-                  log.error("SMGConfigServiceImpl.processObject(" + confFile +
-                    "): CONFIG_ERROR: Ignoring non-existing rra value rra=" + rid + " oid=" + oid)
+                  processConfigError(confFile,
+                    s"processObject: ignoring non-existing rra value rra=$rid oid=$oid")
                   None
                 }
               } else None
@@ -607,6 +646,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
             val myDefaultInterval = globalConf.getOrElse("$default-interval", defaultInterval.toString).toInt
             val myDefaultTimeout = globalConf.getOrElse("$default-timeout", defaultTimeout.toString).toInt
             val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, ymap.toMap.map(kv => (kv._1, kv._2.toString)))
+            checkFetchCommandNotifyConf(oid, notifyConf, confFile)
             val obj = SMGRrdObject(
                 id = oid,
                 command = SMGCmd(ymap("command").toString, ymap.getOrElse("timeout", myDefaultTimeout).asInstanceOf[Int]),
@@ -627,8 +667,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
             intervals += obj.interval
           }
         } catch {
-          case x : ClassCastException => log.error("SMGConfigServiceImpl.processObject(" + confFile +
-            "): CONFIG_ERROR:: bad object tuple (" + t.toString + ") ex: " + x.toString)
+          case x : ClassCastException => processConfigError(confFile,
+            s"processObject: bad object tuple ($t) ex: $x")
         }
       }
     }
@@ -700,7 +740,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
         try {
           yamlTopObject.asInstanceOf[java.util.List[Object]].foreach { yamlObj: Object =>
             if (yamlObj == null) {
-              log.error("SMGConfigServiceImpl.parseConf(" + confFile + "): CONFIG_ERROR: Received null yamlObj")
+              processConfigError(confFile, "parseConf: Received null yamlObj")
               return
             }
             try {
@@ -727,17 +767,17 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
                 processObject(t, confFile)
               }
             } catch {
-              case x: ClassCastException => log.error("SMGConfigServiceImpl.parseConf(" + confFile +
-                "): CONFIG_ERROR:: bad object (" + yamlObj.toString + ") ex: " + x.toString)
+              case x: ClassCastException => processConfigError(confFile,
+                s"parseConf: bad yaml object - wrong type ($yamlObj) ex: $x")
             }
           } //foreach
         } catch {
-          case e: ClassCastException => log.error("SMGConfigServiceImpl.parseConf(" + confFile + "): CONFIG_ERROR: bad toplevel object (expected List): " + yamlTopObject.getClass.toString)
+          case e: ClassCastException => processConfigError(confFile, "bad top level object (expected List): " + yamlTopObject.getClass.toString)
         }
         val t1 = System.currentTimeMillis()
         log.debug("SMGConfigServiceImpl.parseConf(" + confFile + "): Finishing for " + (t1 - t0) + " milliseconds at " + t1)
       } catch {
-        case e: Throwable => log.ex(e, "SMGConfigServiceImpl.parseConf(" + confFile + "): CONFIG_ERROR:: Unexpected exception: " + e.toString)
+        case e: Throwable => processConfigError(confFile, s"parseConf: unexpected exception: $e")
       }
     } // def parseConf
 
@@ -865,20 +905,14 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
       objectAlertConfs.toMap,
       notifyCommands.toMap,
       objectNotifyConfs.toMap,
-      hiddenIndexConfs.toMap
+      hiddenIndexConfs.toMap,
+      configErrors.toList
     )
 
-    // validate pre_fetch commands - specifying invalid command id would be ignored
-    ret.rrdObjects.foreach{ obj =>
-      if (obj.preFetch.nonEmpty && preFetches.get(obj.preFetch.get).isEmpty) {
-        log.error("SMGConfigServiceImpl.getNewConfig(" + currentConfigFile +
-          "): CONFIG_ERROR: object specifies non existing pre_fetch id: " + obj)
-      }
-    }
     ret
   } // getNewConfig
 
   // register an Akka DeadLetter listener, to detect issues
-  val deadLetterListener = actorSystem.actorOf(Props(classOf[SMGDeadLetterActor]))
+  private val deadLetterListener = actorSystem.actorOf(Props(classOf[SMGDeadLetterActor]))
   actorSystem.eventStream.subscribe(deadLetterListener, classOf[DeadLetter])
 }
