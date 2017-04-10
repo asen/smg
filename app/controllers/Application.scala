@@ -526,9 +526,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
       remotes.notifySlaves()
     }
     remotes.fetchConfigs()
-    val retStr = if (configSvc.config.allErrors.isEmpty)
-      "OK - no issues detected"
-    else "WARNING - some issues detected:\n\n" + configSvc.config.allErrors.mkString("\n")
+    val myNewConf = configSvc.config
+    val retStr = if (myNewConf.allErrors.isEmpty)
+      s"OK - no issues detected (${myNewConf.viewObjects.size} view objects defined)"
+    else "WARNING - some issues detected (${myNewConf.viewObjects.size} view objects defined):\n\n" +
+      configSvc.config.allErrors.mkString("\n")
     Ok(retStr)
   }
 
@@ -579,10 +581,14 @@ class Application  @Inject() (actorSystem: ActorSystem,
         val ac = configSvc.config.objectAlertConfs.get(ou.get.id)
         val ncUnk = ou.get.notifyConf
         val nc  = configSvc.config.objectNotifyConfs.get(ou.get.id)
-        val ncmds = SMGMonNotifySeverity.values.toList.map { v =>
-          val cmdBackoff = configSvc.objectVarNotifyCmdsAndBackoff(ou.get, None, v)
-          (v, cmdBackoff._1, cmdBackoff._2)
-        }
+        val ncmdsByVar = ou.get.vars.indices.map { vix =>
+          val bySev = Seq(SMGMonNotifySeverity.ANOMALY, SMGMonNotifySeverity.WARNING,
+            SMGMonNotifySeverity.UNKNOWN, SMGMonNotifySeverity.CRITICAL).map { sev =>
+            val cmdBackoff = configSvc.objectVarNotifyCmdsAndBackoff(ou.get, Some(vix), sev)
+            (sev, cmdBackoff._1, cmdBackoff._2)
+          }.toList
+          (vix, bySev)
+        }.toList
         val notifyStrikesObj = configSvc.objectVarNotifyStrikes(ou.get, None)
         val notifyStrikesVars = ou.get.vars.indices.map( vix => configSvc.objectVarNotifyStrikes(ou.get, Some(vix)))
         val hstate =  monitorApi.inspectObject(ov.get)
@@ -596,7 +602,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
           }
           lb.toList.reverse
         } else List()
-        Ok(views.html.inspectObject(ov.get, pfs, ac, ncUnk, nc, ncmds, Seq(notifyStrikesObj) ++ notifyStrikesVars, hstate))
+        Ok(views.html.inspectObject(ov.get, pfs, ac, ncUnk, nc, ncmdsByVar, Seq(notifyStrikesObj) ++ notifyStrikesVars, hstate))
       } else NotFound("Object not found")
     }
   }

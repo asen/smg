@@ -24,7 +24,7 @@ case class SMGMonAlertThresh(value: Double, op: String) {
 }
 
 object SMGMonSpikeThresh {
-  val DEFAULT_SPIKE_CHECK_CONF = "1.5:30m:30h".split(":")
+  val DEFAULT_SPIKE_CHECK_CONF: Array[String] = "1.5:30m:30h".split(":")
 }
 
 case class SMGMonSpikeThresh(confStr: String) {
@@ -33,15 +33,15 @@ case class SMGMonSpikeThresh(confStr: String) {
   private val arr0 = confStr.split(":")
   private val configArr = if (arr0.length < 3) SMGMonSpikeThresh.DEFAULT_SPIKE_CHECK_CONF else arr0
 
-  val changeThresh = configArr(0).toDouble // = 1.5
-  val maxStCntStr = configArr(1)           // = "30m",
-  val maxLtCntStr = configArr(2)           // = "30h"
+  val changeThresh: Double = configArr(0).toDouble // = 1.5
+  val maxStCntStr: String = configArr(1)           // = "30m",
+  val maxLtCntStr: String = configArr(2)           // = "30h"
 
   private def parsePeriodStr(periodStr: String) = SMGRrd.parsePeriod(periodStr).getOrElse(3600)
 
-  def maxStCnt(interval: Int) = scala.math.max( parsePeriodStr(maxStCntStr) / interval, 2)
+  def maxStCnt(interval: Int): Int = scala.math.max( parsePeriodStr(maxStCntStr) / interval, 2)
 
-  def maxLtCnt(interval: Int) = scala.math.max( parsePeriodStr(maxLtCntStr) / interval, 2) + maxStCnt(interval)
+  def maxLtCnt(interval: Int): Int = scala.math.max( parsePeriodStr(maxLtCntStr) / interval, 2) + maxStCnt(interval)
 
   def checkAlert(mvstats: SMGMonValueMovingStats, maxStCnt: Int, maxLtCnt: Int, numFmt: (Double) => String): Option[String] = {
     mvstats.checkAnomaly(changeThresh, maxStCnt, maxLtCnt, numFmt).map(s => s"($maxStCntStr/$maxLtCntStr) $s")
@@ -57,7 +57,11 @@ case class SMGMonVarAlertConf(src: SMGMonAlertConfSource.Value,
                               crit: Option[SMGMonAlertThresh],
                               warn: Option[SMGMonAlertThresh],
                               spike: Option[SMGMonSpikeThresh]
-                             )
+                             ) {
+  def inspect: String = {
+    s"SMGMonVarAlertConf: src=$src, srcId=$srcId, crit=$crit, warn=$warn, spike=$spike"
+  }
+}
 
 object SMGMonVarAlertConf {
 
@@ -102,9 +106,9 @@ object SMGMonVarAlertConf {
     }
   }
 
-  def isAlertKey(k: String) = k.startsWith("alert-")
+  def isAlertKey(k: String): Boolean = k.startsWith("alert-")
 }
 
-case class SMGMonObjAlertConf(private val varConfs: Map[Int, Seq[SMGMonVarAlertConf]]) {
+case class SMGMonObjAlertConf(varConfs: Map[Int, Seq[SMGMonVarAlertConf]]) {
   def varConf(ix: Int): Seq[SMGMonVarAlertConf] = varConfs.getOrElse(ix, Seq())
 }

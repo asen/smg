@@ -127,22 +127,43 @@ trait SMGConfigService {
                                     atSeverity: SMGMonNotifySeverity.Value): (Seq[SMGMonNotifyCmd], Int) = {
     val oncOpt = config.objectNotifyConfs.get(ou.id)
     val isDisabledAndBackoffOpt = oncOpt.map(_.getIsDisabledAndBackoff(vixOpt))
+
+    def cmdsForSeverity(vnc: SMGMonNotifyConf) = atSeverity match {
+      case SMGMonNotifySeverity.CRITICAL => vnc.crit
+      case SMGMonNotifySeverity.UNKNOWN => vnc.unkn
+      case SMGMonNotifySeverity.WARNING => vnc.warn
+      case SMGMonNotifySeverity.ANOMALY => vnc.spike
+      case _ => { // should never happen ???
+        SMGLogger.error(s"objectVarNotifyCmdsAndBackoff(${ou.id}, $vixOpt): cmdsForSeverity called with bad severity: $atSeverity")
+        Seq()
+      }
+    }
+
     val retCmds = if (isDisabledAndBackoffOpt.exists(_._1)) {
+      SMGLogger.debug(s"objectVarNotifyCmdsAndBackoff${ou.id}, $vixOpt) notificattions are disabled ($atSeverity)")
       Seq() // there is a conf and it says disabled
     } else {
       val notifCmds = if (oncOpt.isDefined) {
-        val vixes = if (vixOpt.isDefined) Seq(vixOpt.get) else ou.vars.indices
-        vixes.flatMap { vix =>
-          oncOpt.get.varConf(vix).flatMap { vnc =>
-            atSeverity match {
-              case SMGMonNotifySeverity.CRITICAL => vnc.crit
-              case SMGMonNotifySeverity.UNKNOWN => vnc.unkn
-              case SMGMonNotifySeverity.WARNING => vnc.warn
-              case SMGMonNotifySeverity.ANOMALY => vnc.spike
-              case _ => Seq()
-            }
+        val oncCmdIds: Seq[String] = if (vixOpt.isDefined){
+          oncOpt.get.varConf(vixOpt.get).flatMap( vnc => cmdsForSeverity(vnc))
+        } else { //"Object level" notify comds, should only happen for unknown state??
+          if (atSeverity != SMGMonNotifySeverity.UNKNOWN) {
+            SMGLogger.error(s"objectVarNotifyCmdsAndBackoff${ou.id}, $vixOpt) called for object with bad severity: $atSeverity")
           }
-        }.distinct.map(s => config.notifyCommands.get(s)).filter(_.isDefined).map(_.get)
+          ou.vars.indices.flatMap { vix =>
+            oncOpt.get.varConf(vix).flatMap { vnc => cmdsForSeverity(vnc) }
+          }
+        }.distinct
+        if (oncCmdIds.nonEmpty)
+          oncCmdIds.map { s =>
+            val opt = config.notifyCommands.get(s)
+            if (opt.isEmpty){
+              SMGLogger.error(s"objectVarNotifyCmdsAndBackoff: ${ou.id}: config specifies non-existing notify command: $s")
+            }
+            opt
+          }.filter(_.isDefined).map(_.get)
+        else
+          globalNotifyCmds(atSeverity)
       } else
         globalNotifyCmds(atSeverity)
       notifCmds.distinct
@@ -339,7 +360,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
         //        log.info(f.toPath);
         f.isFile && matcher.matches(f.toPath)}.toList.sortBy(f => f.toPath)
     } else {
-      log.warn("SMGConfigServiceImpl.getListOfFiles: CONFIG_WARNING: " + dir + " : glob did not match anything")
+      log.warn("SMGConfigServiceImpl.getListOfFiles: " + dir + " : glob did not match anything")
       List[File]()
     }
   }

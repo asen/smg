@@ -83,7 +83,7 @@ case class SMGLocalConfig(
   def allRemotes: List[SMGRemote] = SMGRemote.local :: remotes.toList
 
   private def globalNotifyConf(key: String) =  globals.get(key).map { s =>
-    s.split(",").map(cmdid => notifyCommands.get(cmdid)).filter(_.isDefined).map(_.get).toSeq
+    s.split("\\s*,\\s*").map(cmdid => notifyCommands.get(cmdid)).filter(_.isDefined).map(_.get).toSeq
   }.getOrElse(Seq())
 
 

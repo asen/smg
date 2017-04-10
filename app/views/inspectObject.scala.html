@@ -5,8 +5,10 @@
 @import com.smule.smg.SMGMonNotifyCmd
 @import com.smule.smg.SMGMonNotifySeverity
 @import com.smule.smg.SMGPreFetchCmd
-@(ov:SMGObjectView, pfs: List[(SMGPreFetchCmd, String)], acs: Option[SMGMonObjAlertConf], ncUnk: Option[SMGMonNotifyConf], nc: Option[SMGMonObjNotifyConf],
-  ncmds: Seq[(SMGMonNotifySeverity.Value, Seq[SMGMonNotifyCmd], Int)], nstrikes: Seq[Int], hstate: Option[String])
+@(ov:SMGObjectView, pfs: List[(SMGPreFetchCmd, String)], acs: Option[SMGMonObjAlertConf],
+  ncUnk: Option[SMGMonNotifyConf], nc: Option[SMGMonObjNotifyConf],
+  ncmdsByVar: List[(Int, Seq[(SMGMonNotifySeverity.Value, Seq[SMGMonNotifyCmd], Int)])],
+  nstrikes: Seq[Int], hstate: Option[String])
 
 <h3>Object View</h3>
 <p>@ov</p>
@@ -35,16 +37,23 @@
     No ref object defined
   }</p>
 
-<h3>Alert Confs</h3>
+<h3>Alert Confs (SMGMonObjAlertConf)</h3>
 <p>
 @if(acs.isEmpty){
   No alert confs defined
 } else {
-  @acs.get
+  @for(vix <- acs.get.varConfs.keys.toSeq.sorted){
+    <h4>vix: @{vix}</h4>
+    <ul>
+      @for(vc <- acs.get.varConfs(vix)){
+        <li>@{vc.inspect}</li>
+      }
+    </ul>
+  }
 }
 </p>
 
-<h3>Object Notify Confs</h3>
+<h3>Object Notify Conf</h3>
 <p>
   @if(ncUnk.isEmpty){
   No notification conf for object UNKNOWN state
@@ -52,20 +61,34 @@
   @ncUnk.get
   }
 </p>
+
+<h3>Object Vars Notify Conf (SMGMonObjNotifyConf)</h3>
 <p>
   @if(nc.isEmpty){
-  No notification conf for object vars
+    No notification conf for object vars
   } else {
-  @nc.get
+    @for(vix <- nc.get.varConfs.keys.toSeq.sorted){
+      <h4>vix: @{vix}</h4>
+      <ul>
+        @for(vc <- nc.get.varConfs(vix)){
+        <li>@{vc.inspect}</li>
+        }
+      </ul>
+    }
   }
 </p>
 <p>
   Notify commands:<br/>
-  @for((v, cs, backoff) <- ncmds){
-    @if(cs.nonEmpty){
-     @v: @{cs.mkString(", ")} (backoff=@backoff)<br/>
+  <ul>
+  @for(t <- ncmdsByVar) {
+    <h4>vix: @{t._1}</h4>
+    <p>
+    @for((v, cs, backoff) <- t._2){
+      @v: @{cs.mkString(", ")} (backoff=@backoff)<br/>
     }
+    </p>
   }
+  </ul>
 </p>
 
 <h3>Notify Strikes</h3>
