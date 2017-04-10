@@ -37,10 +37,10 @@ case class SMGRrdObject(id: String,
 
   private val log = SMGLogger
 
-  private val nanList = vars.map(v => Double.NaN)
+  private val nanList: List[Double] = vars.map(v => Double.NaN)
 
   private var myPrevCacheTs: Int = 0
-  private var myPrevCachedValues = nanList
+  private var myPrevCachedValues: List[Double] = nanList
 
   private var myCacheTs: Int = SMGRrd.tssNow
   private var myCachedValues = nanList
@@ -50,14 +50,15 @@ case class SMGRrdObject(id: String,
       // XXX this is only to deal with counter overflows which we don't want to mess our aggregated stats
       val deltaTime = myCacheTs - myPrevCacheTs
       if (deltaTime > 0 && deltaTime <= 3 * interval) {
-        val rates = myCachedValues.zip(myPrevCachedValues).map { case (cur, prev) => cur - prev / deltaTime }
+        val rates = myCachedValues.zip(myPrevCachedValues).map { case (cur, prev) => (cur - prev) / deltaTime }
         val isGood = rates.zip(vars).forall { case (rate, v) =>
-          (!rate.isNaN) && (rate > v.getOrElse("min", "0.0").toDouble) && v.get("max").forall(_.toDouble >= rate)
+          (!rate.isNaN) && (rate >= v.getOrElse("min", "0.0").toDouble) && v.get("max").forall(_.toDouble >= rate)
         }
         if (isGood)
           myCachedValues
-        else
+        else {
           nanList
+        }
       } else {
         nanList // time delta outside range
       }
@@ -71,6 +72,10 @@ case class SMGRrdObject(id: String,
     myCachedValues = nanList
     myCacheTs = SMGRrd.tssNow
   }
+
+  override def inspect: String = super.inspect +
+    s", myCacheTs=$myCacheTs, myCachedValues=$myCachedValues" +
+    s", myPrevCacheTs=$myPrevCacheTs, myPrevCachedValues=$myPrevCachedValues"
 
   override def fetchValues: List[Double] = {
     try {
