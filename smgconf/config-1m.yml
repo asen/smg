@@ -108,6 +108,22 @@
     - label: sec/sec
       max: 1.01
 
+- localhost.time.counter2:
+  title: "Test time counter2"
+  command: "date +%s"
+#  options:
+  interval: 60
+  rrd_type: COUNTER
+  vars:
+    - label: sec/sec
+      max: 1.01
+
+- +localhost.time.counter.agg:
+  op: SUM
+  ids:
+    - localhost.time.counter
+    - localhost.time.counter2
+
 - localhost.spike.check:
   title: "Test spike"
   command: "smgscripts/print-series.rb smgscripts/print-series-test.txt"

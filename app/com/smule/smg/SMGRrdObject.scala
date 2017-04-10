@@ -39,26 +39,37 @@ case class SMGRrdObject(id: String,
 
   private val nanList = vars.map(v => Double.NaN)
 
+  private var myPrevCacheTs: Int = 0
   private var myPrevCachedValues = nanList
+
+  private var myCacheTs: Int = SMGRrd.tssNow
   private var myCachedValues = nanList
 
   override def cachedValues: List[Double] = {
     if (isCounter) {
-      val deltas = myCachedValues.zip(myPrevCachedValues).map { case (cur, prev) => cur - prev }
-      val isGood = deltas.zip(vars).forall { case (delta, v) =>
-        (!delta.isNaN) && (delta > v.getOrElse("min", "0.0").toDouble) && v.get("max").forall(_.toDouble >= delta)
+      // XXX this is only to deal with counter overflows which we don't want to mess our aggregated stats
+      val deltaTime = myCacheTs - myPrevCacheTs
+      if (deltaTime > 0 && deltaTime <= 3 * interval) {
+        val rates = myCachedValues.zip(myPrevCachedValues).map { case (cur, prev) => cur - prev / deltaTime }
+        val isGood = rates.zip(vars).forall { case (rate, v) =>
+          (!rate.isNaN) && (rate > v.getOrElse("min", "0.0").toDouble) && v.get("max").forall(_.toDouble >= rate)
+        }
+        if (isGood)
+          myCachedValues
+        else
+          nanList
+      } else {
+        nanList // time delta outside range
       }
-      if (isGood)
-        myCachedValues
-      else
-        nanList
     } else
       myCachedValues
   }
 
   override def invalidateCachedValues(): Unit = {
     myPrevCachedValues = myCachedValues
+    myPrevCacheTs = 0
     myCachedValues = nanList
+    myCacheTs = SMGRrd.tssNow
   }
 
   override def fetchValues: List[Double] = {
@@ -74,12 +85,13 @@ case class SMGRrdObject(id: String,
         throw SMGCmdException(this.command.str, this.command.timeoutSec, -1, out.mkString("\n"), errMsg)
       }
       myPrevCachedValues = myCachedValues
+      myPrevCacheTs = myCacheTs
       myCachedValues = ret
+      myCacheTs = SMGRrd.tssNow
       ret
     } catch {
       case t: Throwable => {
-        myPrevCachedValues = myCachedValues
-        myCachedValues = nanList
+        invalidateCachedValues()
         throw t
       }
     }

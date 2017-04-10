@@ -724,11 +724,14 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
             }
             if (objOpts.nonEmpty && objOpts.forall(_.isDefined)){
               val objs = objOpts.map(_.get)
+              // XXX for now assuming first object's var definitions but filtering out "max" value
+              // which is likely wrong for the SUM object. TODO ability to define its own vars
+              val myVars = objs.head.vars.map { v => v.filter { case (k,v) => k != "max" } }
               val rrdAggObj = SMGRrdAggObject(
                 id = oid,
                 ous = objs,
                 aggOp = op,
-                vars = objs.head.vars,
+                vars = myVars,
                 title = ymap.getOrElse("title", oid).toString,
                 rrdType = objs.head.rrdType,
                 interval = objs.head.interval,
