@@ -697,7 +697,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
     def processAggObject( t: (String,Object), confFile: String ): Unit = {
       val oid =  t._1.substring(1)
       if (!validateOid(oid)){
-        log.error("SMGConfigServiceImpl.processAggObject(" + confFile + "): CONFIG_ERROR: Skipping object with invalid or duplicate id: " + oid)
+        processConfigError(confFile, "processAggObject: skipping agg object with invalid or duplicate id: " + oid)
       } else {
         try {
           val ymap = t._2.asInstanceOf[java.util.Map[String, Object]]
@@ -706,8 +706,9 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
             case "SUMN" => "SUMN"
             case "AVG"  => "AVG"
             case "SUM" => "SUM"
-            case _ => {
-              log.warn(s"SMGConfigServiceImpl.processAggObject($confFile): CONFIG_WARNING: unsupported agg op for $oid, assuming SUM")
+            case x => {
+              processConfigError(confFile,
+                s"processAggObject: unsupported agg op for $oid: $x (assuming SUM)", isWarn = true)
               "SUM"
             }
           }
@@ -716,8 +717,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
             val objOpts = ids.map { ovid =>
               val ret = objectIds.get(ovid).flatMap(_.refObj)
               if (ret.isEmpty) {
-                log.error(s"SMGConfigServiceImpl.processAggObject($confFile): CONFIG_ERROR: agg object references " +
-                  s"undefined id: $oid, ref id=$ovid (will be ignored)")
+                processConfigError(confFile, "processAggObject: agg object references " +
+                  s"undefined object: $oid, ref id=$ovid (will be ignored)")
               }
               ret
             }
@@ -742,11 +743,12 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem:
               allViewObjectsConf += rrdAggObj
             } // else - error already logged
           } else {
-            log.warn(s"SMGConfigServiceImpl.processAggObject($confFile): CONFIG_ERROR: agg object definition without ids: $oid, ignoring")
+            processConfigError(confFile,
+              s"processAggObject: agg object definition without ids: $oid, ignoring")
           }
         } catch {
-          case x : ClassCastException => log.error("SMGConfigServiceImpl.processAggObject(" + confFile +
-            "): CONFIG_ERROR:: bad object tuple (" + t.toString + ") ex: " + x.toString)
+          case x : ClassCastException => processConfigError(confFile,
+            s"processAggObject: bad object tuple ($t) ex: $x")
         }
       }
     }
