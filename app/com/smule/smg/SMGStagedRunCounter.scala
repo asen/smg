@@ -126,7 +126,6 @@ object SMGStagedRunCounter {
         }
       }
     }
-    true
   }
 
   /**
