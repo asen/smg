@@ -39,7 +39,7 @@ object SMGRunStats {
     }
     val tl = customTotals.getOrDefault(cid, -1)
     if ((tl > 0) && (cnt == tl)) {
-      log.info("SMGRunStats.incCustomCounter(" + cid + ") run completed with " + tl + " objects processed")
+      log.debug("SMGRunStats.incCustomCounter(" + cid + ") run completed with " + tl + " objects processed")
       true
     } else false
   }

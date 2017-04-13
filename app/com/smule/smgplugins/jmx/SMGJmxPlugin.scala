@@ -103,6 +103,7 @@ class SMGJmxPlugin (val pluginId: String,
   private def onRunComplete(): Unit = {
     cleanup()
     finished()
+    log.info("SMGJmxPlugin.onRunComplete: finished")
   }
 
   val myUpdateEc: ExecutionContext = Akka.system.dispatchers.lookup("akka-contexts.jmx-plugin")
