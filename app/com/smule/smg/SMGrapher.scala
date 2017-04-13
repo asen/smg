@@ -8,14 +8,8 @@ import akka.actor.{ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 
-import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
-
-/**
- * Created by asen on 10/22/15.
- */
 
 /**
   * The SMG @GrapherApi imlementation
@@ -50,6 +44,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val sz = if (commandTrees.isEmpty) 0 else commandTrees.map(_.size).sum
     if (sz == 0) {
       log.info(s"SMGrapher.run(interval=$interval): No commands to execute")
+      Future { runPlugins(interval) }
       return
     }
     val aggObjectUpdates = conf.rrdAggObjectsByInterval.getOrElse(interval, Seq())
@@ -90,9 +85,13 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
         log.debug(s"SMGrapher.run(interval=$interval): Sent fetch update message for: ${fRoot.node.id}")
       }
       log.info(s"SMGrapher.run(interval=$interval): sent messages for $sz fetch commands")
-      configSvc.plugins.foreach { p =>
-        if (p.interval == interval) p.run()
-      }
+      runPlugins(interval)
+    }
+  }
+
+  private def runPlugins(interval: Int): Unit = {
+    configSvc.plugins.foreach { p =>
+      if (p.interval == interval) p.run()
     }
   }
 

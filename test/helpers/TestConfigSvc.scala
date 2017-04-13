@@ -1,5 +1,6 @@
 package helpers
 
+import akka.actor.ActorSystem
 import com.smule.smg._
 
 /**
@@ -97,4 +98,5 @@ class TestConfigSvc() extends SMGConfigService {
 
   override def notifyReloadListeners(ctx: String): Unit = {}
 
+  override val actorSystem: ActorSystem = null
 }

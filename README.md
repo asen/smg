@@ -134,10 +134,11 @@ smgconf/config-example.yml as examples.
     smg.timeoutCommand = "gtimeout"
     ```
 
-    (or alias timeout to gtimeout in your environment)
+    (or alias timeout to gtimeout in your environment, e.g
+    via /usr/local/bin/timeout symlink to gtimeout)
 
 * Run:
     ```
     $ cd smg
-    $ JAVA_HOME=$(/usr/libexec/java_home -v 1.8) ./activator run
+    $ JAVA_HOME=$(/usr/libexec/java_home -v 1.8) ./run-dev.sh
     ```

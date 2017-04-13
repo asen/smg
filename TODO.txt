@@ -23,6 +23,12 @@ from external sources posting the data via some API
 
 * smart (?) search
 
+== Documentation ==
+
+* document agg objects (+object.id)
+
+* document JMX plugin/config
+
 == Known Bugs ==
 
 

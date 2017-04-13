@@ -84,6 +84,10 @@ trait SMGConfigService {
   */
   def sendRunMsg(msg: SMGDFRunMsg): Unit = dataFeedListeners.foreach(dfl => Try(dfl.receiveRunMsg(msg)))
 
+  /**
+    * published here for plugins to use
+    */
+  val actorSystem: ActorSystem
 
   /**
   * Register an object instance to be notified on config reloads
@@ -210,7 +214,8 @@ trait SMGConfigService {
   * @param configuration - Play configuration object to bootstrap our config from
   */
 @Singleton
-class SMGConfigServiceImpl @Inject() (configuration: Configuration, actorSystem: ActorSystem) extends SMGConfigService {
+class SMGConfigServiceImpl @Inject() (configuration: Configuration,
+                                      override val actorSystem: ActorSystem) extends SMGConfigService {
   private val log = SMGLogger
 
   /**

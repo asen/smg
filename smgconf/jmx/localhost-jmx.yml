@@ -1,0 +1,45 @@
+
+- host.localhost.jmx.smg.jvm:
+  hostPort: "127.0.0.1:9001"
+  objs:
+    - heapMem:
+      title: "localhost smg heapMem usage"
+      jmxName: "java.lang:type=Memory"
+      rrd_type: GAUGE
+      vars:
+        - attr: HeapMemoryUsage:used
+          label: used
+          mu: B
+        - attr: HeapMemoryUsage:committed
+          label: committed
+          mu: B
+    - threadCount:
+      title: "localhost smg threads count"
+      jmxName: "java.lang:type=Threading"
+      rrd_type: GAUGE
+      vars:
+        - attr: ThreadCount
+          label: thread cnt
+        - attr: DaemonThreadCount
+          label: daemon thread cnt
+    - nioBufferPoolDirect:
+      title: "localhost smg nio direct BufferPool mem used"
+      jmxName: "java.nio:type=BufferPool,name=direct"
+      rrd_type: GAUGE
+      vars:
+        - attr: MemoryUsed
+          label: mem used
+          mu: B
+        - attr: TotalCapacity
+          label: tl cap
+          mu: B
+    - nioBufferPoolDirectCnt:
+      title: "localhost smg nio direct BufferPool count"
+      jmxName: "java.nio:type=BufferPool,name=direct"
+      rrd_type: GAUGE
+      vars:
+        - attr: Count
+          label: count
+
+
+

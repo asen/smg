@@ -29,7 +29,7 @@ rm -rf target/universal/stage/{smgconf,smgscripts}
 
 cp -r smgconf smgscripts target/universal/stage/
 
-mkdir -p target/universal/stage/{smgrrd,logs,public/smg,run}
+mkdir -p target/universal/stage/{smgrrd/jmx,logs,public/smg,run}
 
 rm -f target/universal/stage/{start-smg.sh,stop-smg.sh}
 cp start-smg.sh stop-smg.sh target/universal/stage/
