@@ -16,7 +16,8 @@ import scala.collection.mutable.ListBuffer
 
 
 /**
-  * Created by asen on 9/26/16.
+  * This plugin is deprecated and no longer enabled by default.
+  * Kept here as (possibly bad and/or outdated) plugin code example.
   */
 class SMGSpikerPlugin(val pluginId: String,
                       val interval: Int,
