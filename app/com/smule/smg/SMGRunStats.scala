@@ -12,7 +12,7 @@ object SMGRunStats {
   private val customTotals = new java.util.concurrent.ConcurrentHashMap[String,Int]()
 
   def resetCustomCounter(cid: String, total: Int): Unit = {
-    log.info("SMGRunStats.resetCustomCounter(" + cid + "): total=" + total)
+    log.debug("SMGRunStats.resetCustomCounter(" + cid + "): total=" + total)
     val prevCount = customCounts.getOrDefault(cid, new AtomicInteger(0)).get()
     val prevTotal = customTotals.getOrDefault(cid, 0)
     if (prevCount < prevTotal) {
