@@ -15,7 +15,7 @@ class SMGJmxClient(val log: SMGPluginLogger) {
     // trying to avoid synchronization
     if (!jmxConnections.contains(hostPort)) {
       jmxConnections.putIfAbsent(hostPort, {
-        log.info(s"Creating new SMGJmxConnection for $hostPort")
+        log.debug(s"Creating new SMGJmxConnection for $hostPort")
         new SMGJmxConnection(hostPort, log)
       })
     }
