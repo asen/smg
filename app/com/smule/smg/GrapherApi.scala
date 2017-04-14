@@ -140,6 +140,15 @@ trait GrapherApi {
     */
   def objectIndexes(ov: SMGObjectView): Seq[SMGIndex]
 
+  /**
+    * Get a read-only snapshot from the current map of
+    * command (pre-fetch or rrd object) id and execution times (in milliseconds)
+    * Useful to find slow commands
+    *
+    * @return
+    */
+  def commandExecutionTimes: Map[String, Long]
+
   //convenience ref ... TODO make this a def and read from config?
   val detailPeriods: List[String] = GrapherApi.detailPeriods
 

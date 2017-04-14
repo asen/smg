@@ -4,10 +4,11 @@ package com.smule.smg
 import java.io.File
 import javax.inject.{Inject, Singleton}
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
 
 
@@ -31,7 +32,22 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   private val log = SMGLogger
 
   private val graphActor = actorSystem.actorOf(SMGraphActor.props)
-  private val updateActor = actorSystem.actorOf(Props(new SMGUpdateActor(configSvc)))
+
+  private val myCommandExecutionTimes: TrieMap[String, Long] = TrieMap[String, Long]()
+
+  override def commandExecutionTimes: Map[String, Long] = myCommandExecutionTimes.toMap
+
+  private def cleanupCommandExecutionTimes() = {
+    val toCheck = myCommandExecutionTimes.keySet
+    val myConf = configSvc.config
+    toCheck.foreach { id =>
+      if (!(myConf.updateObjectsById.contains(id) || myConf.preFetches.contains(id))){
+        myCommandExecutionTimes.remove(id)
+      }
+    }
+  }
+
+  private val updateActor: ActorRef = actorSystem.actorOf(Props(new SMGUpdateActor(configSvc, myCommandExecutionTimes)))
 
   implicit private val messagingEc = ExecutionContexts.defaultCtx
 
@@ -51,10 +67,10 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
 
     // single stage counter if no aggregate object updates are defined, two stages otherwise
     val stages = if (aggObjectUpdates.isEmpty) {
-      Array(SMGRunStageDef(sz, { () =>
-        configSvc.config.rrdConf.flushSocket()
-        log.info(s"SMGrapher.run(interval=$interval): run completed with $sz commands executed")
-      }))
+      Array(
+        SMGRunStageDef(sz,
+          onRunCompleteFunc(s"SMGrapher.run(interval=$interval): run completed with $sz commands executed"))
+      )
     } else {
       val aggsSz = aggObjectUpdates.size
       Array(
@@ -65,10 +81,8 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
           log.debug(s"SMGrapher.run(interval=$interval): stage 0 done ($sz objects). " +
             s"Sent messages for $aggsSz aggregate objects")
         }),
-        SMGRunStageDef(aggsSz, { () =>
-          configSvc.config.rrdConf.flushSocket()
-          log.info(s"SMGrapher.run(interval=$interval): run completed: $sz commands, $aggsSz agg objects")
-        })
+        SMGRunStageDef(aggsSz,
+          onRunCompleteFunc(s"SMGrapher.run(interval=$interval): run completed: $sz commands, $aggsSz agg objects"))
       )
     }
 
@@ -87,6 +101,15 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       log.info(s"SMGrapher.run(interval=$interval): sent messages for $sz fetch commands")
       runPlugins(interval)
     }
+  }
+
+  private def onRunCompleteFunc(logMsg: String): () => Unit = {
+    def ret(): Unit = {
+      configSvc.config.rrdConf.flushSocket()
+      cleanupCommandExecutionTimes() // TODO run this less often?
+      log.info(logMsg)
+    }
+    ret
   }
 
   private def runPlugins(interval: Int): Unit = {

@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import akka.actor.{Actor, ActorSystem, Props}
 
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -14,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * An actor responsible for doing rrd fetches/updates.
   */
-class SMGUpdateActor(configSvc: SMGConfigService) extends Actor {
+class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap[String, Long]) extends Actor {
   import SMGUpdateActor._
 
   val log = SMGLogger
@@ -28,7 +29,12 @@ class SMGUpdateActor(configSvc: SMGConfigService) extends Actor {
         try {
           log.debug(s"SMGUpdateActor Future: updating ${obj.id}")
           val rrd = new SMGRrdUpdate(obj, configSvc)
-          rrd.createOrUpdate(ts)
+          val t0 = System.currentTimeMillis()
+          try {
+            rrd.createOrUpdate(ts)
+          } finally {
+            commandExecutionTimes(obj.id) = System.currentTimeMillis() - t0
+          }
         } catch {
           case ex: Throwable => {
             obj.invalidateCachedValues()
@@ -58,7 +64,12 @@ class SMGUpdateActor(configSvc: SMGConfigService) extends Actor {
             try {
               log.debug(s"Running pre_fetch command: ${pf.id}: ${pf.command.str}")
               try {
-                pf.command.run
+                val t0 = System.currentTimeMillis()
+                try {
+                  pf.command.run
+                } finally {
+                  commandExecutionTimes(pf.id) = System.currentTimeMillis() - t0
+                }
                 //this is reached only on successfull pre-fetch
                 configSvc.sendPfMsg(SMGDFPfMsg(SMGRrd.tssNow, pf.id, interval, leafObjs, 0, List(), None))
                 if (updateCounters)

@@ -1,0 +1,13 @@
+@import com.smule.smg.SMGPreFetchCmd
+@import com.smule.smg.SMGObjectUpdate
+@(lst: List[(String, Long, Object)], total: Int)
+
+<h3>Displaying @{lst.size} out of @{total} slowest fetch commands</h3>
+<ul>
+  @for(t <- lst){
+  <li>
+    <p><strong>@{t._1}: @{t._2}</strong></p>
+    <p><small>@{t._3.toString}</small></p>
+  </li>
+  }
+</ul>

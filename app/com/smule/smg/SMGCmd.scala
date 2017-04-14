@@ -30,20 +30,20 @@ object SMGCmd {
     * To be called once during initialization, set the "timeout" command name (gtimeout on Mac with homebrew)
     * @param newCmd - timeout command executable
     */
-  def setTimeoutCommand(newCmd: String) = timeoutCommand.synchronized { timeoutCommand = newCmd }
+  def setTimeoutCommand(newCmd: String): Unit = timeoutCommand.synchronized { timeoutCommand = newCmd }
 
   /**
     * To be called once during initialization - command to use instead of the default Seq("bash","-c")
     * @param newCmdSeq - new executor command sequence to use
     */
-  def setExecutorCommand(newCmdSeq: Seq[String]) = executorCommand.synchronized { executorCommand = newCmdSeq }
+  def setExecutorCommand(newCmdSeq: Seq[String]): Unit = executorCommand.synchronized { executorCommand = newCmdSeq }
 
   /**
     * Execute a SMG command and collect stdout
     * @param c - SMGCmd object representing the comand
     * @return - a list of strings each representing a command output line
     */
-  def run(c:SMGCmd, myEnv: Map[String,String] = Map()) = runCommand(c.str, c.timeoutSec, myEnv)
+  def run(c:SMGCmd, myEnv: Map[String,String] = Map()): List[String] = runCommand(c.str, c.timeoutSec, myEnv)
 
   /**
     * Execute a system command (string) using a provided timeout and collect its standard output

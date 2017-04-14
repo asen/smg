@@ -47,7 +47,7 @@ case class SMGRrdObject(id: String,
 
   override def cachedValues: List[Double] = {
     if (isCounter) {
-      // XXX this is only to deal with counter overflows which we don't want to mess our aggregated stats
+      // XXX this is only to deal with counter overflows and resets which we don't want to mess our aggregated stats
       val deltaTime = myCacheTs - myPrevCacheTs
       if (deltaTime > 0 && deltaTime <= 3 * interval) {
         val rates = myCachedValues.zip(myPrevCachedValues).map { case (cur, prev) => (cur - prev) / deltaTime }
@@ -79,7 +79,7 @@ case class SMGRrdObject(id: String,
 
   override def fetchValues: List[Double] = {
     try {
-      val out = SMGCmd.runCommand(this.command.str, this.command.timeoutSec)
+      val out = this.command.run
       val ret = for (ln <- out.take(this.vars.size)) yield {
         ln.toDouble
       }

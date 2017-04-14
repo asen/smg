@@ -18,9 +18,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import play.api.mvc.Cookie
 import play.api.mvc.DiscardingCookie
-
 import play.api.libs.json._
-
 
 @Singleton
 class Application  @Inject() (actorSystem: ActorSystem,
@@ -534,13 +532,32 @@ class Application  @Inject() (actorSystem: ActorSystem,
     Ok(retStr)
   }
 
-  def configStatus:  Action[AnyContent] = Action {
+  def configStatus: Action[AnyContent] = Action {
     val myConf = configSvc.config
     val retStr = if (myConf.allErrors.isEmpty)
       s"OK - no issues detected (${myConf.viewObjects.size} view objects defined)"
     else s"WARNING - some issues detected (${myConf.viewObjects.size} view objects defined):\n\n" +
       configSvc.config.allErrors.mkString("\n")
     Ok(retStr + "\n")
+  }
+
+  def commandRunTimes(lmt: Int): Action[AnyContent] = Action {
+    val myConf = configSvc.config
+    val myMap = smg.commandExecutionTimes
+    val mySlowItems = myMap.toList.sortBy(- _._2).take(lmt)
+    val ret: List[(String, Long, Object) ] = mySlowItems.map { case (id, tmms) =>
+      val objOpt = myConf.updateObjectsById.get(id)
+      val retOpt: Option[Object] = if (objOpt.isEmpty)
+        myConf.preFetches.get(id)
+      else {
+        Some(objOpt.get)
+      }
+      if (retOpt.isEmpty){
+        log.error(s"commandRunTimes: did not find object for slow command: $id")
+      }
+      (id, tmms, retOpt)
+    }.filter(_._3.isDefined).map(t => (t._1, t._2, t._3.get))
+    Ok(views.html.inspectSlowCommands(ret, myMap.size))
   }
 
   def pluginIndex(pluginId: String): Action[AnyContent] = Action { implicit request =>
