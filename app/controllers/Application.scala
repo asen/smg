@@ -540,7 +540,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       s"OK - no issues detected (${myConf.viewObjects.size} view objects defined)"
     else s"WARNING - some issues detected (${myConf.viewObjects.size} view objects defined):\n\n" +
       configSvc.config.allErrors.mkString("\n")
-    Ok(retStr)
+    Ok(retStr + "\n")
   }
 
   def pluginIndex(pluginId: String): Action[AnyContent] = Action { implicit request =>

@@ -2,6 +2,8 @@ v 0.5+
 
 == General Enhancements ==
 
+* trace slow commands
+
 * support minY graph option
 
 * make "index" "first-class" filter member (i.e. select an index AND filter within)
@@ -32,3 +34,7 @@ from external sources posting the data via some API
 == Known Bugs ==
 
 * GROUPing stacked graphs seems messed up
+
+* autocomplete for command trees should ignore master remotes
+
+* prevent saveStateToDisk when shutdown is already in progress
