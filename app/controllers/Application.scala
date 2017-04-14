@@ -534,6 +534,15 @@ class Application  @Inject() (actorSystem: ActorSystem,
     Ok(retStr)
   }
 
+  def configStatus:  Action[AnyContent] = Action {
+    val myConf = configSvc.config
+    val retStr = if (myConf.allErrors.isEmpty)
+      s"OK - no issues detected (${myConf.viewObjects.size} view objects defined)"
+    else s"WARNING - some issues detected (${myConf.viewObjects.size} view objects defined):\n\n" +
+      configSvc.config.allErrors.mkString("\n")
+    Ok(retStr)
+  }
+
   def pluginIndex(pluginId: String): Action[AnyContent] = Action { implicit request =>
     val httpParams = (if (request.method == "POST") {
       request.body.asFormUrlEncoded.getOrElse(Map())

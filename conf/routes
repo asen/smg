@@ -45,6 +45,8 @@ POST    /monitor/saveStates   controllers.Application.monitorSaveStates()
 GET     /proxy/:remote/*path  controllers.Application.proxy(remote: String, path: String)
 
 GET     /inspect/:id          controllers.Application.inspect(id: String)
+GET     /config/status        controllers.Application.configStatus()
+
 
 # JSON response for JS UI
 GET     /json/periods         controllers.Application.jsonPeriods()

@@ -757,11 +757,12 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
               val myRrdType = getRrdType(ymap, Some(objs.head.rrdType))
               // sanity check the objects, all must have at least myVars.size vars
               // TODO: more thorough validation?
-              if (objs.exists { ou =>
+              if (!objs.exists { ou =>
                 val ret = ou.vars.size < myVars.size
-                if (!ret) {
+                if (ret) {
                   processConfigError(confFile, "processAggObject: agg object references " +
-                    s"invalid object (less vars than ${myVars.size}): $oid, ref id=${ou.id} (agg object will be ignored)")
+                    s"invalid object (${ou.vars.size} vars less than ${myVars.size}): $oid, ref id=${ou.id} " +
+                    s"(agg object will be ignored)")
                 }
                 ret
               }) {
