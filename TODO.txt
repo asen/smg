@@ -9,8 +9,6 @@ v 0.5+
 * support external updates - objects which do not have an external command to execute but get the updates
 from external sources posting the data via some API
 
-* support aggregate objects (same as aggregate view but actually updated in a RRD for history)
-
 * filter to hide empty graphs
 
 * support "tags" (?) - be able to filter by tag.
@@ -33,4 +31,4 @@ from external sources posting the data via some API
 
 == Known Bugs ==
 
-
+* GROUPing stacked graphs seems messed up
