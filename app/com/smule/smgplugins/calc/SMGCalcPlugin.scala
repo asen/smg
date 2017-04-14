@@ -15,6 +15,7 @@ case class SMGCalcExprIndex(id: String,
                             period: Option[String],
                             step: Option[Int],
                             maxy: Option[Double],
+                            miny: Option[Double],
                             dpp: Boolean,
                             d95p: Boolean
                       )
@@ -63,6 +64,7 @@ class SMGCalcPlugin (val pluginId: String,
                 omap.get("period").map(_.toString),
                 omap.get("step").map(_.asInstanceOf[Int]),
                 omap.get("maxy").map(_.asInstanceOf[Double]),
+                omap.get("miny").map(_.asInstanceOf[Double]),
                 omap.getOrElse("dpp", "off") == "on",
                 omap.getOrElse("d95p", "off") == "on"
               )
@@ -100,8 +102,8 @@ class SMGCalcPlugin (val pluginId: String,
     val maxYOpt = if (ixOpt.isDefined) ixOpt.get.maxy
         else if (httpParams.getOrElse("maxy", "") == "") None
         else Some(httpParams("maxy").toDouble)
-    val gopts = GraphOptions(step = stepOpt, xsort = None,
-      disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = maxYOpt)
+    val gopts = GraphOptions.withSome(step = stepOpt, xsort = None,
+      disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = maxYOpt, minY = None) // TODO support minY
     val expOpt = if (strExpOpt.isDefined) {
       Some(SMGCalcRrd.parseExpr(smg, remotes, strExpOpt.get))
     } else None

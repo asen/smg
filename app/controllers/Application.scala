@@ -159,7 +159,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     xsort: Int,
     dpp: String,
     d95p: String,
-    maxy: Option[String]
+    maxy: Option[String],
+    miny: Option[String]
   ) {
 
     def processParams(idx: Option[SMGIndex]): (SMGFilter, DashboardExtraParams) = {
@@ -173,9 +174,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val myDisablePop = if (idx.isEmpty || (dpp == "on")) dpp == "on" else idx.get.flt.gopts.disablePop
       val myDisable95p = if (idx.isEmpty || (d95p == "on")) d95p == "on" else idx.get.flt.gopts.disable95pRule
       val myMaxY = if (idx.isEmpty || maxy.isDefined) optStr2OptDouble(maxy) else idx.get.flt.gopts.maxY
+      val myMinY = if (idx.isEmpty || miny.isDefined) optStr2OptDouble(miny) else idx.get.flt.gopts.minY
 
       val myGopts = GraphOptions(step = myStep, pl = myPl, xsort = Some(myXSort),
-        disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = myMaxY)
+        disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = myMaxY, minY = myMinY)
 
       val myPx = if (idx.isEmpty || px.isDefined) px else idx.get.flt.px
       val mySx = if (idx.isEmpty || sx.isDefined) sx else idx.get.flt.sx
@@ -229,7 +231,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
       xsort = m.get("xsort").map(_.toInt).getOrElse(0),
       dpp = m.getOrElse("dpp", ""),
       d95p = m.getOrElse("d95p", ""),
-      maxy = m.get("maxy")
+      maxy = m.get("maxy"),
+      miny = m.get("miny")
     )
   }
 
@@ -358,10 +361,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @return
     */
   def show(oid:String, cols: Int, dpp: String, d95p: String,
-           maxy: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+           maxy: Option[String], miny: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val showMs = msEnabled(request)
     val gopts = GraphOptions(step = None, pl = None, xsort = None,
-      disablePop = dpp == "on", disable95pRule = d95p == "on", maxY = optStr2OptDouble(maxy))
+      disablePop = dpp == "on", disable95pRule = d95p == "on",
+      maxY = optStr2OptDouble(maxy), minY = optStr2OptDouble(miny))
     smg.getObjectView(oid) match {
       case Some(obj) => {
         val gfut = smg.getObjectDetailGraphs(obj, gopts)
@@ -387,10 +391,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @return
     */
   def showAgg(ids:String, op:String, title:Option[String], cols: Int, dpp: String, d95p: String,
-              maxy: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+              maxy: Option[String], miny: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val showMs = msEnabled(request)
     val gopts = GraphOptions(step = None, pl = None, xsort = None,
-      disablePop = dpp == "on", disable95pRule = d95p == "on", maxY = optStr2OptDouble(maxy))
+      disablePop = dpp == "on", disable95pRule = d95p == "on",
+      maxY = optStr2OptDouble(maxy), minY = optStr2OptDouble(miny))
     val idLst = ids.split(',')
     val objList = idLst.filter( id => smg.getObjectView(id).nonEmpty ).map(id => smg.getObjectView(id).get)
     if (objList.isEmpty)

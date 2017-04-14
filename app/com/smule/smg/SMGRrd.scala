@@ -59,7 +59,7 @@ object SMGRrd {
     else GPRINT_NUM_FORMAT
 
   //TODO - insert a + after the E instead? rrdtool doesn't like 2.5E9 (treats it as 2.5)
-  def numRrdFormat(x: Double): String = if (x.isNaN)
+  def numRrdFormat(x: Double, nanAsU: Boolean): String = if (x.isNaN && nanAsU)
     "U"
   else if ((x % 1) == 0)
     x.toLong.toString
@@ -227,7 +227,9 @@ object SMGRrd {
     SMGRraDef("_default-" + interval, lst.toList)
   }
 
-  def rrdGraphCommandPx(rrdConf: SMGRrdConfig, title: String, outFn: String, period: String, pl:Option[String], step: Option[Int], maxY: Option[Double]): String = {
+  def rrdGraphCommandPx(rrdConf: SMGRrdConfig, title: String, outFn: String,
+                        period: String, pl:Option[String], step: Option[Int],
+                        maxY: Option[Double], minY: Option[Double]): String = {
     val c = new mutable.StringBuilder(rrdConf.rrdTool).append(" graph ").append(outFn).append(" --imgformat=PNG")
     c.append(" --font '").append(rrdConf.rrdGraphFont.getOrElse("LEGEND:7:monospace")).append("'")
     c.append(" --title '").append(title).append("'")
@@ -238,8 +240,9 @@ object SMGRrd {
     c.append(" --width=").append(rrdConf.rrdGraphWidth)
     c.append(" --height=").append(rrdConf.rrdGraphHeight)
     //c.append(" --full-size-mode")
-    c.append(" --lower-limit 0 ")
-    if (maxY.isDefined) c.append("--upper-limit ").append(maxY.get).append(" --rigid ")
+    c.append(" --lower-limit ").append(numRrdFormat(minY.getOrElse(0.0), nanAsU = false))
+    if (maxY.isDefined) c.append(" --upper-limit ").append(numRrdFormat(maxY.get, nanAsU = false))
+    c.append(" --rigid ")
     if (step.isDefined) c.append("--step ").append(step.get).append(" ")
     c.toString
   }
@@ -404,7 +407,7 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
   }
 
   private def rrdGraphCommand(outFn: String, period:String, gopts: GraphOptions): String = {
-    val px = rrdGraphCommandPx(rrdConf, objv.id, outFn, period, gopts.pl, gopts.step, gopts.maxY)
+    val px = rrdGraphCommandPx(rrdConf, objv.id, outFn, period, gopts.pl, gopts.step, gopts.maxY, gopts.minY)
     val c = new mutable.StringBuilder(px)
     var first = true
     val lblMaker = new LabelMaker()
@@ -673,7 +676,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
     val c = new mutable.StringBuilder()
     var first = true
     var lastLabel = ""
-    val mygopts = GraphOptions(disablePop = true, disable95pRule = gopts.disable95pRule) // TODO support disablePop = false
+    val mygopts = GraphOptions.withSome(disablePop = true, disable95pRule = gopts.disable95pRule) // TODO support disablePop = false
     getAllDefsAndLabelsByVarGroup.foreach {t4 =>
       val cdef = t4._1
       val vlabel = t4._2
@@ -691,7 +694,8 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
   }
 
   private def rrdGraphCommand(outFn: String, period:String, gopts: GraphOptions): String = {
-    rrdGraphCommandPx(rrdConf, aggObj.shortTitle, outFn, period, gopts.pl, gopts.step, gopts.maxY) + (aggObj.op match {
+    rrdGraphCommandPx(rrdConf, aggObj.shortTitle, outFn, period, gopts.pl, gopts.step, gopts.maxY, gopts.minY) +
+      (aggObj.op match {
       case "GROUP" => rrdGraphGroupCommand(outFn, period, stacked = false, gopts)
       case "STACK" => rrdGraphGroupCommand(outFn, period, stacked = true, gopts)
       case "SUM" => rrdGraphCdefCommand(outFn, period, gopts, getSumCdef)
@@ -892,7 +896,7 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
     val c = new mutable.StringBuilder(rrdConf.rrdTool).append(" update ")
     if (rrdConf.rrdToolSocket.nonEmpty) c.append("--daemon unix:").append(rrdConf.rrdToolSocket.get).append(" ")
     c.append(rrdFname)
-    c.append(" ").append(tss).append(":").append(vals.map{ x => numRrdFormat(x)}.mkString(":"))
+    c.append(" ").append(tss).append(":").append(vals.map{ x => numRrdFormat(x, nanAsU = true)}.mkString(":"))
     c.toString
   }
 }

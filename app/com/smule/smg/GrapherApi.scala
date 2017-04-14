@@ -2,31 +2,6 @@ package com.smule.smg
 
 import scala.concurrent.Future
 
-
-/**
-  * Class encapsulating graph display options. All params are optional.
-  *
-  * @param step - step/resolution to use in the graphs (default - rrdtool default for the period)
-  * @param pl - period length - to limit the end period of graphs
-  * @param xsort - whether to apply x-sort (by avg val) to the objects
-  * @param disablePop - disable period-over-period dashed line
-  * @param disable95pRule - disable 95%-ile ruler (line)
-  * @param maxY - limit the Y-axis of the graph to that value (higher values not displayed)
-  */
-case class GraphOptions(step: Option[Int] = None,
-                        pl: Option[String] = None,
-                        xsort: Option[Int] = None,
-                        disablePop: Boolean = false,
-                        disable95pRule: Boolean = false,
-                        maxY: Option[Double] = None ) {
-
-  def fnSuffix(period:String) = {
-    val goptsSx = (if (disablePop) "-dpp" else "") + (if (disable95pRule) "-d95p" else "") +
-      (if (maxY.isDefined) s"-my${maxY.get}" else "")
-    "-" + SMGRrd.safePeriod(period) + pl.map("-pl" + SMGRrd.safePeriod(_)).getOrElse("") + step.map("-" + _).getOrElse("") + goptsSx
-  }
-}
-
 /**
   * The SMGrapher API
   */

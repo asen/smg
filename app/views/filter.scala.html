@@ -125,6 +125,15 @@ Changing this reloads the page.">MaxY:</label>
       </div>
 
       <div class="form-group">
+        <label class="autosubmit-lbl" for="smg-filter-miny"
+               title="Requested graphs Y scale (min, 0 unless specified).
+Changing this reloads the page.">MinY:</label>
+        <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Remove option" onclick="clearElem('smg-filter-miny');" />
+        <input class="form-control" type="text" id="smg-filter-miny"
+               size="12" name="miny" value="@gopts.minY" onchange="mySubmitOnChange(this);">
+      </div>
+
+      <div class="form-group">
         <label class="autosubmit-lbl" for="smg-filter-cols"
                title="How many graphs per row to display on the page.
 Changing this reloads the page.">Columns:</label>

@@ -84,7 +84,7 @@ object SMGRrdCheckUtil {
 
   def rrdTune(smgConfSvc: SMGConfigService, rrdFile: String, tuneWhat: String, vix: Int, newVal: Double): Boolean = {
     val tuneOpt = if (tuneWhat == "min") "-i" else "-a"
-    val tuneVal = if (newVal.isNaN) "U" else SMGRrd.numRrdFormat(newVal)
+    val tuneVal = SMGRrd.numRrdFormat(newVal, nanAsU = true)
     val cmd = SMGCmd(s"${smgConfSvc.config.rrdConf.rrdTool} tune $rrdFile $tuneOpt ${dsName(vix)}:$tuneVal")
     try {
       cmd.run

@@ -113,12 +113,12 @@ case class SMGFilter(px: Option[String],
 
 object SMGFilter {
 
-  val matchLocal = SMGFilter(None,None,None,None,None, None, GraphOptions() )
+  val matchLocal = SMGFilter(None,None,None,None,None, None, GraphOptions.default )
 
-  val matchAll = SMGFilter(None,None,None,None,None, Some(SMGRemote.wildcard.id), GraphOptions() )
+  val matchAll = SMGFilter(None,None,None,None,None, Some(SMGRemote.wildcard.id), GraphOptions.default )
 
   def fromPrefixWithRemote(px:String, remoteId: Option[String]): SMGFilter =
-    SMGFilter(Some(px), None, None, None, None, remoteId, GraphOptions() )
+    SMGFilter(Some(px), None, None, None, None, remoteId, GraphOptions.default )
 
   def fromPrefixLocal(px:String): SMGFilter = fromPrefixWithRemote(px, None)
 
@@ -130,7 +130,8 @@ object SMGFilter {
       xsort = params.get("xsort").map(_.head.toInt),
       disablePop = params.contains("dpp") && params("dpp").head == "on",
       disable95pRule = params.contains("dpp") && params("dpp").head == "on",
-      maxY = params.get("maxy").map(_.head.toDouble)
+      maxY = params.get("maxy").map(_.head.toDouble),
+      minY = params.get("miny").map(_.head.toDouble)
     )
     SMGFilter(
       params.get("px").map(_.head),

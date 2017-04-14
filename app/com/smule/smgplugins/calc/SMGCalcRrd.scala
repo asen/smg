@@ -135,7 +135,7 @@ object SMGCalcRrd {
     val out = new StringBuilder(
       SMGRrd.rrdGraphCommandPx(confSvc.config.rrdConf,
         title.getOrElse("Calculated graph"),
-        outFn, period, None, gopts.step, gopts.maxY)
+        outFn, period, None, gopts.step, gopts.maxY, gopts.minY)
     )
     val colorMaker = new ColorMaker()
     val srcLabelMaker = new SMGRrd.LabelMaker()

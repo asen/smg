@@ -80,7 +80,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "xsort").readNullable[Int] and
       (JsPath \ "dpp").readNullable[String].map(xaggs => xaggs.getOrElse("") == "true") and
       (JsPath \ "d95p").readNullable[String].map(xaggs => xaggs.getOrElse("") == "true") and
-      (JsPath \ "maxy").readNullable[Double]
+      (JsPath \ "maxy").readNullable[Double] and
+      (JsPath \ "miny").readNullable[Double]
     )(GraphOptions.apply _)
 
   implicit val smgFilterReads: Reads[SMGFilter] = (
@@ -90,7 +91,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "rxx").readNullable[String] and
       (JsPath \ "trx").readNullable[String] and
       (JsPath \ "remote").readNullable[String].map { remoteId => Some(remoteId.getOrElse(remote.id)) } and
-      (JsPath \ "gopts").readNullable[GraphOptions].map(go => go.getOrElse(GraphOptions()))
+      (JsPath \ "gopts").readNullable[GraphOptions].map(go => go.getOrElse(GraphOptions.default))
     )(SMGFilter.apply _)
 
 
@@ -300,6 +301,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     if (gopts.step.isDefined) ret("step") = Seq(gopts.step.get.toString)
     if (gopts.pl.isDefined) ret("pl") = Seq(gopts.pl.get)
     if (gopts.maxY.isDefined) ret("maxy") = Seq(gopts.maxY.get.toString)
+    if (gopts.minY.isDefined) ret("miny") = Seq(gopts.minY.get.toString)
     ret.toMap
   }
   /**
@@ -787,6 +789,7 @@ object SMGRemoteClient {
       if (gopts.disablePop) mm += ("dpp" -> Json.toJson("true"))
       if (gopts.disable95pRule) mm += ("d95p" -> Json.toJson("true"))
       if (gopts.maxY.isDefined) mm += ("maxy" -> Json.toJson(gopts.maxY.get))
+      if (gopts.minY.isDefined) mm += ("miny" -> Json.toJson(gopts.minY.get))
       Json.toJson(mm.toMap)
     }
   }
@@ -801,7 +804,7 @@ object SMGRemoteClient {
       if (flt.rxx.isDefined) mm += ("rxx" -> Json.toJson(flt.rxx.get))
       if (flt.trx.isDefined) mm += ("trx" -> Json.toJson(flt.trx.get))
       if (flt.remote.isDefined) mm += ("remote" -> Json.toJson(flt.remote.get))
-      if (flt.gopts != GraphOptions()) mm += ("gopts" -> Json.toJson(flt.gopts))
+      if (flt.gopts != GraphOptions.default) mm += ("gopts" -> Json.toJson(flt.gopts))
       Json.toJson(mm.toMap)
     }
   }
