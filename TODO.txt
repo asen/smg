@@ -8,6 +8,8 @@ v 0.5+
 
 * make "index" "first-class" filter member (i.e. select an index AND filter within)
 
+* generate and display build number somewhere
+
 * support external updates - objects which do not have an external command to execute but get the updates
 from external sources posting the data via some API
 
@@ -34,7 +36,5 @@ from external sources posting the data via some API
 == Known Bugs ==
 
 * GROUPing stacked graphs seems messed up
-
-* autocomplete for command trees should ignore master remotes
 
 * prevent saveStateToDisk when shutdown is already in progress

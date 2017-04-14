@@ -247,7 +247,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     configSvc.config.globals.getOrElse("$rrd_cache_dir", "smgrrd")
   }
 
-  override def notifySlaves() = {
+  override def notifySlaves(): Unit = {
     remoteClients.foreach { kv =>
       kv._2.notifyReloadConf()
     }
@@ -276,7 +276,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
   /**
     * @inheritdoc
     */
-  override def fetchConfigs() = {
+  override def fetchConfigs(): Unit = {
     val configRemotes = configSvc.config.remotes
     initRemoteClients()
     cachedConfigs.keys.toList.foreach { k =>
