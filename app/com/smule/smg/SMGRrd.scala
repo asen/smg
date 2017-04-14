@@ -471,7 +471,7 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
   * @param rrdConf - rrdtool configuration
   * @param aggObj - aggregate object to work with
   */
-class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObject) {
+class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
   import SMGRrd._
 
   /**
@@ -535,7 +535,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObject) {
         }
       }
     }
-    val shortIds = SMGAggObject.stripCommonStuff('.', aggObj.objs.map(o => o.id)).iterator
+    val shortIds = SMGAggObjectView.stripCommonStuff('.', aggObj.objs.map(o => o.id)).iterator
     aggObj.objs.foreach( o => processDefs(o, shortIds.next()))
     ret.map(_.toList)
   }
@@ -621,7 +621,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObject) {
   // return (cdefs, vlabel, rrdlbl, var map)
   private def getAllDefsAndLabelsByVarGroup: Seq[(String,String,String,Map[String,String])] = {
     val retbuf = new ListBuffer[(String,String,String,Map[String,String])]()
-    val shortIds = SMGAggObject.stripCommonStuff('.', aggObj.objs.map(o => o.id)).iterator
+    val shortIds = SMGAggObjectView.stripCommonStuff('.', aggObj.objs.map(o => o.id)).iterator
     val cdefVarLabelMaker = new LabelMaker("cv_")
     var cdefVarDsIx = 0
     aggObj.objs.foreach { o =>

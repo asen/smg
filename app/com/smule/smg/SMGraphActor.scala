@@ -43,7 +43,7 @@ class SMGraphActor extends Actor {
       } (ExecutionContexts.rrdGraphCtx)
     }
 
-    case SMGraphMultiMessage(rrdConf:SMGRrdConfig, obj:SMGAggObject, period:String, gopts: GraphOptions, outFn:String) => {
+    case SMGraphMultiMessage(rrdConf:SMGRrdConfig, obj:SMGAggObjectView, period:String, gopts: GraphOptions, outFn:String) => {
       //log.info("--- SMGraphActor ---")
       val mySender = sender()
       Future {
@@ -72,6 +72,6 @@ class SMGraphActor extends Actor {
 object SMGraphActor {
   def props = Props[SMGraphActor]
   case class SMGraphMessage(rrdConf:SMGRrdConfig, obj:SMGObjectView, period:String, gopts: GraphOptions, outFn:String)
-  case class SMGraphMultiMessage(rrdConf:SMGRrdConfig, obj: SMGAggObject, period:String, gopts: GraphOptions, outFn:String)
+  case class SMGraphMultiMessage(rrdConf:SMGRrdConfig, obj: SMGAggObjectView, period:String, gopts: GraphOptions, outFn:String)
   case class SMGraphReadyMessage(id: String, period: String, cached: Boolean, error: Boolean)
 }

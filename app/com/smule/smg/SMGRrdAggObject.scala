@@ -1,7 +1,11 @@
 package com.smule.smg
 
 /**
-  * Created by asen on 4/7/17.
+  * A RRD (update) object used to keep track of values produced by applying an aggregate op (SUM/AVG etc)
+  * to the values fetched for multiple other update objects.
+  *
+  * Not to be confused with SMGAggObjectView which is a view-only object produced by applying the op on
+  * multiple rrd files during display time.
   */
 case class SMGRrdAggObject(id: String,
                            ous: Seq[SMGObjectUpdate],

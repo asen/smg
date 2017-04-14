@@ -63,7 +63,7 @@ class SMGJsGraphPlugin(val pluginId: String,
       val pmap = Map(restArr:_*)
       val objs = pmap.getOrElse("ids", "").split(",").map(smg.getObjectView(_)).filter(_.isDefined).map(_.get)
       if (objs.nonEmpty)
-        Some(SMGAggObject.build(objs, pmap.getOrElse("op", "GROUP")))
+        Some(SMGAggObjectView.build(objs, pmap.getOrElse("op", "GROUP")))
       else None
     } else {
       log.error("objectFromFetchUrl: bad fetch Url provided: " + furl)

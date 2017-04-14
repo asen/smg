@@ -2,12 +2,10 @@ package com.smule.smg
 
 import scala.concurrent.Future
 
-/**
- * Created by asen on 11/10/15.
- */
 
 /**
-  * Class encapsulating graph options. All params are optional.
+  * Class encapsulating graph display options. All params are optional.
+  *
   * @param step - step/resolution to use in the graphs (default - rrdtool default for the period)
   * @param pl - period length - to limit the end period of graphs
   * @param xsort - whether to apply x-sort (by avg val) to the objects
@@ -30,12 +28,9 @@ case class GraphOptions(step: Option[Int] = None,
 }
 
 /**
-  * The SMGrapher public API
+  * The SMGrapher API
   */
 trait GrapherApi {
-
-  //convenience ref
-  val detailPeriods: List[String] = GrapherApi.detailPeriods
 
   /**
     * Execute a fetch + update run for given interval (to be called regularly by scheduler)
@@ -43,6 +38,12 @@ trait GrapherApi {
     */
   def run(interval:Int):Unit
 
+  /**
+    * Trigger running given commands tree on-demand (outside regular interval runs e.g. for testing)
+    * @param interval - interval under which the commands tree normally runs.
+    * @param cmdId - top-level command id to execute and then all child commands as defined
+    * @return - true if matching interval and command were found and false otherwise.
+    */
   def runCommandsTree(interval: Int, cmdId: String): Boolean
 
   /**
@@ -50,7 +51,6 @@ trait GrapherApi {
     * @return - sequence of tuples containing the remote id and a sequence of idnexes
     */
   def getTopLevelIndexesByRemote(rmt: Option[String]): Seq[(SMGRemote, Seq[SMGIndex])]
-
 
   /**
     * Get Top Level automatically discovered (by id) indexes
@@ -99,14 +99,15 @@ trait GrapherApi {
   def graphObjects(lst: Seq[SMGObjectView], periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]]
 
   /**
-    * Asynchronous call to graph a [[SMGAggObject]] (representing an aggregate view from multiple [[SMGObjectView]]s,
+    * Asynchronous call to graph a [[SMGAggObjectView]] (representing an aggregate view from multiple [[SMGObjectView]]s,
     * each representing single rrd database), for a given sequence of periods.
+    *
     * @param aobj - an aggregate object to graph
     * @param periods - list of periods to graph for
     * @param xRemote - whether to download remote rrds and aggregate cross-remote
     * @return - future sequence of SMG image objects
     */
-  def graphAggObject(aobj:SMGAggObject, periods: Seq[String], gopts: GraphOptions, xRemote: Boolean): Future[Seq[SMGImageView]]
+  def graphAggObject(aobj: SMGAggObjectView, periods: Seq[String], gopts: GraphOptions, xRemote: Boolean): Future[Seq[SMGImageView]]
 
   /**
     * Asynchronous call to graph a [[SMGObjectView]] for the set of
@@ -138,6 +139,9 @@ trait GrapherApi {
     * @return
     */
   def objectIndexes(ov: SMGObjectView): Seq[SMGIndex]
+
+  //convenience ref ... TODO make this a def and read from config?
+  val detailPeriods: List[String] = GrapherApi.detailPeriods
 
   // convenience reference to the remotesApi
   def remotes: SMGRemotesApi

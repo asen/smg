@@ -119,10 +119,13 @@
       max: 1.01
 
 - +localhost.time.counter.agg:
+  title: localhost time counter agg
   op: SUM
   ids:
     - localhost.time.counter
     - localhost.time.counter2
+  vars:
+    - label: sum sec/sec
 
 - localhost.spike.check:
   title: "Test spike"

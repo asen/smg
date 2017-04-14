@@ -2,6 +2,8 @@ v 0.5+
 
 == General Enhancements ==
 
+* support minY graph option
+
 * make "index" "first-class" filter member (i.e. select an index AND filter within)
 
 * support external updates - objects which do not have an external command to execute but get the updates

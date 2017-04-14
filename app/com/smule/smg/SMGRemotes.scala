@@ -71,7 +71,7 @@ trait SMGRemotesApi {
     * @param periods - list of peridos to cover
     * @return - a Future list of aggregate images (one per period)
     */
-  def graphAgg(remoteId: String, aobj: SMGAggObject, periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]]
+  def graphAgg(remoteId: String, aobj: SMGAggObjectView, periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]]
 
   /**
     * fetch csv data  for a non-Agg object from remote instance
@@ -362,7 +362,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
   /**
     * @inheritdoc
     */
-  override def graphAgg(remoteId:String, aobj: SMGAggObject, periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]] = {
+  override def graphAgg(remoteId:String, aobj: SMGAggObjectView, periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]] = {
     if (clientForId(remoteId).nonEmpty)
       clientForId(remoteId).get.graphAgg(aobj, periods, gopts)
     else Future { Seq() }

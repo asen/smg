@@ -103,7 +103,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     if (objList.isEmpty)
       Future {}.map { _ => NotFound("object ids not found") }
     else {
-      val aobj = SMGAggObject.build(objList, op)
+      val aobj = SMGAggObjectView.build(objList, op)
       val params = SMGRrdFetchParams(r, s, e, filterNan = fnan.getOrElse("false") == "true")
       smg.fetchAgg(aobj, params).map { ret =>
         val json = Json.toJson(ret)
@@ -186,7 +186,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     val objsById = configSvc.config.viewObjectsById
     val lst = ids.map(oid => objsById.get(oid)).filter(o => o.nonEmpty).map(o => o.get)
     if (lst.nonEmpty) {
-      val aggObj = SMGAggObject.build(lst, op, title)
+      val aggObj = SMGAggObjectView.build(lst, op, title)
       smg.graphAggObject(aggObj, periods, gopts, xRemote = false)
     } else Future {
       Seq()

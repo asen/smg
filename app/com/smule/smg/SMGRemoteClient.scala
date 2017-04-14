@@ -68,10 +68,10 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "title").read[String].map(title => "(" + remote.id + ") " + title)
   }
 
-  val aggObjectReads = aggObjectBuilder.apply(SMGRemoteAggObject.apply _)
+  val aggObjectReads = aggObjectBuilder.apply(SMGRemoteAggObjectView.apply _)
 
   implicit val smgRemoteObjectViewReads: Reads[SMGObjectView] = {
-    aggObjectBuilder.apply(SMGRemoteAggObject.apply _) or nonAggObjectBuilder.apply(SMGRemoteObject.apply _)
+    aggObjectBuilder.apply(SMGRemoteAggObjectView.apply _) or nonAggObjectBuilder.apply(SMGRemoteObject.apply _)
   }
 
   implicit val smgGraphOptionsReads: Reads[GraphOptions] = (

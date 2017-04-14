@@ -315,7 +315,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
         }
         byGraphVars(curVars) += ov
       }
-      val aggObjs = for (v <- orderedVars.toList) yield SMGAggObject.build(byGraphVars(v).toList, dep.agg.get)
+      val aggObjs = for (v <- orderedVars.toList) yield SMGAggObjectView.build(byGraphVars(v).toList, dep.agg.get)
       // if we are not graphing cross-remote, every ag object defined from a cross-remote filter can
       // result in multiple images (one per remote) and we want the monitoring state per resulting image
       val monObjsSeq = if (!dep.xRemoteAgg) {
@@ -399,7 +399,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       Future { }.map { _ => NotFound("object ids not found") }
     else {
       val byRemote = objList.groupBy(o => SMGRemote.remoteId(o.id))
-      val aobj = SMGAggObject.build(objList, op, title)
+      val aobj = SMGAggObjectView.build(objList, op, title)
       val gfut = smg.graphAggObject(aobj, smg.detailPeriods, gopts, byRemote.keys.size > 1)
       val mfut = if (showMs) monitorApi.objectViewStates(objList) else Future { Map() }
       val ixes = smg.objectIndexes(aobj)
@@ -452,7 +452,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     if (objList.isEmpty)
       Future { }.map { _ => NotFound("object ids not found") }
     else {
-      val aobj = SMGAggObject.build(objList, op)
+      val aobj = SMGAggObjectView.build(objList, op)
       val params = SMGRrdFetchParams(r, s, e, filterNan = false)
       smg.fetchAgg(aobj, params).map { ret =>
         fetchCommon(aobj, d, ret)
@@ -477,7 +477,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val vlst = if (ov.isAgg) {
         val aov = ov.asInstanceOf[SMGAggObjectView]
         if ((aov.op == "GROUP") || (aov.op == "STACK") ) {
-          val shortIds = SMGAggObject.stripCommonStuff('.', aov.objs.map(o => o.id)).iterator
+          val shortIds = SMGAggObjectView.stripCommonStuff('.', aov.objs.map(o => o.id)).iterator
           aov.objs.flatMap{ o =>
             val sid = shortIds.next()
             ovars(o).map { v => // override labels

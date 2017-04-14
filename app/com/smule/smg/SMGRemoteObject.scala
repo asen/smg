@@ -79,7 +79,7 @@ case class SMGRemoteObjectCopy(
 }
 
 
-case class SMGRemoteAggObject(
+case class SMGRemoteAggObjectView(
                             id: String,
                             objs: Seq[SMGObjectView],
                             op: String,

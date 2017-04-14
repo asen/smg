@@ -192,7 +192,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val config = configSvc.config
     implicit val timeout: Timeout = 120000
     if (obj.isAgg) {
-      graphLocalAggObject(obj.asInstanceOf[SMGAggObject], period, gopts)
+      graphLocalAggObject(obj.asInstanceOf[SMGLocalAggObjectView], period, gopts)
     } else {
       val msg = SMGraphActor.SMGraphMessage(config.rrdConf, obj, period, gopts, new File(config.imgDir, baseFn).toString)
       (graphActor ? msg).mapTo[SMGraphActor.SMGraphReadyMessage].map { resp: SMGraphActor.SMGraphReadyMessage =>
@@ -265,7 +265,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
   }
 
-  private def graphLocalAggObject(obj:SMGAggObject, period: String, gopts: GraphOptions): Future[SMGAggImage] = {
+  private def graphLocalAggObject(obj:SMGAggObjectView, period: String, gopts: GraphOptions): Future[SMGAggImage] = {
     val baseFn = getBasePngFn(obj.id, period, gopts)
     val config = configSvc.config
     implicit val timeout: Timeout = 120000
@@ -277,11 +277,11 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
   }
 
-  private def getXRemoteLocalCopies(aobj:SMGAggObjectView): Future[Option[SMGAggObject]] = {
+  private def getXRemoteLocalCopies(aobj:SMGAggObjectView): Future[Option[SMGLocalAggObjectView]] = {
     val futObjs = for (o <- aobj.objs) yield if (SMGRemote.isRemoteObj(o.id)) remotes.downloadRrd(o) else Future { Some(o) }
-    Future.sequence(futObjs).map[Option[SMGAggObject]] { objOpts =>
+    Future.sequence(futObjs).map[Option[SMGLocalAggObjectView]] { objOpts =>
       if (!objOpts.exists(_.isEmpty)) {
-        Some(SMGAggObject(aobj.id, objOpts.map(_.get),
+        Some(SMGLocalAggObjectView(aobj.id, objOpts.map(_.get),
           aobj.op,
           aobj.vars,
           aobj.cdefVars,
@@ -293,7 +293,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
   }
 
-  private def graphAggObjectXRemote(aobj:SMGAggObject, periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]] = {
+  private def graphAggObjectXRemote(aobj:SMGAggObjectView, periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]] = {
     getXRemoteLocalCopies(aobj).flatMap{ myaobj =>
       Future.sequence(for (p <- periods) yield {
         if (myaobj.isEmpty)
@@ -307,7 +307,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   /**
     * @inheritdoc
     */
-  override def graphAggObject(aobj:SMGAggObject, periods: Seq[String], gopts: GraphOptions, xRemote: Boolean): Future[Seq[SMGImageView]] = {
+  override def graphAggObject(aobj:SMGAggObjectView, periods: Seq[String], gopts: GraphOptions, xRemote: Boolean): Future[Seq[SMGImageView]] = {
     if (xRemote) {
       graphAggObjectXRemote(aobj, periods, gopts)
     } else {
@@ -328,7 +328,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     * @return
     */
   override def fetch(obj: SMGObjectView, params: SMGRrdFetchParams): Future[Seq[SMGRrdRow]] = {
-    if (obj.isAgg) return fetchAgg(obj.asInstanceOf[SMGAggObject], params)
+    if (obj.isAgg) return fetchAgg(obj.asInstanceOf[SMGLocalAggObjectView], params)
     if (SMGRemote.isRemoteObj(obj.id)) {
       remotes.fetchRows(obj.id, params)
     } else {
