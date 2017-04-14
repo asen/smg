@@ -600,6 +600,56 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     def validateOid(oid: String): Boolean = oid.matches("^[\\w\\._-]+$") && 
       (!objectIds.contains(oid)) && (!preFetches.contains(oid))
 
+    def processObjectVarsAlertAndNotifyConfs(ymap: java.util.Map[String, Object], oid: String): List[Map[String,String]] = {
+      val ymapVars = ymap("vars").asInstanceOf[java.util.ArrayList[java.util.Map[String, Object]]].toList.map(
+        (m: java.util.Map[String,Object]) => m.map { t => (t._1, t._2.toString) }.toMap
+      )
+      // parse alert confs
+      ymapVars.zipWithIndex.foreach { t =>
+        val ix = t._2
+        val m = t._1
+        val ac = SMGMonVarAlertConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m)
+        if (ac.isDefined) {
+          addAlertConf(oid, ix, ac.get)
+        }
+      }
+      // parse notify confs
+      ymapVars.zipWithIndex.foreach { t =>
+        val ix = t._2
+        val m = t._1
+        val nc = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m)
+        if (nc.isDefined) {
+          addNotifyConf(oid, ix, nc.get)
+        }
+      }
+      // exclude alert- and notify- defs from the vars maps so it is not passed around remotes and does not mess up aggregation
+      val ymapFilteredVars = ymapVars.map { m =>
+        m.filter(t => !(SMGMonVarAlertConf.isAlertKey(t._1) || SMGMonNotifyConf.isNotifyKey(t._1)) )
+      }
+      ymapFilteredVars
+    }
+
+    def getRraDef(confFile: String, oid: String, ymap: java.util.Map[String, Object]): Option[SMGRraDef] = {
+      if (ymap.contains("rra")) {
+        val rid = ymap.get("rra").toString
+        if (rraDefs.contains(rid)) {
+          rraDefs.get(rid)
+        } else {
+          processConfigError(confFile,
+            s"processObject: ignoring non-existing rra value rra=$rid oid=$oid")
+          None
+        }
+      } else None
+    }
+
+    def getRrdType(ymap: java.util.Map[String, Object], default: Option[String]): String = {
+      val realDefault = default.getOrElse("GAUGE")
+      // XXX support for both rrdType (deprecated) and rrd_type syntax
+      if (ymap.contains("rrd_type"))
+        ymap("rrd_type").toString
+      else ymap.getOrElse("rrdType", realDefault).toString
+    }
+
     def processObject( t: (String,Object), confFile: String ): Unit = {
       val oid = t._1
       if (!validateOid(oid)){
@@ -629,51 +679,15 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
               allViewObjectsConf += obj
             }
           } else { //no ref - plain rrd object
-            val rraDef = if (ymap.contains("rra")) {
-                val rid = ymap.get("rra").toString
-                if (rraDefs.contains(rid)){
-                  rraDefs.get(rid)
-                } else {
-                  processConfigError(confFile,
-                    s"processObject: ignoring non-existing rra value rra=$rid oid=$oid")
-                  None
-                }
-              } else None
-
-            val ymapVars = ymap("vars").asInstanceOf[java.util.ArrayList[java.util.Map[String, Object]]].toList.map(
-              (m: java.util.Map[String,Object]) => m.map { t => (t._1, t._2.toString) }.toMap
-            )
-            // parse alert confs
-            ymapVars.zipWithIndex.foreach { t =>
-              val ix = t._2
-              val m = t._1
-              val ac = SMGMonVarAlertConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m)
-              if (ac.isDefined) {
-                addAlertConf(oid, ix, ac.get)
-              }
-            }
-            // parse notify confs
-            ymapVars.zipWithIndex.foreach { t =>
-              val ix = t._2
-              val m = t._1
-              val nc = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m)
-              if (nc.isDefined) {
-                addNotifyConf(oid, ix, nc.get)
-              }
-            }
-            // exclude alert- and notify- defs from the vars maps so it is not passed around remotes and does not mess up aggregation
-            val ymapFilteredVars = ymapVars.map { m =>
-              m.filter(t => !(SMGMonVarAlertConf.isAlertKey(t._1) || SMGMonNotifyConf.isNotifyKey(t._1)) )
-            }
-            // XXX support for both rrdType (deprecated) and rrd_type syntax
-            val myRrdType = if (ymap.contains("rrd_type"))
-                ymap("rrd_type").toString
-              else ymap.getOrElse("rrdType", "GAUGE").toString
-            val myDefaultInterval = globalConf.getOrElse("$default-interval", defaultInterval.toString).toInt
-            val myDefaultTimeout = globalConf.getOrElse("$default-timeout", defaultTimeout.toString).toInt
-            val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, ymap.toMap.map(kv => (kv._1, kv._2.toString)))
-            checkFetchCommandNotifyConf(oid, notifyConf, confFile)
-            val obj = SMGRrdObject(
+            if (ymap.contains("vars") && ymap.contains("command")) {
+              val rraDef = getRraDef(confFile, oid, ymap)
+              val ymapFilteredVars = processObjectVarsAlertAndNotifyConfs(ymap, oid)
+              val myRrdType = getRrdType(ymap, None)
+              val myDefaultInterval = globalConf.getOrElse("$default-interval", defaultInterval.toString).toInt
+              val myDefaultTimeout = globalConf.getOrElse("$default-timeout", defaultTimeout.toString).toInt
+              val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, ymap.toMap.map(kv => (kv._1, kv._2.toString)))
+              checkFetchCommandNotifyConf(oid, notifyConf, confFile)
+              val obj = SMGRrdObject(
                 id = oid,
                 command = SMGCmd(ymap("command").toString, ymap.getOrElse("timeout", myDefaultTimeout).asInstanceOf[Int]),
                 vars = ymapFilteredVars,
@@ -687,10 +701,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
                 rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap.get("rrd_init_source").toString) else None,
                 notifyConf = notifyConf
               )
-            objectIds(oid) = obj
-            objectUpdateIds(oid) = obj
-            allViewObjectsConf += obj
-            intervals += obj.interval
+              objectIds(oid) = obj
+              objectUpdateIds(oid) = obj
+              allViewObjectsConf += obj
+              intervals += obj.interval
+            } else {
+              processConfigError(confFile, s"RRD object definition does not contain command and vars: $oid: ${ymap.toString}")
+            }
           }
         } catch {
           case x : ClassCastException => processConfigError(confFile,
@@ -700,7 +717,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     }
 
     def processAggObject( t: (String,Object), confFile: String ): Unit = {
-      val oid =  t._1.substring(1)
+      val oid =  t._1.substring(1) // strip the +
       if (!validateOid(oid)){
         processConfigError(confFile, "processAggObject: skipping agg object with invalid or duplicate id: " + oid)
       } else {
@@ -723,33 +740,52 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
               val ret = objectIds.get(ovid).flatMap(_.refObj)
               if (ret.isEmpty) {
                 processConfigError(confFile, "processAggObject: agg object references " +
-                  s"undefined object: $oid, ref id=$ovid (will be ignored)")
+                  s"undefined object: $oid, ref id=$ovid (agg object will be ignored)")
               }
               ret
             }
             if (objOpts.nonEmpty && objOpts.forall(_.isDefined)){
               val objs = objOpts.map(_.get)
-              // XXX for now assuming first object's var definitions but filtering out "max" value
-              // which is likely wrong for the SUM object. TODO ability to define its own vars
-              val myVars = objs.head.vars.map { v => v.filter { case (k,v) => k != "max" } }
-              val rrdAggObj = SMGRrdAggObject(
-                id = oid,
-                ous = objs,
-                aggOp = op,
-                vars = myVars,
-                title = ymap.getOrElse("title", oid).toString,
-                rrdType = objs.head.rrdType,
-                interval = objs.head.interval,
-                stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
-                rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
-                rraDef = objs.head.rraDef,
-                rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap.get("rrd_init_source").toString) else None,
-                notifyConf = None // TODO
-              )
-              objectIds(oid) = rrdAggObj
-              objectUpdateIds(oid) = rrdAggObj
-              allViewObjectsConf += rrdAggObj
-            } // else - error already logged
+              val myRraDef = getRraDef(confFile, oid, ymap)
+              val myVars = if (ymap.containsKey("vars")) {
+                processObjectVarsAlertAndNotifyConfs(ymap, oid)
+              } else {
+                // XXX no vars defined, use first object's ones but filter out the "max" value
+                // which is likely wrong for the SUM object.
+                objs.head.vars.map { v => v.filter { case (k, vv) => k != "max" } }
+              }
+              val myRrdType = getRrdType(ymap, Some(objs.head.rrdType))
+              // sanity check the objects, all must have at least myVars.size vars
+              // TODO: more thorough validation?
+              if (objs.exists { ou =>
+                val ret = ou.vars.size < myVars.size
+                if (!ret) {
+                  processConfigError(confFile, "processAggObject: agg object references " +
+                    s"invalid object (less vars than ${myVars.size}): $oid, ref id=${ou.id} (agg object will be ignored)")
+                }
+                ret
+              }) {
+                val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, ymap.toMap.map(kv => (kv._1, kv._2.toString)))
+                checkFetchCommandNotifyConf(oid, notifyConf, confFile)
+                val rrdAggObj = SMGRrdAggObject(
+                  id = oid,
+                  ous = objs,
+                  aggOp = op,
+                  vars = myVars,
+                  title = ymap.getOrElse("title", oid).toString,
+                  rrdType = myRrdType,
+                  interval = objs.head.interval,
+                  stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
+                  rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
+                  rraDef = myRraDef,
+                  rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap.get("rrd_init_source").toString) else None,
+                  notifyConf = notifyConf
+                )
+                objectIds(oid) = rrdAggObj
+                objectUpdateIds(oid) = rrdAggObj
+                allViewObjectsConf += rrdAggObj
+              } // else - error already logged (checking for incompatible vars)
+            } // else - errors already logged (checking for invalid object refs)
           } else {
             processConfigError(confFile,
               s"processAggObject: agg object definition without ids: $oid, ignoring")
