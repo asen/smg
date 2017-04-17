@@ -26,20 +26,16 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                                 ts: Option[Int], updateCounters: Boolean) => {
       log.debug(s"SMGUpdateActor received SMGUpdateObjectMessage for ${obj.id}")
       Future {
-        try {
-          log.debug(s"SMGUpdateActor Future: updating ${obj.id}")
-          val rrd = new SMGRrdUpdate(obj, configSvc)
+        def fetchFn() = {
           val t0 = System.currentTimeMillis()
           try {
-            rrd.createOrUpdate(ts)
+            obj.fetchValues
           } finally {
             commandExecutionTimes(obj.id) = System.currentTimeMillis() - t0
           }
-        } catch {
-          case ex: Throwable => {
-            obj.invalidateCachedValues()
-            log.ex(ex, s"SMGUpdateActor got an error while updating ${obj.id}")
-          }
+        }
+        try {
+          SMGUpdateActor.processObjectUpdate(obj, configSvc, ts, fetchFn, log)
         } finally {
           if (updateCounters) {
             SMGStagedRunCounter.incIntervalCount(obj.interval)
@@ -137,4 +133,83 @@ object SMGUpdateActor {
                                     ts: Option[Int],
                                     updateCounters: Boolean
                                   )
+
+  /**
+    * Use this to do rrd updates and send appropriate object monitoring messages.
+    *
+    * The fetchFn must return a List[Double] of correct length or throw SMGFetchException
+    * (or the more specific SMGCmdException) on failure to fetch the values.
+    *
+    * @param obj
+    * @param smgConfSvc
+    * @param ts
+    * @param fetchFn
+    * @param log
+    */
+  def processObjectUpdate(obj: SMGObjectUpdate,
+                          smgConfSvc: SMGConfigService,
+                          ts: Option[Int],
+                          fetchFn: () => List[Double],
+                          log: SMGLoggerApi
+                         ): Unit = {
+    try {
+      val rrd = new SMGRrdUpdate(obj, smgConfSvc)
+      rrd.checkOrCreateRrd()
+      var values = List[Double]()
+      try {
+        values = fetchFn()
+      } catch {
+        case cex: SMGCmdException => {
+          obj.invalidateCachedValues()
+          log.error(s"Failed fetch command [${obj.id}]: ${cex.getMessage}")
+          smgConfSvc.sendObjMsg(
+            SMGDFObjMsg(ts.getOrElse(SMGRrd.tssNow), obj, List(), cex.exitCode,
+              List(cex.cmdStr + s" (${cex.timeoutSec})", cex.stdout, cex.stderr))
+          )
+        }
+        case fex: SMGFetchException => {
+          obj.invalidateCachedValues()
+          log.error(s"Fetch exception from  [${obj.id}]: ${fex.getMessage}")
+          smgConfSvc.sendObjMsg(SMGDFObjMsg(SMGRrd.tssNow, obj, List(), -1, List("fetch_error", fex.getMessage)))
+        }
+        case ex: Throwable => {
+          obj.invalidateCachedValues()
+          log.ex(ex, s"Unexpected exception from fetch [${obj.id}]: ${ex.getMessage}")
+          smgConfSvc.sendObjMsg(SMGDFObjMsg(SMGRrd.tssNow, obj, List(), -1, List("unexpected_error.", ex.getMessage)))
+        }
+      }
+      if (values.nonEmpty) {
+        try {
+          rrd.updateValues(values, ts)
+          smgConfSvc.sendObjMsg(
+            SMGDFObjMsg(ts.getOrElse(SMGRrd.tssNow), obj, values, 0, List())
+          )
+        } catch {
+          case cex: SMGCmdException => {
+            obj.invalidateCachedValues()
+            log.error("Exception in update: [" + obj.id + "]: " + cex.toString)
+            smgConfSvc.sendObjMsg(
+              SMGDFObjMsg(SMGRrd.tssNow, obj, List(), -1, List("update_error", cex.getMessage))
+            )
+          }
+          case t: Throwable => {
+            obj.invalidateCachedValues()
+            log.ex(t, "Unexpected exception in update: [" + obj.id + "]: " + t.toString)
+            smgConfSvc.sendObjMsg(
+              SMGDFObjMsg(SMGRrd.tssNow, obj, List(), -1, List("unexpected_update_error", t.getMessage))
+            )
+          }
+        }
+      } // if (values.nonEmpty)
+    } catch {
+      case ex: Throwable => {
+        obj.invalidateCachedValues()
+        log.ex(ex, s"SMGUpdateActor got an unexpected while checking ${obj.id} rrd file")
+        smgConfSvc.sendObjMsg(
+          SMGDFObjMsg(ts.getOrElse(SMGRrd.tssNow), obj, List(), -1, List("unexpected_rrd_error", ex.getMessage))
+        )
+      }
+    }
+
+  } // processObjectUpdate
 }

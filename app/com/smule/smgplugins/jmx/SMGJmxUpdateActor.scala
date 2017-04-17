@@ -44,23 +44,21 @@ class SMGJmxUpdateActor(
             confParser.hostPortPfId(hostPort), plugin.interval, objs, 0,
             List(), Some(plugin.pluginId)))
           objs.foreach { obj =>
-            try {
-              val v = jmxClient.fetchJmxValues(hostPort, obj.jmxName, obj.attrs)
+
+            def fetchFn(): List[Double] = {
               try {
-                obj.setCurrentValues(v)
-                val rrd = new SMGRrdUpdate(obj, smgConfSvc)
-                rrd.createOrUpdate(None)
+                val values = jmxClient.fetchJmxValues(hostPort, obj.jmxName, obj.attrs)
+                obj.setCurrentValues(values)
+                values
               } catch {
                 case ex: Throwable => {
-                  log.ex(ex, s"Unexpected exception while updating rrd values: $hostPort, $obj")
-                  smgConfSvc.sendObjMsg(SMGDFObjMsg(SMGRrd.tssNow, obj, List(), -1, List("RRD update error.", ex.getMessage)))
+                  throw new SMGFetchException(s"JMX fetch error: $hostPort, ${obj.jmxName}:${obj.attrs}, msg=${ex.getMessage}")
                 }
               }
-            } catch {
-              case ex: Throwable => {
-                log.ex(ex, s"Exception while fetching JMX values: $hostPort, ${obj.jmxName}:${obj.attrs}")
-                smgConfSvc.sendObjMsg(SMGDFObjMsg(SMGRrd.tssNow, obj, List(), -1, List("JMX fetch error.", ex.getMessage)))
-              }
+            }
+
+            try {
+              SMGUpdateActor.processObjectUpdate(obj, smgConfSvc, None, fetchFn, log)
             } finally {
               incrementCounter()
             }

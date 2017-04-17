@@ -10,11 +10,8 @@ case class SMGCmd(str: String, timeoutSec: Int = 30) {
     * Execute this command and collect standard output
     * @return - a list of strings each representing a command output line
     */
-  def run = SMGCmd.run(this)
+  def run: List[String] = SMGCmd.run(this)
 }
-
-case class SMGCmdException(cmdStr: String, timeoutSec: Int, exitCode: Int, stdout: String, stderr: String) extends
-  RuntimeException(s"Command failed (exit code $exitCode): $cmdStr")
 
 object SMGCmd {
   val log = SMGLogger
@@ -57,7 +54,7 @@ object SMGCmd {
       log.error("Bad exit value from command (" + exit + "): " + cmd)
       out.foreach( (x) => log.error( "STDOUT: " + x) )
       err.foreach( (x) => log.error( "STDERR: " + x) )
-      throw new SMGCmdException(cmd, timeoutSecs, exit, out.mkString("\n"), err.mkString("\n"))
+      throw SMGCmdException(cmd, timeoutSecs, exit, out.mkString("\n"), err.mkString("\n"))
     }
     out
   }

@@ -1,25 +1,34 @@
 package com.smule.smg
 
-/**
-  * Created by asen on 11/12/15.
-  */
+
+trait SMGLoggerApi {
+  def debug(a:Any): Unit
+
+  def info(a:Any): Unit
+
+  def warn(a:Any): Unit
+
+  def error(a:Any): Unit
+
+  def ex(ex:Throwable, msg: String = ""): Unit
+}
 
 /**
   * A simple logger class wrapping Play's logger
   */
-object SMGLogger {
+object SMGLogger extends SMGLoggerApi {
 
   private val logger = play.api.Logger("smg")
 
-  def debug(a:Any) = logger.debug(a.toString)
+  override def debug(a:Any): Unit = logger.debug(a.toString)
 
-  def info(a:Any) = logger.info(a.toString)
+  override def info(a:Any): Unit = logger.info(a.toString)
 
-  def warn(a:Any) = logger.warn(a.toString)
+  override def warn(a:Any): Unit = logger.warn(a.toString)
 
-  def error(a:Any) = logger.error(a.toString)
+  override def error(a:Any): Unit = logger.error(a.toString)
 
-  def ex(ex:Throwable, msg: String = "") = {
+  override def ex(ex:Throwable, msg: String = ""): Unit = {
     if (msg != "")
       error(msg)
     error(ex)

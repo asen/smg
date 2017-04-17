@@ -798,64 +798,20 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
 
   private val rrdFname = obju.rrdFile.get
 
-  /**
-    * Create a new rrd file matching the configured object or update an existing one
-    */
-  def createOrUpdate(ts: Option[Int] = None): List[Double] = {
-    if (!fileExists) create(ts)
-    update(ts)
+  def checkOrCreateRrd(ts: Option[Int] = None): Unit = {
+    if (!fileExists){
+      val cmd = rrdCreateCommand(ts)
+      SMGCmd.runCommand(cmd, defaultCommandTimeout)
+      log.info("Created new rrd using: " + cmd)
+    }
+  }
+
+  def updateValues(values: List[Double], ts: Option[Int]): Unit = {
+      val tss = if (ts.isEmpty) "N" else ts.get.toString
+      SMGCmd.runCommand(rrdUpdateCommand(tss, values), defaultCommandTimeout)
   }
 
   private def fileExists: Boolean = new File(rrdFname).exists()
-
-  private def create(ts:Option[Int]): Unit = {
-    val cmd = rrdCreateCommand(ts)
-    SMGCmd.runCommand(cmd, defaultCommandTimeout)
-    log.info("Created new rrd using: " + cmd)
-  }
-
-  /**
-    * Update an existing rrd with current values
-    *
-    * @param ts - optional timestamp of the update
-    */
-  def update(ts:Option[Int]): List[Double] = {
-    // fetchValues can block for up to conf.timeoutSec + defaultCommandTimeout seconds,
-    // which is better than launching tons of fetch processes?
-    log.debug("Fetching values for [" + obju.id + "]")
-    try {
-      var values : List[Double] = List()
-      try {
-        values = obju.fetchValues
-      } catch {
-        case cex: SMGCmdException => {
-          obju.invalidateCachedValues()
-          log.error("Failed fetch command [" + obju.id + "]: " + cex.getMessage)
-          configSvc.sendObjMsg(
-            SMGDFObjMsg(ts.getOrElse(tssNow), obju, List(), cex.exitCode,
-              List(cex.cmdStr + s" (${cex.timeoutSec})", cex.stdout, cex.stderr))
-          )
-          return List()
-        }
-      }
-      val tss = if (ts.isEmpty) "N" else ts.get.toString
-      SMGCmd.runCommand(rrdUpdateCommand(tss, values), defaultCommandTimeout)
-      log.debug("Updated values for [" + obju.id + "]:" + values.toString)
-      configSvc.sendObjMsg(
-          SMGDFObjMsg(ts.getOrElse(tssNow), obju, values, 0, List())
-        )
-      values
-    } catch {
-      case e:Throwable => {
-        obju.invalidateCachedValues()
-        log.ex(e, "Exception in update: [" + obju.id + "]: " + e.toString)
-        configSvc.sendObjMsg(
-          SMGDFObjMsg(ts.getOrElse(tssNow), obju, List(), -1, List("update_error"))
-        )
-        List()
-      }
-    }
-  }
 
   private def rrdCreateCommand(ts:Option[Int]): String = {
     val c = new mutable.StringBuilder(rrdConf.rrdTool).append(" create ").append(rrdFname)
