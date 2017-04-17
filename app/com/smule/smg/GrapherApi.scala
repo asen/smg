@@ -53,7 +53,7 @@ trait GrapherApi {
     * @param filter - filter to use
     * @return - sequence of matching objects
     */
-  def getFilteredObjects(filter: SMGFilter): Seq[SMGObjectView]
+  def getFilteredObjects(filter: SMGFilter, ix: Option[SMGIndex]): Seq[SMGObjectView]
 
 
   /**

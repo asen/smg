@@ -550,7 +550,7 @@ trait SMGMonitorApi {
     * @param limit - limit the number of filtered objects to include
     * @return
     */
-  def localHeatmap(flt: SMGFilter, maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): SMGMonHeatmap
+  def localHeatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): SMGMonHeatmap
 
   /**
     * Generate a sequence of heatmaps (by remote). A heatmap is (possibly condensed) list of SMGMonState squares.
@@ -560,7 +560,7 @@ trait SMGMonitorApi {
     * @param limit - limit the number of filtered objects to include
     * @return  - sequence of (remote,heatmap) tuples
     */
-  def heatmap(flt: SMGFilter, maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[Seq[(SMGRemote, SMGMonHeatmap)]]
+  def heatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[Seq[(SMGRemote, SMGMonHeatmap)]]
 
   def saveStateToDisk(): Unit
 

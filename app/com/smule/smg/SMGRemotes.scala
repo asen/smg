@@ -138,7 +138,7 @@ trait SMGRemotesApi {
     * @param limit - limit the number of filtered objects to include
     * @return
     */
-  def heatmap(remoteId: String, flt: SMGFilter, maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[SMGMonHeatmap]
+  def heatmap(remoteId: String, flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[SMGMonHeatmap]
 
 
   /**
@@ -447,11 +447,12 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
 
   def heatmap(remoteId: String,
               flt: SMGFilter,
+              ix: Option[SMGIndex],
               maxSize: Option[Int],
               offset: Option[Int],
               limit: Option[Int]): Future[SMGMonHeatmap] = {
 
-    clientForId(remoteId).get.heatmap(flt, maxSize, offset, limit)
+    clientForId(remoteId).get.heatmap(flt, ix, maxSize, offset, limit)
   }
 
   def objectViewsStates(remoteId: String, ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]] = {

@@ -402,16 +402,16 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     (lst.toList, chunkSize)
   }
 
-  override def localHeatmap(flt: SMGFilter, maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): SMGMonHeatmap = {
+  override def localHeatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): SMGMonHeatmap = {
     // TODO include global/run issues?
-    val objList = smg.getFilteredObjects(flt).filter(o => SMGRemote.isLocalObj(o.id)) // XXX or clone the filter with empty remote?
+    val objList = smg.getFilteredObjects(flt, ix).filter(o => SMGRemote.isLocalObj(o.id)) // XXX or clone the filter with empty remote?
     val objsSlice = objList.slice(offset.getOrElse(0), offset.getOrElse(0) + limit.getOrElse(objList.size))
     val allStates = objsSlice.flatMap( ov => localNonAgObjectStates(ov))
     val ct = if (maxSize.isDefined && allStates.nonEmpty) condenseHeatmapStates(allStates, maxSize.get) else (allStates.toList, 1)
     SMGMonHeatmap(ct._1, ct._2)
   }
 
-  override def heatmap(flt: SMGFilter, maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[Seq[(SMGRemote, SMGMonHeatmap)]] = {
+  override def heatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[Seq[(SMGRemote, SMGMonHeatmap)]] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
     val myRemotes = configSvc.config.allRemotes.filter { rmt =>
       val fltRemoteId = flt.remote.getOrElse(SMGRemote.local.id)
@@ -420,11 +420,10 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val futs = myRemotes.map { rmt =>
       if (rmt == SMGRemote.local)
         Future {
-          (rmt, localHeatmap(flt, maxSize, offset, limit))
+          (rmt, localHeatmap(flt, ix, maxSize, offset, limit))
         }
       else
-        remotes.heatmap(rmt.id, flt, maxSize, offset, limit).map(mh => (rmt, mh))
-
+        remotes.heatmap(rmt.id, flt, ix, maxSize, offset, limit).map(mh => (rmt, mh))
     }
     Future.sequence(futs)
   }

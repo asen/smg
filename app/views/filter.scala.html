@@ -1,8 +1,9 @@
+@import com.smule.smg.SMGIndex
 @import com.smule.smg.SMGFilter
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.GraphOptions
 
-@(flt: SMGFilter, period: String, cols: Int, rows: Int,
+@(ix: Option[SMGIndex], flt: SMGFilter, period: String, cols: Int, rows: Int,
         availRemotes: Seq[SMGRemote], aggOp: Option[String], showXagg: Boolean, xagg: Boolean,
         gopts: GraphOptions, maxUrlSize: Int, defaultPeriod: String, defaultCols: Int, defaultRows: Int)
 
@@ -10,8 +11,22 @@
 <form id="smgFilterForm" method="GET" action="/dash" class="filter-form">
 
   <div class="panel panel-primary">
+    <input type="hidden" id="smg-filter-ix" name="ix" value='@{ix.map(_.id).getOrElse("")}'>
+    @if(ix.isDefined){
     <div class="panel-heading">
-      <h3 class="panel-title">Filter: @flt.humanText</h3>
+      <h3 class="panel-title">Index: @ix.get.title (@ix.get.id)</h3>
+    </div>
+    <div class="panel-body">
+      <h5 style="word-wrap: break-word;">Index Filter: @ix.get.flt.humanText</h5>
+      <div class="form-group">
+        <input title="Clear index filter and reload the page" id="smg-filter-clear-idx"
+               onclick='document.getElementById("smg-filter-ix").value= ""; mySubmitOnChange(this);'
+               class="form-control btn-submit-manual" type="button" value="Remove index filter">
+      </div>
+    </div>
+    }
+    <div class="panel-heading">
+      <h3 class="panel-title">User Filter: @flt.humanText</h3>
     </div>
     <div class="panel-body">
 

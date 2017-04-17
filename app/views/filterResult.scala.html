@@ -46,7 +46,7 @@
   }
 
 @if(dep.rows > 0) {
-  @filter(flt, dep.period, dep.cols, dep.rows, availRemotes, aggOp,
+  @filter(idx, flt, dep.period, dep.cols, dep.rows, availRemotes, aggOp,
           byRemote.nonEmpty && byRemote.tail.nonEmpty, dep.xRemoteAgg, gopts, conf.maxUrlSize,
           GrapherApi.defaultPeriod, conf.dashDefaultCols, conf.dashDefaultRows)
 

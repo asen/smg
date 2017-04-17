@@ -254,7 +254,10 @@ class Api  @Inject() (actorSystem: ActorSystem,
 
   def monitorHeatmapCommon(params: Map[String, Seq[String]]): Result = {
     val flt = SMGFilter.fromParams(params)
-    val hm = monitorApi.localHeatmap(flt,
+    val ix = params.get("ix").map(_.head).flatMap { ixId =>
+      smg.getIndexById(ixId)
+    }
+    val hm = monitorApi.localHeatmap(flt, ix,
       params.get("maxSize").map(_.head.toInt),
       params.get("offset").map(_.head.toInt),
       params.get("limit").map(_.head.toInt))

@@ -164,9 +164,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   ) {
 
     def processParams(idx: Option[SMGIndex]): (SMGFilter, DashboardExtraParams) = {
-      // use index filter/gopts if index available
-      // form is overriding index spec
-      
+      // use index gopts if available, form is overriding index spec
       val myXSort = if (idx.isEmpty || (xsort > 0)) xsort else idx.get.flt.gopts.xsort.getOrElse(0)
       val istep = if (step.getOrElse("") != "") SMGRrd.parseStep(step.get) else None
       val myStep = if (idx.isEmpty || istep.isDefined) istep else idx.get.flt.gopts.step
@@ -178,16 +176,16 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
       val myGopts = GraphOptions(step = myStep, pl = myPl, xsort = Some(myXSort),
         disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = myMaxY, minY = myMinY)
-
-      val myPx = if (idx.isEmpty || px.isDefined) px else idx.get.flt.px
-      val mySx = if (idx.isEmpty || sx.isDefined) sx else idx.get.flt.sx
-      val myRx = if (idx.isEmpty || rx.isDefined) rx else idx.get.flt.rx
-      val myRxx = if (idx.isEmpty || rxx.isDefined) rxx else idx.get.flt.rxx
-      val myTrx = if (idx.isEmpty || trx.isDefined) trx else idx.get.flt.trx
-
+      
       val myRemote = if (idx.isEmpty || remote.isDefined) remote else idx.get.flt.remote
 
-      val flt = SMGFilter(px = myPx, sx = mySx, rx = myRx, rxx = myRxx, trx = myTrx, remote = myRemote, gopts = myGopts)
+      val flt = SMGFilter(px = px, //myPx,
+        sx = sx, //mySx,
+        rx = rx, //myRx,
+        rxx = rxx, //myRxx,
+        trx = trx, //myTrx,
+        remote = myRemote,
+        gopts = myGopts)
 
       val myPeriod = if (idx.isEmpty || period.isDefined)
         period.getOrElse(GrapherApi.defaultPeriod)
@@ -289,7 +287,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       Seq()
     } else {
       val offset = dep.pg * limit
-      val filteredObjects = smg.getFilteredObjects(flt)
+      val filteredObjects = smg.getFilteredObjects(flt, idx)
       tlObjects = filteredObjects.size
       maxPages = (tlObjects / limit) + (if ((tlObjects % limit) == 0) 0 else 1)
       val sliced = filteredObjects.slice(offset, offset + limit)
@@ -647,8 +645,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
     else if (ixObj.get.disableHeatmap || ixObj.get.flt.matchesAnyObjectIdAndText) {
       Future {  Ok(views.html.monitorSvgDisabled()).as("image/svg+xml") }
     } else {
-      val tpl = (ixid, smg.getFilteredObjects(ixObj.get.flt))
-      monitorApi.heatmap(ixObj.get.flt, Some(DEFAULT_INDEX_HEATMAP_MAX_SIZE), None, None).map { hms =>
+      // XXX use index filter here directly vs supplying filter and index to getFilteredObjects
+      val tpl = (ixid, smg.getFilteredObjects(ixObj.get.flt, None))
+      monitorApi.heatmap(ixObj.get.flt, None, Some(DEFAULT_INDEX_HEATMAP_MAX_SIZE), None, None).map { hms =>
         val hmLst = hms.map(_._2)
         val combinedHm = SMGMonHeatmap.join(hmLst)
         Ok(views.html.monitorSvgHeatmap(combinedHm)).as("image/svg+xml")
@@ -702,7 +701,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorHeatmap: Action[AnyContent] = Action.async { implicit request =>
     val params = request.queryString
     val flt = SMGFilter.matchAll //SMGFilter.fromParams(params)
-    monitorApi.heatmap(flt,
+    monitorApi.heatmap(flt, None,
       Some(params.get("maxSize").map(_.head.toInt).getOrElse(DEFAULT_HEATMAP_MAX_SIZE)),
       params.get("offset").map(_.head.toInt),
       params.get("limit").map(_.head.toInt)).map { data =>
@@ -868,7 +867,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
     val idx = smg.getIndexById(ix)
     if (idx.isDefined) {
-      val objs = smg.getFilteredObjects(idx.get.flt)
+      val objs = smg.getFilteredObjects(idx.get.flt, None)
       monitorApi.silenceList(objs.map(_.id), untilTss).map { ret =>
         Redirect(curl).flashing( if (ret) {
           "success" -> s"Silenced all objects matching index: ${idx.get.title} (${idx.get.id})"

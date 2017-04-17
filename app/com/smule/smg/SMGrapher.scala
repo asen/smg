@@ -194,7 +194,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   /**
     * @inheritdoc
     */
-  override def getFilteredObjects(filter: SMGFilter): Seq[SMGObjectView]  = {
+  override def getFilteredObjects(filter: SMGFilter, ix: Option[SMGIndex]): Seq[SMGObjectView]  = {
     val toFilter = if (filter.remote.getOrElse("") == SMGRemote.wildcard.id) {
       configSvc.config.viewObjects ++ remotes.configs.flatMap(cfg => cfg.viewObjects)
     } else {
@@ -202,7 +202,10 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       if (remoteConf.nonEmpty) remoteConf.get.viewObjects else configSvc.config.viewObjects
     }
     toFilter.filter { obj =>
-      filter.matches(obj)
+      if (ix.isDefined) {
+        ix.get.flt.matches(obj) && filter.matches(obj)
+      } else
+        filter.matches(obj)
     }
   }
 
