@@ -155,9 +155,9 @@ object SMGUpdateActor {
     try {
       val rrd = new SMGRrdUpdate(obj, smgConfSvc)
       rrd.checkOrCreateRrd()
-      var values = List[Double]()
       try {
-        values = fetchFn()
+        val values = fetchFn()
+        processRrdUpdate(rrd, smgConfSvc, ts, values, log)
       } catch {
         case cex: SMGCmdException => {
           obj.invalidateCachedValues()
@@ -178,29 +178,6 @@ object SMGUpdateActor {
           smgConfSvc.sendObjMsg(SMGDFObjMsg(SMGRrd.tssNow, obj, List(), -1, List("unexpected_error.", ex.getMessage)))
         }
       }
-      if (values.nonEmpty) {
-        try {
-          rrd.updateValues(values, ts)
-          smgConfSvc.sendObjMsg(
-            SMGDFObjMsg(ts.getOrElse(SMGRrd.tssNow), obj, values, 0, List())
-          )
-        } catch {
-          case cex: SMGCmdException => {
-            obj.invalidateCachedValues()
-            log.error("Exception in update: [" + obj.id + "]: " + cex.toString)
-            smgConfSvc.sendObjMsg(
-              SMGDFObjMsg(SMGRrd.tssNow, obj, List(), -1, List("update_error", cex.getMessage))
-            )
-          }
-          case t: Throwable => {
-            obj.invalidateCachedValues()
-            log.ex(t, "Unexpected exception in update: [" + obj.id + "]: " + t.toString)
-            smgConfSvc.sendObjMsg(
-              SMGDFObjMsg(SMGRrd.tssNow, obj, List(), -1, List("unexpected_update_error", t.getMessage))
-            )
-          }
-        }
-      } // if (values.nonEmpty)
     } catch {
       case ex: Throwable => {
         obj.invalidateCachedValues()
@@ -212,4 +189,42 @@ object SMGUpdateActor {
     }
 
   } // processObjectUpdate
+
+  /**
+    * Do the update part of a SNGObjectUpdate and send appropriate monitor messages
+    * Does not throw
+    *
+    * @param rrd
+    * @param smgConfSvc
+    * @param ts
+    * @param values
+    * @param log
+    */
+  def processRrdUpdate(rrd: SMGRrdUpdate,
+                       smgConfSvc: SMGConfigService,
+                       ts: Option[Int],
+                       values: List[Double],
+                       log: SMGLoggerApi): Unit = {
+    try {
+      rrd.updateValues(values, ts)
+      smgConfSvc.sendObjMsg(
+        SMGDFObjMsg(ts.getOrElse(SMGRrd.tssNow), rrd.obju, values, 0, List())
+      )
+    } catch {
+      case cex: SMGCmdException => {
+        rrd.obju.invalidateCachedValues()
+        log.error(s"Exception in update: [${rrd.obju.id}]: ${cex.toString}")
+        smgConfSvc.sendObjMsg(
+          SMGDFObjMsg(SMGRrd.tssNow, rrd.obju, List(), -1, List("update_error", cex.getMessage))
+        )
+      }
+      case t: Throwable => {
+        rrd.obju.invalidateCachedValues()
+        log.ex(t, s"Unexpected exception in update: [${rrd.obju.id}]: ${t.toString}")
+        smgConfSvc.sendObjMsg(
+          SMGDFObjMsg(SMGRrd.tssNow, rrd.obju, List(), -1, List("unexpected_update_error", t.getMessage))
+        )
+      }
+    }
+  }
 }
