@@ -163,6 +163,15 @@ class Application  @Inject() (actorSystem: ActorSystem,
     miny: Option[String]
   ) {
 
+    def validateAggParam(aggParam: Option[String]): Option[String] = {
+      aggParam.flatMap { myAgg =>
+        myAgg match {
+          case "GROUP" | "STACK" | "SUM" | "SUMN" | "SUMNAN" | "AVG" => Some(myAgg)
+          case _ => None
+        }
+      }
+    }
+
     def processParams(idx: Option[SMGIndex]): (SMGFilter, DashboardExtraParams) = {
       // use index gopts if available, form is overriding index spec
       val myXSort = if (idx.isEmpty || (xsort > 0)) xsort else idx.get.flt.gopts.xsort.getOrElse(0)
@@ -192,7 +201,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
       else
         idx.get.period.getOrElse(GrapherApi.defaultPeriod)
       
-      val myAgg = if (idx.isEmpty || agg.isDefined) agg else idx.get.aggOp
+      val myAgg = if (idx.isEmpty || agg.isDefined)
+        validateAggParam(agg)
+      else
+        idx.get.aggOp
+
       val myXRemoteAgg = if (idx.isEmpty || (xagg == "on")) xagg == "on" else idx.get.xAgg
       val myCols = if (idx.isEmpty || cols.isDefined)
         cols.getOrElse(configSvc.config.dashDefaultCols)

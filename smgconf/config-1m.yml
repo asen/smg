@@ -4,6 +4,7 @@
 #  cols: 2
 #  rows: 1
   parent: hosts
+#  agg_op: SUM
 #  rows: 50
 #  sx: ""
 #  rx: ""

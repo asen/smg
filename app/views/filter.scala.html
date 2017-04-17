@@ -18,6 +18,9 @@
     </div>
     <div class="panel-body">
       <h5 style="word-wrap: break-word;">Index Filter: @ix.get.flt.humanText</h5>
+      @if(ix.get.aggOp.isDefined) {
+        <h5>Index aggregate function: @ix.get.aggOp.get</h5>
+      }
       <div class="form-group">
         <input title="Clear index filter and reload the page" id="smg-filter-clear-idx"
                onclick='document.getElementById("smg-filter-ix").value= ""; mySubmitOnChange(this);'
@@ -90,7 +93,11 @@ matching all of the provided space separated case insensitive regular expression
         <label class="manualsubmit-lbl"
             title="Reload the page using updated filters.">Apply filters</label>
         <input title="Reload the page using updated filters" id="btn_GET"
-               class="form-control btn-submit-manual" type="submit" value="Apply">
+               class="form-control btn-submit-manual"
+               @if(ix.isDefined && ix.get.aggOp.isDefined && aggOp.isDefined){
+                name="agg"
+               }
+               type="submit" value="Apply">
       </div>
 
       <!-- separator -->
@@ -206,6 +213,7 @@ By default aggregation happens per-remote instance">Cross-Remote:</label>
         }
       </div>
       } else {
+      <span><strong>Aggregate function: @aggOp.get</strong></span>
       @if(xagg) {
       <input type="hidden" name="xagg" value="on" />
       }
