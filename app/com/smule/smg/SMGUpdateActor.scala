@@ -70,7 +70,12 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                   try {
                     pf.command.run
                   } finally {
-                    commandExecutionTimes(pf.id) = System.currentTimeMillis() - t0
+                    val cmdTimeMs = System.currentTimeMillis() - t0
+                    if (cmdTimeMs > (pf.command.timeoutSec * 1000) * 0.75){ // more than 75% of timeout time
+                      log.warn(s"SMGUpdateActor: slow pre_fetch command: ${pf.id}: ${pf.command.str} " +
+                        s"(took=${cmdTimeMs/1000}, timeout=${pf.command.timeoutSec})")
+                    }
+                    commandExecutionTimes(pf.id) = cmdTimeMs
                   }
                   //this is reached only on successfull pre-fetch
                   configSvc.sendPfMsg(SMGDFPfMsg(SMGRrd.tssNow, pf.id, interval, leafObjs, 0, List(), None))
