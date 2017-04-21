@@ -55,6 +55,8 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
       parallelRoots.foreach { fRoots =>
         Future {
           val t0 = SMGRrd.tssNow
+          var slowWarnLogged = false
+          var slowErrLogged = false
           fRoots.foreach { fRoot =>
             if (fRoot.node.isRrdObj) { // can happen for top-level rrd obj
               savedSelf ! SMGUpdateObjectMessage(fRoot.node.asInstanceOf[SMGRrdObject], ts, updateCounters)
@@ -122,10 +124,14 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
             val deltaT = SMGRrd.tssNow - t0
             lazy val tooSlowMsg = s"SMGUpdateActor: pre_fetch child sequence is taking more than $deltaT seconds. " +
               s"Current node=${fRoot.node.id}, childConc=$childConc"
-            if (deltaT >= (interval * 3) / 4){
-              log.error(tooSlowMsg) // TODO for now just logging the condition
-            } else if (deltaT >= interval / 4) {
-              log.warn(tooSlowMsg)
+            if (!slowErrLogged) {
+              if (deltaT >= (interval * 3) / 4) {
+                log.error(tooSlowMsg) // TODO for now just logging the condition
+                slowErrLogged = true
+              } else if ((deltaT >= interval / 4) && (!slowWarnLogged)) {
+                log.warn(tooSlowMsg)
+                slowWarnLogged = true
+              }
             }
           } // fRoots.forEach
         }(ecForInterval(interval))
