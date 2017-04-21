@@ -840,7 +840,7 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
     val lbl = new LabelMaker()
     obju.vars.foreach { (v: Map[String, String]) =>
       c.append(" DS:").append(lbl.nextLabel).append(":").append(obju.rrdType)
-      c.append(":").append((obju.interval * 2.5).toString).append(":").append(v.getOrElse("min", "0"))
+      c.append(":").append((obju.interval * 2.5).toInt).append(":").append(v.getOrElse("min", "0"))
       c.append(":").append(v.getOrElse("max", "U"))
     }
     val myRraDef = if (obju.rraDef.isDefined) obju.rraDef.get else SMGRrd.getDefaultRraDef(obju.interval)
