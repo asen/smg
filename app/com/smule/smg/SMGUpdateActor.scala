@@ -57,6 +57,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
           val t0 = SMGRrd.tssNow
           var slowWarnLogged = false
           var slowErrLogged = false
+          var childSeqAborted = false
           fRoots.foreach { fRoot =>
             if (fRoot.node.isRrdObj) { // can happen for top-level rrd obj
               savedSelf ! SMGUpdateObjectMessage(fRoot.node.asInstanceOf[SMGRrdObject], ts, updateCounters)
@@ -70,6 +71,11 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                 try {
                   val t0 = System.currentTimeMillis()
                   try {
+                    if (childSeqAborted)
+                      throw SMGCmdException(pf.command.str, pf.command.timeoutSec, -1,
+                        "Aborted due to too slow pre-fetch commands sequence.",
+                        "Consider adjusting timeouts" +
+                          pf.parentId.map(s => s" and/or increasing child_conc on the parent: $s").getOrElse("") + ".")
                     pf.command.run
                   } finally {
                     val cmdTimeMs = System.currentTimeMillis() - t0
@@ -126,7 +132,8 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
               s"Current node=${fRoot.node.id}, childConc=$childConc"
             if (!slowErrLogged) {
               if (deltaT >= (interval * 3) / 4) {
-                log.error(tooSlowMsg) // TODO for now just logging the condition
+                log.error(tooSlowMsg + " (aborting subsequent commands)")
+                childSeqAborted = true
                 slowErrLogged = true
               } else if ((deltaT >= interval / 4) && (!slowWarnLogged)) {
                 log.warn(tooSlowMsg)
