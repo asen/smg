@@ -485,9 +485,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
           val parentPfStr = yamlMap.getOrElse("pre_fetch", "").toString
           val parentPf = if (parentPfStr == "") None else Some(parentPfStr)
           val ignoreTs = yamlMap.contains("ignorets") && (yamlMap.get("ignorets").toString != "false")
+          val childConc = if (yamlMap.contains("child_conc"))
+            yamlMap.get("child_conc").asInstanceOf[Int]
+          else 1
+
           val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, id, yamlMap.toMap.map(kv => (kv._1, kv._2.toString)))
           checkFetchCommandNotifyConf(id, notifyConf, confFile)
-          preFetches(id) = SMGPreFetchCmd(id, cmd, parentPf, ignoreTs, notifyConf)
+          preFetches(id) = SMGPreFetchCmd(id, cmd, parentPf, ignoreTs, Math.max(1, childConc), notifyConf)
         }
       } else {
         processConfigError(confFile, "processPrefetch: $pre_fetch yamlMap does not have command and id: " + yamlMap.toString)

@@ -13,6 +13,7 @@
   id: host_localhost_up
   command: "ping -c 1 localhost >/dev/null"
   ignorets: true
+  child_conc: 2
   notify-unkn: mail-asen
 
 - $pre_fetch:
@@ -56,6 +57,7 @@
   title: "A dummy graph for this host"
   command: "echo 2 && echo 1"
 #  options:
+  pre_fetch: host_localhost_up
   interval: 60
   rrd_type: GAUGE
   vars:

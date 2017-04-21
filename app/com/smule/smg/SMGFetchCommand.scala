@@ -17,9 +17,12 @@ trait SMGFetchCommand extends SMGTreeNode {
   val command: SMGCmd
   val preFetch: Option[String]
   val isRrdObj: Boolean
-  val ignoreTs = false // only meaningful in local/non-rrd obj context, which overrides that
 
-  override def parentId = preFetch
+  override def parentId: Option[String] = preFetch
+
+  // these are only meaningful in local/non-rrd obj context, which overrides them
+  val ignoreTs = false
+  val childConc: Int = 1
 }
 
 
