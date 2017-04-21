@@ -73,7 +73,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                     pf.command.run
                   } finally {
                     val cmdTimeMs = System.currentTimeMillis() - t0
-                    if (cmdTimeMs > (pf.command.timeoutSec * 1000) * 0.75){ // more than 75% of timeout time
+                    if (cmdTimeMs > (pf.command.timeoutSec * 1000) * 0.5){ // more than 50% of timeout time
                       log.warn(s"SMGUpdateActor: slow pre_fetch command: ${pf.id}: ${pf.command.str} " +
                         s"(took=${cmdTimeMs/1000}, timeout=${pf.command.timeoutSec})")
                     }
