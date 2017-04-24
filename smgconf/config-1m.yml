@@ -179,3 +179,14 @@
   cdef_vars:
     - label: val1-cdf
       cdef: "$ds1,$ds0,/"
+
+- ^jmx.xremote:
+  rx: .jmx.smg
+  remote: "*"
+  agg_op: GROUP
+  xagg: true
+
+- ^jmx.premote:
+  rx: .jmx.smg
+  remote: "*"
+  agg_op: GROUP

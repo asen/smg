@@ -19,20 +19,25 @@
     <div class="panel-body">
       <h5 style="word-wrap: break-word;">Index Filter: @ix.get.flt.humanText</h5>
       @if(ix.get.aggOp.isDefined) {
-        <h5>Index aggregate function: @ix.get.aggOp.get</h5>
+        <h5>Index aggregate function: @ix.get.aggOp.get @if(ix.get.xAgg){(Cross-Remote)}</h5>
       }
       <div class="form-group">
         <input title="Clear index filter and reload the page" id="smg-filter-clear-idx"
                onclick='document.getElementById("smg-filter-ix").value= ""; mySubmitOnChange(this);'
                class="form-control btn-submit-manual" type="button" value="Remove index filter">
       </div>
+      <div class="form-group">
+        <input title="Merge the index and user filters and reload the page" id="smg-filter-merge-idx"
+               onclick='mergeIndexFilterAsUser(this);'
+               class="form-control btn-submit-manual" type="button" value="Merge with user filter">
+      </div>
     </div>
     }
+
     <div class="panel-heading">
       <h3 class="panel-title">User Filter: @flt.humanText</h3>
     </div>
     <div class="panel-body">
-
       @if(availRemotes.nonEmpty) {
       <div class="form-group form-group-rmt">
         <label class="manualsubmit-lbl"
@@ -92,11 +97,8 @@ matching all of the provided space separated case insensitive regular expression
       <div class="form-group">
         <label class="manualsubmit-lbl"
             title="Reload the page using updated filters.">Apply filters</label>
-        <input title="Reload the page using updated filters" id="btn_GET"
+        <input title="Reload the page using updated filters" id="smg-filter-submit"
                class="form-control btn-submit-manual"
-               @if(ix.isDefined && ix.get.aggOp.isDefined && aggOp.isDefined){
-                name="agg"
-               }
                type="submit" value="Apply">
       </div>
 
@@ -196,40 +198,41 @@ Changing this reloads the page.">Disable 95%-ile line:</label>
 
       <br/>
 
+      <input type="hidden" id="smg-filter-xagg" name="xagg" value='@if(xagg){on} else {off}' />
+      <input type="hidden" id="smg-filter-agg" name="agg" value='@aggOp.getOrElse("")' />
+
       @if(aggOp.isEmpty) {
       <div class="form-group">
         <label class="autosubmit-lbl"
                title="Apply aggregate function to the set of DISPLAYED graphs, grouping them by graphed variables">Aggregate functions:</label>
-        <input class="btn btn-default btn-submit" type="submit" name="agg" value="GROUP">
-        <input class="btn btn-default btn-submit" type="submit" name="agg" value="STACK">
-        <input class="btn btn-default btn-submit" type="submit" name="agg" value="SUM">
-        <input class="btn btn-default btn-submit" type="submit" name="agg" value="SUMN">
-        <input class="btn btn-default btn-submit" type="submit" name="agg" value="AVG">
+        <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="GROUP">
+        <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="STACK">
+        <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="SUM">
+        <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="SUMN">
+        <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="AVG">
         @if(showXagg){
-        <label for="xagg_cb" class="manualsubmit-lbl"
+        <label for="cb_xagg" class="manualsubmit-lbl"
             title="Toggle whether to group aggregate objects across all remote instances.
 By default aggregation happens per-remote instance">Cross-Remote:</label>
-            <input type="checkbox" id="xagg_cb" name="xagg" @if(xagg){ checked } />
+            <input type="checkbox" id="cb_xagg" onclick="toggleXAgg()" @if(xagg){ checked="checked" } />
         }
       </div>
       } else {
-      <span><strong>Aggregate function: @aggOp.get</strong></span>
-      @if(xagg) {
-      <input type="hidden" name="xagg" value="on" />
-      }
+      <span><strong>Aggregate function: @aggOp.get @if(xagg){(Cross-Remote)}</strong></span>
+      <input type="button" class="btn btn-default btn-submit" onclick="mySubmitAgg(this);" value="Unapply">
       }
       <input id="smgFilterFormPg" type="hidden" name="pg" value="0" />
     </div>
   </div>
 </form>
 
-<input type="hidden" id="inp_aggOp" name="aggOp" value='@aggOp.getOrElse("")' />
-
 <!-- strip empty params from the form so that urls are less cluttered -->
 <script language="JavaScript">
   function disableEmptyInputs() {
+      var indexHasXAgg = @if(ix.isDefined && ix.get.xAgg) { true } else { false };
       $(':input', this).each(function() {
           this.disabled = !($(this).val()) ||
+                          ((this.name == "xagg") && (!indexHasXAgg) && ($(this).val() == "off")) ||
                           ((this.name == "xsort") && ($(this).val() == 0)) ||
                           ((this.name == "pg") && ($(this).val() == 0)) ||
                           ((this.name == "period") && ($(this).val() == "@defaultPeriod")) ||
@@ -256,22 +259,77 @@ By default aggregation happens per-remote instance">Cross-Remote:</label>
   };
 
   function mySubmitOnChange(elem) {
-      disableEmptyInputs();
-      var jsAggOp = $('#inp_aggOp')[0].value;
-      if (jsAggOp) {
-        var input = document.createElement("input");
-        input.setAttribute("type", "hidden");
-        input.setAttribute("name", "agg");
-        input.setAttribute("value", jsAggOp);
-        document.getElementById("smgFilterForm").appendChild(input);
-      }
-      setTimeout(0, $('#btn_GET').click());
+     setTimeout(0, $('#smg-filter-submit').click());
   }
 
   function smgFilterGoToPage(pg) {
     var pgelem = document.getElementById("smgFilterFormPg")
     pgelem.value = pg
     mySubmitOnChange(pgelem);
+  }
+
+  function toggleXAgg() {
+    var elem = document.getElementById("smg-filter-xagg")
+    if (elem.value == "on") {
+      elem.value = "off"
+    } else {
+      elem.value = "on"
+    }
+  }
+
+  function mySubmitAgg(elem) {
+    var indexHasAgg = @if(ix.isDefined && ix.get.aggOp.isDefined) { true } else { false };
+    var hidInput = document.getElementById('smg-filter-agg')
+    if (!indexHasAgg && (elem.value == 'Unapply')){
+      hidInput.value = "";
+    } else {
+      hidInput.value = elem.value;
+    }
+    mySubmitOnChange(elem);
+  }
+
+  @if(ix.isDefined){
+    function mergeIndexFilterAsUser(elem) {
+      var myGetUserValue = function(name){
+        return document.getElementById("smg-filter-" + name).value
+      }
+      var toMerge = {
+        "remote" : "@ix.get.flt.remote.getOrElse("")",
+        "trx": "@ix.get.flt.trx",
+        "px": "@ix.get.flt.px",
+        "sx": "@ix.get.flt.sx",
+        "rx": "@ix.get.flt.rx",
+        "rxx": "@ix.get.flt.rxx"
+        };
+      var conflicts = [];
+      for(var nm in toMerge){
+        var v = toMerge[nm];
+        var uv = myGetUserValue(nm)
+        if ((v != "") && (uv != "") && (v != uv)){
+          conflicts.push(nm);
+        }
+      }
+      if (conflicts.length > 0) {
+        if (!confirm("Warning: Some user filter value(s) conflict with index filter value(s) - " +
+                     conflicts.join(", ") +
+                     ". Consider changing the user filter first.\n" +
+                     "Are you sure you want to overwrite your user filter value(s)?"
+                    )) {
+          return;
+        }
+      }
+      var mySetUserValue = function(name, v){
+        document.getElementById("smg-filter-" + name).value = v
+      }
+      for(var nm in toMerge){
+        var v = toMerge[nm];
+        if (v != ""){
+          mySetUserValue(nm, v);
+        }
+      }
+      mySetUserValue("ix", "");
+      mySubmitOnChange(elem);
+    }
   }
 
   $('form#smgFilterForm').submit(disableEmptyInputs);

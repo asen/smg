@@ -155,7 +155,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     cols: Option[Int],
     rows: Option[Int],
     pg: Int,
-    xagg: String,
+    xagg: Option[String],
     xsort: Int,
     dpp: String,
     d95p: String,
@@ -206,7 +206,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       else
         idx.get.aggOp
 
-      val myXRemoteAgg = if (idx.isEmpty || (xagg == "on")) xagg == "on" else idx.get.xAgg
+      val myXRemoteAgg = if (idx.isEmpty || xagg.isDefined) xagg.getOrElse("off") == "on" else idx.get.xAgg
       val myCols = if (idx.isEmpty || cols.isDefined)
         cols.getOrElse(configSvc.config.dashDefaultCols)
       else
@@ -238,7 +238,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       cols = m.get("cols").map(_.toInt),
       rows = m.get("rows").map(_.toInt),
       pg = m.get("pg").map(_.toInt).getOrElse(0),
-      xagg = m.getOrElse("xagg", ""),
+      xagg = m.get("xagg"),
       xsort = m.get("xsort").map(_.toInt).getOrElse(0),
       dpp = m.getOrElse("dpp", ""),
       d95p = m.getOrElse("d95p", ""),

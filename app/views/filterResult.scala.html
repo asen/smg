@@ -55,7 +55,13 @@
   }
 
   <div class="alert alert-success">
-    Displaying @dispCount @if(aggOp.isDefined){ aggregate (@aggOp.get) } graphs (using @slicedCount out of @tlCount matching objects) in max @dep.cols columns and max @dep.rows rows.
+    <p>Displaying @dispCount @if(aggOp.isDefined){ aggregate (@aggOp.get) } graphs (using @slicedCount out of @tlCount
+      matching objects) in max @dep.cols columns and max @dep.rows rows.</p>
+    @if( aggOp.isDefined && (slicedCount < tlCount) ){
+    <p><font color="red"><strong>WARNING: You are applying an aggregate function on a subset of the objects matching
+      the current filter. Consider increasing page size if you really want to see aggregation from
+      all (via Rows/Columns, up to a sane limit).</strong></font></p>
+    }
   </div>
 
   @if(showMs){
