@@ -21,19 +21,6 @@ case class SMGJmxObject(baseId: String,
                         notifyConf: Option[SMGMonNotifyConf]
                        ) extends SMGObjectUpdate with SMGObjectView {
 
-  private var currentValues = vars.map { v => 0.0 }
-
-  def setCurrentValues(newVals: List[Double]): Unit = {
-    currentValues.synchronized {
-      currentValues = newVals
-    }
-  }
-  override def fetchValues: List[Double] = {
-    currentValues.synchronized {
-      currentValues
-    }
-  }
-
   override def showUrl:String = "/show/" + id
 
   override def fetchUrl(period: String): String = "/fetch/" + id + "?s=" + period
@@ -53,9 +40,4 @@ case class SMGJmxObject(baseId: String,
 
   def attrs: List[String] = vars.map(v => v.getOrElse("attr", "UNDEFINED_ATTR"))
 
-  override def cachedValues: List[Double] = fetchValues
-
-  override def invalidateCachedValues(): Unit = {
-    currentValues = vars.map { v => 0.0 }
-  }
 }

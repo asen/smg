@@ -85,6 +85,27 @@ trait SMGConfigService {
   def sendRunMsg(msg: SMGDFRunMsg): Unit = dataFeedListeners.foreach(dfl => Try(dfl.receiveRunMsg(msg)))
 
   /**
+    * Store recently fetched object value into cache.
+    * @param ou - object update
+    * @param tss - fetch timestamp (seconds)
+    * @param vals - fetched values
+    */
+  def cacheValues(ou: SMGObjectUpdate, tss: Int, vals: List[Double]): Unit
+
+  /**
+    * Invalidate any previously cached values for this object
+    * @param ou
+    */
+  def invalidateCachedValues(ou: SMGObjectUpdate): Unit
+
+  /**
+    * Get the latest cached values for given object
+    * @param ou - object update
+    * @return - list of values (can be NaNs if no valid cache)
+    */
+  def getCachedValues(ou: SMGObjectUpdate): List[Double]
+
+  /**
     * published here for plugins to use
     */
   val actorSystem: ActorSystem
@@ -322,6 +343,32 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
 
   override val pluginsById: Map[String, SMGPlugin] = plugins.groupBy(_.pluginId).map(t => (t._1, t._2.head))
 
+  // XXX this is only updated on config reload (getNewConfig) to avoid the need of synchronization
+  private val valuesCache = new SMGValuesCache()
+
+  override def cacheValues(ou: SMGObjectUpdate, tss: Int, vals: List[Double]): Unit = {
+    // XXX - check whether ou.id is still valid and don't cache values if object was just expunged
+    // there is still a race condition here as some no longer valid caches may slip in in -
+    // these would clear on subsequent reload
+    // TODO check commented out for now - this is a common reload problem (applicable to monitor states too)
+    // and needs better approach (current workaround is a second reload)
+//    if (config.updateObjectsById.contains(ou.id)) {
+      valuesCache.cacheValues(ou, tss, vals)
+//    }
+  }
+
+  override def invalidateCachedValues(ou: SMGObjectUpdate): Unit = {
+    valuesCache.invalidateCache(ou)
+  }
+
+  override def getCachedValues(ou: SMGObjectUpdate): List[Double] = {
+    valuesCache.getCachedValues(ou)
+  }
+
+  private def refreshCachedValuesMap(newConf: SMGLocalConfig): Unit = {
+    valuesCache.purgeObsoleteObjs(newConf.updateObjects)
+  }
+
   private var currentConfig = getNewConfig
 
   /**
@@ -356,7 +403,6 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       log.warn("SMGConfigServiceImpl.reload: Reload is already running in another thread, aborting")
     }
   }
-
 
   private def getListOfFiles(dir: String, matcher: PathMatcher):List[File] = {
     val d = new File(dir)
@@ -980,6 +1026,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       hiddenIndexConfs.toMap,
       configErrors.toList
     )
+
+    refreshCachedValuesMap(ret)
 
     ret
   } // getNewConfig

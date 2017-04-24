@@ -1,3 +1,4 @@
+@import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGObjectView
 @import com.smule.smg.SMGMonObjAlertConf
 @import com.smule.smg.SMGMonNotifyConf
@@ -5,7 +6,7 @@
 @import com.smule.smg.SMGMonNotifyCmd
 @import com.smule.smg.SMGMonNotifySeverity
 @import com.smule.smg.SMGPreFetchCmd
-@(ov:SMGObjectView, pfs: List[(SMGPreFetchCmd, String)], acs: Option[SMGMonObjAlertConf],
+@(cfSvc: SMGConfigService, ov:SMGObjectView, pfs: List[(SMGPreFetchCmd, String)], acs: Option[SMGMonObjAlertConf],
   ncUnk: Option[SMGMonNotifyConf], nc: Option[SMGMonObjNotifyConf],
   ncmdsByVar: List[(Int, Seq[(SMGMonNotifySeverity.Value, Seq[SMGMonNotifyCmd], Int)])],
   nstrikes: Seq[Int], hstate: Option[String])
@@ -34,7 +35,7 @@
 <p>@if(ov.refObj.isDefined){
   <ul>
     <li><p><b>refObj.toString:</b> @ov.refObj.get</p></li>
-    <li><p><b>refObj.inspect:</b> @ov.refObj.get.inspect</p></li>
+    <li><p><b>refObj.inspect:</b> @ov.refObj.get.inspect(cfSvc)</p></li>
   </ul>
   } else {
     No ref object defined

@@ -26,32 +26,12 @@ case class SMGRrdAggObject(id: String,
 
   def fetchUrl(period: String): String = "/fetch/" + id + "?s=" + period
 
-  private val log = SMGLogger
-
-  private val nanList = vars.map(v => Double.NaN)
-  private var myCachedValues = nanList
-
-  override def invalidateCachedValues(): Unit = {
-    myCachedValues = nanList
+  def fetchValues(confSvc: SMGConfigService): List[Double] = {
+    val sources = ous.map(ou => confSvc.getCachedValues(ou)).toList
+    SMGRrd.mergeValues(aggOp, sources)
   }
-
-  override def cachedValues: List[Double] = myCachedValues
 
   override val preFetch: Option[String] = None
-
-  override def fetchValues: List[Double] = {
-    try {
-      val sources = ous.map(_.cachedValues).toList
-      val ret = SMGRrd.mergeValues(aggOp, sources)
-      myCachedValues = ret
-      ret
-    } catch {
-      case t: Throwable => {
-        myCachedValues = nanList
-        throw t
-      }
-    }
-  }
 
   override val isAgg = false
 

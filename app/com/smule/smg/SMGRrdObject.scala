@@ -45,61 +45,18 @@ case class SMGRrdObject(id: String,
   private var myCacheTs: Int = SMGRrd.tssNow
   private var myCachedValues = nanList
 
-  override def cachedValues: List[Double] = {
-    if (isCounter) {
-      // XXX this is only to deal with counter overflows and resets which we don't want to mess our aggregated stats
-      val deltaTime = myCacheTs - myPrevCacheTs
-      if (deltaTime > 0 && deltaTime <= 3 * interval) {
-        val rates = myCachedValues.zip(myPrevCachedValues).map { case (cur, prev) => (cur - prev) / deltaTime }
-        val isGood = rates.zip(vars).forall { case (rate, v) =>
-          (!rate.isNaN) && (rate >= v.getOrElse("min", "0.0").toDouble) && v.get("max").forall(_.toDouble >= rate)
-        }
-        if (isGood)
-          myCachedValues
-        else {
-          nanList
-        }
-      } else {
-        nanList // time delta outside range
-      }
-    } else
-      myCachedValues
-  }
-
-  override def invalidateCachedValues(): Unit = {
-    myPrevCachedValues = myCachedValues
-    myPrevCacheTs = 0
-    myCachedValues = nanList
-    myCacheTs = SMGRrd.tssNow
-  }
-
-  override def inspect: String = super.inspect +
-    s", myCacheTs=$myCacheTs, myCachedValues=$myCachedValues" +
-    s", myPrevCacheTs=$myPrevCacheTs, myPrevCachedValues=$myPrevCachedValues"
-
-  override def fetchValues: List[Double] = {
-    try {
-      val out = this.command.run
-      val ret = for (ln <- out.take(this.vars.size)) yield {
-        ln.toDouble
-      }
-      if (ret.size < this.vars.size) {
-        val errMsg = "Bad output from external command - less lines than expected (" + ret.size + "<" + this.vars.size + ")"
-        log.error(errMsg)
-        log.error(out)
-        throw SMGCmdException(this.command.str, this.command.timeoutSec, -1, out.mkString("\n"), errMsg)
-      }
-      myPrevCachedValues = myCachedValues
-      myPrevCacheTs = myCacheTs
-      myCachedValues = ret
-      myCacheTs = SMGRrd.tssNow
-      ret
-    } catch {
-      case t: Throwable => {
-        invalidateCachedValues()
-        throw t
-      }
+  def fetchValues: List[Double] = {
+    val out = this.command.run
+    val ret = for (ln <- out.take(this.vars.size)) yield {
+      ln.toDouble
     }
+    if (ret.size < this.vars.size) {
+      val errMsg = "Bad output from external command - less lines than expected (" + ret.size + "<" + this.vars.size + ")"
+      log.error(errMsg)
+      log.error(out)
+      throw SMGCmdException(this.command.str, this.command.timeoutSec, -1, out.mkString("\n"), errMsg)
+    }
+    ret
   }
 
   override val isAgg = false

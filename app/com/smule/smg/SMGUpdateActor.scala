@@ -29,7 +29,11 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
         def fetchFn() = {
           val t0 = System.currentTimeMillis()
           try {
-            obj.fetchValues
+            obj match {
+              case rrdObj: SMGRrdObject => rrdObj.fetchValues
+              case aggObj: SMGRrdAggObject => aggObj.fetchValues(configSvc)
+              case x => throw new SMGFetchException(s"SMGERR: Invalid object update type: ${x.getClass}")
+            }
           } finally {
             commandExecutionTimes(obj.id) = System.currentTimeMillis() - t0
           }
@@ -114,7 +118,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                       fRoot.allNodes.foreach { cmd =>
                         SMGStagedRunCounter.incIntervalCount(interval)
                         if (cmd.isRrdObj) {
-                          cmd.asInstanceOf[SMGObjectUpdate].invalidateCachedValues()
+                          configSvc.invalidateCachedValues(cmd.asInstanceOf[SMGObjectUpdate])
                         }
                       }
                     }
@@ -169,7 +173,7 @@ object SMGUpdateActor {
                                   )
 
   /**
-    * Use this to do rrd updates and send appropriate object monitoring messages.
+    * Use this to do rrd updates, store successful values in the cache and send appropriate object monitoring messages.
     *
     * The fetchFn must return a List[Double] of correct length or throw SMGFetchException
     * (or the more specific SMGCmdException) on failure to fetch the values.
@@ -191,10 +195,11 @@ object SMGUpdateActor {
       rrd.checkOrCreateRrd()
       try {
         val values = fetchFn()
+        smgConfSvc.cacheValues(obj, ts.getOrElse(SMGRrd.tssNow), values)
         processRrdUpdate(rrd, smgConfSvc, ts, values, log)
       } catch {
         case cex: SMGCmdException => {
-          obj.invalidateCachedValues()
+          smgConfSvc.invalidateCachedValues(obj)
           log.error(s"SMGUpdateActor: Failed fetch command [${obj.id}]: ${cex.getMessage}")
           smgConfSvc.sendObjMsg(
             SMGDFObjMsg(ts.getOrElse(SMGRrd.tssNow), obj, List(), cex.exitCode,
@@ -202,19 +207,19 @@ object SMGUpdateActor {
           )
         }
         case fex: SMGFetchException => {
-          obj.invalidateCachedValues()
+          smgConfSvc.invalidateCachedValues(obj)
           log.error(s"SMGUpdateActor: Fetch exception from  [${obj.id}]: ${fex.getMessage}")
           smgConfSvc.sendObjMsg(SMGDFObjMsg(SMGRrd.tssNow, obj, List(), -1, List("fetch_error", fex.getMessage)))
         }
         case ex: Throwable => {
-          obj.invalidateCachedValues()
+          smgConfSvc.invalidateCachedValues(obj)
           log.ex(ex, s"SMGUpdateActor: Unexpected exception from fetch [${obj.id}]: ${ex.getMessage}")
           smgConfSvc.sendObjMsg(SMGDFObjMsg(SMGRrd.tssNow, obj, List(), -1, List("unexpected_error.", ex.getMessage)))
         }
       }
     } catch {
       case ex: Throwable => {
-        obj.invalidateCachedValues()
+        smgConfSvc.invalidateCachedValues(obj)
         log.ex(ex, s"SMGUpdateActor got an unexpected while checking ${obj.id} rrd file")
         smgConfSvc.sendObjMsg(
           SMGDFObjMsg(ts.getOrElse(SMGRrd.tssNow), obj, List(), -1, List("unexpected_rrd_error", ex.getMessage))
@@ -246,14 +251,14 @@ object SMGUpdateActor {
       )
     } catch {
       case cex: SMGCmdException => {
-        rrd.obju.invalidateCachedValues()
+        smgConfSvc.invalidateCachedValues(rrd.obju)
         log.error(s"SMGUpdateActor: Exception in update: [${rrd.obju.id}]: ${cex.toString}")
         smgConfSvc.sendObjMsg(
           SMGDFObjMsg(SMGRrd.tssNow, rrd.obju, List(), -1, List("update_error", cex.getMessage))
         )
       }
       case t: Throwable => {
-        rrd.obju.invalidateCachedValues()
+        smgConfSvc.invalidateCachedValues(rrd.obju)
         log.ex(t, s"SMGUpdateActor: Unexpected exception in update: [${rrd.obju.id}]: ${t.toString}")
         smgConfSvc.sendObjMsg(
           SMGDFObjMsg(SMGRrd.tssNow, rrd.obju, List(), -1, List("unexpected_update_error", t.getMessage))

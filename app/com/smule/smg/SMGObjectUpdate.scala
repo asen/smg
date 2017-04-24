@@ -13,10 +13,6 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
   val rrdType: String
   def isCounter: Boolean = (rrdType != "GAUGE") && (rrdType != "ABSOLUTE")
 
-  def fetchValues: List[Double]
-  def cachedValues: List[Double]
-  def invalidateCachedValues(): Unit
-
   val preFetch: Option[String]
   val rrdFile: Option[String]
   val rraDef: Option[SMGRraDef]
@@ -31,7 +27,7 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
 
   val rrdInitSource: Option[String] = None
 
-  def inspect: String = List(
+  def inspect(cfSvc: SMGConfigService): String = List(
     "pluginId" -> pluginId,
     "interval" -> interval,
     "id" -> id,
@@ -41,6 +37,6 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
     "preFetch" -> preFetch,
     "rrdFile" -> rrdFile,
     "rraDef" -> rraDef,
-    "cachedValues" -> cachedValues
+    "cachedValues" -> cfSvc.getCachedValues(this)
   ).map { case (k,v) => s"$k=$v"}.mkString(", ")
 }

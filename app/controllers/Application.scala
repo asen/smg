@@ -644,7 +644,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
           }
           lb.toList.reverse
         } else List()
-        Ok(views.html.inspectObject(ov.get, pfs, ac, ncUnk, nc, ncmdsByVar, Seq(notifyStrikesObj) ++ notifyStrikesVars, hstate))
+        Ok(views.html.inspectObject(configSvc, ov.get, pfs, ac, ncUnk, nc, ncmdsByVar,
+          Seq(notifyStrikesObj) ++ notifyStrikesVars, hstate))
       } else NotFound("Object not found")
     }
   }

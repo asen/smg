@@ -47,9 +47,7 @@ class SMGJmxUpdateActor(
 
             def fetchFn(): List[Double] = {
               try {
-                val values = jmxClient.fetchJmxValues(hostPort, obj.jmxName, obj.attrs)
-                obj.setCurrentValues(values)
-                values
+                jmxClient.fetchJmxValues(hostPort, obj.jmxName, obj.attrs)
               } catch {
                 case ex: Throwable => {
                   throw new SMGFetchException(s"JMX fetch error: $hostPort, ${obj.jmxName}:${obj.attrs}, msg=${ex.getMessage}")

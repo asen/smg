@@ -99,4 +99,28 @@ class TestConfigSvc() extends SMGConfigService {
   override def notifyReloadListeners(ctx: String): Unit = {}
 
   override val actorSystem: ActorSystem = null
+
+  /**
+    * Store recently fetched object value into cache.
+    *
+    * @param ou   - object update
+    * @param tss  - fetch timestamp (seconds)
+    * @param vals - fetched values
+    */
+  override def cacheValues(ou: SMGObjectUpdate, tss: Int, vals: List[Double]): Unit = {}
+
+  /**
+    * Get the latest cached values for given object
+    *
+    * @param ou - object update
+    * @return
+    */
+  override def getCachedValues(ou: SMGObjectUpdate): List[Double] = List()
+
+  /**
+    * Invalidate any previously cached values for this object
+    *
+    * @param ou
+    */
+  override def invalidateCachedValues(ou: SMGObjectUpdate): Unit = {}
 }
