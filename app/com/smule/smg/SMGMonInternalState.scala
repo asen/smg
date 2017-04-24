@@ -276,7 +276,7 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
 
   override def alertSubject: String = s"${ou.id}[$vix]:$label"
 
-  override def text: String = s"${ou.id}($vix:$label): ${ou.title}: $currentStateDesc"
+  override def text: String = s"${ou.id}[$vix]:$label: ${ou.title}: $currentStateDesc"
 
   myMovingStatsOpt = Some(new SMGMonValueMovingStats(ou.id, vix, ou.interval))
 //  myCounterPrevValue = Double.NaN
