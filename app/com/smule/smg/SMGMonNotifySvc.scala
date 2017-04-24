@@ -353,7 +353,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
           val id = idlbl.split(":")(0)
           if (!id.startsWith(SMGMonState.MON_STATE_GLOBAL_PX) &&
             !configSvc.config.updateObjectsById.contains(id) &&
-            !configSvc.config.preFetches.contains(id)){
+            configSvc.config.findPreFetchCmd(id).isEmpty) {
             log.warn(s"Removing obsolete activeAlert data: $idlbl")
             m.remove(idlbl)
           }

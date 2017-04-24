@@ -29,6 +29,8 @@ trait SMGConfigReloadListener {
   */
 trait SMGConfigService {
 
+  protected val log = SMGLogger
+
   val defaultInterval: Int = 60 // seconds
   val defaultTimeout: Int = 30  // seconds
 
@@ -70,13 +72,28 @@ trait SMGConfigService {
   * Send a data feed object message to all registered listeners for processing
   * @param msg - the message to send
   */
-  def sendObjMsg(msg: SMGDFObjMsg): Unit = dataFeedListeners.foreach(dfl => Try(dfl.receiveObjMsg(msg)))
+  def sendObjMsg(msg: SMGDFObjMsg): Unit = {
+    if (config.updateObjectsById.contains(msg.obj.id)) {
+      dataFeedListeners.foreach(dfl => Try(dfl.receiveObjMsg(msg)))
+    } else {
+      log.warn(s"ConfigService.sendObjMsg: ignoring message for no longer existing object: " +
+        s"${msg.obj.id}${msg.obj.pluginId.map(plid => s" (plugin=$plid)").getOrElse("")}")
+    }
+  }
 
   /**
   * Send a data feed "Pre fetch" command message to all registered listeners for processing
   * @param msg - the message to send
   */
-  def sendPfMsg(msg: SMGDFPfMsg): Unit = dataFeedListeners.foreach(dfl => Try(dfl.receivePfMsg(msg)))
+  def sendPfMsg(msg: SMGDFPfMsg): Unit = {
+    if ((msg.pluginId.isEmpty && config.preFetches.contains(msg.pfId)) ||
+        (msg.pluginId.isDefined && config.pluginPreFetches.getOrElse(msg.pluginId.get, Map()).contains(msg.pfId))) {
+      dataFeedListeners.foreach(dfl => Try(dfl.receivePfMsg(msg)))
+    } else {
+      log.warn(s"ConfigService.sendPfMsg: ignoring message for no longer existing preFetch: " +
+        s"${msg.pfId}${msg.pluginId.map(plid => s" (plugin=$plid)").getOrElse("")}")
+    }
+  }
 
   /**
   * Send a data feed "run" (e.g. finished/overlap etc) message to all registered listeners for processing
@@ -237,7 +254,6 @@ trait SMGConfigService {
 @Singleton
 class SMGConfigServiceImpl @Inject() (configuration: Configuration,
                                       override val actorSystem: ActorSystem) extends SMGConfigService {
-  private val log = SMGLogger
 
   /**
   * @inheritdoc
@@ -347,14 +363,10 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   private val valuesCache = new SMGValuesCache()
 
   override def cacheValues(ou: SMGObjectUpdate, tss: Int, vals: List[Double]): Unit = {
-    // XXX - check whether ou.id is still valid and don't cache values if object was just expunged
-    // there is still a race condition here as some no longer valid caches may slip in in -
-    // these would clear on subsequent reload
-    // TODO check commented out for now - this is a common reload problem (applicable to monitor states too)
-    // and needs better approach (current workaround is a second reload)
-//    if (config.updateObjectsById.contains(ou.id)) {
+    // check whether ou.id is still valid and don't cache values if object was expunged by config reload
+    if (config.updateObjectsById.contains(ou.id)) {
       valuesCache.cacheValues(ou, tss, vals)
-//    }
+    }
   }
 
   override def invalidateCachedValues(ou: SMGObjectUpdate): Unit = {
@@ -365,7 +377,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     valuesCache.getCachedValues(ou)
   }
 
-  private def refreshCachedValuesMap(newConf: SMGLocalConfig): Unit = {
+  private def cleanupCachedValuesMap(newConf: SMGLocalConfig): Unit = {
     valuesCache.purgeObsoleteObjs(newConf.updateObjects)
   }
 
@@ -395,6 +407,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
                 " imgDir=" + newConf.imgDir + " urlPrefix=" + newConf.urlPrefix +
                 " objectsCount=" + newConf.rrdObjects.size +
                 " intervals=" + newConf.intervals.toList.sorted.mkString(","))
+        cleanupCachedValuesMap(newConf)
         notifyReloadListeners("ConfigService.reload")
       } finally {
         reloadIsRunning.set(false)
@@ -1026,9 +1039,6 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       hiddenIndexConfs.toMap,
       configErrors.toList
     )
-
-    refreshCachedValuesMap(ret)
-
     ret
   } // getNewConfig
 

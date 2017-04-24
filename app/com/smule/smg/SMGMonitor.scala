@@ -136,8 +136,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   private def createStateTrees(config: SMGLocalConfig): List[SMGTree[SMGMonInternalState]] = {
-    val ret = config.updateObjects.groupBy(_.pluginId).flatMap { idSeqTpl =>
-      val (plidOpt, plSeq)  = idSeqTpl
+    val ret = config.updateObjects.groupBy(_.pluginId).flatMap { case (plidOpt, plSeq) =>
       plSeq.groupBy(_.interval).flatMap { case (intvl, seq) =>
         val leafsSeq = seq.flatMap { ou =>
           ou.vars.indices.map { vix => getOrCreateVarState(ou,vix, update = true) }
