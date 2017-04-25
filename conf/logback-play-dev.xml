@@ -32,6 +32,17 @@
   <logger name="com.avaje.ebeaninternal.server.lib.BackgroundThread" level="OFF" />
   <logger name="com.gargoylesoftware.htmlunit.javascript" level="OFF" />
 
+  <!-- more disabled loggers -->
+  <logger name="sun.rmi.loader" level="OFF" />
+  <logger name="sun.rmi.transport.misc" level="OFF" />
+  <logger name="sun.rmi.transport.tcp" level="OFF" />
+  <logger name="sun.rmi.client.ref" level="OFF" />
+  <logger name="javax.management.remote.misc" level="OFF" />
+  <logger name="javax.management.remote.timeout" level="OFF" />
+  <logger name="javax.management.mbeanserver" level="OFF" />
+  <logger name="sun.rmi.client.call" level="OFF" />
+  <logger name="sun.rmi.server.call" level="OFF" />
+
   <root level="DEBUG">
     <appender-ref ref="ASYNCFILE" />
     <appender-ref ref="ASYNCSTDOUT" />
