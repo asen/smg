@@ -1,13 +1,13 @@
-@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGMonState
 @import com.smule.smg.SMGMonFilter
 @import com.smule.smg.SMGTree
 @import com.smule.smg.SMGState
-@(plugins: Seq[SMGPlugin], rmtId: String, availRemotes:Seq[String], flt: SMGMonFilter,
+@(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String], flt: SMGMonFilter,
   rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], pg:Int, maxPages:Int,
   limit: Int, defLimit: Int, curUrl: String)(implicit flash: Flash)
 
-@main("SMG - Monitor State trees", plugins, 300) {
+@main("SMG - Monitor State trees", cfSvc, 300) {
 
 @monitorMenu("trees")
 

@@ -4,8 +4,6 @@ v 0.5+
 
 * trace slow commands
 
-* make "index" "first-class" filter member (i.e. select an index AND filter within)
-
 * generate and display build number somewhere
 
 * support external updates - objects which do not have an external command to execute but get the updates
@@ -19,6 +17,8 @@ from external sources posting the data via some API
 
 * login system (?)
 
+* support agg and graph objects defined before their ref objects (?)
+
 == Monitor ==
 
 == Search ==
@@ -28,7 +28,8 @@ from external sources posting the data via some API
 == Documentation ==
 
 * document agg objects (+object.id)
-
+* child_conc
+* index is now "first-class" filter member
 * document JMX plugin/config
 
 == Known Bugs ==

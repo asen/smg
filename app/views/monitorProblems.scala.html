@@ -1,14 +1,14 @@
-@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.SMGMonState
 @import com.smule.smg.SMGState
 @import com.smule.smg.SMGMonFilter
 @import com.smule.smg.SMGMonitorStatesResponse
 
-@(plugins: Seq[SMGPlugin], availRemotes:Seq[String], availStates:Seq[String], rmtId: Option[String],
+@(cfSvc: SMGConfigService, availRemotes:Seq[String], availStates:Seq[String], rmtId: Option[String],
   monitorStates: Seq[SMGMonitorStatesResponse], flt:SMGMonFilter, curUrl: String)(implicit flash: Flash)
 
-@main("SMG - Monitor overview", plugins, 60) {
+@main("SMG - Monitor overview", cfSvc, 60) {
 
 @monitorMenu("problems")
 

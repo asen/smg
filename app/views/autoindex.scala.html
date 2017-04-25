@@ -1,10 +1,10 @@
-@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGConfigService
 @import com.smule.smg.GrapherApi
 @import com.smule.smg.SMGAutoIndex
 
-@(topLevel: SMGAutoIndex, periods: Seq[String], expandLevels: Int, plugins: Seq[SMGPlugin])(implicit flash: Flash)
+@(topLevel: SMGAutoIndex, periods: Seq[String], expandLevels: Int, cfSvc: SMGConfigService)(implicit flash: Flash)
 
-@main("SMG - Auto Index " + topLevel.id, plugins) {
+@main("SMG - Auto Index " + topLevel.id, cfSvc) {
 
   <h4>Automatically discovered indexes</h4>
 

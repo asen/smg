@@ -1,11 +1,11 @@
-@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGFetchCommandTree
 @import com.smule.smg.SMGMonState
-@(plugins: Seq[SMGPlugin], rmtId: String, availRemotes:Seq[String],
+@(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String],
   trees: Map[Int,Seq[SMGFetchCommandTree]], rootId: String, parentId: Option[String],
   maxLevels: Int, defaultLevels: Int, curUrl: String)(implicit flash: Flash)
 
-@main("SMG - Run trees", plugins, 0) {
+@main("SMG - Run trees", cfSvc, 0) {
 
 @monitorMenu("runtrees")
 

@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.{ActorSystem, DeadLetter, Props}
+import com.typesafe.config.ConfigFactory
 import org.yaml.snakeyaml.Yaml
 import play.api.Configuration
 
@@ -30,6 +31,8 @@ trait SMGConfigReloadListener {
 trait SMGConfigService {
 
   protected val log = SMGLogger
+
+  val smgVersionStr: String
 
   val defaultInterval: Int = 60 // seconds
   val defaultTimeout: Int = 30  // seconds
@@ -261,6 +264,21 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   override val useInternalScheduler: Boolean = configuration.getBoolean("smg.useInternalScheduler").getOrElse(true)
 
   private val callSystemGcOnReload: Boolean = configuration.getBoolean("smg.callSystemGcOnReload").getOrElse(true)
+
+  override val smgVersionStr: String = {
+    try {
+      val conf = ConfigFactory.load("build-number.conf")
+      val vers = conf.getString("smg.version")
+      val bnum = conf.getString("smg.build")
+      val ret = s"$vers-$bnum"
+      log.info(s"Staring SMG version $ret")
+      ret
+    } catch {
+      case t: Throwable =>
+        log.ex(t, "Unexpected exception reading build-number.conf")
+        "unknown"
+    }
+  }
 
   /**
     * XXX looks like java is leaking direct memory buffers (or possibly - just slowing

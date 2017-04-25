@@ -1,10 +1,10 @@
-@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGSearchResult
 
 @(q: String, res: Seq[SMGSearchResult], hasMore: Boolean, lmt:Int, defaultLmt:Int,
-  plugins: Seq[SMGPlugin])(implicit flash: Flash)
+  cfSvc: SMGConfigService)(implicit flash: Flash)
 
-@main("SMG - Search", plugins, 0) {
+@main("SMG - Search", cfSvc, 0) {
 
 @if(res.isEmpty) {
   <p>&nbsp;</p>

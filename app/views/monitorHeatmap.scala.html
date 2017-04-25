@@ -1,21 +1,15 @@
-@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.SMGMonHeatmap
 
-@(plugins: Seq[SMGPlugin], monitorStates: Seq[(SMGRemote, SMGMonHeatmap)])(implicit flash: Flash)
+@(cfSvc: SMGConfigService, monitorStates: Seq[(SMGRemote, SMGMonHeatmap)])(implicit flash: Flash)
 
-@main("SMG - Monitor heatmap", plugins) {
+@main("SMG - Monitor heatmap", cfSvc) {
 
 @monitorMenu("heatmap")
 
 <h3>Heatmap</h3>
 
-<!--
-  <form method="GET" action="/monitor">
-    <label for="cbShowAll">Toggle show all states</label>
-    <input id="cbShowAll" type="checkbox" name="all" checked>
-  </form>
--->
   <hr/>
 
   @for((r, ms) <- monitorStates) {

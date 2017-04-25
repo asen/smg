@@ -1,5 +1,6 @@
+@import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGPlugin
-@(title: String, plugins: Seq[SMGPlugin], autoRefresh: Int = 300)(content: Html)(implicit flash: Flash)
+@(title: String, cfSvc: SMGConfigService, autoRefresh: Int = 300)(content: Html)(implicit flash: Flash)
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -33,7 +34,7 @@
                         <span class="icon-bar"></span>
                         <span class="icon-bar"></span>
                         <span class="icon-bar"></span>
-                        @for(p <- plugins){
+                        @for(p <- cfSvc.plugins){
                         <span class="icon-bar"></span>
                         }
                     </button>
@@ -49,7 +50,7 @@
                         <li><a href="/dash?remote=*">All graphs</a></li>
                         <li><a href="/monitor">Monitor</a></li>
                         <li><a href="/assets/docs/index.html">Docs</a></li>
-                        @for(p <- plugins){
+                        @for(p <- cfSvc.plugins){
                         <li><a href="/plugin/@{p.pluginId}">Plugin: @{p.pluginId}</a></li>
                         }
                     </ul>
@@ -71,6 +72,6 @@
         </div>
 
         <hr/>
-        <p align="center"><small>&lt;&lt;&lt; <i>end of page</i> &gt;&gt;&gt;</small></p>
+        <p align="center"><small>&lt;&lt;&lt; <i>SMG Version @cfSvc.smgVersionStr (end of page)</i> &gt;&gt;&gt;</small></p>
     </body>
 </html>

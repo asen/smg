@@ -1,12 +1,12 @@
-@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.SMGMonState
 @import com.smule.smg.SMGState
 @import com.smule.smg.SMGMonFilter
 
-@(plugins: Seq[SMGPlugin], monitorStates: Seq[(SMGRemote, Seq[SMGMonState])], curUrl: String)(implicit flash: Flash)
+@(cfSvc: SMGConfigService, monitorStates: Seq[(SMGRemote, Seq[SMGMonState])], curUrl: String)(implicit flash: Flash)
 
-@main("SMG - Monitor silenced states", plugins, 60) {
+@main("SMG - Monitor silenced states", cfSvc, 60) {
 
 @monitorMenu("silenced")
 

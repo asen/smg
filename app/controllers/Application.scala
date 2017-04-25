@@ -56,7 +56,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val myLevels = lvls.getOrElse(configSvc.config.indexTreeLevels)
     val saneLevels = scala.math.min(scala.math.max(1, myLevels), MAX_INDEX_LEVELS)
     Ok(views.html.index(rmtOpt, availRemotes, saneLevels, configSvc.config.indexTreeLevels,
-      tlIndexesByRemote, smg.detailPeriods.drop(1), configSvc.plugins))
+      tlIndexesByRemote, smg.detailPeriods.drop(1), configSvc))
   }
 
   private def msEnabled(request: Request[AnyContent]) = request.cookies.get(SMG_MONITOR_STATE_COOKIE_NAME).map(_.value).getOrElse("on") == "on"
@@ -70,7 +70,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     if (dispIx.isEmpty) {
       Ok("Index id not found: " + root)
     } else {
-      Ok(views.html.autoindex(dispIx.get, smg.detailPeriods, expandLevels, configSvc.plugins))
+      Ok(views.html.autoindex(dispIx.get, smg.detailPeriods, expandLevels, configSvc))
     }
   }
 
@@ -357,7 +357,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val myAggOp = if (dep.agg.isDefined) dep.agg else lst.find(_.obj.isAgg).map(_.obj.asInstanceOf[SMGAggObjectView].op)
       val errorsOpt = if (myErrors.isEmpty) None else Some(myErrors.mkString(", "))
       Ok(
-        views.html.filterResult(configSvc.plugins, idx, parentIdx, byRemote, flt, dep, myAggOp, maxPages,
+        views.html.filterResult(configSvc, idx, parentIdx, byRemote, flt, dep, myAggOp, maxPages,
           lst.size, objsSlice.size, tlObjects, availRemotes,
           flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt, conf)
       )
@@ -385,7 +385,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
           val lst = t(0).asInstanceOf[Seq[SMGImageView]]
           val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonState]]].flatMap(_._2).toList
           val ixes = smg.objectIndexes(obj)
-          Ok(views.html.show(configSvc.plugins, obj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms, ixes))
+          Ok(views.html.show(configSvc, obj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms, ixes))
         }
       }
       case None => Future { }.map { _ => NotFound("object id not found") }
@@ -420,7 +420,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       Future.sequence(Seq(gfut,mfut)).map { t =>
         val lst = t.head.asInstanceOf[Seq[SMGImageView]]
         val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonState]]].flatMap(_._2).toList
-        Ok(views.html.show(configSvc.plugins, aobj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms, ixes))
+        Ok(views.html.show(configSvc, aobj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms, ixes))
       }
     }
   }
@@ -584,7 +584,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }).map { case (k,v) => k -> v.mkString }
     configSvc.plugins.find( p => p.pluginId == pluginId) match {
       case Some(plugin) => {
-        Ok(views.html.pluginIndex(plugin, plugin.htmlContent(httpParams), configSvc.plugins))
+        Ok(views.html.pluginIndex(plugin, plugin.htmlContent(httpParams), configSvc))
       }
       case None => Ok("Plugin not found - " + pluginId)
     }
@@ -605,7 +605,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       }
       msg = Some("Settings saved in your browser")
     }
-    Ok(views.html.userSettings(configSvc.plugins, msg, showMs)).withCookies(cookiesToSet:_*).discardingCookies(cookiesToDiscard:_*)
+    Ok(views.html.userSettings(configSvc, msg, showMs)).withCookies(cookiesToSet:_*).discardingCookies(cookiesToDiscard:_*)
   }
 
   def inspect(id: String): Action[AnyContent] = Action {
@@ -697,7 +697,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       includeSoft = inclSoft, includeAcked = inclAck, includeSilenced = inclSlnc)
     val availStates = (SMGState.values - SMGState.OK).toSeq.sorted.map(_.toString)
     monitorApi.states(rmtOpt, flt).map { msr =>
-      Ok(views.html.monitorProblems(configSvc.plugins, availRemotes, availStates, rmtOpt,
+      Ok(views.html.monitorProblems(configSvc, availRemotes, availStates, rmtOpt,
         msr, flt, request.uri))
     }
 
@@ -705,7 +705,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   def monitorSilenced(): Action[AnyContent] = Action.async { implicit request =>
     monitorApi.silencedStates().map { seq =>
-      Ok(views.html.monitorSilenced(configSvc.plugins, seq, request.uri))
+      Ok(views.html.monitorSilenced(configSvc, seq, request.uri))
     }
   }
 
@@ -719,7 +719,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       Some(params.get("maxSize").map(_.head.toInt).getOrElse(DEFAULT_HEATMAP_MAX_SIZE)),
       params.get("offset").map(_.head.toInt),
       params.get("limit").map(_.head.toInt)).map { data =>
-      Ok(views.html.monitorHeatmap(configSvc.plugins, data))
+      Ok(views.html.monitorHeatmap(configSvc, data))
     }
   }
 
@@ -737,7 +737,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val includeAckd = ackd.getOrElse("off") == "on"
     val includeSlncd = slncd.getOrElse("off") == "on"
     monitorApi.monLogApi.getSince(period, rmtOpt, limit, Some(minSev), inclSoft, includeAckd, includeSlncd).map { logs =>
-      Ok(views.html.monitorLog(configSvc.plugins, availRemotes, rmtOpt, SMGState.values.toList.map(_.toString),
+      Ok(views.html.monitorLog(configSvc, availRemotes, rmtOpt, SMGState.values.toList.map(_.toString),
         Some(minSev.toString), period, DEFAULT_LOGS_SINCE, limit, DEFAULT_LOGS_LIMIT,
         inclSoft = inclSoft, inclAckd = includeAckd, inclSlncd = includeSlncd, logs))
     }
@@ -779,7 +779,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       monitorApi.monTrees(remote, flt, rid, myPg, myLimit).map { t =>
         val seq = t._1
         val maxPg = t._2
-        Ok(views.html.monitorStateTrees(configSvc.plugins, remote, remoteIds, flt, rid, seq, myPg, maxPg,
+        Ok(views.html.monitorStateTrees(configSvc, remote, remoteIds, flt, rid, seq, myPg, maxPg,
           myLimit, TREES_PAGE_DFEAULT_LIMIT, request.uri))
       }
     }
@@ -803,7 +803,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       }
       val maxLevels = if (rootStr != "") conf.MAX_RUNTREE_LEVELS else lvls.getOrElse(conf.runTreeLevelsDisplay)
       val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
-      Ok(views.html.runTrees(configSvc.plugins, remote, remoteIds,
+      Ok(views.html.runTrees(configSvc, remote, remoteIds,
         treesMap, rootStr, parentId, maxLevels, conf.runTreeLevelsDisplay, request.uri))
     }
   }
@@ -997,7 +997,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       hasMore = sres.size == maxRes + 1,
       lmt = maxRes,
       defaultLmt = DEFAULT_SEARCH_RESULTS_LIMIT,
-      plugins = configSvc.plugins))
+      cfSvc= configSvc))
   }
 
   def jsonTrxTokens(q: String, remote: Option[String]) = Action {

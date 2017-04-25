@@ -1,11 +1,11 @@
 @import com.smule.smg.SMGIndex
 @import com.smule.smg.SMGRemote
-@import com.smule.smg.SMGPlugin
+@import com.smule.smg.SMGConfigService
 
 @(rmtId: Option[String], availRemotes:Seq[String], lvls: Int, defaultLevels: Int,
- remotesData: Seq[(SMGRemote, Seq[SMGIndex])], periods: Seq[String], plugins: Seq[SMGPlugin])(implicit flash: Flash)
+ remotesData: Seq[(SMGRemote, Seq[SMGIndex])], periods: Seq[String], cfSvc: SMGConfigService)(implicit flash: Flash)
 
-@main("SMG - Index", plugins) {
+@main("SMG - Index", cfSvc) {
 
 <div>
   <form id="indexFilterForm" method="GET">
@@ -52,10 +52,10 @@
     </ul>
     <hr/>
   }
-  @if(plugins.nonEmpty){
+  @if(cfSvc.plugins.nonEmpty){
   <h3>Enabled plugins</h3>
   <ul>
-      @for(p <- plugins) {
+      @for(p <- cfSvc.plugins) {
       <li><a href="/plugin/@{p.pluginId}">@{p.pluginId}</a></li>
       }
   </ul>
