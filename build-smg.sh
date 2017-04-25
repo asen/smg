@@ -21,20 +21,21 @@ fi
 
 echo "*** Building version $VERSION"
 
-if [ ! -f conf/build-number.conf ] ; then
+BNFILE=conf/build-number.conf
+if [ ! -f $BNFILE ] ; then
   echo "initialzing new build-number.conf using build-number.conf.init"
-  cp conf/build-number.conf.init conf/build-number.conf
+  cp $BNFILE.init $BNFILE
 fi
 # update version
-sed "s/smg.version=.*$/smg.version=$VERSION/" conf/build-number.conf > conf/build-number.conf.tmp
-mv -f conf/build-number.conf.tmp conf/build-number.conf
+sed "s/smg.version=.*$/smg.version=$VERSION/" $BNFILE > $BNFILE.tmp
+mv -f $BNFILE.tmp $BNFILE
 # update build number
-BNUM=`grep smg.build= conf/build-number.conf | cut -d = -f 2`
+BNUM=`grep smg.build= $BNFILE | cut -d = -f 2`
 let "NBNUM=$BNUM+1"
-sed "s/smg.build=$BNUM/smg.build=$NBNUM/" conf/build-number.conf > conf/build-number.conf.tmp
-mv -f conf/build-number.conf.tmp conf/build-number.conf
+sed "s/smg.build=$BNUM/smg.build=$NBNUM/" $BNFILE > $BNFILE.tmp
+mv -f $BNFILE.tmp $BNFILE
+cat $BNFILE
 
-cat conf/build-number.conf
 
 rm -rf public/smg/*.png
 
