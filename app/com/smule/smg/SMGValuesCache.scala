@@ -49,10 +49,11 @@ class SMGValuesCache() {
     */
   def getCachedValues(ou: SMGObjectUpdate): List[Double] = {
     lazy val nanList: List[Double] = ou.vars.map(v => Double.NaN)
-    val opt = myLastCache.get(ou.id)
+    val key = ckey(ou)
+    val opt = myLastCache.get(key)
     if (opt.isDefined && (SMGRrd.tssNow - opt.get.tss < maxCacheAge(ou))) {
       if (ou.isCounter) {
-        val prevOpt = myPrevCache.get(ou.id)
+        val prevOpt = myPrevCache.get(key)
         if (prevOpt.isDefined) {
           // XXX this is only to deal with counter overflows and resets which we don't want to mess our aggregated stats
           val deltaTime = opt.get.tss - prevOpt.get.tss

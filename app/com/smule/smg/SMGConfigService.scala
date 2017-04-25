@@ -366,6 +366,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     // check whether ou.id is still valid and don't cache values if object was expunged by config reload
     if (config.updateObjectsById.contains(ou.id)) {
       valuesCache.cacheValues(ou, tss, vals)
+    } else {
+      log.debug(s"ConfigService.cacheValues: ignoring obsolete object with id: ${ou.id}")
     }
   }
 
