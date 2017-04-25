@@ -1,7 +1,9 @@
 # Smule Grapher (SMG)
 
 <a name="toc" />
+
 ## Table of Contents
+
 1. [Introduction](#introduction)
     1. [What is it](#what-is-it)
     1. [Why another rrdtool based system](#why-another)
@@ -18,10 +20,12 @@
             1. [Regex filter](#flt-regex)
             1. [Regex Exclude filter](#flt-rxexclude)
             1. [Title Regex filter](#flt-titlerx)
+            1. [Index filter](#flt-index)
         1. [Indexes](#indexes)
         1. [Graph options](#gopts)
             1. [Step](#step)
             1. [MaxY](#maxy)
+            1. [MinY](#miny)
             1. [Rows and cols](#rows-and-cols)
             1. [X-Sort](#sorting)
         1. [Aggregate functions](#aggregate-functions)
@@ -34,9 +38,11 @@
 1. [Developer documentation](dev/index.md)
 
 <a name="introduction" />
+
 ## Introduction
 
 <a name="what-is-it" />
+
 ### What is it
 
 Smule Grapher (SMG) is a Play 2.4/Scala app used to retrieve data 
@@ -45,6 +51,7 @@ commands) and maintain many RRD databases with the retrieved data and
 then plot and display time-series graphs (and more) from them.
 
 <a name="why-another" />
+
 ### Why another rrdtool based system
 
 Why not cacti (which is better than mrtg in many ways)
@@ -84,17 +91,18 @@ Some Features:
 * arbitrary number of vars per object/graph allowed (though defining 
 more than 10 is rarely a good idea)
 * single instance/config can specify and work with different update 
-periods - like evey minute, every 5 minutes (the default as in mrtg), 
-every hour etc.
+periods - like evey minute (the default), every 5 minutes, every hour
+etc.
 * script\_outputting\_var\_value.sh can be a mrtg helper script (with 
 max 2 vars)
 * Multi-colos support. One can have multiple instances spread across 
-diff geo locations but use single UI access point for all.
+different geo locations but use single UI access point for all.
 * Built in monitoring (as of 0.2+)
 
 See concepts overview below for more details.
 
 <a name="ui-orient" />
+
 ### UI orientation
 
 SMG's main page (/) displays a list of [configured top-level
@@ -113,6 +121,7 @@ item displays current issues as detected by the
 will show up as menu items too.
 
 <a name="concepts" />
+
 ### Concepts overview
 
 SMG uses the (excellent) [rrdtool](http://oss.oetiker.ch/rrdtool/) 
@@ -129,6 +138,7 @@ and older data gets averaged over longer period and kept like that
 (at smaller resolution).
 
 <a name="rrd-objects" />
+
 #### RRD objects
 
 Every graph in SMG corresponds to one or more (check aggregate 
@@ -163,10 +173,22 @@ be executed and its output (numbers) recorded in the RRD file.
 The default interval if not specified in the config is 300 seconds 
 (or every-5 minutes).
 
-Check [Rrd Objects configuration](admin/index.md#rrd-objects) for more 
-details on what properties are supported for given rrd object.
+Check [RRD Objects configuration](admin/index.md#rrd-objects) for more 
+details on what properties are supported for given RRD object.
+
+In addition to regular RRD objects (with values for update coming from 
+external command output) SMG supports Aggregate Rrd Objects. These don't
+have their own command to run but instead use values fetched for multiple 
+other regular RRD objects to produce a single aggregate value for every 
+variable defined and then update that in a RRD file. These are distinguished
+from regular RRD objects by prepending a '+' to the object id in the yaml
+config.
+
+Check [Aggregate RRD Objects configuration](admin/index.md#rrd-agg-objects) for more 
+details on what properties are supported for given Aggregate RRD object.
 
 <a name="intervals" />
+
 #### Intervals, runs and scheduler
 
 SMG has the concept of regular (every *interval* seconds) *runs* where 
@@ -175,7 +197,9 @@ All objects having the same interval config value will be processed
 during the respective interval run (also see the next section on 
 pre\_fetch and run trees). All per-interval runs execute in
 their own separate thread pool, so that e.g. slow hourly commands do
-not interfere too much with fast every-minute commands.
+not interfere too much with fast every-minute commands. Aggregate RRD
+object updates happen after all regular rrd objects have been updated,
+at the end of the interval run.
 
 There are two ways this can work:
 
@@ -190,10 +214,11 @@ to *false* and then schedule the smgscripts/run-job.sh script as cron
 jobs (per interval, passed as param to run-job.sh) as needed.
 
 So far the internal scheduler has been working fine for us at Smule so 
-don't see many reasons to want to use the external scheduler option.
+don't see any reasons to want to use the external scheduler option.
 
 
 <a name="pre_fetch" />
+
 #### pre_fetch and run command trees
 
 One important thing when trying to get and update RRDs for tens of 
@@ -225,15 +250,23 @@ to be its parent. That way one can define a hierarchical command tree
 structure ("run tree") where many child commands depend on a single 
 parent command and a set of parents can define a common parent of their 
 own etc. Example use case for this is to define a top-level 
-_ping -c 1 \<ip_addr\>_ pre\_fetch command for given host and then all 
+_ping -c 1 ip.addr_ pre\_fetch command for given host and then all 
 other pre\_fetches (or actual rrd objects) for that host can have the 
 ping pre\_fetch defined as parent and will not run  at all if e.g. the 
 host is down (not ping-able). Having such setup will also make SMG only
 send a single "unknown" alert if a host is down (vs alerts for each 
 individual command).
 
+An important note is that SMG will execute child pre-fetch commands in sequence (but 
+not rrd object commands which are always parallelized up to the max concurrency 
+level configured for the interval). The intent is to be able to limit the number of
+concurrent probes hitting some target host to 1 per interval. This behavior can be
+overriden by setting the **child_conc** property on the pre-fetch command to more
+than the default 1 (setting the number of max concurrent threads that can execute
+child pre-fetches of this pre-fetch).
 
 <a name="period" />
+
 #### Period since and period length
 
 By default SMG will plot graphs for a period starting at some point
@@ -247,6 +280,7 @@ Since). Both parameters and their format are described in detail
 
 
 <a name="filters" />
+
 #### Filters
 
 SMG maintains the list of all objects available for graphing in memory.
@@ -277,6 +311,7 @@ use the filters to define arbitrary groups later when needed.
 
 
 <a name="flt-remote" />
+
 ##### Remote filter
 - a drop down to select a specific [remote instance](#remotes) to 
 search in or to search in all remotes via the special 
@@ -284,12 +319,14 @@ asterisk _\*_ remote id. Note that this filter is not visible
 unless there is at least one configured remote.
 
 <a name="flt-titlerx" />
+
 ##### Text Regex filter
 - when set, only objects where any of object id, title, var labels
  or measurement units is matched by the specified regular expressions 
  will be matched by the filter. 
 
 <a name="flt-prefix" />
+
 ##### Prefix filter
 
 - when set, only object ids having the specified 
@@ -298,6 +335,7 @@ Note that this is not a regexp but a direct string comparison (and
 e.g dots are not special match-all symbols).
 
 <a name="flt-suffix" />
+
 ##### Suffix filter 
 
 - when set, only object ids having the specified 
@@ -305,19 +343,32 @@ suffix string (ending with it) will be matched by the filter.
 Note that this is not a regexp but a direct string comparison.
 
 <a name="flt-regex" />
+
 ##### Regex filter
 
 - when set, only object ids matching the specified
 regular expressions will be matched by the filter. 
 
 <a name="flt-rxexclude" />
+
 ##### Regex Exclude filter
 
 - when set, only object ids NOT matching the 
 specified regular expressions will be matched by the filter. 
 
+<a name="flt-index" />
+
+##### Index filter
+
+- Where Index ([described below](#indexes)) itself defines a filter, the index id is
+a "first class" filter member too. So when visiting an Index url one sees the index
+filter separately from the user filter and the user filter works only within the already
+filtered by the index objects. The UI provides options to remove the index filter or merge
+it with the user filter resulting in a index-free filter.
+
 
 <a name="indexes" />
+
 #### Indexes
 
 An index is basically a named filter with some additional properties. 
@@ -332,12 +383,14 @@ for more details on indexes.
 
 
 <a name="gopts" />
+
 #### Graph options
 
 These generally allow one to set some non-default graph options, 
 when desired.
 
 <a name="step" />
+
 ##### Step
 
 By default rrdtool will pick the "best" possible step (what period a
@@ -350,6 +403,7 @@ graphs updated every minute, SMG will display 1 data point per minute
 that. 
 
 <a name="maxy" />
+
 ##### MaxY
 
 Sometimes one would get big "spikes" in the data where for a short 
@@ -361,8 +415,15 @@ order to see details around such spikes one can set the **MaxY**
 where the spike was occurring but the surrounding time series data
 can be seen in a good detail.
 
-          
+<a name="miny" />
+
+##### MinY
+
+Similar to MaxY, MinY determines the minimum Y value which will be 
+displayed on the graphs.
+
 <a name="rows-and-cols" />
+
 ##### Rows and columns
 
 Whenever SMG displays the graphs resulting from the given filter it 
@@ -374,6 +435,7 @@ most "Rows" rows per page.
 
 
 <a name="sorting" />
+
 ##### Sorting
 
 SMG supports sorting a displayed page of graphs by the average value
@@ -403,6 +465,7 @@ which you can sort after.
 This feature is subject to future improvements too.
 
 <a name="aggregate-functions" />
+
 #### Aggregate functions
 
 SMG supports "aggregating" graphs for objects which have identical set 
@@ -432,6 +495,7 @@ so it is expected to be somewhat slower.
 
 
 <a name="view-objects" />
+
 #### View objects and calculated graphs
 
 In addition to the mentioned RRD objects, SMG also supports *View 
@@ -464,11 +528,12 @@ variable in SMG which divides the "cache hit" rate (x 100) by the total
 "requests" and we effectively get an average "cache hit percentage" for
 the given period.
 
-Check the [Cdef variables](admin/index.md#cdef-vars) section in the 
+Check the [Cdef variables](admin/index.md#cdef_vars) section in the 
 Admin documentation for more details.
 
 
 <a name="remotes" />
+
 #### Remotes
 
 SMG was designed with multiple data centers (a.k.a. "*remotes*") in 
@@ -512,6 +577,7 @@ is mostly a convenience to get all monitoring in a single UI
 "dashboard".
 
 <a name="plugins" />
+
 #### Plugins
 
 SMG supports plugins (configured in application.conf) which are just
@@ -554,12 +620,14 @@ fancier graphs client-side.
 object time-series by applying complex arithmetic expressions involving
 these time-series.
 
-- spiker - this plugin runs periodically (as configured) and tries to 
-detect anomalies (like sudden spikes and drops) in the graphs. It is 
-deprecated (the monitoring functionality does the same, better)
-and is provided more like an example.
+- jmx - one can fetch JMX values using bash command wrappers which might
+work for longer update intervals and not too many objects but is problematic
+as establishing the JMX connection can be slow (and thus - expensive).
+It would be much better to to use persistent connections and this is
+what the SMG JMX plugins provides. Documentation TBD
 
 <a name="monitoring" />
+
 #### Monitoring
 
 SMG main function is to fetch many values from various services and 

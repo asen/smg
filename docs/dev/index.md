@@ -35,7 +35,7 @@ homebrew on Mac:
 <li>Run:
 <pre>
     $ cd smg
-    $ JAVA_HOME=$(/usr/libexec/java_home -v 1.8) ./activator run
+    $ JAVA_HOME=$(/usr/libexec/java_home -v 1.8) ./run-dev.sh
 </pre></li>
 </ol>
 
@@ -52,15 +52,22 @@ Just some notes on potential future content below
 - rrdtool
 - Akka
 - remotes
+- avoid/minimize synchronization when possible
 
 ## Modules orientation
 
-- bind(classOf[SMGConfigService]).to(classOf[SMGConfigServiceImpl])
-- bind(classOf[GrapherApi]).to(classOf[SMGrapher])
-- bind(classOf[SMGSchedulerApi]).to(classOf[SMGScheduler])
-- bind(classOf[SMGRemotesApi]).to(classOf[SMGRemotes])
-- bind(classOf[SMGMonitorLogApi]).to(classOf[SMGMonitorLog])
-- bind(classOf[SMGMonitorApi]).to(classOf[SMGMonitor])
+- all singletons
+
+    
+    bind(classOf[SMGConfigService]).to(classOf[SMGConfigServiceImpl])
+    bind(classOf[SMGRemotesApi]).to(classOf[SMGRemotes])
+    bind(classOf[SMGSearchCache]).to(classOf[SMGSearchCacheImpl])
+    bind(classOf[GrapherApi]).to(classOf[SMGrapher])
+    bind(classOf[SMGSchedulerApi]).to(classOf[SMGScheduler])
+    bind(classOf[SMGMonitorLogApi]).to(classOf[SMGMonitorLog])
+    bind(classOf[SMGMonNotifyApi]).to(classOf[SMGMonNotifySvc])
+    bind(classOf[SMGMonitorApi]).to(classOf[SMGMonitor])
+
 
 ## Plugins
 - ...

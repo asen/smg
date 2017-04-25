@@ -25,9 +25,6 @@ from external sources posting the data via some API
 
 == Documentation ==
 
-* document agg objects (+object.id)
-* child_conc
-* index is now "first-class" filter member
 * document JMX plugin/config
 
 == Known Bugs ==

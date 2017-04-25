@@ -10,6 +10,7 @@
 1. [Configuration](#config)
     1. [Globals](#globals)
     1. [RRD objects](#rrd-objects)
+    1. [Aggregate RRD objects](#rrd-agg-objects)
     1. [View objects](#view-objects)
     1. [Indexes](#indexes)
     1. [Hidden Indexes](#hindexes)
@@ -19,11 +20,13 @@
     1. Tweaking SMG for performance
 
 <a name="install" />
+
 ## Install
 
 SMG can be installed for a pre-built .tgz or run directly from sources.
 
 <a name="pre-reqs" />
+
 ### Pre-requisites
 
 SMG needs the following software to run.
@@ -72,6 +75,7 @@ option](#img_dir)):
 </pre>
 
 <a name="install-tgz" />
+
 ### Installation from .tgz bundle
 
 SMG comes as a pre-built tgz archive named like _smg-$VERSION.tgz_ 
@@ -132,6 +136,7 @@ section for more details.
 
 
 <a name="install-src" />
+
 #### Installation from sources
 
 - This is mostly meant for development purposes - check [the 
@@ -140,6 +145,7 @@ instructions.
 
 
 <a name="config" />
+
 ## Configuration Reference
 
 SMG uses [yaml](http://yaml.org/) for its configuration file format. 
@@ -170,6 +176,7 @@ order of the graphs to be displayed to match the order in which the
 objects were defined. 
 
 <a name="globals" />
+
 ### Globals
 
 Global for SMG variables are defined as a name -> value pairs where the
@@ -282,14 +289,16 @@ one does not care about Android and IE.
 <a name="pre_fetch" />
 
 - **$pre\_fetch**: pre\_fetch is special and it is not a simple name ->
-value pair. A $pre_fetch defines an unique **id** and a **command** to 
+value pair. A $pre\_fetch defines an unique **id** and a **command** to 
 execute, together with an optional **timeout** for the command 
-(30 seconds by default) and an optional "parent" pre_fetch id.
-Pre fetch also supports **notify-xxx**: - these are multiple properties
-which define monitoring alert notifications (check [monitoring config](#monitoring)
-for details). Note that from the per-leve specifiers only notify-unkn
-is relevant at this level. Here are two example pre_fetch definitions, one
-referencing the other as a parent:
+(30 seconds by default) and an optional "parent" pre\_fetch id. In addition
+pre\_fetch can have a **child\_conc** property (default 1 if not specified)
+which determines how many threads can execute this pre-fetch child pre-fetches
+(but not object commands which are always parallelized). Pre fetch also 
+supports **notify-xxx**: - these are multiple properties which define monitoring
+alert notifications (check [monitoring config](#monitoring) for details). Note
+that from the per-leve specifiers only notify-unkn is relevant at this level.
+Here are two example pre_fetch definitions, one referencing the other as a parent:
 
 <blockquote>
 <pre>
@@ -298,6 +307,7 @@ referencing the other as a parent:
       id: host.host1.up
       command: "ping -c 1 host1 >/dev/null"
       notify-unnkn: mail-asen, notif-pd
+      child_conc: 2
       timeout: 5
           
     - $pre_fetch:
@@ -509,6 +519,7 @@ Int.MaxValue which effectively disables throttling.
 be considered a hard error and in turn - trigger alert notifications.
 
 <a name="rrd-objects" />
+
 ### RRD objects
 
 RRD objects usually represent the majority of the SMG config. These 
@@ -662,6 +673,46 @@ for this object. By default SMG will pick one based on object interval.
 monitoring alert notifications. Check [monitoring config](#monitoring)
 for details. Note that from the per-leve specifiers only notify-unkn
 is relevant at this level.
+
+<a name="rrd-agg-objects" />
+
+### Aggrgegate RRD objects
+
+In addition to the "regular" RRD Objects described above, one can define
+"aggregate" RRD Objects. Simiar to the aggregate functions which can be 
+applied on multiple View objects, the aggrgeate RRD objects represent values
+produced by applying an aggregate function (SUM, AVG, etc) to a set of
+update objects. The resulting value is then updated in a RRD file and the
+object also represents a View object subject to display and view 
+aggregation functions. An aggrgegate RRD object is defined by prepending a
+'+' to the object id. Example:
+
+<pre>
+- +agg.hosts.sysload:                                   # aggregate rrd object id
+  op: AVG                                               # mandatory aggregate function to apply
+  ids:                                                  # mandatory list of object ids
+    - host.host1.sysload                                # regular rrd object id, currently must be defined before this object in the config
+    - host.host2.sysload                                # regular rrd object id, currently must be defined before this object in the config
+  interval: 60                                          # optional - default is the interval of the first object listed in the ids list
+  title: "Localhost sysload (1/5/15 min)"               # optional title - object id will be used if no title is present
+  rrd_type: GAUGE                                       # optional - if not set, the rrd_type of the first object will be used
+  rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
+  stack: false                                          # optional - stack graph lines if true, default - false
+  notify-unkn: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
+  vars:                                                 # optional list of all variables to graph. If not set the first object vars list will be used.
+    - label: sl1min                                     # the variable label. 
+      min: 0                                            # optional - min accepted rrd value, default 0
+      max: 1000                                         # optional - max accepted rrd value, default U (unlimmited)
+      mu: "lavg"                                        # optional - measurement units, default - empty string
+      lt: "LINE1"                                       # optional - line type, default is LINE1
+      alert-warn-gt: 8                                  # optional - monitoring thresholds, details below
+    - label: sl5min                                     # another variable def
+    - label: sl15min                                    # a 3d variable def
+</pre>
+
+As mentioned in the yaml comments above, some of the properties of the aggregate object will be
+assumed from the first object vars list, unless explicitly defined. It is up to the config to
+ensure that the list of objects to aggregate is compatible (and meaningful).
 
 <a name="view-objects" />
 
