@@ -4,8 +4,6 @@ v 0.5+
 
 * trace slow commands
 
-* generate and display build number somewhere
-
 * support external updates - objects which do not have an external command to execute but get the updates
 from external sources posting the data via some API
 

@@ -528,6 +528,22 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  private def configStatusStr(myConf: SMGLocalConfig): String = {
+    val myVersionStr = s"(SMG Version ${configSvc.smgVersionStr})"
+    val objus = myConf.updateObjects.size
+    val rrdObjs = myConf.rrdObjects.size
+    val rrdAggObjs = myConf.rrdAggObjects.size
+    val othObjs = objus - (rrdObjs + rrdAggObjs)
+    val myObjectsStr = s"$objus local update objects (rrd=$rrdObjs, " +
+      s"rrdAgg=$rrdAggObjs, plugins=$othObjs), " +
+      s"${myConf.viewObjects.size} local view objects and ${myConf.remotes.size} remote SMG instances defined."
+    val retStr = if (myConf.allErrors.isEmpty)
+      s"OK $myVersionStr - no issues detected: $myObjectsStr"
+    else s"WARNING $myVersionStr - some issues detected: $myObjectsStr\n\n" +
+      configSvc.config.allErrors.mkString("\n")
+    retStr + "\n"
+  }
+
   /**
     * Reload local config from disk and propagate the reload command to all configured remotes.
     *
@@ -540,21 +556,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
       remotes.notifySlaves()
     }
     remotes.fetchConfigs()
-    val myNewConf = configSvc.config
-    val retStr = if (myNewConf.allErrors.isEmpty)
-      s"OK - no issues detected (${myNewConf.viewObjects.size} view objects defined)"
-    else s"WARNING - some issues detected (${myNewConf.viewObjects.size} view objects defined):\n\n" +
-      configSvc.config.allErrors.mkString("\n")
-    Ok(retStr)
+    Ok(configStatusStr(configSvc.config))
   }
 
   def configStatus: Action[AnyContent] = Action {
-    val myConf = configSvc.config
-    val retStr = if (myConf.allErrors.isEmpty)
-      s"OK - no issues detected (${myConf.viewObjects.size} view objects defined)"
-    else s"WARNING - some issues detected (${myConf.viewObjects.size} view objects defined):\n\n" +
-      configSvc.config.allErrors.mkString("\n")
-    Ok(retStr + "\n")
+    Ok(configStatusStr(configSvc.config))
   }
 
   def commandRunTimes(lmt: Int): Action[AnyContent] = Action {
