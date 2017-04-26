@@ -115,8 +115,9 @@ can get an "empty" (match-all) filter by clicking the **All Graphs**
 link in the top menu. The **Automatic index** represents a tree
 structure which SMG will automatically create from all object ids.
 That looks much better if the object ids follow a hierarchical 
-structure where "levels" are seprated by dots. The **Monitor** menu
-item displays current issues as detected by the 
+structure where "levels" are seprated by dots. The **Search** menu
+item allows searching for both objects and indexes. The **Monitor**
+menu item displays current issues as detected by the 
 [monitoring system](#monitoring). Any registered SMG [plugins](#plugins) 
 will show up as menu items too.
 

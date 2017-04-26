@@ -2,12 +2,10 @@ v 0.5+
 
 == General Enhancements ==
 
-* trace slow commands
-
 * support external updates - objects which do not have an external command to execute but get the updates
 from external sources posting the data via some API
 
-* filter to hide empty graphs
+* filter to hide empty graphs (?)
 
 * support "tags" (?) - be able to filter by tag.
 
@@ -17,7 +15,11 @@ from external sources posting the data via some API
 
 * support agg and graph objects defined before their ref objects (?)
 
+* configurator (plugin?)
+
 == Monitor ==
+
+* combine UNKNOWN alerts for the same fetch command from diff intervals into a single one.
 
 == Search ==
 
@@ -25,7 +27,7 @@ from external sources posting the data via some API
 
 == Documentation ==
 
-* document JMX plugin/config
+* document JMX plugin config
 
 == Known Bugs ==
 

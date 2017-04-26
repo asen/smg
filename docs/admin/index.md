@@ -633,27 +633,24 @@ to make such a change outside SMG using rrdtool though.
 
 The following properties are all optional.
 
-- **interval**: - (default - _300_ seconds) - every rrd object has a an 
+- **interval**: - (default - _60_ seconds) - every rrd object has a an 
 interval associated with it - determining how often the data will be 
-retrieved from the monitored service and updated in the RRD file. 
-The default of 300 seconds (every 5 minutes) is inspired by MRTG and 
-Cacti, however we at Smule usually use 60 (every minute) for most
-graphs.
+retrieved from the monitored service and updated in the RRD file.
 
 - **title**: - free form text description of the object. If not 
 specified, the object id will be used as a title.
 
-- **rrd_type**: (default - GAUGE) - can be COUNTER, DERIVE etc, check 
+- **rrd\_type**: (default - GAUGE) - can be COUNTER, DERIVE etc, check 
 rrdtool docs for other options. Note that originally SMG used rrdType
 for this property which is inconsistent with the rest. SMG will still
-try to read rrdType if rrd_type is not present, for backwards 
+try to read rrdType if rrd\_type is not present, for backwards 
 compatibility.
 
-- **rrd_init_source**: (no default) - if defined SMG will pass 
---source <val> to rrdtool create. This can be used to rebuild some
-rrd using different step/RRAs etc. E.g. update the conf and also
-specify rrd_init_source: <object_id>.old, then rename the actual
-rrd file from <object_id>.rrd to <object_id>.old. On the next run
+- **rrd\_init\_source**: (no default) - if defined SMG will pass 
+--source _val_ to rrdtool create. This can be used to rebuild some
+rrd using different step/RRAs etc. E.g. update the conf specifying
+rrd_init_source: object.id.old, then rename the actual
+rrd file from object.id.rrd to object.id.old. On the next run
 SMG will re-create the rrd using the newly specified config and
 populate the data from the pre-existing values. Check rrdtool docs 
 for more information and caveats (Note: this feature requires 
@@ -759,7 +756,8 @@ cache hit % in this case) [explained below](#cdef_vars-cdef)
 One should not set both gv and cdef_vars on the same View object. If 
 one does that the gv values will be ignored. Note that technically it 
 is possible to do what gv does using just cdef_vars except 
-that gv provides a simpler way to just select/reorder graph lines.
+that gv provides a simpler way to just select a subset or reorder graph
+lines.
 
 View objects support the following properties:
 
@@ -840,9 +838,9 @@ Here is an example Index definition:
 <pre>
     - ^hosts.localhost:                # index id
       title: "localhost graphs"  # optional - id (sans the ^ char) will be used if not specified
-      cols: 6                    # optional (default - 6) how many coulmns of graph images to display
-      rows: 30                   # optional (default - 30) how many rows (max) to display. excess rows are paginated
-      px: "host.localhost."           # optional filter: rrd object id prefix to match. Ignored if null (which is the default).
+      cols: 6                    # optional (default - the value of $dash-default-cols) how many coulmns of graph images to display
+      rows: 10                   # optional (default - the value of $dash-default-rows) how many rows (max) to display. excess rows are paginated
+      px: "host.localhost."      # optional filter: rrd object id prefix to match. Ignored if null (which is the default).
 #      sx: ...                   # optional filter: rrd object id suffix to match. Ignored if null (which is the default).
 #      rx: ...                   # optional filter: rrd object id regex to match. Ignored if null (which is the default).
 #      rxx: ...                  #
@@ -866,14 +864,16 @@ specified, the id (sans the ^ char) will be used.
 - **desc**: - optional free form text description of the index 
 (displayed together with title on index pages).
 
-- **cols**: (default - 6) - optional number specifying in how many
-"columns" to display the rows of graphs. Note that this sets a max 
-limit (and a hard "line break"), chances are that on smaller screens 
-your browser will still wrap graph "rows" as needed for display.
+- **cols**: (default - the value of the $dash-default-cols global) -
+optional number specifying in how many "columns" to display the rows
+of graphs. Note that this sets a max limit (and a hard "line break"),
+chances are that on smaller screens your browser will still wrap graph
+"rows" as needed for display.
 
-- **rows**: (default - 30) - optional number specifying how many rows
-(each having max _cols_ graphs) to display, effectively setting the
-number of graphs SMG will display on a single page of results.
+- **rows**: (default - the value of the $dash-default-rows global) -
+optional number specifying how many rows (each having max _cols_ graphs)
+to display, effectively setting the number of graphs SMG will display on
+a single page of results.
 
 <a name="period" />
 
@@ -893,7 +893,7 @@ time specifier which can be one of the following:
     - _d_ - for days
     - _h_ - for hours
     - (None, just a number) - assumed to be seconds.
-The end point of the graph can be set to be different than
+The end point of the graphs can be set to be different than
 "now" by using a "period length" (**pl**)
 [graph option](#graph-options).
 
