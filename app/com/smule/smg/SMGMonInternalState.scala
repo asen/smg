@@ -35,8 +35,6 @@ trait SMGMonInternalState extends SMGMonState {
   override def severity: Double = currentStateVal.id.toDouble
   override def remote: SMGRemote = SMGRemote.local
 
-  override def alertKey: String = id
-
   def errorRepeat: Int = {
     val mylst = myRecentStates.take(maxHardErrorCount)
     if (mylst.head.isOk)
@@ -264,6 +262,8 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
                      val monLog: SMGMonitorLogApi,
                      val notifSvc: SMGMonNotifyApi) extends SMGMonInternalState {
 
+  override def alertKey: String = id
+
   override val id: String = SMGMonVarState.stateId(ou,vix)
   override val parentId: Option[String] = Some(ou.id)
 
@@ -444,6 +444,8 @@ class SMGMonObjState(var ou: SMGObjectUpdate,
                      val notifSvc: SMGMonNotifyApi) extends SMGMonBaseFetchState {
   override val id: String = SMGMonObjState.stateId(ou)
 
+  override def alertKey: String = id
+
   override def parentId: Option[String] = SMGMonPfState.fetchParentStateId(ou.preFetch, ou.interval, ou.pluginId)
 
   override def ouids: Seq[String] = (Seq(ou.id) ++ configSvc.config.viewObjectsByUpdateId.getOrElse(ou.id, Seq()).map(_.id)).distinct
@@ -517,6 +519,9 @@ class SMGMonRunState(val interval: Int,
                      val notifSvc: SMGMonNotifyApi) extends SMGMonInternalState {
 
   override val id: String = SMGMonRunState.stateId(interval, pluginId)
+
+  override def alertKey: String = id
+
   override def parentId: Option[String] = None
 
   override def ouids: Seq[String] = Seq()
