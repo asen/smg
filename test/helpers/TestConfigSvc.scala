@@ -123,4 +123,8 @@ class TestConfigSvc() extends SMGConfigService {
     * @param ou
     */
   override def invalidateCachedValues(ou: SMGObjectUpdate): Unit = {}
+
+  override val smgVersionStr: String = "test"
+  override val defaultInterval: Int = 60
+  override val defaultTimeout: Int = 30
 }

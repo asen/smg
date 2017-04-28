@@ -23,49 +23,11 @@ import scala.io.Source
   */
 class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, val log: SMGPluginLogger) {
 
-  private def getListOfFiles(dir: String, matcher: PathMatcher): List[File] = {
-    val d = new File(dir)
-    if (d.exists && d.isDirectory) {
-      d.listFiles.filter { (f: File) =>
-        //        log.info(f.toPath);
-        f.isFile && matcher.matches(f.toPath)
-      }.toList.sortBy(f => f.toPath)
-    } else {
-      log.warn("SMGJmxConfigParser.getListOfFiles: CONFIG_WARNING: " + dir + " : glob did not match anything")
-      List[File]()
-    }
-  }
-
-  private def expandGlob(glob: String): List[String] = {
-    if (new File(glob).isFile) {
-      return List(glob)
-    }
-    //    log.info("expandGlob: Expanding glob: " + glob)
-    val fs = FileSystems.getDefault
-    var dir = glob
-    val sepIdx = glob.lastIndexOf(fs.getSeparator)
-    if (sepIdx != -1) {
-      dir = glob.substring(0, sepIdx)
-    }
-    //    log.info("expandGlob: listing dir " + dir + " with glob " + glob)
-    val matcher = fs.getPathMatcher("glob:" + glob)
-    getListOfFiles(dir, matcher).map((f: File) => f.getPath)
-  }
-
-  private def keyValFromMap(m: java.util.Map[String, Object]): (String, Object) = {
-    val firstKey = m.keys.collectFirst[String] { case x => x }.getOrElse("")
-    val retVal = m.remove(firstKey)
-    if (retVal != null)
-      (firstKey, retVal)
-    else
-      (firstKey, m)
-  }
-
-  private def validateOid(oid: String): Boolean = oid.matches("^[\\w\\._-]+$")
+  val myCfParser = new SMGConfigParser(log)
 
   private def processObject(rrdDir: String, interval: Int, pfId: String, hostPort: String, baseId: String,
                             oid: String, ymap: java.util.Map[String, Object], confFile: String ): Option[SMGJmxObject] = {
-    if (!validateOid(oid)){
+    if (!myCfParser.validateOid(oid)){
       log.error("SMGJmxConfigParser.processObject(" + confFile + "): CONFIG_ERROR: Skipping object with invalid id: " + oid)
       None
     } else {
@@ -73,9 +35,7 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
         val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid,
           ymap.toMap.map(kv => (kv._1, kv._2.toString)))
         // XXX support for both rrdType (deprecated) and rrd_type syntax
-        val myRrdType = if (ymap.contains("rrd_type"))
-          ymap("rrd_type").toString
-        else ymap.getOrElse("rrdType", "GAUGE").toString
+        val myRrdType = myCfParser.getRrdType(ymap, None)
 
         val obj = SMGJmxObject(baseId,
           oid,
@@ -84,9 +44,7 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
           hostPort,
           ymap("jmxName").toString,
           myRrdType,
-          ymap("vars").asInstanceOf[util.ArrayList[util.Map[String, Object]]].toList.map(
-            (m: util.Map[String,Object]) => m.map { t => (t._1, t._2.toString) }.toMap
-          ),
+          myCfParser.ymapVars(ymap),
           rrdDir,
           interval,
           Some(pluginId),
@@ -112,7 +70,7 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
     val pf = SMGPreFetchCmd(pfId, SMGCmd(s"jmx://$hostPort"), None, ignoreTs = true, childConc = 1, notifyConf)
     var ret = ListBuffer[SMGJmxObject]()
     ymap("objs").asInstanceOf[java.util.ArrayList[java.util.Map[String, Object]]].foreach { oymap =>
-      val t = keyValFromMap(oymap)
+      val t = myCfParser.keyValFromMap(oymap)
       val opt = processObject(rrdDir, interval, pf.id, hostPort, baseId, baseId + "." + t._1,
         t._2.asInstanceOf[java.util.Map[String, Object]], confFile)
       if (opt.isDefined) ret += opt.get
@@ -125,12 +83,12 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
     val ret = ListBuffer[SMGJmxObject]()
     val retPfs = mutable.Map[String, SMGPreFetchCmd]()
     tlConf("includes").asInstanceOf[util.ArrayList[String]].foreach { globStr: String =>
-      expandGlob(globStr).foreach { yamlfn =>
+      myCfParser.expandGlob(globStr).foreach { yamlfn =>
         val confTxt = Source.fromFile(yamlfn).mkString
         val yaml = new Yaml();
         val yamlTopObject = yaml.load(confTxt)
         yamlTopObject.asInstanceOf[java.util.List[Object]].foreach { yamlObj: Object =>
-          val t = keyValFromMap(yamlObj.asInstanceOf[java.util.Map[String, Object]])
+          val t = myCfParser.keyValFromMap(yamlObj.asInstanceOf[java.util.Map[String, Object]])
           val (lst, pf) = parseHostDef(rrdDir, interval, t._1, t._2.asInstanceOf[java.util.Map[String, Object]], yamlfn)
           ret ++= lst
           retPfs(pf.id) = pf
