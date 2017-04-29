@@ -2,7 +2,7 @@ v 0.5+
 
 == General Enhancements ==
 
-* support agg and graph objects defined before their ref objects (?)
+* fix/improve x-sort (how?)
 
 * configurator (plugin?)
 
@@ -17,14 +17,9 @@ from external sources posting the data via some API. Probably a plugin.
 
 * login system (?)
 
-
 == Monitor ==
 
 * combine UNKNOWN alerts for the same fetch command from diff intervals into a single one.
-
-== Search ==
-
-* smart (?) search
 
 == Documentation ==
 

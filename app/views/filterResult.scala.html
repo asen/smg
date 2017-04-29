@@ -62,6 +62,11 @@
       the current filter. Consider increasing page size if you really want to see aggregation from
       all (via Rows/Columns, up to a sane limit).</strong></font></p>
     }
+    @if((gopts.xsort.getOrElse(0) != 0) && (slicedCount < tlCount)){
+    <p><font color="red"><strong>WARNING: You are sorting a subset of the objects matching
+      the current filter. Consider increasing page size if you really want to see them
+      all sorted (via Rows/Columns, up to a sane limit).</strong></font></p>
+    }
   </div>
 
   @if(showMs){

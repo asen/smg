@@ -345,7 +345,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
     // We need both the (future) images and monitor states resolved before responding
     Future.sequence(Seq(futImages, futMonitorStates)).map { mySeq =>
-      val lst = mySeq.head.asInstanceOf[List[SMGImageView]]
+      val lst = mySeq.head.asInstanceOf[Seq[SMGImageView]]
       val monStatesByImgView = mySeq(1).asInstanceOf[Map[String,Seq[SMGMonState]]]
 
       val byRemoteMap = lst.groupBy( img => img.remoteId.getOrElse("") )

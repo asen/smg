@@ -243,9 +243,9 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   }
 
   private def graphLocalObjects(lst: Seq[SMGObjectView], periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]] = {
-    val localFutures = ( for(o <- lst ; if !SMGRemote.isRemoteObj(o.id))
-      yield for (period <- periods) yield graphLocalObject(o, period, gopts) ).flatten
-//    implicit val ec = ExecutionContexts.rrdGraphCtx // TODO???
+    val localFutures = lst.flatMap {o =>
+      periods.map{ period => graphLocalObject(o, period, gopts) }
+    }
     Future.sequence(localFutures)
   }
 
@@ -253,11 +253,19 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     * @inheritdoc
     */
   override def graphObjects(lst: Seq[SMGObjectView], periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]] = {
-    val localFuture = graphLocalObjects(lst, periods, gopts)
-    val remoteObjs = for(o <- lst ; if SMGRemote.isRemoteObj(o.id)) yield o
-    val remoteFuture = remotes.graphObjects(remoteObjs, periods, gopts)
-//    implicit val ec = ExecutionContexts.rrdGraphCtx
-    Future.sequence(Seq(remoteFuture, localFuture)).map { sofs => sofs.flatten }
+    val locRemote = lst.partition(o => !SMGRemote.isRemoteObj(o.id))
+    val localFuture = graphLocalObjects(locRemote._1, periods, gopts)
+    val remoteFuture = remotes.graphObjects(locRemote._2, periods, gopts)
+    Future.sequence(Seq(localFuture, remoteFuture)).map { sofs =>
+      val byId = sofs.flatten.groupBy(_.obj.id).map(t => (t._1, t._2.head))
+      lst.map { ov =>
+        val opt = byId.get(ov.id)
+        if (opt.isEmpty) {
+          log.error(s"Unexpected error in graphObjects opt.isEmpty: $ov : $byId")
+        }
+        opt
+      }.filter(_.isDefined).map(_.get).toList
+    }
   }
 
 
