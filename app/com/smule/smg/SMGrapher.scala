@@ -49,7 +49,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
 
   private val updateActor: ActorRef = actorSystem.actorOf(Props(new SMGUpdateActor(configSvc, myCommandExecutionTimes)))
 
-  implicit private val messagingEc = ExecutionContexts.defaultCtx
+  private val messagingEc = ExecutionContexts.defaultCtx
 
   /**
     * @inheritdoc
@@ -60,7 +60,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val sz = if (commandTrees.isEmpty) 0 else commandTrees.map(_.size).sum
     if (sz == 0) {
       log.info(s"SMGrapher.run(interval=$interval): No commands to execute")
-      Future { runPlugins(interval) }
+      Future { runPlugins(interval) }(messagingEc)
       return
     }
     val aggObjectUpdates = conf.rrdAggObjectsByInterval.getOrElse(interval, Seq())
@@ -100,7 +100,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       }
       log.info(s"SMGrapher.run(interval=$interval): sent messages for $sz fetch commands")
       runPlugins(interval)
-    }
+    }(messagingEc)
   }
 
   private def onRunCompleteFunc(logMsg: String): () => Unit = {
@@ -227,7 +227,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
           SMGImage.errorImage(obj, period, None)
         else
           SMGImage(obj, period, config.urlPrefix + "/" + baseFn)
-      }
+      }(messagingEc) // TODO or use graphCtx?
     }
   }
 
@@ -243,6 +243,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   }
 
   private def graphLocalObjects(lst: Seq[SMGObjectView], periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]] = {
+    implicit val myEc = ExecutionContexts.rrdGraphCtx
     val localFutures = lst.flatMap {o =>
       periods.map{ period => graphLocalObject(o, period, gopts) }
     }
@@ -253,7 +254,8 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     * @inheritdoc
     */
   override def graphObjects(lst: Seq[SMGObjectView], periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]] = {
-    val locRemote = lst.partition(o => !SMGRemote.isRemoteObj(o.id))
+    implicit val myEc = ExecutionContexts.rrdGraphCtx
+    val locRemote = lst.partition(o => SMGRemote.isLocalObj(o.id))
     val localFuture = graphLocalObjects(locRemote._1, periods, gopts)
     val remoteFuture = remotes.graphObjects(locRemote._2, periods, gopts)
     Future.sequence(Seq(localFuture, remoteFuture)).map { sofs =>
@@ -303,16 +305,20 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val baseFn = getBasePngFn(obj.id, period, gopts)
     val config = configSvc.config
     implicit val timeout: Timeout = 120000
-//    implicit val ec = ExecutionContexts.rrdGraphCtx  // TODO???
     val msg = SMGraphActor.SMGraphMultiMessage(config.rrdConf,obj,period, gopts, new File(config.imgDir, baseFn).toString)
     (graphActor ? msg).mapTo[SMGraphActor.SMGraphReadyMessage].map { resp:SMGraphActor.SMGraphReadyMessage =>
       log.debug("SMGrapher.graphAggObject: received response: " + resp )
       SMGAggImage(obj, period, if (resp.error) "/assets/images/error.png" else config.urlPrefix + "/" + baseFn)
-    }
+    }(messagingEc) // TODO or use graphCtx?
   }
 
   private def getXRemoteLocalCopies(aobj:SMGAggObjectView): Future[Option[SMGLocalAggObjectView]] = {
-    val futObjs = for (o <- aobj.objs) yield if (SMGRemote.isRemoteObj(o.id)) remotes.downloadRrd(o) else Future { Some(o) }
+    implicit val myEc = ExecutionContexts.rrdGraphCtx
+    val futObjs = for (o <- aobj.objs)
+      yield if (SMGRemote.isRemoteObj(o.id))
+        remotes.downloadRrd(o)
+      else
+        Future { Some(o) }
     Future.sequence(futObjs).map[Option[SMGLocalAggObjectView]] { objOpts =>
       if (!objOpts.exists(_.isEmpty)) {
         Some(SMGLocalAggObjectView(aobj.id, objOpts.map(_.get),
@@ -328,6 +334,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   }
 
   private def graphAggObjectXRemote(aobj:SMGAggObjectView, periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]] = {
+    implicit val myEc = ExecutionContexts.rrdGraphCtx
     getXRemoteLocalCopies(aobj).flatMap{ myaobj =>
       Future.sequence(for (p <- periods) yield {
         if (myaobj.isEmpty)
@@ -335,13 +342,14 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
         else
           graphLocalAggObject(myaobj.get, p, gopts)
       })
-    } (ExecutionContexts.rrdGraphCtx)
+    }
   }
 
   /**
     * @inheritdoc
     */
   override def graphAggObject(aobj:SMGAggObjectView, periods: Seq[String], gopts: GraphOptions, xRemote: Boolean): Future[Seq[SMGImageView]] = {
+    implicit val myEc = ExecutionContexts.rrdGraphCtx
     if (xRemote) {
       graphAggObjectXRemote(aobj, periods, gopts)
     } else {
@@ -362,6 +370,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     * @return
     */
   override def fetch(obj: SMGObjectView, params: SMGRrdFetchParams): Future[Seq[SMGRrdRow]] = {
+    implicit val myEc = ExecutionContexts.rrdGraphCtx
     if (obj.isAgg) return fetchAgg(obj.asInstanceOf[SMGLocalAggObjectView], params)
     if (SMGRemote.isRemoteObj(obj.id)) {
       remotes.fetchRows(obj.id, params)
@@ -372,7 +381,32 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
   }
 
+  private def fetchManyLocal(objs: Seq[SMGObjectView],
+                             params: SMGRrdFetchParams): Future[Seq[(String, Seq[SMGRrdRow])]] = {
+    implicit val myEc = ExecutionContexts.rrdGraphCtx
+    val localFuts = objs.map { obj =>
+        fetch(obj, params).map(rows => (obj.id, rows))
+      }
+    Future.sequence(localFuts)
+  }
+
+  override def fetchMany(objs: Seq[SMGObjectView],
+                         params: SMGRrdFetchParams): Future[Seq[(String, Seq[SMGRrdRow])]] = {
+    implicit val myEc = ExecutionContexts.rrdGraphCtx
+    val locRemote = objs.partition(o => SMGRemote.isLocalObj(o.id))
+    val localFut = fetchManyLocal(locRemote._1, params)
+    val remoteFut = remotes.fetchRowsMany(locRemote._2.map(_.id), params)
+    Future.sequence(Seq(localFut, remoteFut)).map { sofs =>
+      val map = sofs.flatten.toMap
+      objs.map { o =>
+        (o.id, map.getOrElse(o.id, Seq()))
+      }
+    }
+  }
+
+
   override def fetchAgg(obj: SMGAggObjectView, params: SMGRrdFetchParams): Future[Seq[SMGRrdRow]] = {
+    implicit val myEc = ExecutionContexts.rrdGraphCtx
     if (SMGRemote.isRemoteObj(obj.id) && (!obj.objs.exists(o => SMGRemote.remoteId(obj.id) != SMGRemote.remoteId(o.id)))) {
       remotes.fetchAggRows(obj, params)
     } else {

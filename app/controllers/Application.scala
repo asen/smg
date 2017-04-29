@@ -76,15 +76,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
 
   private def xsortObjectViews(lst: Seq[SMGObjectView], sortBy: Int, period: String): Seq[SMGObjectView] = {
-    // convert the seq of objects to a seq of (object,recent_values) tuples by doing (async) fetches
-    val futs = lst.map { ov =>
-      smg.fetch(ov, SMGRrdFetchParams(None, Some(period), None, filterNan = true )).map { rseq =>
-        (ov, rseq)
-      }
-    }
-    val results = futs.map { fut =>
-      Await.result(fut,  Duration(120, "seconds"))
-    }
+    val fparams = SMGRrdFetchParams(None, Some(period), None, filterNan = true )
+    val fut = smg.fetchMany(lst, fparams)
+    val fetchResults = Await.result(fut,  Duration(120, "seconds")).toMap
+    val results = lst.map{ ov => (ov, fetchResults.getOrElse(ov.id, Seq())) }
     // first group by vars trying to preserve ordering
     val byGraphVars = mutable.Map[List[Map[String,String]],ListBuffer[(SMGObjectView, Seq[SMGRrdRow])]]()
     val orderedVars = ListBuffer[List[Map[String,String]]]()

@@ -82,6 +82,14 @@ trait SMGRemotesApi {
   def fetchRows(remoteOid: String, params: SMGRrdFetchParams): Future[Seq[SMGRrdRow]]
 
   /**
+    * fetch csv data  for a multiple non-Agg object from (possibly multiple) remote instances
+    * @param remoteOids - remote object id
+    * @param params - fetch params
+    * @return - future sequence of rrd rows data
+    */
+  def fetchRowsMany(remoteOids: Seq[String], params: SMGRrdFetchParams): Future[Seq[(String,Seq[SMGRrdRow])]]
+
+  /**
     * fetch csv data  for an Agg object from remote instance
     * @param aobj - agg object instance
     * @param params - fetch params
@@ -376,6 +384,24 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     if (clientForId(remoteId).nonEmpty){
       clientForId(remoteId).get.fetchRows(SMGRemote.localId(oid), params)
     } else Future { Seq() }
+  }
+
+  override def fetchRowsMany(remoteOids: Seq[String], params: SMGRrdFetchParams): Future[Seq[(String,Seq[SMGRrdRow])]] = {
+    val oidsByRemote = remoteOids.groupBy(s => SMGRemote.remoteId(s))
+    val futs = oidsByRemote.map { case (rmtId, oids) =>
+      if (clientForId(rmtId).nonEmpty){
+        val ids = oids.map(s => SMGRemote.localId(s))
+        clientForId(rmtId).get.fetchRowsMany(ids, params).map { mm =>
+          mm.map(t => (SMGRemote.prefixedId(rmtId, t._1), t._2))
+        }
+      } else Future { Seq() }
+    }
+    Future.sequence(futs).map { sofmaps =>
+      val map = sofmaps.flatten.toMap
+      remoteOids.map { oid =>
+        (oid, map.getOrElse(oid, Seq()))
+      }
+    }
   }
 
   /**

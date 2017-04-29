@@ -335,6 +335,20 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
+  def fetchRowsMany(oids: Seq[String], params: SMGRrdFetchParams): Future[Map[String,Seq[SMGRrdRow]]] = {
+    val fparams = if (params.fetchUrlParams == "") "" else "&" + params.fetchUrlParams
+    ws.url(remote.url + API_PREFIX + "fetchMany?ids=" + oids.mkString(",") + fparams).
+      withRequestTimeout(graphTimeoutMs).get().map { resp =>
+      val jsval = Json.parse(resp.body)
+      jsval.as[Map[String,Seq[SMGRrdRow]]]
+    }.recover {
+      case x: Throwable => {
+        log.ex(x, s"fetchRowsMany exception: $oids params=$params")
+        Map()
+      }
+    }
+  }
+
   /**
     * TODO
     *

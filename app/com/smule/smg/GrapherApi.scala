@@ -102,6 +102,14 @@ trait GrapherApi {
 
   /**
     * TODO
+    * @param objs
+    * @param params [[SMGRrdFetchParams]]
+    * @return
+    */
+  def fetchMany(objs: Seq[SMGObjectView], params: SMGRrdFetchParams): Future[Seq[(String, Seq[SMGRrdRow])]]
+
+  /**
+    * TODO
     * @param aobj
     * @param params [[SMGRrdFetchParams]]
     * @return

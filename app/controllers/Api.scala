@@ -82,6 +82,25 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def fetchMany(ids: String,
+            r: Option[Int],
+            s: Option[String],
+            e: Option[String],
+            fnan: Option[String]): Action[AnyContent] = Action.async {
+    val oids = ids.split(",")
+    if (oids.isEmpty) Future {
+      Ok("[]")
+    }
+    else {
+      val params = SMGRrdFetchParams(r, s, e, filterNan = fnan.getOrElse("false") == "true")
+      val objs = oids.map(id => smg.getObjectView(id)).filter(_.isDefined).map(_.get)
+      smg.fetchMany(objs, params).map { ret =>
+        val json = Json.toJson(ret.toMap)
+        Ok(json)
+      }
+    }
+  }
+
   /**
     * Fetch rrd rows for an aggregate object as json
     *
