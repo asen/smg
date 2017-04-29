@@ -530,13 +530,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   private def configStatusStr(myConf: SMGLocalConfig): String = {
     val myVersionStr = s"(SMG Version ${configSvc.smgVersionStr})"
-    val objus = myConf.updateObjects.size
-    val rrdObjs = myConf.rrdObjects.size
-    val rrdAggObjs = myConf.rrdAggObjects.size
-    val othObjs = objus - (rrdObjs + rrdAggObjs)
-    val myObjectsStr = s"$objus local update objects (rrd=$rrdObjs, " +
-      s"rrdAgg=$rrdAggObjs, plugins=$othObjs), " +
-      s"${myConf.viewObjects.size} local view objects and ${myConf.remotes.size} remote SMG instances defined."
+    val myObjectsStr = myConf.humanDesc
     val retStr = if (myConf.allErrors.isEmpty)
       s"OK $myVersionStr - no issues detected: $myObjectsStr"
     else s"WARNING $myVersionStr - some issues detected: $myObjectsStr\n\n" +

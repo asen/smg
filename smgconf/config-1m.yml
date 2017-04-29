@@ -22,6 +22,12 @@
   command: 'bash -c "exit $(($RANDOM%2))"'
 #  command: 'echo 0'
 
+- +localhost.agg:
+  op: SUM
+  ids:
+    - localhost.sysload
+    - localhost.sysload2
+
 - localhost.sysload:
   pre_fetch: host_localhost_up
   command: "smgscripts/mac_localhost_sysload.sh"
@@ -46,12 +52,6 @@
       cdef: "$ds,100,*"
     - label: 15min_x100
       cdef: "$ds,100,*"
-
-- +localhost.agg:
-  op: SUM
-  ids:
-    - localhost.sysload
-    - localhost.sysload2
 
 - localhost.dummy:
   title: "A dummy graph for this host"

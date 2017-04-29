@@ -275,4 +275,15 @@ case class SMGLocalConfig(
   }
 
   val allErrors: List[String] = configErrors ++ validationErrors.toList
+
+  def humanDesc: String = {
+    val objus = updateObjects.size
+    val rrdObjs = rrdObjects.size
+    val rrdAggObjs = rrdAggObjects.size
+    val othObjs = objus - (rrdObjs + rrdAggObjs)
+    val intvls = intervals.toList.sorted.mkString(",")
+    s"intervals=$intvls localUpdateObjects=$objus (rrd=$rrdObjs, " +
+      s"rrdAgg=$rrdAggObjs, plugins=$othObjs) " +
+      s"localViewObjects=${viewObjects.size} remotes=${remotes.size}"
+  }
 }

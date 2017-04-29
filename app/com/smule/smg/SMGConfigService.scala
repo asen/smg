@@ -280,6 +280,18 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     }
   }
 
+  if (configuration.getString("smg.timeoutCommand").isDefined){
+    val tmtCmd = configuration.getString("smg.timeoutCommand").get
+    log.info("Overriding SMGCmd timeout command using " + tmtCmd)
+    SMGCmd.setTimeoutCommand(tmtCmd)
+  }
+
+  if (configuration.getStringList("smg.executorCommand").isDefined) {
+    val execSeq = configuration.getStringList("smg.executorCommand").get
+    log.info("Overriding SMGCmd executor command using " + execSeq)
+    SMGCmd.setExecutorCommand(execSeq)
+  }
+
   /**
     * XXX looks like java is leaking direct memory buffers (or possibly - just slowing
     * down external commands when reclaiming these on the fly) when reloading conf.
@@ -336,9 +348,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
 
   private val dataFeedEnabled: Boolean =  configuration.getBoolean("smg.dataFeedEnabled").getOrElse(true)
 
-  override def dataFeedListeners: List[SMGDataFeedListener] = if (dataFeedEnabled) myDataFeedListeners.toList else List()
+  override def dataFeedListeners: List[SMGDataFeedListener] = {
+    if (dataFeedEnabled) myDataFeedListeners.toList else List()
+  }
 
-  override def registerDataFeedListener(lsnr: SMGDataFeedListener):Unit = myDataFeedListeners.synchronized(myDataFeedListeners += lsnr)
+  override def registerDataFeedListener(lsnr: SMGDataFeedListener):Unit = {
+    myDataFeedListeners.synchronized(myDataFeedListeners += lsnr)
+  }
 
   // Config reload listeners
 
@@ -394,12 +410,24 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     valuesCache.purgeObsoleteObjs(newConf.updateObjects)
   }
 
+  private def initExecutionContexts(intervals: Set[Int]) = {
+    val defaultThreadsPerInterval: Int = configuration.getInt("smg.defaultThreadsPerInterval").getOrElse(4)
+    val threadsPerIntervalMap: Map[Int, Int] = configuration.getConfig("smg.threadsPerIntervalMap") match {
+      case Some(conf) => (for (i <- intervals.toList; if conf.getInt("interval_" + i).isDefined) yield (i, conf.getInt("interval_" + i).get)).toMap
+      case None => Map[Int, Int]()
+    }
+    ExecutionContexts.initializeUpdateContexts(intervals.toSeq, threadsPerIntervalMap, defaultThreadsPerInterval)
+  }
+
+  private val topLevelConfigFile: String = configuration.getString("smg.config").getOrElse("/etc/smg/config.yml")
+
   private val configParser = new SMGConfigParser(log)
 
   override val defaultInterval: Int = configParser.defaultInterval
   override val defaultTimeout: Int = configParser.defaultTimeout
 
-  private var currentConfig = configParser.getNewConfig(plugins, configuration)
+  private var currentConfig = configParser.getNewConfig(plugins, topLevelConfigFile)
+  initExecutionContexts(currentConfig.intervals)
 
   /**
   * @inheritdoc
@@ -416,17 +444,17 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       val t0 = System.currentTimeMillis()
       log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)
       try {
-        val newConf = configParser.getNewConfig(plugins, configuration)
+        val newConf = configParser.getNewConfig(plugins, topLevelConfigFile)
+        initExecutionContexts(newConf.intervals)
         currentConfig.synchronized {  // not really needed ...
           currentConfig = newConf
         }
-        val t1 = System.currentTimeMillis()
-        log.info("SMGConfigServiceImpl.reloadConf: completed for " + (t1 - t0) + "ms. rrdConf=" + newConf.rrdConf +
-                " imgDir=" + newConf.imgDir + " urlPrefix=" + newConf.urlPrefix +
-                " objectsCount=" + newConf.rrdObjects.size +
-                " intervals=" + newConf.intervals.toList.sorted.mkString(","))
         cleanupCachedValuesMap(newConf)
         notifyReloadListeners("ConfigService.reload")
+        val t1 = System.currentTimeMillis()
+        log.info("SMGConfigServiceImpl.reload: completed for " + (t1 - t0) + "ms. rrdConf=" + newConf.rrdConf +
+          " imgDir=" + newConf.imgDir + " urlPrefix=" + newConf.urlPrefix +
+          " humanDesc: " + newConf.humanDesc)
       } finally {
         reloadIsRunning.set(false)
       }
