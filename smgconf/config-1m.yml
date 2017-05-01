@@ -40,6 +40,32 @@
     - label: 5min
     - label: 15min
 
+- localhost.sysload.stacked:
+  pre_fetch: host_localhost_up
+  command: "smgscripts/mac_localhost_sysload.sh"
+  interval: 60
+  rrd_type: GAUGE
+  stack: true
+  vars:
+    - label: sl1min
+#      alert-spike: ""
+      #"1.5:15m:2h:0"
+    - label: sl5min
+    - label: sl15min
+
+- localhost.sysload.stacked2:
+  pre_fetch: host_localhost_up
+  command: "smgscripts/mac_localhost_sysload.sh"
+  interval: 60
+  rrd_type: GAUGE
+  stack: true
+  vars:
+    - label: sl1min
+#      alert-spike: ""
+      #"1.5:15m:2h:0"
+    - label: sl5min
+    - label: sl15min
+
 - localhost.sysload2:
   pre_fetch: fail_randomly
   command: "smgscripts/mac_localhost_sysload.sh"

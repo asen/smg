@@ -5,7 +5,8 @@
 
 @(ix: Option[SMGIndex], flt: SMGFilter, period: String, cols: Int, rows: Int,
         availRemotes: Seq[SMGRemote], aggOp: Option[String], showXagg: Boolean, xagg: Boolean,
-        gopts: GraphOptions, maxUrlSize: Int, defaultPeriod: String, defaultCols: Int, defaultRows: Int)
+        gopts: GraphOptions, maxUrlSize: Int, defaultPeriod: String, defaultCols: Int,
+        defaultRows: Int, page: Int)
 
 
 <form id="smgFilterForm" method="GET" action="/dash" class="filter-form">
@@ -174,17 +175,6 @@ Changing this reloads the page.">Rows:</label>
                onchange="mySubmitOnChange(this);" />
       </div>
 
-      <div class="form-group">
-        <label class="autosubmit-lbl" for="smg-filter-xsort"
-            title="Sort the DISPLAYED on the page graphs to be grouped by graphed variables and then within each group -
-sort by the average value with specified 1-based index.0 means default order.
-Changing this reloads the page.">X-Sort:</label>
-        <input class="form-control" type="number" id="smg-filter-xsort"
-               style="width: 4em"
-               step="1" name="xsort" value='@{gopts.xsort.getOrElse(0)}'
-               onchange="mySubmitOnChange(this);" />
-      </div>
-
       <div class="form-group form-group-cbs">
         <label for="dpp_cb" class="autosubmit-lbl" title="Disable the dotted line(s) representing the previous period value(s).
 Changing this reloads the page.">Disable Period-Over-Period:</label>
@@ -210,18 +200,30 @@ Changing this reloads the page.">Disable 95%-ile line:</label>
         <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="SUM">
         <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="SUMN">
         <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="AVG">
-        @if(showXagg){
-        <label for="cb_xagg" class="manualsubmit-lbl"
-            title="Toggle whether to group aggregate objects across all remote instances.
-By default aggregation happens per-remote instance">Cross-Remote:</label>
-            <input type="checkbox" id="cb_xagg" onclick="toggleXAgg()" @if(xagg){ checked="checked" } />
-        }
+
+        <div class="form-group">
+          <label class="autosubmit-lbl" for="smg-filter-xsort"
+                 title="Sort the DISPLAYED on the page graphs to be grouped by graphed variables and then within each group -
+sort by the average value with specified 1-based index.0 means default order.
+Changing this reloads the page.">Sort by (var index, 0 means no sort):</label>
+          <input type="number" id="smg-filter-xsort"
+                 style="width: 4em"
+                 step="1" name="xsort" value='@{gopts.xsort.getOrElse(0)}'
+                 onchange="mySubmitOnChange(this);" />
+        </div>
+
       </div>
       } else {
       <span><strong>Aggregate function: @aggOp.get @if(xagg){(Cross-Remote)}</strong></span>
       <input type="button" class="btn btn-default btn-submit" onclick="mySubmitAgg(this);" value="Unapply">
       }
-      <input id="smgFilterFormPg" type="hidden" name="pg" value="0" />
+      @if(showXagg){
+      <label for="cb_xagg" class="manualsubmit-lbl"
+             title="Toggle whether to group aggregate objects or sort across all remote instances.
+By default aggregation/sorting happens per-remote instance">Cross-Remote:</label>
+      <input type="checkbox" id="cb_xagg" onclick="toggleXAgg()" @if(xagg){ checked="checked" } />
+      }
+      <input id="smgFilterFormPg" type="hidden" name="pg" value="@page" />
     </div>
   </div>
 </form>

@@ -9,16 +9,14 @@ import com.ning.http.client.providers.netty.response.NettyResponse
 import com.smule.smg._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.json._
 import play.api.libs.ws.WSClient
-import play.api.mvc._
+import play.api.mvc.{Cookie, DiscardingCookie, _}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
-import play.api.mvc.Cookie
-import play.api.mvc.DiscardingCookie
-import play.api.libs.json._
 
 @Singleton
 class Application  @Inject() (actorSystem: ActorSystem,
@@ -74,38 +72,29 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  private def varsDesc(vars: List[Map[String,String]]) = "vars: " + vars.zipWithIndex.map { case (v, ix) =>
+    v.getOrElse("label", s"ds$ix") + v.get("mu").map(mu => s" ($mu)").getOrElse("")
+  }.mkString(", ")
 
-  private def xsortObjectViews(lst: Seq[SMGObjectView], sortBy: Int, period: String): Seq[SMGObjectView] = {
-    val fparams = SMGRrdFetchParams(None, Some(period), None, filterNan = true )
-    val fut = smg.fetchMany(lst, fparams)
-    val fetchResults = Await.result(fut,  Duration(120, "seconds")).toMap
-    val results = lst.map{ ov => (ov, fetchResults.getOrElse(ov.id, Seq())) }
-    // first group by vars trying to preserve ordering
-    val byGraphVars = mutable.Map[List[Map[String,String]],ListBuffer[(SMGObjectView, Seq[SMGRrdRow])]]()
-    val orderedVars = ListBuffer[List[Map[String,String]]]()
-    results.foreach { t =>
-      val curVars = t._1.filteredVars(true)
-      if (!byGraphVars.contains(curVars)){
-        byGraphVars(curVars) = ListBuffer[(SMGObjectView, Seq[SMGRrdRow])]()
-        orderedVars += curVars
+  /**
+    * group objects by "graph vars" (identical var defs, subject to aggregation nd sorting)
+    * @param lst - a sequence of object views to group
+    * @return - sequence of tuples each corresponding to the unique "graph vars" present in the object list.
+    *         The first element of the tuple is the vars "humand description" and the second - the sequence
+    *         of objects having these vars.
+    */
+  private def groupByVars(lst: Seq[SMGObjectView]): Seq[(String, Seq[SMGObjectView])] = {
+    // group by vars trying to preserve ordering
+    val grouped = mutable.Map[List[Map[String,String]],Seq[SMGObjectView]](lst.groupBy(_.filteredVars(true)).toSeq:_*)
+    val ret = ListBuffer[(String, Seq[SMGObjectView])]()
+    lst.foreach { ov =>
+      val v = ov.filteredVars(true)
+      val elem = grouped.remove(v)
+      if (elem.isDefined) {
+        ret += Tuple2(varsDesc(v), elem.get)
       }
-      byGraphVars(curVars) += t
     }
-    // sort by the average value of the var with sortBy index within each group of vars
-    orderedVars.flatMap { v =>
-      byGraphVars(v).toList.sortBy {t =>
-        if (t._2.isEmpty)
-          0.0
-        else {
-          // average the recent values
-          val numSeq = t._2.filter(sortBy < _.vals.size).map(_.vals(sortBy))
-          if (numSeq.isEmpty)
-            0.0
-          else
-            - numSeq.foldLeft(0.0) {(x,y) => x + y} / numSeq.size
-        }
-      }.map(_._1)
-    }
+    ret.toList
   }
 
   private def optStr2OptDouble(opt: Option[String]): Option[Double] = if (opt.isDefined && (opt.get != "")) Some(opt.get.toDouble) else None
@@ -178,8 +167,19 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val myMaxY = if (idx.isEmpty || maxy.isDefined) optStr2OptDouble(maxy) else idx.get.flt.gopts.maxY
       val myMinY = if (idx.isEmpty || miny.isDefined) optStr2OptDouble(miny) else idx.get.flt.gopts.minY
 
-      val myGopts = GraphOptions(step = myStep, pl = myPl, xsort = Some(myXSort),
-        disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = myMaxY, minY = myMinY)
+      val myAgg = if (idx.isEmpty || agg.isDefined)
+        validateAggParam(agg)
+      else
+        idx.get.aggOp
+
+      val myGopts = GraphOptions(
+        step = myStep,
+        pl = myPl,
+        xsort = if (myAgg.isDefined) None else Some(myXSort),
+        disablePop = myDisablePop,
+        disable95pRule = myDisable95p,
+        maxY = myMaxY,
+        minY = myMinY)
       
       val myRemote = if (idx.isEmpty || remote.isDefined) remote else idx.get.flt.remote
 
@@ -195,11 +195,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
         period.getOrElse(GrapherApi.defaultPeriod)
       else
         idx.get.period.getOrElse(GrapherApi.defaultPeriod)
-      
-      val myAgg = if (idx.isEmpty || agg.isDefined)
-        validateAggParam(agg)
-      else
-        idx.get.aggOp
 
       val myXRemoteAgg = if (idx.isEmpty || xagg.isDefined) xagg.getOrElse("off") == "on" else idx.get.xAgg
       val myCols = if (idx.isEmpty || cols.isDefined)
@@ -211,7 +206,13 @@ class Application  @Inject() (actorSystem: ActorSystem,
       else
         idx.get.rows.getOrElse(configSvc.config.dashDefaultRows)
 
-      val dep = DashboardExtraParams(period = myPeriod, cols = myCols, rows = myRows, pg = pg, agg = myAgg, xRemoteAgg = myXRemoteAgg)
+      val dep = DashboardExtraParams(
+        period = myPeriod,
+        cols = myCols,
+        rows = myRows,
+        pg = pg,
+        agg = myAgg,
+        xRemoteAgg = myXRemoteAgg)
 
       (flt,dep)
     }
@@ -253,13 +254,79 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   /**
+    * A class wrapping a list of strings (each representing a "level" description) and a sequence of
+    * image views to display
+    * @param levels - list of strings
+    * @param lst - sequence of image views
+    */
+  case class DashboardGraphsGroup(levels: List[String], lst: Seq[SMGImageView])
+
+  /**
+    * Sort a sequence of image views by first grouping them by vars and then within each group - sort
+    * by the descending average value (for the period) of the variable with index specified by sortBy
+    * @param lst - sequence to sort
+    * @param sortBy - index of the variable by which value to sort. Sort order is undefined if sortBy >= number of vars
+    * @param period - period for which to calculate averages for sorting
+    * @return - a sequence of DashboardGraphsGroup each representing a group of graphs with identical var definitions
+    *         where within each group the images are sorted as described.
+    */
+  private def xsortImageViews(lst: Seq[SMGImageView], sortBy: Int, period: String): Seq[DashboardGraphsGroup]  = {
+    val fparams = SMGRrdFetchParams(None, Some(period), None, filterNan = true )
+    val objLst = lst.map { iv => iv.obj }
+    val ov2iv = lst.groupBy(_.obj.id)
+    val fut = smg.fetchMany(objLst, fparams)
+    val fetchResults = Await.result(fut,  Duration(120, "seconds")).toMap
+    val byVars = groupByVars(objLst)
+    byVars.map { case (vdesc, vlst) =>
+      val vlstSorted = vlst.sortBy { ov =>
+        val rows = fetchResults.getOrElse(ov.id, Seq())
+        if (rows.isEmpty) {
+          0.0
+        } else {
+          // average the rows and sort by descending value
+          val numSeq = rows.filter(sortBy < _.vals.size).map(_.vals(sortBy))
+          if (numSeq.isEmpty)
+            0.0
+          else
+            - numSeq.foldLeft(0.0) {(x,y) => x + y} / numSeq.size
+        }
+      }
+      val sortedVdesc = if (sortBy < vlstSorted.head.filteredVars(true).size) {
+        s"sorted by ${vlstSorted.head.filteredVars(true)(sortBy).getOrElse("label", s"ds$sortBy")}"
+      } else
+        "not sorted"
+      (List(vdesc, sortedVdesc), vlstSorted)
+    }.map { case (descLst, slst) =>
+      DashboardGraphsGroup(descLst, slst.flatMap(ov => ov2iv.getOrElse(ov.id, Seq())))
+    }
+  }
+
+  /**
+    * group a list of DashboardGraphsGroups by remote
+    * @param dglst
+    * @return
+    */
+  private def groupByRemote(dglst: Seq[DashboardGraphsGroup]): Seq[DashboardGraphsGroup] = {
+    dglst.flatMap { dg =>
+      val lst = dg.lst
+      val byRemoteMap = lst.groupBy(img => img.remoteId.getOrElse(""))
+      val byRemote = (List(SMGRemote.local.id) ++ remotes.configs.map(rc => rc.remote.id)).
+        filter(rid => byRemoteMap.contains(rid)).map(rid => (rid, byRemoteMap(rid))).map { t =>
+        (if (t._1 == SMGRemote.local.id) "Local" else s"Remote: ${t._1}", t._2)
+      }
+      byRemote.map {t => DashboardGraphsGroup(t._1 :: dg.levels, t._2)}
+    }
+  }
+
+  /**
     * Display dashboard page (filter and graphs)
     * @return
     */
   def dash(): Action[AnyContent] = Action.async { implicit request =>
-
+    // gathering any errors in this
     val myErrors = ListBuffer[String]()
 
+    // parse http params
     val dps = if (request.method == "POST") {
       myErrors += "This page URL is not share-able because the resulting URL would be too long."
       dashPostParams(request)
@@ -267,7 +334,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
     else
       dashGetParams(request)
 
+    // keep track if monitor state display is disabled. TODO - clanup/remove this (?)
     val showMs = msEnabled(request)
+
+    // get index and parent index if ix id is supplied
     val idx = if (dps.ix.nonEmpty) {
       val idxOpt = smg.getIndexById(dps.ix.get)
       if (idxOpt.isEmpty) {
@@ -278,10 +348,13 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val parentIdx: Option[SMGIndex] = if (idx.isDefined && idx.get.parentId.isDefined) {
       smg.getIndexById(idx.get.parentId.get)
     } else None
-    
+
+    // get filter and extra params from the parsed http params
     val (flt, dep) = dps.processParams(idx)
 
+    // get an immutable local config ref for the duration of this request
     val conf = configSvc.config
+    // get the list of remotes to display in the filter form deop down
     val availRemotes = if (conf.remotes.nonEmpty)
       Seq(SMGRemote.local) ++ conf.remotes ++ Seq(SMGRemote.wildcard)
     else
@@ -298,12 +371,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val filteredObjects = smg.getFilteredObjects(flt, idx)
       tlObjects = filteredObjects.size
       maxPages = (tlObjects / limit) + (if ((tlObjects % limit) == 0) 0 else 1)
-      val sliced = filteredObjects.slice(offset, offset + limit)
-      if (flt.gopts.xsort.getOrElse(0) > 0)
-        xsortObjectViews(sliced, flt.gopts.xsort.get - 1, dep.period)
-      else
-        sliced
+      filteredObjects.slice(offset, offset + limit)
     }
+
+    // "Cross-remote" checkbox is shown if result contains objects from more than 1 remote
+    val showXRmt = objsSlice.nonEmpty && objsSlice.tail.exists(ov => ov.remoteId != objsSlice.head.remoteId)
 
     // get two futures - one for the images we want and the other for the respective monitorStates
     val (futImages, futMonitorStates) = if (objsSlice.isEmpty) {
@@ -312,17 +384,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
     } else if (dep.agg.nonEmpty) {
       // group objects by "graph vars" (identical var defs, subject to aggregation) and produce an aggregate
       // object and corresponding image for each group
-      val byGraphVars = mutable.Map[List[Map[String,String]],ListBuffer[SMGObjectView]]()
-      val orderedVars = ListBuffer[List[Map[String,String]]]()
-      objsSlice.foreach { ov =>
-        val curVars = ov.filteredVars(true)
-        if (!byGraphVars.contains(curVars)){
-          byGraphVars(curVars) = ListBuffer[SMGObjectView]()
-          orderedVars += curVars
-        }
-        byGraphVars(curVars) += ov
+      val byGraphVars = groupByVars(objsSlice)
+      val aggObjs = byGraphVars.map { case (vdesc, vseq) =>
+        SMGAggObjectView.build(vseq, dep.agg.get)
       }
-      val aggObjs = for (v <- orderedVars.toList) yield SMGAggObjectView.build(byGraphVars(v).toList, dep.agg.get)
       // if we are not graphing cross-remote, every ag object defined from a cross-remote filter can
       // result in multiple images (one per remote) and we want the monitoring state per resulting image
       val monObjsSeq = if (!dep.xRemoteAgg) {
@@ -343,21 +408,37 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val lst = mySeq.head.asInstanceOf[Seq[SMGImageView]]
       val monStatesByImgView = mySeq(1).asInstanceOf[Map[String,Seq[SMGMonState]]]
 
-      val byRemoteMap = lst.groupBy( img => img.remoteId.getOrElse("") )
-      val byRemote = (List("") ++ remotes.configs.map(rc => rc.remote.id)).
-        filter(rid => byRemoteMap.contains(rid)).map( rid => (rid, byRemoteMap(rid)) )
-      //preserve order
-      val monOverviewOids = objsSlice.map(_.id)
-      // XXX make sure we find agg objects and their op even if not specified in url params but e.g. coming from plugin
+      val sortedGroups = if (dep.agg.isEmpty && (flt.gopts.xsort.getOrElse(0) > 0)){
+        xsortImageViews(lst, flt.gopts.xsort.get - 1, dep.period)
+      } else {
+        List(DashboardGraphsGroup(List(), lst))
+      }
+      val result =  if (dep.xRemoteAgg)
+        // pre-pend a "Cross-remote" level to the dashboard groups
+        sortedGroups.map(dg => DashboardGraphsGroup("Cross-remote" :: dg.levels, dg.lst ))
+      else {
+        groupByRemote(sortedGroups)
+      }
+      //keep mon overview ordered same as display order
+      val monOverviewOids = result.flatMap { dg =>
+        dg.lst.flatMap { iv =>
+          if (iv.obj.isAgg) {
+            iv.obj.asInstanceOf[SMGAggObjectView].objs.map(_.id)
+          } else Seq(iv.obj.id)
+        }
+      }
+      // XXX make sure we find agg objects op even if not specified in url params or index but e.g. coming from a plugin
       val myAggOp = if (dep.agg.isDefined) dep.agg else lst.find(_.obj.isAgg).map(_.obj.asInstanceOf[SMGAggObjectView].op)
       val errorsOpt = if (myErrors.isEmpty) None else Some(myErrors.mkString(", "))
       Ok(
-        views.html.filterResult(configSvc, idx, parentIdx, byRemote, flt, dep, myAggOp, maxPages,
-          lst.size, objsSlice.size, tlObjects, availRemotes,
+        views.html.filterResult(configSvc, idx, parentIdx, result, flt, dep,
+          myAggOp, showXRmt,
+          maxPages, lst.size, objsSlice.size, tlObjects, availRemotes,
           flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt, conf)
       )
     }
   }
+
 
   /**
     * Display graphs for a single object based on id in all default periods

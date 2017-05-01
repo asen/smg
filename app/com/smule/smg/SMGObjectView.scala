@@ -79,8 +79,10 @@ trait SMGObjectView extends SMGObjectBase {
 
   val refObj: Option[SMGObjectUpdate]
 
-  def inspectUrl = if (isAgg) None else Some(s"/inspect/$id")
+  def inspectUrl: Option[String] = if (isAgg) None else Some(s"/inspect/$id")
 
-  def ouId = refObj.map(_.id).getOrElse(id)
+  def ouId: String = refObj.map(_.id).getOrElse(id)
+
+  def remoteId: String = SMGRemote.remoteId(id)
 
 }

@@ -11,7 +11,8 @@
 @import controllers.Application
 
 @(cfSvc: SMGConfigService, idx: Option[SMGIndex], parentIdx: Option[SMGIndex],
-  byRemote: Seq[(String, Seq[SMGImageView])], flt: SMGFilter, dep: Application#DashboardExtraParams, aggOp: Option[String],
+  result: Seq[Application#DashboardGraphsGroup], flt: SMGFilter, dep: Application#DashboardExtraParams,
+  aggOp: Option[String], showXRemote: Boolean,
   maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int, availRemotes: Seq[SMGRemote],
   gopts: GraphOptions, showMs:Boolean, monData: Map[String, Seq[SMGMonState]],
   monOverviewOids: Seq[String], errorMsg: Option[String], conf:SMGLocalConfig)(implicit flash: Flash)
@@ -47,8 +48,9 @@
 
 @if(dep.rows > 0) {
   @filter(idx, flt, dep.period, dep.cols, dep.rows, availRemotes, aggOp,
-          byRemote.nonEmpty && byRemote.tail.nonEmpty, dep.xRemoteAgg, gopts, conf.maxUrlSize,
-          GrapherApi.defaultPeriod, conf.dashDefaultCols, conf.dashDefaultRows)
+          showXRemote, dep.xRemoteAgg, gopts, conf.maxUrlSize,
+          GrapherApi.defaultPeriod, conf.dashDefaultCols,
+          conf.dashDefaultRows, dep.pg)
 
   @if(aggOp.isEmpty){
   @displaySelectHeader()
@@ -58,15 +60,14 @@
     <p>Displaying @dispCount @if(aggOp.isDefined){ aggregate (@aggOp.get) } graphs (using @slicedCount out of @tlCount
       matching objects) in max @dep.cols columns and max @dep.rows rows.</p>
     @if( aggOp.isDefined && (slicedCount < tlCount) ){
-    <p><font color="red"><strong>WARNING: You are applying an aggregate function on a subset of the objects matching
+    <p><font color="red"><strong>WARNING: You are applying an aggregate function only on the displayed subset of the objects matching
       the current filter. Consider increasing page size if you really want to see aggregation from
       all (via Rows/Columns, up to a sane limit).</strong></font></p>
-    }
-    @if((gopts.xsort.getOrElse(0) != 0) && (slicedCount < tlCount)){
-    <p><font color="red"><strong>WARNING: You are sorting a subset of the objects matching
+    } else { @if((gopts.xsort.getOrElse(0) != 0) && (slicedCount < tlCount)){
+    <p><font color="red"><strong>WARNING: You are sorting only the displayed subset of the objects matching
       the current filter. Consider increasing page size if you really want to see them
       all sorted (via Rows/Columns, up to a sane limit).</strong></font></p>
-    }
+    }}
   </div>
 
   @if(showMs){
@@ -74,15 +75,13 @@
     @monStateListActions(monData.values.toSeq.flatten)
   }
 
-  @if(aggOp.isEmpty){
-    @filterPages(dep.pg, maxPg)
-  }
+  @filterPages(dep.pg, maxPg)
 
-  @for( (remoteId, lst) <- byRemote) {
-    <h3>@if(remoteId == "") { Local } else { Remote: @remoteId}</h3>
+  @for(group <- result) {
+    <h3>@group.levels.mkString(" - ")</h3>
     <div class="smgraphcontainer">
       <div class="smgrow">
-      @for( (g, ix) <- lst.zipWithIndex) {
+      @for( (g, ix) <- group.lst.zipWithIndex) {
         <div class="smgcell" style="max-width: @{conf.rrdConf.imageCellWidth}px;">
           <!-- @g.obj -->
           <a name="@g.obj.id" ></a> <a name="@g.period"></a> <a name="@g.obj.id-@g.period"></a>
@@ -131,9 +130,7 @@
     </div>
   }
 
-  @if(aggOp.isEmpty){
-    @filterPages(dep.pg, maxPg)
-  }
+  @filterPages(dep.pg, maxPg)
 }
 
 }

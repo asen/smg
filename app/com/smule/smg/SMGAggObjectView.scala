@@ -13,7 +13,7 @@ trait SMGAggObjectView extends SMGObjectView {
   val objs: Seq[SMGObjectView]
   val op: String
 
-  val stack: Boolean = op == "STACK"
+  override val stack: Boolean = (op == "STACK") || objs.head.stack
 
   /**
     * @inheritdoc
@@ -72,22 +72,6 @@ case class SMGLocalAggObjectView(id: String,
   * Singleton defining helpers to build aggregate objects (SMGAggobject)
   */
 object SMGAggObjectView {
-
-//  /**
-//    * Check if the provided list of SMGObjects can be aggregated.
-//    * @param objs -
-//    * @return - true if list has more than 1 element and all objects in the list have identical var
-//    *         definitions. false otherwise
-//    */
-//  def canBeAggregated(objs: Seq[SMGObjectView]): Boolean = {
-//    if (objs.nonEmpty && objs.tail.nonEmpty) {
-//      ! objs.tail.exists{ o =>
-//        (objs.head.vars != o.vars) ||
-//          (objs.head.graphVarsIndexes != o.graphVarsIndexes) ||
-//          (objs.head.cdefVars != o.cdefVars)
-//      }
-//    } else false
-//  }
 
   private def myGenId(objs: Seq[SMGObjectView],
                       vars: List[Map[String, String]],
@@ -200,8 +184,13 @@ object SMGAggObjectView {
   def build(objs: Seq[SMGObjectView], op:String, title: Option[String] = None): SMGLocalAggObjectView = {
     val myTitle = if (title.isDefined) title.get else "(" + op + ", " + objs.size + " objects) " +
        buildTitle(objs.map(o => o.title))
-    SMGLocalAggObjectView(myGenId(objs, objs.head.vars, objs.head.cdefVars, objs.head.graphVarsIndexes, op),
-                objs, op, objs.head.vars, objs.head.cdefVars, objs.head.graphVarsIndexes, myTitle)
+    SMGLocalAggObjectView(id = myGenId(objs, objs.head.vars, objs.head.cdefVars, objs.head.graphVarsIndexes, op),
+      objs = objs,
+      op = op,
+      vars = objs.head.vars,
+      cdefVars = objs.head.cdefVars,
+      graphVarsIndexes = objs.head.graphVarsIndexes,
+      title = myTitle)
   }
 
 
