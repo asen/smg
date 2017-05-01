@@ -439,7 +439,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-
   /**
     * Display graphs for a single object based on id in all default periods
     *

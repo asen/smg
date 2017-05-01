@@ -259,14 +259,14 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val localFuture = graphLocalObjects(locRemote._1, periods, gopts)
     val remoteFuture = remotes.graphObjects(locRemote._2, periods, gopts)
     Future.sequence(Seq(localFuture, remoteFuture)).map { sofs =>
-      val byId = sofs.flatten.groupBy(_.obj.id).map(t => (t._1, t._2.head))
-      lst.map { ov =>
+      val byId = sofs.flatten.groupBy(_.obj.id).map(t => (t._1, t._2))
+      lst.flatMap { ov =>
         val opt = byId.get(ov.id)
-        if (opt.isEmpty) {
+        if (opt.isEmpty) { // should never happen ...
           log.error(s"Unexpected error in graphObjects opt.isEmpty: $ov : $byId")
         }
-        opt
-      }.filter(_.isDefined).map(_.get).toList
+        opt.getOrElse(Seq())
+      }
     }
   }
 
