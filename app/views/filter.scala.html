@@ -209,7 +209,7 @@ Changing this reloads the page.">Sort by (var index, 0 means no sort):</label>
           <input type="number" id="smg-filter-xsort"
                  style="width: 4em"
                  step="1" name="xsort" value='@{gopts.xsort.getOrElse(0)}'
-                 onchange="mySubmitOnChange(this);" />
+                 onchange="mySubmitXSort(this);" />
         </div>
 
       </div>
@@ -259,6 +259,11 @@ By default aggregation/sorting happens per-remote instance">Cross-Remote:</label
         document.getElementById("smgFilterForm").method = "POST";
       }
   };
+
+  function mySubmitXSort(elem) {
+    var fakeElem = { value: "Unapply" }
+    mySubmitAgg(fakeElem)
+  }
 
   function mySubmitOnChange(elem) {
      setTimeout(0, $('#smg-filter-submit').click());

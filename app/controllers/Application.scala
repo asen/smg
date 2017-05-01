@@ -309,7 +309,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   private def groupByRemote(dglst: Seq[DashboardGraphsGroup]): Seq[DashboardGraphsGroup] = {
     dglst.flatMap { dg =>
       val lst = dg.lst
-      val byRemoteMap = lst.groupBy(img => img.remoteId.getOrElse(""))
+      val byRemoteMap = lst.groupBy(img => img.remoteId.getOrElse(SMGRemote.local.id))
       val byRemote = (List(SMGRemote.local.id) ++ remotes.configs.map(rc => rc.remote.id)).
         filter(rid => byRemoteMap.contains(rid)).map(rid => (rid, byRemoteMap(rid))).map { t =>
         (if (t._1 == SMGRemote.local.id) "Local" else s"Remote: ${t._1}", t._2)
@@ -413,10 +413,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
       } else {
         List(DashboardGraphsGroup(List(), lst))
       }
-      val result =  if (dep.xRemoteAgg)
+      val result =  if (dep.xRemoteAgg) {
         // pre-pend a "Cross-remote" level to the dashboard groups
-        sortedGroups.map(dg => DashboardGraphsGroup("Cross-remote" :: dg.levels, dg.lst ))
-      else {
+        sortedGroups.map(dg => DashboardGraphsGroup("Cross-remote" :: dg.levels, dg.lst))
+      } else {
         groupByRemote(sortedGroups)
       }
       //keep mon overview ordered same as display order

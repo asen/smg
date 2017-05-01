@@ -89,7 +89,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
             fnan: Option[String]): Action[AnyContent] = Action.async {
     val oids = ids.split(",")
     if (oids.isEmpty) Future {
-      Ok("[]")
+      NotFound("{}")
     }
     else {
       val params = SMGRrdFetchParams(r, s, e, filterNan = fnan.getOrElse("false") == "true")
