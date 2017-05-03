@@ -32,20 +32,20 @@ class SMGraphActor extends Actor {
             rrd.graph(outFn, period, gopts)
             cached = false
           }
-          mySender ! SMGraphReadyMessage(obj.id, period, cached, false)
+          mySender ! SMGraphReadyMessage(obj.id, period, cached, error = false)
         } catch {
           case (e: Throwable) => {
             log.ex(e, "SMGraphActor: SMGraphMessage caused unexpected error")
-            mySender ! SMGraphReadyMessage(obj.id, period, false, true)
+            mySender ! SMGraphReadyMessage(obj.id, period, cached = false, error = true)
           }
         }
         //log.info("Message sent back")
       } (ExecutionContexts.rrdGraphCtx)
     }
 
-    case SMGraphMultiMessage(rrdConf:SMGRrdConfig, obj:SMGAggObjectView, period:String, gopts: GraphOptions, outFn:String) => {
+    case SMGraphAggMessage(rrdConf:SMGRrdConfig, obj:SMGAggObjectView, period:String, gopts: GraphOptions, outFn:String) => {
       //log.info("--- SMGraphActor ---")
-      val mySender = sender()
+      val mySender = sender() // sender() is not available in our rrdGraphCtx future so use a reference stored here
       Future {
         try {
           val rrd = new SMGRrdGraphAgg(rrdConf, obj)
@@ -55,11 +55,11 @@ class SMGraphActor extends Actor {
             rrd.graph(outFn, period, gopts)
             cached = false
           }
-          mySender ! SMGraphReadyMessage(obj.id, period, cached, false)
+          mySender ! SMGraphReadyMessage(obj.id, period, cached, error = false)
         } catch {
           case (e: Throwable) => {
-            log.ex(e, "SMGraphActor: SMGraphMultiMessage caused unexpected error")
-            mySender ! SMGraphReadyMessage(obj.id, period, false, true)
+            log.ex(e, "SMGraphActor: SMGraphAggMessage caused unexpected error")
+            mySender ! SMGraphReadyMessage(obj.id, period, cached = false, error = true)
           }
         }
         //log.info("Message sent back")
@@ -72,6 +72,6 @@ class SMGraphActor extends Actor {
 object SMGraphActor {
   def props = Props[SMGraphActor]
   case class SMGraphMessage(rrdConf:SMGRrdConfig, obj:SMGObjectView, period:String, gopts: GraphOptions, outFn:String)
-  case class SMGraphMultiMessage(rrdConf:SMGRrdConfig, obj: SMGAggObjectView, period:String, gopts: GraphOptions, outFn:String)
+  case class SMGraphAggMessage(rrdConf:SMGRrdConfig, obj: SMGAggObjectView, period:String, gopts: GraphOptions, outFn:String)
   case class SMGraphReadyMessage(id: String, period: String, cached: Boolean, error: Boolean)
 }

@@ -189,17 +189,48 @@ Changing this reloads the page.">Disable 95%-ile line:</label>
       <br/>
 
       <input type="hidden" id="smg-filter-xagg" name="xagg" value='@if(xagg){on} else {off}' />
-      <input type="hidden" id="smg-filter-agg" name="agg" value='@aggOp.getOrElse("")' />
+      @defining(if(aggOp.isEmpty && ix.isDefined && ix.get.aggOp.isDefined){ "Unapply" } else { aggOp.getOrElse("") } ){ myAggOp =>
+      <input type="hidden" id="smg-filter-agg"
+             name="agg"
+             value='@myAggOp' />
+      }
 
       @if(aggOp.isEmpty) {
       <div class="form-group">
         <label class="autosubmit-lbl"
                title="Apply aggregate function to the set of DISPLAYED graphs, grouping them by graphed variables">Aggregate functions:</label>
-        <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="GROUP">
-        <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="STACK">
-        <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="SUM">
-        <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="SUMN">
-        <input class="btn btn-default btn-submit" type="button" onclick="mySubmitAgg(this);" value="AVG">
+        <input class="btn btn-default btn-submit"
+               title="Group all displayed graphs having same variables definitions and display a single image per group.
+Each group image will have a graph line for every variable in the original graphs"
+               type="button" onclick="mySubmitAgg(this);" value="GROUP">
+        <input class="btn btn-default btn-submit"
+               title="Group all displayed graphs having same variables definitions and display a single image per group.
+Each group image will have a graph line for every variable in the original graphs and lines will be stacked on top of each other"
+               type="button" onclick="mySubmitAgg(this);" value="STACK">
+        <input class="btn btn-default btn-submit"
+               title="Group all displayed graphs having same variables definitions and display a single image per group.
+Each group image will have a single graph line for each of the variable definitions forming the group and the values will be the sum of the original graphs values"
+               type="button" onclick="mySubmitAgg(this);" value="SUM">
+        <input class="btn btn-default btn-submit"
+               title="Group all displayed graphs having same variables definitions and display a single image per group.
+Each group image will have a single graph line for each of the variable definitions forming the group and the values will be the sum of the original graphs values.
+The difference from SUM is that NaN values are treated as 0.0"
+               type="button" onclick="mySubmitAgg(this);" value="SUMN">
+        <input class="btn btn-default btn-submit"
+               title="Group all displayed graphs having same variables definitions and display a single image per group.
+Each group image will have a single graph line for each of the variable definitions forming the group and the values will be the average value from the original graphs values
+NaN values are ignored when averaging"
+               type="button" onclick="mySubmitAgg(this);" value="AVG">
+        <input class="btn btn-default btn-submit"
+               title="Group all displayed graphs having same variables definitions and display a single image per group.
+Each group image will have a single graph line for each of the variable definitions forming the group and the values will be the maximal value from the original graphs values
+NaN values are ignored when determining max"
+               type="button" onclick="mySubmitAgg(this);" value="MAX">
+        <input class="btn btn-default btn-submit"
+               title="Group all displayed graphs having same variables definitions and display a single image per group.
+Each group image will have a single graph line for each of the variable definitions forming the group and the values will be the minimal value from the original graphs values
+NaN values are ignored when determining min"
+               type="button" onclick="mySubmitAgg(this);" value="MIN">
 
         <div class="form-group">
           <label class="autosubmit-lbl" for="smg-filter-xsort"

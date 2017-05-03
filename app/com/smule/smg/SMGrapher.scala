@@ -305,7 +305,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val baseFn = getBasePngFn(obj.id, period, gopts)
     val config = configSvc.config
     implicit val timeout: Timeout = 120000
-    val msg = SMGraphActor.SMGraphMultiMessage(config.rrdConf,obj,period, gopts, new File(config.imgDir, baseFn).toString)
+    val msg = SMGraphActor.SMGraphAggMessage(config.rrdConf,obj,period, gopts, new File(config.imgDir, baseFn).toString)
     (graphActor ? msg).mapTo[SMGraphActor.SMGraphReadyMessage].map { resp:SMGraphActor.SMGraphReadyMessage =>
       log.debug("SMGrapher.graphAggObject: received response: " + resp )
       SMGAggImage(obj, period, if (resp.error) "/assets/images/error.png" else config.urlPrefix + "/" + baseFn)

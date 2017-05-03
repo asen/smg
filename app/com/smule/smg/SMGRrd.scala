@@ -7,10 +7,6 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /**
- * Created by asen on 10/22/15.
- */
-
-/**
   * rrdtool configuration
   *
   * @param rrdTool - path to rrdtool executable
@@ -34,7 +30,7 @@ case class SMGRrdConfig(rrdTool: String ,
     }
   }
 
-  val imageCellWidth = rrdGraphWidth + 83 // rrdtool adds 81 + 2 right padding
+  val imageCellWidth: Int = rrdGraphWidth + 83 // rrdtool adds 81 + 2 right padding
 }
 
 /**
@@ -339,6 +335,15 @@ object SMGRrd {
     evalRpn(st)
   }
 
+  def validateAggParam(aggParam: Option[String]): Option[String] = {
+    aggParam.flatMap { myAgg =>
+      myAgg match {
+        case "GROUP" | "STACK" | "SUM" | "SUMN" | "SUMNAN" | "AVG" | "MAX" | "MIN" => Some(myAgg)
+        case _ => None
+      }
+    }
+  }
+
   def mergeValues(op: String, nums: List[List[Double]]): List[Double] = {
     op match {
       case "GROUP" => groupNumbers(nums)
@@ -348,6 +353,8 @@ object SMGRrd {
       // SUMNAN is deprecated use SUMN instead
       case "SUMNAN" => sumNumbers(nums, nanAs0 = true)
       case "AVG" => averageNumbers( nums )
+      case "MAX" => maxNanNumbers( nums )
+      case "MIN" => minNanNumbers( nums )
       case s : String => throw new RuntimeException("Invalid op: " + s)
     }
   }
@@ -376,6 +383,33 @@ object SMGRrd {
     ret.toList.zipWithIndex.map { t =>
       if (counts(t._2) == 0) Double.NaN else t._1 / counts(t._2)
     }
+  }
+
+  private def minNanNumbers(inp: List[List[Double]]) : List[Double] = {
+    val ret = Array[Double](inp.head:_*)
+    inp.tail.foreach { lst =>
+      lst.zipWithIndex.foreach { case (d, ix) =>
+        if (ret(ix).isNaN)
+          ret(ix) = d
+        else if (d < ret(ix)) // this will be false if d is NaN
+          ret(ix) = d
+      }
+    }
+    ret.toList
+  }
+
+
+  private def maxNanNumbers(inp: List[List[Double]]) : List[Double] = {
+    val ret = Array[Double](inp.head:_*)
+    inp.tail.foreach { lst =>
+      lst.zipWithIndex.foreach { case (d, ix) =>
+        if (ret(ix).isNaN)
+          ret(ix) = d
+        else if (d > ret(ix)) // this will be false if d is NaN
+          ret(ix) = d
+      }
+    }
+    ret.toList
   }
 
   private def groupNumbers(inp: List[List[Double]]) : List[Double] = {
@@ -543,19 +577,18 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
     ret.map(_.toList)
   }
 
-  private def toRpnSum(defIds: Seq[String]): String = {
+  private def toRpnBinOp(defIds: Seq[String], op: String): String = {
     if (defIds.tail.isEmpty) defIds.head
     else {
-      toRpnSum(defIds.tail) + "," + defIds.head  + ",+"
+      toRpnBinOp(defIds.tail, op) + "," + defIds.head  + s",$op"
     }
   }
 
-  private def toRpnSumNan(defIds: Seq[String]): String = {
-    if (defIds.tail.isEmpty) defIds.head
-    else {
-      toRpnSumNan(defIds.tail) + "," + defIds.head  + ",ADDNAN"
-    }
-  }
+  private def toRpnSum(defIds: Seq[String]): String = toRpnBinOp(defIds, "+")
+  private def toRpnSumNan(defIds: Seq[String]): String = toRpnBinOp(defIds, "ADDNAN")
+  private def toRpnMaxNan(defIds: Seq[String]): String = toRpnBinOp(defIds, "MAXNAN")
+  private def toRpnMinNan(defIds: Seq[String]): String = toRpnBinOp(defIds, "MINNAN")
+
 
   private def getSumCdef(defs: Seq[String], cdefLbl:String, defLabelMaker: LabelMaker): (String, String) = {
     ("'CDEF:" + cdefLbl + "=" + toRpnSum(defs.map(x => defLabelMaker.nextLabel)) + "'", cdefLbl)
@@ -568,6 +601,15 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
   private def getAvgCdef(defs: Seq[String], cdefLbl:String, defLabelMaker: LabelMaker): (String, String) = {
     ("'CDEF:" + cdefLbl + "=" + defs.map(x => defLabelMaker.nextLabel).mkString(",") +"," + defs.size + ",AVG'", cdefLbl)
   }
+
+  private def getMaxNanCdef(defs: Seq[String], cdefLbl:String, defLabelMaker: LabelMaker): (String, String) = {
+    ("'CDEF:" + cdefLbl + "=" + toRpnMaxNan(defs.map(x => defLabelMaker.nextLabel)) + "'", cdefLbl)
+  }
+
+  private def getMinNanCdef(defs: Seq[String], cdefLbl:String, defLabelMaker: LabelMaker): (String, String) = {
+    ("'CDEF:" + cdefLbl + "=" + toRpnMinNan(defs.map(x => defLabelMaker.nextLabel)) + "'", cdefLbl)
+  }
+
 
   private def rrdGraphCdefCommand(outFn: String, period:String, gopts: GraphOptions,
                                   getCdefFn: (Seq[String], String, LabelMaker) => (String, String)
@@ -703,6 +745,9 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
       // SUMNAN is deprecated use SUMN instead
       case "SUMNAN" => rrdGraphCdefCommand(outFn, period, gopts, getSumNanCdef)
       case "AVG" => rrdGraphCdefCommand(outFn, period, gopts, getAvgCdef)
+      // XXX MAX and MIN are actually MAXNAN and MINNAN currently
+      case "MAX" => rrdGraphCdefCommand(outFn, period, gopts, getMaxNanCdef)
+      case "MIN" => rrdGraphCdefCommand(outFn, period, gopts, getMinNanCdef)
       case s : String => throw new RuntimeException("Invalid op: " + s)
     })
   }

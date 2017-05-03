@@ -147,15 +147,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
     miny: Option[String]
   ) {
 
-    def validateAggParam(aggParam: Option[String]): Option[String] = {
-      aggParam.flatMap { myAgg =>
-        myAgg match {
-          case "GROUP" | "STACK" | "SUM" | "SUMN" | "SUMNAN" | "AVG" => Some(myAgg)
-          case _ => None
-        }
-      }
-    }
-
     def processParams(idx: Option[SMGIndex]): (SMGFilter, DashboardExtraParams) = {
       // use index gopts if available, form is overriding index spec
       val myXSort = if (idx.isEmpty || (xsort > 0)) xsort else idx.get.flt.gopts.xsort.getOrElse(0)
@@ -168,7 +159,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val myMinY = if (idx.isEmpty || miny.isDefined) optStr2OptDouble(miny) else idx.get.flt.gopts.minY
 
       val myAgg = if (idx.isEmpty || agg.isDefined)
-        validateAggParam(agg)
+        SMGRrd.validateAggParam(agg)
       else
         idx.get.aggOp
 

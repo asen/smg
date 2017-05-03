@@ -459,6 +459,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
           case "SUMN" => "SUMN"
           case "AVG" => "AVG"
           case "SUM" => "SUM"
+          case "MAX" => "MAX"
+          case "MIN" => "MIN"
           case x => {
             processConfigError(confFile,
               s"processAggObject: unsupported agg op for $oid: $x (assuming SUM)", isWarn = true)
