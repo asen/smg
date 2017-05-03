@@ -48,7 +48,7 @@
 
 @if(dep.rows > 0) {
   @filter(idx, flt, dep.period, dep.cols, dep.rows, availRemotes, aggOp,
-          showXRemote, dep.xRemoteAgg, gopts, conf.maxUrlSize,
+          showXRemote, dep.xRemoteAgg, dep.groupBy, gopts, conf.maxUrlSize,
           GrapherApi.defaultPeriod, conf.dashDefaultCols,
           conf.dashDefaultRows, dep.pg)
 
@@ -78,7 +78,13 @@
   @filterPages(dep.pg, maxPg)
 
   @for(group <- result) {
-    <h3>@group.levels.mkString(" - ")</h3>
+    @if(group.levels.nonEmpty){
+    <h3>@group.levels.head</h3>
+      @for(lvl <- group.levels.tail){
+      <h4>@lvl</h4>
+      }
+    <hr/>
+    }
     <div class="smgraphcontainer">
       <div class="smgrow">
       @for( (g, ix) <- group.lst.zipWithIndex) {

@@ -103,6 +103,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "rows").readNullable[Int] and
       (JsPath \ "agg_op").readNullable[String] and
       (JsPath \ "xagg").readNullable[String].map(xaggs => xaggs.getOrElse("") == "true") and
+      (JsPath \ "gb").readNullable[String].map(gbsOpt => gbsOpt.flatMap(gbs => SMGAggGroupBy.gbVal(gbs))) and
       (JsPath \ "period").readNullable[String] and
       (JsPath \ "desc").readNullable[String] and
       (JsPath \ "parent").readNullable[String].map(os => if (os.nonEmpty) Some(prefixedId(os.get)) else None ) and
@@ -833,7 +834,8 @@ object SMGRemoteClient {
       if (ix.cols.isDefined) mm += ("cols" -> Json.toJson(ix.cols.get))
       if (ix.rows.isDefined) mm += ("rows" -> Json.toJson(ix.rows.get))
       if (ix.aggOp.isDefined) mm += ("agg_op" -> Json.toJson(ix.aggOp.get))
-      if (ix.xAgg) mm += ("xagg" -> Json.toJson("true"))
+      if (ix.xRemoteAgg) mm += ("xagg" -> Json.toJson("true"))
+      if (ix.aggGroupBy.isDefined) mm += ("gb" -> Json.toJson(ix.aggGroupBy.get.toString))
       if (ix.period.isDefined) mm += ("period" -> Json.toJson(ix.period.get))
       if (ix.desc.isDefined) mm += ("desc" -> Json.toJson(ix.desc.get))
       if (ix.parentId.isDefined) mm += ("parent" -> Json.toJson(ix.parentId.get))

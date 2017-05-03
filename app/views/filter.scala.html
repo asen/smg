@@ -2,14 +2,16 @@
 @import com.smule.smg.SMGFilter
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.GraphOptions
+@import com.smule.smg.SMGAggGroupBy
 
 @(ix: Option[SMGIndex], flt: SMGFilter, period: String, cols: Int, rows: Int,
-        availRemotes: Seq[SMGRemote], aggOp: Option[String], showXagg: Boolean, xagg: Boolean,
+        availRemotes: Seq[SMGRemote], aggOp: Option[String],
+        showXagg: Boolean, xagg: Boolean, groupBy: SMGAggGroupBy.Value,
         gopts: GraphOptions, maxUrlSize: Int, defaultPeriod: String, defaultCols: Int,
         defaultRows: Int, page: Int)
 
 
-<form id="smgFilterForm" method="GET" action="/dash" class="filter-form">
+<form id="smgFilterForm" method="GET" action="/dash" class="filter-form" xmlns="http://www.w3.org/1999/html">
 
   <div class="panel panel-primary">
     <input type="hidden" id="smg-filter-ix" name="ix" value='@{ix.map(_.id).getOrElse("")}'>
@@ -20,7 +22,7 @@
     <div class="panel-body">
       <h5 style="word-wrap: break-word;">Index Filter: @ix.get.flt.humanText</h5>
       @if(ix.get.aggOp.isDefined) {
-        <h5>Index aggregate function: @ix.get.aggOp.get @if(ix.get.xAgg){(Cross-Remote)}</h5>
+        <h5>Index aggregate function: @ix.get.aggOp.get @if(ix.get.xRemoteAgg){(Cross-Remote)}</h5>
       }
       <div class="form-group">
         <input title="Clear index filter and reload the page" id="smg-filter-clear-idx"
@@ -254,6 +256,16 @@ Changing this reloads the page.">Sort by (var index, 0 means no sort):</label>
 By default aggregation/sorting happens per-remote instance">Cross-Remote:</label>
       <input type="checkbox" id="cb_xagg" onclick="toggleXAgg()" @if(xagg){ checked="checked" } />
       }
+      <label for="smg-fliter-gb" class="manualsubmit-lbl"
+             title="Select how to group displayed objects for aggregation and sorting.
+All types of groupings require the same number of variables. The different values determine
+whether all variable definition properties are used or just a subset of them and also whether
+object id suffix is included">Group By:</label>
+      <select id="smg-fliter-gb" name="gb">
+        @for(gbv <- SMGAggGroupBy.values) {
+        <option value="@gbv.toString" @if(gbv==groupBy){ selected }>@{SMGAggGroupBy.gbDesc(gbv)}</option>
+        }
+      </select>
       <input id="smgFilterFormPg" type="hidden" name="pg" value="@page" />
     </div>
   </div>
@@ -262,10 +274,16 @@ By default aggregation/sorting happens per-remote instance">Cross-Remote:</label
 <!-- strip empty params from the form so that urls are less cluttered -->
 <script language="JavaScript">
   function disableEmptyInputs() {
-      var indexHasXAgg = @if(ix.isDefined && ix.get.xAgg) { true } else { false };
+      var indexHasXAgg = @if(ix.isDefined && ix.get.xRemoteAgg) { true } else { false };
+      var defaultGroupBy = @if(ix.isDefined && ix.get.aggGroupBy.isDefined) {
+          "@{ix.get.aggGroupBy.get}";
+          } else {
+          "@{SMGAggGroupBy.defaultGroupBy}";
+          }
       $(':input', this).each(function() {
           this.disabled = !($(this).val()) ||
                           ((this.name == "xagg") && (!indexHasXAgg) && ($(this).val() == "off")) ||
+                          ((this.name == "gb") && ($(this).val() == defaultGroupBy)) ||
                           ((this.name == "xsort") && ($(this).val() == 0)) ||
                           ((this.name == "pg") && ($(this).val() == 0)) ||
                           ((this.name == "period") && ($(this).val() == "@defaultPeriod")) ||

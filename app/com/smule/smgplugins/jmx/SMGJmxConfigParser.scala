@@ -101,17 +101,32 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
   def buildIndexes(jmxObjects: List[SMGJmxObject]): List[SMGConfIndex] = {
     val ret = ListBuffer[SMGConfIndex]()
     jmxObjects.groupBy(_.baseId).keys.foreach { baseId =>
-      ret += SMGConfIndex(baseId, baseId,
-        SMGFilter.fromPrefixLocal(baseId),
-        None, None, None, xAgg = false, None, None, Some(pluginId), disableHeatmap = false)
+      ret += SMGConfIndex(
+        id = baseId,
+        title = baseId,
+        flt = SMGFilter.fromPrefixLocal(baseId),
+        cols = None,
+        rows = None,
+        aggOp = None,
+        xRemoteAgg = false,
+        aggGroupBy = None,
+        period = None,
+        desc = None,
+        parentId = Some(pluginId),
+        disableHeatmap = false)
     }
-    val secondLevel = SMGConfIndex(pluginId+"_all", s"JMX Graphs ($pluginId - All)",
-      SMGFilter.matchLocal,
-      None, Some(0), None, xAgg = false, None, None, Some(pluginId), ret.map(_.id), disableHeatmap = false)
+    val secondLevel = SMGConfIndex(
+      id = pluginId + "_all",
+      title = s"JMX Graphs ($pluginId - All)",
+      flt = SMGFilter.matchLocal,
+      cols = None, rows = Some(0), aggOp = None, xRemoteAgg = false, aggGroupBy = None,
+      period = None, desc = None, parentId = Some(pluginId), childIds = ret.map(_.id), disableHeatmap = false)
     ret += secondLevel
-    val topLevel = SMGConfIndex(pluginId, s"JMX Graphs ($pluginId)",
-      SMGFilter.matchLocal,
-      None, Some(0), None, xAgg = false, None, None, None, Seq(pluginId+"_all"), disableHeatmap = false)
+    val topLevel = SMGConfIndex(
+      id = pluginId, title = s"JMX Graphs ($pluginId)",
+      flt = SMGFilter.matchLocal,
+      cols = None, rows = Some(0), aggOp = None, xRemoteAgg = false, aggGroupBy = None,
+      period = None, desc = None, parentId = None, childIds = Seq(pluginId + "_all"), disableHeatmap = false)
     ret += topLevel
     ret.toList
   }

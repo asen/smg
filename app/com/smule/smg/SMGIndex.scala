@@ -64,7 +64,9 @@ trait SMGIndex {
 
   val aggOp: Option[String]
 
-  val xAgg: Boolean
+  val xRemoteAgg: Boolean
+
+  val aggGroupBy: Option[SMGAggGroupBy.Value]
 
   val period: Option[String]
   val desc: Option[String]

@@ -1,5 +1,9 @@
 package com.smule.smg
 
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+import scala.util.Try
+
 /**
   * A SMG aggregate object view - representing a set of SMGObjects (rrd dbs) having identical
   * variables and subject to aggregation.
@@ -66,6 +70,65 @@ case class SMGLocalAggObjectView(id: String,
   override val refObj: Option[SMGObjectUpdate] = None
 
   override lazy val rrdType: String = objs.map(_.rrdType).distinct.mkString(",")
+}
+
+object SMGAggGroupBy extends Enumeration {
+
+  val GB_VARS, GB_VARSSX, GB_LBLMU, GB_LBLMUSX = Value
+
+  def gbDesc(v: Value): String = v match {
+    case GB_VARS => "By same vars defs (default)"
+    case GB_VARSSX => "By same vars defs and object id suffix"
+    case GB_LBLMU => "By same vars labels and units"
+    case GB_LBLMUSX => "By same vars labels and units and object id suffix"
+    case x => throw new RuntimeException(s"The impossible has happened: $x")
+  }
+
+  def gbVal(s: String): Option[Value] = Try(withName(s)).toOption
+
+  def defaultGroupBy: Value = GB_VARS
+
+  private def varsDesc(vars: List[Map[String,String]]) = s"Vars (${vars.size}): " + vars.zipWithIndex.map { case (v, ix) =>
+    "(" + v.map { case (k,s) =>
+      s"$k=$s"
+    }.mkString(" ") + ")"
+  }.mkString(", ")
+
+
+  private def objectGroupByVars(ov: SMGObjectView, gb: Value) = {
+    gb match {
+      case GB_VARS => ov.filteredVars(true)
+      case GB_VARSSX => {
+        ov.filteredVars(true).map { m =>
+          m ++ Map("sx" -> ov.id.split('.').last)
+        }
+      }
+      case GB_LBLMU => ov.filteredVars(true).map { m =>
+        m.filter { case (k, v) =>
+          (k == "label") || (k == "mu")
+        }
+      }
+      case GB_LBLMUSX => ov.filteredVars(true).map { m =>
+        m.filter { case (k, v) =>
+          (k == "label") || (k == "mu")
+        } ++ Map("sx" -> ov.id.split('.').last)
+      }
+    }
+  }
+
+  def groupByVars(lst: Seq[SMGObjectView], gb: Value): Seq[(String, Seq[SMGObjectView])] = {
+    // group by vars trying to preserve ordering
+    val grouped = mutable.Map[List[Map[String,String]],Seq[SMGObjectView]](lst.groupBy(ov => objectGroupByVars(ov,gb)).toSeq:_*)
+    val ret = ListBuffer[(String, Seq[SMGObjectView])]()
+    lst.foreach { ov =>
+      val gbv = objectGroupByVars(ov, gb)
+      val elem = grouped.remove(gbv)
+      if (elem.isDefined) {
+        ret += Tuple2(varsDesc(gbv), elem.get)
+      }
+    }
+    ret.toList
+  }
 }
 
 /**

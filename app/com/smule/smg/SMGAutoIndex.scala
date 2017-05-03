@@ -51,7 +51,8 @@ case class SMGAutoIndex(id: String, children: Seq[SMGAutoIndex], remoteId: Optio
   override def asUrlForPeriod(aPeriod: String) = flt.asUrlForPage(0, cols, rows, Some(aPeriod))
 
   override val aggOp = None
-  override val xAgg = false
+  override val xRemoteAgg = false
+  override val aggGroupBy: Option[SMGAggGroupBy.Value] = None
 
   override val period = None
   override val desc = None

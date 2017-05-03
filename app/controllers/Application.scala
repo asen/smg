@@ -72,31 +72,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  private def varsDesc(vars: List[Map[String,String]]) = "vars: " + vars.zipWithIndex.map { case (v, ix) =>
-    v.getOrElse("label", s"ds$ix") + v.get("mu").map(mu => s" ($mu)").getOrElse("")
-  }.mkString(", ")
-
-  /**
-    * group objects by "graph vars" (identical var defs, subject to aggregation nd sorting)
-    * @param lst - a sequence of object views to group
-    * @return - sequence of tuples each corresponding to the unique "graph vars" present in the object list.
-    *         The first element of the tuple is the vars "humand description" and the second - the sequence
-    *         of objects having these vars.
-    */
-  private def groupByVars(lst: Seq[SMGObjectView]): Seq[(String, Seq[SMGObjectView])] = {
-    // group by vars trying to preserve ordering
-    val grouped = mutable.Map[List[Map[String,String]],Seq[SMGObjectView]](lst.groupBy(_.filteredVars(true)).toSeq:_*)
-    val ret = ListBuffer[(String, Seq[SMGObjectView])]()
-    lst.foreach { ov =>
-      val v = ov.filteredVars(true)
-      val elem = grouped.remove(v)
-      if (elem.isDefined) {
-        ret += Tuple2(varsDesc(v), elem.get)
-      }
-    }
-    ret.toList
-  }
-
   private def optStr2OptDouble(opt: Option[String]): Option[Double] = if (opt.isDefined && (opt.get != "")) Some(opt.get.toDouble) else None
 
   case class DashboardExtraParams (
@@ -105,7 +80,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
                                     rows: Int,
                                     pg: Int,
                                     agg: Option[String],
-                                    xRemoteAgg: Boolean
+                                    xRemoteAgg: Boolean,
+                                    groupBy: SMGAggGroupBy.Value
                                   )
 
   /**
@@ -144,7 +120,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     dpp: String,
     d95p: String,
     maxy: Option[String],
-    miny: Option[String]
+    miny: Option[String],
+    gb: Option[String]
   ) {
 
     def processParams(idx: Option[SMGIndex]): (SMGFilter, DashboardExtraParams) = {
@@ -171,7 +148,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
         disable95pRule = myDisable95p,
         maxY = myMaxY,
         minY = myMinY)
-      
+
       val myRemote = if (idx.isEmpty || remote.isDefined) remote else idx.get.flt.remote
 
       val flt = SMGFilter(px = px, //myPx,
@@ -187,7 +164,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       else
         idx.get.period.getOrElse(GrapherApi.defaultPeriod)
 
-      val myXRemoteAgg = if (idx.isEmpty || xagg.isDefined) xagg.getOrElse("off") == "on" else idx.get.xAgg
+      val myXRemoteAgg = if (idx.isEmpty || xagg.isDefined) xagg.getOrElse("off") == "on" else idx.get.xRemoteAgg
       val myCols = if (idx.isEmpty || cols.isDefined)
         cols.getOrElse(configSvc.config.dashDefaultCols)
       else
@@ -197,13 +174,19 @@ class Application  @Inject() (actorSystem: ActorSystem,
       else
         idx.get.rows.getOrElse(configSvc.config.dashDefaultRows)
 
+      val groupBy = if (idx.isEmpty || gb.isDefined) {
+        gb.flatMap(SMGAggGroupBy.gbVal)
+      } else idx.get.aggGroupBy
+
       val dep = DashboardExtraParams(
         period = myPeriod,
         cols = myCols,
         rows = myRows,
         pg = pg,
         agg = myAgg,
-        xRemoteAgg = myXRemoteAgg)
+        xRemoteAgg = myXRemoteAgg,
+        groupBy = groupBy.getOrElse(SMGAggGroupBy.defaultGroupBy)
+      )
 
       (flt,dep)
     }
@@ -230,7 +213,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
       dpp = m.getOrElse("dpp", ""),
       d95p = m.getOrElse("d95p", ""),
       maxy = m.get("maxy"),
-      miny = m.get("miny")
+      miny = m.get("miny"),
+      gb = m.get("gb")
     )
   }
 
@@ -261,13 +245,13 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @return - a sequence of DashboardGraphsGroup each representing a group of graphs with identical var definitions
     *         where within each group the images are sorted as described.
     */
-  private def xsortImageViews(lst: Seq[SMGImageView], sortBy: Int, period: String): Seq[DashboardGraphsGroup]  = {
+  private def xsortImageViews(lst: Seq[SMGImageView], sortBy: Int, groupBy: SMGAggGroupBy.Value, period: String): Seq[DashboardGraphsGroup]  = {
     val fparams = SMGRrdFetchParams(None, Some(period), None, filterNan = true )
     val objLst = lst.map { iv => iv.obj }
     val ov2iv = lst.groupBy(_.obj.id)
     val fut = smg.fetchMany(objLst, fparams)
     val fetchResults = Await.result(fut,  Duration(120, "seconds")).toMap
-    val byVars = groupByVars(objLst)
+    val byVars = SMGAggGroupBy.groupByVars(objLst, groupBy)
     byVars.map { case (vdesc, vlst) =>
       val vlstSorted = vlst.sortBy { ov =>
         val rows = fetchResults.getOrElse(ov.id, Seq())
@@ -283,9 +267,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
         }
       }
       val sortedVdesc = if (sortBy < vlstSorted.head.filteredVars(true).size) {
-        s"sorted by ${vlstSorted.head.filteredVars(true)(sortBy).getOrElse("label", s"ds$sortBy")}"
+        s"Sorted by ${vlstSorted.head.filteredVars(true)(sortBy).getOrElse("label", s"ds$sortBy")}"
       } else
-        "not sorted"
+        "Not sorted"
       (List(vdesc, sortedVdesc), vlstSorted)
     }.map { case (descLst, slst) =>
       DashboardGraphsGroup(descLst, slst.flatMap(ov => ov2iv.getOrElse(ov.id, Seq())))
@@ -375,7 +359,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     } else if (dep.agg.nonEmpty) {
       // group objects by "graph vars" (identical var defs, subject to aggregation) and produce an aggregate
       // object and corresponding image for each group
-      val byGraphVars = groupByVars(objsSlice)
+      val byGraphVars = SMGAggGroupBy.groupByVars(objsSlice, dep.groupBy)
       val aggObjs = byGraphVars.map { case (vdesc, vseq) =>
         SMGAggObjectView.build(vseq, dep.agg.get)
       }
@@ -400,7 +384,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val monStatesByImgView = mySeq(1).asInstanceOf[Map[String,Seq[SMGMonState]]]
 
       val sortedGroups = if (dep.agg.isEmpty && (flt.gopts.xsort.getOrElse(0) > 0)){
-        xsortImageViews(lst, flt.gopts.xsort.get - 1, dep.period)
+        xsortImageViews(lst, flt.gopts.xsort.get - 1, dep.groupBy, dep.period)
       } else {
         List(DashboardGraphsGroup(List(), lst))
       }
