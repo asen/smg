@@ -62,6 +62,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     (JsPath \ "id").read[String].map(id => prefixedId(id)) and
       (JsPath \ "objs").read[List[SMGRemoteObject]] and
       (JsPath \ "op").read[String] and
+      (JsPath \ "gb").readNullable[String].map { gbOpt =>
+        gbOpt.flatMap(gbs => SMGAggGroupBy.gbVal(gbs)).getOrElse(SMGAggGroupBy.defaultGroupBy) } and
       (JsPath \ "vars").read[List[Map[String, String]]] and
       (JsPath \ "cdefVars").readNullable[List[Map[String, String]]].map(ol => ol.getOrElse(List())) and
       (JsPath \ "graphVarsIndexes").readNullable[List[Int]].map(ol => ol.getOrElse(List())) and
@@ -774,6 +776,7 @@ object SMGRemoteClient {
       "id" -> obj.id,
       "objs" -> Json.toJson(obj.objs),
       "op" -> obj.op,
+      "gb" -> obj.groupBy.toString,
       "vars" -> Json.toJson(obj.vars),
       "cdefVars" -> Json.toJson(obj.cdefVars),
       "graphVarsIndexes" -> Json.toJson(obj.graphVarsIndexes),

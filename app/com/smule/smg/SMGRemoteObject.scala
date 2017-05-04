@@ -83,6 +83,7 @@ case class SMGRemoteAggObjectView(
                             id: String,
                             objs: Seq[SMGObjectView],
                             op: String,
+                            groupBy: SMGAggGroupBy.Value,
                             vars: List[Map[String, String]],
                             cdefVars: List[Map[String, String]],
                             graphVarsIndexes: Seq[Int],

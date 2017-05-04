@@ -262,7 +262,7 @@ All types of groupings require the same number of variables. The different value
 whether all variable definition properties are used or just a subset of them and also whether
 object id suffix is included">Group By:</label>
       <select id="smg-fliter-gb" name="gb">
-        @for(gbv <- SMGAggGroupBy.values) {
+        @for(gbv <- SMGAggGroupBy.values.toSeq) {
         <option value="@gbv.toString" @if(gbv==groupBy){ selected }>@{SMGAggGroupBy.gbDesc(gbv)}</option>
         }
       </select>

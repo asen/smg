@@ -1,5 +1,6 @@
 @import com.smule.smg.SMGImageView
 @import com.smule.smg.SMGObjectView
+@import com.smule.smg.SMGAggObjectView
 @import com.smule.smg.SMGConfigService
 @import com.smule.smg.GraphOptions
 @import com.smule.smg.SMGMonState
@@ -71,6 +72,10 @@ Changing this reloads the page.">Disable 95%-ile line:</label>
       </div>
     </div>
   </div>
+
+  @if(obj.isAgg){
+  <h5>@{obj.asInstanceOf[SMGAggObjectView].groupByKey.desc}</h5>
+  }
 
   @if(showMs) {
   <div>

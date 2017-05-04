@@ -113,6 +113,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     */
   def fetchAgg(ids: String,
                op: String,
+               gb: Option[String],
                r: Option[Int],
                s: Option[String],
                e: Option[String],
@@ -122,7 +123,8 @@ class Api  @Inject() (actorSystem: ActorSystem,
     if (objList.isEmpty)
       Future {}.map { _ => NotFound("object ids not found") }
     else {
-      val aobj = SMGAggObjectView.build(objList, op)
+      val groupBy = SMGAggGroupBy.gbParamVal(gb)
+      val aobj = SMGAggObjectView.build(objList, op, groupBy)
       val params = SMGRrdFetchParams(r, s, e, filterNan = fnan.getOrElse("false") == "true")
       smg.fetchAgg(aobj, params).map { ret =>
         val json = Json.toJson(ret)
@@ -183,7 +185,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
   def agg: Action[AnyContent] = Action.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val gopts = goptsFromParams(params)
-    aggCommon(params("ids").head, params("op").head, params("periods").headOption,
+    aggCommon(params("ids").head, params("op").head, params("gb").headOption, params("periods").headOption,
       gopts, params("title").headOption).map { imgLst: Seq[SMGImageView] =>
       val json = Json.toJson(imgLst)
       Ok(json)
@@ -199,7 +201,8 @@ class Api  @Inject() (actorSystem: ActorSystem,
     * @param title      - optional graph title
     * @return
     */
-  def aggCommon(idsStr: String, op: String, periodsStr: Option[String], gopts: GraphOptions, title: Option[String]): Future[Seq[SMGImageView]] = {
+  def aggCommon(idsStr: String, op: String, gb: Option[String],
+                periodsStr: Option[String], gopts: GraphOptions, title: Option[String]): Future[Seq[SMGImageView]] = {
     val ids = idsStr.split(',').toList
     val periods = periodsStr match {
       case Some(s) => s.split(',').toList
@@ -208,7 +211,8 @@ class Api  @Inject() (actorSystem: ActorSystem,
     val objsById = configSvc.config.viewObjectsById
     val lst = ids.map(oid => objsById.get(oid)).filter(o => o.nonEmpty).map(o => o.get)
     if (lst.nonEmpty) {
-      val aggObj = SMGAggObjectView.build(lst, op, title)
+      val groupBy = SMGAggGroupBy.gbParamVal(gb)
+      val aggObj = SMGAggObjectView.build(lst, op, groupBy, title)
       smg.graphAggObject(aggObj, periods, gopts, xRemote = false)
     } else Future {
       Seq()

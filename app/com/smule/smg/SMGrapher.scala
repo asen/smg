@@ -323,6 +323,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       if (!objOpts.exists(_.isEmpty)) {
         Some(SMGLocalAggObjectView(aobj.id, objOpts.map(_.get),
           aobj.op,
+          aobj.groupBy,
           aobj.vars,
           aobj.cdefVars,
           aobj.graphVarsIndexes,

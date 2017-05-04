@@ -13,8 +13,8 @@ GET     /dash           controllers.Application.dash()
 POST    /dash           controllers.Application.dash()
 GET     /show/:oid      controllers.Application.show(oid: String, cols: Int ?= 6, dpp: String ?= "", d95p: String ?= "", maxy: Option[String], miny: Option[String])
 GET     /fetch/:oid     controllers.Application.fetch(oid: String, r: Option[Int], s: Option[String], e: Option[String], d: Boolean ?= false)
-GET     /showAgg        controllers.Application.showAgg(ids:String, op:String, title:Option[String], cols: Int ?= 6, dpp: String ?= "", d95p: String ?= "", maxy: Option[String], miny: Option[String])
-GET     /fetchAgg       controllers.Application.fetchAgg(ids:String, op:String, r:Option[Int], s: Option[String], e: Option[String], d:Boolean ?= false)
+GET     /showAgg        controllers.Application.showAgg(ids:String, op:String, gb: Option[String], title: Option[String], cols: Int ?= 6, dpp: String ?= "", d95p: String ?= "", maxy: Option[String], miny: Option[String])
+GET     /fetchAgg       controllers.Application.fetchAgg(ids:String, op:String, gb: Option[String], r:Option[Int], s: Option[String], e: Option[String], d:Boolean ?= false)
 POST    /run/:interval  controllers.Application.runJob(interval: Int, id: Option[String])
 POST    /reload         controllers.Application.reloadConf
 GET     /reload         controllers.Application.reloadConf
@@ -69,7 +69,7 @@ POST    /plugin/:pluginId  controllers.Application.pluginIndex(pluginId: String)
 GET     /api/config         controllers.Api.config
 GET     /api/fetch/:oid     controllers.Api.fetch(oid: String, r: Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
 GET     /api/fetchMany      controllers.Api.fetchMany(ids: String, r: Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
-GET     /api/fetchAgg       controllers.Api.fetchAgg(ids: String, op: String, r:Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
+GET     /api/fetchAgg       controllers.Api.fetchAgg(ids: String, op: String, gb: Option[String], r: Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
 POST    /api/reloadLocal    controllers.Api.reloadLocal
 GET     /api/reloadLocal    controllers.Api.reloadLocal
 POST    /api/reloadSlave/:slaveId   controllers.Api.reloadSlave(slaveId: String)

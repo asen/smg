@@ -175,7 +175,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
         idx.get.rows.getOrElse(configSvc.config.dashDefaultRows)
 
       val groupBy = if (idx.isEmpty || gb.isDefined) {
-        gb.flatMap(SMGAggGroupBy.gbVal)
+        gb.map(s => SMGAggGroupBy.gbParamVal(Some(s)))
       } else idx.get.aggGroupBy
 
       val dep = DashboardExtraParams(
@@ -361,7 +361,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       // object and corresponding image for each group
       val byGraphVars = SMGAggGroupBy.groupByVars(objsSlice, dep.groupBy)
       val aggObjs = byGraphVars.map { case (vdesc, vseq) =>
-        SMGAggObjectView.build(vseq, dep.agg.get)
+        SMGAggObjectView.build(vseq, dep.agg.get, dep.groupBy)
       }
       // if we are not graphing cross-remote, every ag object defined from a cross-remote filter can
       // result in multiple images (one per remote) and we want the monitoring state per resulting image
@@ -451,7 +451,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param cols - number fo columns to display graphs in
     * @return
     */
-  def showAgg(ids:String, op:String, title:Option[String], cols: Int, dpp: String, d95p: String,
+  def showAgg(ids:String, op:String, gb: Option[String], title: Option[String], cols: Int, dpp: String, d95p: String,
               maxy: Option[String], miny: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val showMs = msEnabled(request)
     val gopts = GraphOptions(step = None, pl = None, xsort = None,
@@ -463,7 +463,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
       Future { }.map { _ => NotFound("object ids not found") }
     else {
       val byRemote = objList.groupBy(o => SMGRemote.remoteId(o.id))
-      val aobj = SMGAggObjectView.build(objList, op, title)
+      val groupBy = SMGAggGroupBy.gbParamVal(gb)
+      val aobj = SMGAggObjectView.build(objList, op, groupBy, title)
       val gfut = smg.graphAggObject(aobj, smg.detailPeriods, gopts, byRemote.keys.size > 1)
       val mfut = if (showMs) monitorApi.objectViewStates(objList) else Future { Map() }
       val ixes = smg.objectIndexes(aobj)
@@ -509,14 +510,15 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param d - download or inline display
     * @return
     */
-  def fetchAgg(ids:String, op:String, r:Option[Int], s: Option[String], e: Option[String],
+  def fetchAgg(ids:String, op:String, gb: Option[String], r: Option[Int], s: Option[String], e: Option[String],
                d:Boolean): Action[AnyContent] = Action.async {
     val idLst = ids.split(',')
     val objList = idLst.filter( id => smg.getObjectView(id).nonEmpty ).map(id => smg.getObjectView(id).get)
     if (objList.isEmpty)
       Future { }.map { _ => NotFound("object ids not found") }
     else {
-      val aobj = SMGAggObjectView.build(objList, op)
+      val groupBy = SMGAggGroupBy.gbParamVal(gb)
+      val aobj = SMGAggObjectView.build(objList, op, groupBy)
       val params = SMGRrdFetchParams(r, s, e, filterNan = false)
       smg.fetchAgg(aobj, params).map { ret =>
         fetchCommon(aobj, d, ret)

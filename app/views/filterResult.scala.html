@@ -1,4 +1,5 @@
 @import com.smule.smg.SMGImageView
+@import com.smule.smg.SMGAggObjectView
 @import com.smule.smg.SMGFilter
 @import com.smule.smg.GrapherApi ; val predefPeriods = GrapherApi.detailPeriods
 @import com.smule.smg.SMGRemote
@@ -79,7 +80,7 @@
 
   @for(group <- result) {
     @if(group.levels.nonEmpty){
-    <h3>@group.levels.head</h3>
+    <h3>@group.levels.head (@group.lst.size @if(group.lst.size == 1){graph} else {graphs})</h3>
       @for(lvl <- group.levels.tail){
       <h4>@lvl</h4>
       }
@@ -98,6 +99,9 @@
               }
               [<a href="@g.fetchUrl">csv</a>,<a href="@g.fetchUrl&d=1">dl</a>]
             </h4>
+            @if(g.obj.isAgg){
+              <h5>@{g.obj.asInstanceOf[SMGAggObjectView].groupByKey.desc}</h5>
+            }
             <div class="subtitle-div">
               <div class="subtitle-div">
                 @{g.obj.id} (@{g.obj.rrdType}) [<a href="#@g.obj.id" >#</a>]
