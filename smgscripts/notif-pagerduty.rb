@@ -41,11 +41,22 @@ hash = {
 
 # puts JSON.dump(hash)
 
+proxy_host = nil
+proxy_port = nil
+proxy_str= ENV["https_proxy"] || ENV["http_proxy"]
+if proxy_str
+  proxy_str=proxy_str.gsub(/https?:\/\//,"")
+  if proxy_str != ""
+    proxy_host, proxy_port = proxy_str.split(":",2)
+    proxy_port = proxy_port.nil? ? 80 : proxy_port.to_i
+  end
+end
+
 uri = URI.parse('https://events.pagerduty.com/generic/2010-04-15/create_event.json')
 req = Net::HTTP::Post.new(uri.request_uri, 'Content-Type' => 'application/json')
 req.body = JSON.dump(hash)
 # p uri
-http = Net::HTTP.new(uri.host, uri.port)
+http = Net::HTTP.new(uri.host, uri.port, proxy_host, proxy_port)
 http.use_ssl = true
 res = http.request(req)
 puts res.body
