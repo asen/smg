@@ -185,7 +185,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
   def agg: Action[AnyContent] = Action.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val gopts = goptsFromParams(params)
-    aggCommon(params("ids").head, params("op").head, params("gb").headOption, params("periods").headOption,
+    aggCommon(params("ids").head, params("op").head, params.get("gb").map(_.head), params("periods").headOption,
       gopts, params("title").headOption).map { imgLst: Seq[SMGImageView] =>
       val json = Json.toJson(imgLst)
       Ok(json)
