@@ -78,7 +78,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
           aggObjectUpdates.foreach { obj =>
             updateActor ! SMGUpdateActor.SMGUpdateObjectMessage(obj, None, updateCounters = true)
           }
-          log.debug(s"SMGrapher.run(interval=$interval): stage 0 done ($sz objects). " +
+          log.info(s"SMGrapher.run(interval=$interval): stage 0 done ($sz objects). " +
             s"Sent messages for $aggsSz aggregate objects")
         }),
         SMGRunStageDef(aggsSz,
