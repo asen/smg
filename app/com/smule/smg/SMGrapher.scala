@@ -327,7 +327,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
           aobj.vars,
           aobj.cdefVars,
           aobj.graphVarsIndexes,
-          "(X-Remote) " + aobj.title
+          "(Cross-remote) " + aobj.title
         )
         )
       } else None

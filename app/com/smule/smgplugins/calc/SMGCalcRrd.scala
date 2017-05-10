@@ -132,17 +132,18 @@ object SMGCalcRrd {
     val firstObjElem = expr.firstObjectViewElem.get
     val firstObj = firstObjElem.ov
 //    val myVar = firstObjElem.graphVar
+    val cmdPx = SMGRrd.rrdGraphCommandPx(confSvc.config.rrdConf,
+      title.getOrElse("Calculated graph"),
+      outFn, period, None, gopts.step, gopts.maxY, gopts.minY)
     val out = new StringBuilder(
-      SMGRrd.rrdGraphCommandPx(confSvc.config.rrdConf,
-        title.getOrElse("Calculated graph"),
-        outFn, period, None, gopts.step, gopts.maxY, gopts.minY)
+      cmdPx
     )
     val colorMaker = new ColorMaker()
     val srcLabelMaker = new SMGRrd.LabelMaker()
     out.append(exprToRrd(expr, period, gopts, colorMaker))
 
     try {
-      SMGCmd(out.toString()).run
+      SMGRrd.runRrdGraphCommand(confSvc.config.rrdConf, out.toString)
       (Some(SMGImage(firstObj, period, confSvc.config.urlPrefix + "/" + baseFn)), None)
     } catch {
       case _: Exception => (None, Some("An exception from rrdtool has occured. Command was: " + out.toString()))

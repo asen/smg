@@ -1,6 +1,6 @@
 package com.smule.smg
 
-import java.io.File
+import java.io.{File, FileWriter}
 import java.nio.file.Paths
 
 import scala.collection.mutable
@@ -31,6 +31,9 @@ case class SMGRrdConfig(rrdTool: String ,
   }
 
   val imageCellWidth: Int = rrdGraphWidth + 83 // rrdtool adds 81 + 2 right padding
+
+  //TODO make this configurable? 2621440 according to getconf ARG_MAX on linux and 262144 on Mac
+  val maxArgsLength: Int = 250000
 }
 
 /**
@@ -226,7 +229,7 @@ object SMGRrd {
   def rrdGraphCommandPx(rrdConf: SMGRrdConfig, title: String, outFn: String,
                         period: String, pl:Option[String], step: Option[Int],
                         maxY: Option[Double], minY: Option[Double]): String = {
-    val c = new mutable.StringBuilder(rrdConf.rrdTool).append(" graph ").append(outFn).append(" --imgformat=PNG")
+    val c = new mutable.StringBuilder("graph ").append(outFn).append(" --imgformat=PNG")
     c.append(" --font '").append(rrdConf.rrdGraphFont.getOrElse("LEGEND:7:monospace")).append("'")
     c.append(" --title '").append(title).append("'")
     c.append(" --start=now-").append(safePeriod(period))
@@ -279,7 +282,33 @@ object SMGRrd {
     s" 'COMMENT: step\\: $resStr\\n' "
   }
 
+  private def runRrdGraphCommandPipe(rrdConf: SMGRrdConfig, cmd: String) = {
+    val tmpFile = File.createTempFile("smg-rrdt-pipe-", ".cmd")
+    //tmpFile.deleteOnExit() we delete explicitly instead
+    try {
+      try {
+        val fw = new FileWriter(tmpFile, false)
+        try {
+          fw.write(cmd)
+        } finally fw.close()
+      } catch {
+        case t: Throwable => throw SMGCmdException("CREATE_TEMP_RRDTOOL_CMD_FILE",
+          defaultCommandTimeout, -1, "Unable to create temp file", t.getMessage)
+      }
+      SMGCmd.runCommand(rrdConf.rrdTool + " - < " + tmpFile.getAbsolutePath, defaultCommandTimeout)
+    } finally {
+      tmpFile.delete()
+    }
+  }
 
+  def runRrdGraphCommand(rrdConf: SMGRrdConfig, cmd: String): Unit = {
+    if (cmd.length < rrdConf.maxArgsLength)
+      SMGCmd.runCommand(rrdConf.rrdTool + " " + cmd, defaultCommandTimeout)
+    else {
+      log.warn(s"SMGRrd.runRrdGraphCommand: command string is too long (${cmd.length}) - will use rrdtool - < tmpfile")
+      runRrdGraphCommandPipe(rrdConf, cmd)
+    }
+  }
 
   private def evalRpn(rpn: mutable.Stack[String]): Double = {
     // TODO VERY limited RPN support
@@ -437,12 +466,13 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
     * @param period - period to cover in the graph
     */
   def graph(outfn:String, period: String, gopts: GraphOptions): Unit = {
-    SMGCmd.runCommand(rrdGraphCommand(outfn, period, gopts), defaultCommandTimeout)
+    val cmd = rrdGraphCommand(outfn, period, gopts)
+    runRrdGraphCommand(rrdConf, cmd)
   }
 
   private def rrdGraphCommand(outFn: String, period:String, gopts: GraphOptions): String = {
-    val px = rrdGraphCommandPx(rrdConf, objv.id, outFn, period, gopts.pl, gopts.step, gopts.maxY, gopts.minY)
-    val c = new mutable.StringBuilder(px)
+    val cmd = rrdGraphCommandPx(rrdConf, objv.id, outFn, period, gopts.pl, gopts.step, gopts.maxY, gopts.minY)
+    val c = new mutable.StringBuilder(cmd)
     var first = true
     val lblMaker = new LabelMaker()
     val colorMaker = new ColorMaker()
@@ -519,8 +549,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
     */
   def graph(outfn:String, period: String, gopts: GraphOptions): Unit = {
     val cmd = rrdGraphCommand(outfn, period, gopts)
-    //    log.info(cmd)
-    SMGCmd.runCommand(cmd, defaultCommandTimeout)
+    runRrdGraphCommand(rrdConf, cmd)
   }
 
   private def defLabelMakersPrefix(ix: Int) = "d" + ix + "_"
@@ -736,7 +765,9 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
   }
 
   private def rrdGraphCommand(outFn: String, period:String, gopts: GraphOptions): String = {
-    rrdGraphCommandPx(rrdConf, aggObj.shortTitle, outFn, period, gopts.pl, gopts.step, gopts.maxY, gopts.minY) +
+    val cmdPx = rrdGraphCommandPx(rrdConf, aggObj.shortTitle, outFn, period,
+      gopts.pl, gopts.step, gopts.maxY, gopts.minY)
+    cmdPx +
       (aggObj.op match {
       case "GROUP" => rrdGraphGroupCommand(outFn, period, stacked = false, gopts)
       case "STACK" => rrdGraphGroupCommand(outFn, period, stacked = true, gopts)

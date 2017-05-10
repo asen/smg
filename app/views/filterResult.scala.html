@@ -115,7 +115,7 @@
               @if(showMs && monData.contains(g.obj.id)){
               <div>
                 <div class="subtitle-div">
-                  @monitorSvgObjects(monData(g.obj.id), Some(monData(g.obj.id).size))
+                  @monitorSvgObjects(monData(g.obj.id), None)
                 </div>
                 @if(aggOp.isEmpty && monData.contains(g.obj.id)){
                   @defining(SMGMonStateAgg.aggByParentId(monData(g.obj.id)).headOption.map(_._2)) { objStateOpt =>
