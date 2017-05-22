@@ -2,20 +2,16 @@ v 0.5+
 
 == General Enhancements ==
 
+* support external updates - objects which do not have an external command to execute but get the updates
+from external sources posting the data via some API. Probably a plugin.
+
 * fix/improve x-sort (how?)
 
 * configurator (plugin?)
 
-* support external updates - objects which do not have an external command to execute but get the updates
-from external sources posting the data via some API. Probably a plugin.
-
 * filter to hide empty graphs (?)
 
 * support "tags" (?) - be able to filter by tag.
-
-* backups/replication (?) Currently can just copy out the rrd dir for a backup (and the conf - if not generated).
-
-* login system (?)
 
 == Monitor ==
 
@@ -30,3 +26,11 @@ from external sources posting the data via some API. Probably a plugin.
 * GROUP-ing stacked graphs seems messed up
 
 * prevent saveStateToDisk when shutdown is already in progress
+
+== Longer term ==
+
+* slave mode - do not do RRD updates but forward to central update node ?
+
+* backups/replication (?) Currently can just copy out the rrd dir for a backup (and the conf - if not generated).
+
+* login system (?)
