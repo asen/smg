@@ -19,7 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object SMGMonNotifySeverity extends Enumeration {
   val RECOVERY, ACKNOWLEDGEMENT, ANOMALY, WARNING, UNKNOWN, CRITICAL, SMGERR, THROTTLED, UNTHROTTLED = Value
 
-  def fromStateValue(sv: SMGState.Value) = {
+  def fromStateValue(sv: SMGState.Value): SMGMonNotifySeverity.Value = {
     sv match {
       case SMGState.OK => this.RECOVERY
       case SMGState.E_VAL_WARN => this.WARNING
@@ -197,37 +197,44 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     Future.sequence(futs).map(_.exists(p => p))
   }
 
+  // Don't throttle acknowledgements and recoveries
+  private val dontThrottleSeverities = Set(SMGMonNotifySeverity.RECOVERY, SMGMonNotifySeverity.ACKNOWLEDGEMENT)
+
   // return Future[True] if message should be sent
   private def updateThrottleCounters(severity: SMGMonNotifySeverity.Value,
                                      akey: String,
                                      subj: String,
                                      body: String,
                                      ncmds: Seq[SMGMonNotifyCmd]): Future[Boolean] = {
-    val intvl = throttleInterval
-    val nowHourTs = (SMGRrd.tssNow / intvl) * intvl // rounded to beginning of throttle interval
-    if (nowHourTs == currentThrottleTs) {
-      throttleSyncObj.synchronized {
-        currentThrottleCnt += 1
-        if (currentThrottleCnt >= throttleMaxCount) {
-          throttledMsgs += SMGMonNotifyMsgData(
-            severity,
-            akey, subj, body, ncmds)
-          val shouldSendThrottle = if (!throttledIsSent) {
+    if (dontThrottleSeverities.contains(severity)) {
+      Future { true }
+    } else {
+      val intvl = throttleInterval
+      val nowHourTs = (SMGRrd.tssNow / intvl) * intvl // rounded to beginning of throttle interval
+      if (nowHourTs == currentThrottleTs) {
+        throttleSyncObj.synchronized {
+          currentThrottleCnt += 1
+          if (currentThrottleCnt >= throttleMaxCount) {
+            throttledMsgs += SMGMonNotifyMsgData(
+              severity,
+              akey, subj, body, ncmds)
+            val shouldSendThrottle = if (!throttledIsSent) {
               throttledIsSent = true
               true
             } else false
-          if (shouldSendThrottle)
-            sendThrottledMsg(ncmds, currentThrottleCnt, throttleMaxCount, nowHourTs + intvl).map(b => false)
-          else Future {
-            false
+            if (shouldSendThrottle)
+              sendThrottledMsg(ncmds, currentThrottleCnt, throttleMaxCount, nowHourTs + intvl).map(b => false)
+            else Future {
+              false
+            }
+          } else Future {
+            true
           }
-        } else Future {
-          true
         }
+      } else {
+        // new throttle period
+        flushQueuedMessages(nowHourTs).map(b => true)
       }
-    } else {
-      // new throttle period
-      flushQueuedMessages(nowHourTs).map(b => true)
     }
   }
 
