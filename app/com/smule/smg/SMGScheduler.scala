@@ -90,13 +90,8 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
         return
       }
       log.info("SMGScheduler.tick: " + tickTsSecs)
-      var flushed = false
       for (i <- intervals.toSeq.sorted) {
         if (tickTsSecs % i < MAX_TICK_JITTER) { // allow it to be up to MAX_TICK_JITTER second(s) late
-          if (!flushed) {
-            configSvc.config.rrdConf.flushSocket()
-            flushed = true
-          }
           try {
             smg.run(i)
           } catch {
