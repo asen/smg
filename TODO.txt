@@ -2,6 +2,8 @@ v 0.5+
 
 == General Enhancements ==
 
+* Support update "delay", for stats which we get with certain delay.
+
 * Improve event log and UI
 
 * support external updates - objects which do not have an external command to execute but get the updates
