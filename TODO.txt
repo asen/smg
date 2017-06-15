@@ -2,6 +2,8 @@ v 0.5+
 
 == General Enhancements ==
 
+* Improve event log and UI
+
 * support external updates - objects which do not have an external command to execute but get the updates
 from external sources posting the data via some API. Probably a plugin.
 
