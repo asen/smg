@@ -25,6 +25,7 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
 
   def notifyConf: Option[SMGMonNotifyConf]
 
+  val dataDelay: Int = 0
   val rrdInitSource: Option[String] = None
 
   def inspect(cfSvc: SMGConfigService): String = List(

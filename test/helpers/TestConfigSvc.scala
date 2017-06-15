@@ -18,6 +18,7 @@ class TestConfigSvc() extends SMGConfigService {
     title = "test,object.1 Title",
     rrdType = "GAUGE",
     interval = 60,
+    dataDelay = 0,
     stack = false,
     preFetch = pfId,
     rrdFile = Some(s"test-out/$oid.rrd"),

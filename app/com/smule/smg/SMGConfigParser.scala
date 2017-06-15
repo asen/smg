@@ -425,6 +425,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 title = ymap.getOrElse("title", oid).toString,
                 rrdType = myRrdType,
                 interval = ymap.getOrElse("interval", myDefaultInterval).asInstanceOf[Int],
+                dataDelay = ymap.getOrElse("dataDelay", 0).asInstanceOf[Int],
                 stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
                 preFetch = if (ymap.contains("pre_fetch")) Some(ymap.get("pre_fetch").toString) else None,
                 rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
@@ -487,6 +488,9 @@ class SMGConfigParser(log: SMGLoggerApi) {
               // which is likely wrong for the SUM object.
               objs.head.vars.map { v => v.filter { case (k, vv) => k != "max" } }
             }
+            val myDataDelay = if (ymap.containsKey("dataDelay")){
+              ymap.get("dataDelay").asInstanceOf[Int]
+            } else objs.head.dataDelay
             val myRrdType = getRrdType(ymap, Some(objs.head.rrdType))
             // sanity check the objects, all must have at least myVars.size vars
             // TODO: more thorough validation?
@@ -509,6 +513,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 title = ymap.getOrElse("title", oid).toString,
                 rrdType = myRrdType,
                 interval = objs.head.interval,
+                dataDelay = myDataDelay,
                 stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
                 rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
                 rraDef = myRraDef,

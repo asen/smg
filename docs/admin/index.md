@@ -534,6 +534,7 @@ which could look like this:
   timeout: 30                                           # optional - fetch command timeout, default 30
   title: "Localhost sysload (1/5/15 min)"               # optional title - object id will be used if no title is present
   interval: 60                                          # optional - default is 60
+  dataDelay: 0                                          # optional - default 0
   rrd_type: GAUGE                                       # optional - default is GAUGE. Can be COUNTER etc (check rrdtool docs)
   rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
@@ -636,6 +637,12 @@ The following properties are all optional.
 - **interval**: - (default - _60_ seconds) - every rrd object has a an 
 interval associated with it - determining how often the data will be 
 retrieved from the monitored service and updated in the RRD file.
+
+- **dataDelay** - (default - _0_ seconds) - sometimes services report
+their data with certain delay (e.g. a CDN API may report the traffic
+used with 15 min delay). Set that value to the number of seconds data is
+delayed with and on update SMG will subtract that many seconds from the
+fetch/update timestamp.
 
 - **title**: - free form text description of the object. If not 
 specified, the object id will be used as a title.

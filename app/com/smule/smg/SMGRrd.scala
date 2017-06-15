@@ -883,7 +883,12 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
   }
 
   def updateValues(values: List[Double], ts: Option[Int]): Unit = {
-      val tss = if (ts.isEmpty) "N" else ts.get.toString
+      val tss = if (ts.isEmpty && (obju.dataDelay == 0))
+        "N" // rrdtool default
+      else if (ts.isEmpty)
+        (SMGRrd.tssNow - obju.dataDelay).toString
+      else
+        (ts.get - obju.dataDelay).toString
       SMGCmd.runCommand(rrdUpdateCommand(tss, values), defaultCommandTimeout)
   }
 
@@ -908,9 +913,9 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
     } else {
       c.append(" --start ")
       if (ts.isEmpty)
-        c.append("-").append(obju.interval * 2)
+        c.append("-").append(obju.interval * 2 + obju.dataDelay)
       else
-        c.append((ts.get - (obju.interval * 2)).toString)
+        c.append((ts.get - (obju.interval * 2 + obju.dataDelay) ).toString)
     }
 //    c.append(" --no-overwrite")
     val lbl = new LabelMaker()
