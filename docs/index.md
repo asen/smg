@@ -694,7 +694,7 @@ directory specified by the **$monstate\_dir** global config value)
 on shut-down and loaded on start-up.
 
 SMG also supports "silencing" alerts which is basically hiding them 
-from the error page. There are three types of silencing:
+from the error page. There are two types of silencing:
 
 - **Acknowledge** - this will "silence" a current error until it gets
 back into a normal state which will automatically clear the 
@@ -705,9 +705,6 @@ which the silencing will expire. Silencing does not clear on
 recovery which is different than acknowledgement and is useful
 for services which are in "flapping" state - flipping between OK and 
 non-OK states (otherwise acknowlegement is better).
-
-- **Silence permanently** - silence some error permanently. This should
-be avoided in general (better to update configs).
 
 By default SMG will not show Soft, Acknowledged or Silenced error - 
 this can be toggled for each type using the respective checkboxes.
