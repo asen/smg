@@ -17,6 +17,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
+import scala.util.Try
 
 @Singleton
 class Application  @Inject() (actorSystem: ActorSystem,
@@ -72,7 +73,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  private def optStr2OptDouble(opt: Option[String]): Option[Double] = if (opt.isDefined && (opt.get != "")) Some(opt.get.toDouble) else None
+  private def optStr2OptDouble(opt: Option[String]): Option[Double] = if (opt.isDefined && (opt.get != "")) {
+    Try(opt.get.toDouble).toOption
+  } else None
 
   case class DashboardExtraParams (
                                     period: String,

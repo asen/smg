@@ -46,12 +46,12 @@
         <label class="autosubmit-lbl"
                  title="Requested graphs Y scale (max).
 Changing this reloads the page.">MaxY:</label>
-        <input id="maxy_inp" size="12" type="text" name="maxy" value="@gopts.maxY" onchange="mySubmitOnChange(this);">
+        <input id="maxy_inp" size="12" type="text" name="maxy" pattern="[0-9\.\+\-E]+" value="@gopts.maxY" onchange="mySubmitOnChange(this);">
 
         <label class="autosubmit-lbl"
                title="Requested graphs Y scale (min, default is 0.0).
 Changing this reloads the page.">MinY:</label>
-        <input id="miny_inp" size="12" type="text" name="miny" value="@gopts.minY" onchange="mySubmitOnChange(this);">
+        <input id="miny_inp" size="12" type="text" name="miny" pattern="[0-9\.\+\-E]+" value="@gopts.minY" onchange="mySubmitOnChange(this);">
 
         <label for="dpp_cb" class="autosubmit-lbl" title="Disable the dotted line(s) representing the previous period value(s).
 Changing this reloads the page.">Disable Period-Over-Period:</label>
