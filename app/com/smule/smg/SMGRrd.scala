@@ -33,7 +33,7 @@ case class SMGRrdConfig(rrdTool: String ,
   val imageCellWidth: Int = rrdGraphWidth + 83 // rrdtool adds 81 + 2 right padding
 
   //TODO make this configurable? 2621440 according to getconf ARG_MAX on linux and 262144 on Mac
-  val maxArgsLength: Int = 200000
+  val maxArgsLength: Int = 25000
 }
 
 /**
