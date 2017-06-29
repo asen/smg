@@ -171,7 +171,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
       log.warn(s"SMGMonNotifySvc.notify: Muted state prevents sending of throttle messages with subj: $msgSubj")
       return Future { true }
     }
-    val msgBody = s"$msgSubj: \n\n Further notifications will be delayed " +
+    val msgBody = s"$msgSubj: \n\n No more alert notifications will be sent " +
       s"until ${new Date(1000L * throttledUntil).toString}.\n\n" +
       s"Check ${configSvc.config.notifyBaseUrl}/monitor#${configSvc.config.notifyRemoteId.getOrElse("")}\n\n"
     val allCmds = (configSvc.globalNotifyCmds(SMGMonNotifySeverity.SMGERR) ++
@@ -224,7 +224,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
             } else false
             if (shouldSendThrottle)
               sendThrottledMsg(ncmds, currentThrottleCnt, throttleMaxCount, nowHourTs + intvl).map(b => false)
-            else Future {
+            Future {
               false
             }
           } else Future {
@@ -272,10 +272,14 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     } else {
       val akey = monState.alertKey
       val toNotify = ncmds.distinct
-      val allNotified = toNotify.toSet ++ activeAlerts.getOrElse(akey, List()).toSet
-      activeAlerts(akey) = allNotified.toList
-      activeAlertsLastTs(akey) = SMGRrd.tssNow
-      runStateCommandsAsync(monState, toNotify, isRepeat = false, isImprovement)
+      runStateCommandsAsync(monState, toNotify, isRepeat = false, isImprovement).map { msgWasSent =>
+        if (msgWasSent) {
+          val allNotified = toNotify.toSet ++ activeAlerts.getOrElse(akey, List()).toSet
+          activeAlerts(akey) = allNotified.toList
+          activeAlertsLastTs(akey) = SMGRrd.tssNow
+          true
+        } else false
+      }
     }
   }
 
