@@ -37,5 +37,5 @@ object SMGRemote {
     } else ""
   } else id
 
-  def prefixedId(rid: String, id: String) = "@" + rid + "." + id
+  def prefixedId(rid: String, id: String): String = "@" + rid + "." + id
 }

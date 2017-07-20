@@ -295,10 +295,9 @@ execute, together with an optional **timeout** for the command
 pre\_fetch can have a **child\_conc** property (default 1 if not specified)
 which determines how many threads can execute this pre-fetch child pre-fetches
 (but not object commands which are always parallelized). Pre fetch also 
-supports **notify-xxx**: - these are multiple properties which define monitoring
-alert notifications (check [monitoring config](#monitoring) for details). Note
-that from the per-leve specifiers only notify-unkn is relevant at this level.
-Here are two example pre_fetch definitions, one referencing the other as a parent:
+supports **notify-unkn** - to override alert recipients for failure (check 
+[monitoring config](#monitoring) for details). Here are two example pre_fetch
+definitions, one referencing the other as a parent:
 
 <blockquote>
 <pre>
@@ -306,7 +305,7 @@ Here are two example pre_fetch definitions, one referencing the other as a paren
     - $pre_fetch:
       id: host.host1.up
       command: "ping -c 1 host1 >/dev/null"
-      notify-unnkn: mail-asen, notif-pd
+      notify-unkn: mail-asen, notif-pd
       child_conc: 2
       timeout: 5
           
