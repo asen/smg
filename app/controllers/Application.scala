@@ -408,11 +408,12 @@ class Application  @Inject() (actorSystem: ActorSystem,
       // XXX make sure we find agg objects op even if not specified in url params or index but e.g. coming from a plugin
       val myAggOp = if (dep.agg.isDefined) dep.agg else lst.find(_.obj.isAgg).map(_.obj.asInstanceOf[SMGAggObjectView].op)
       val errorsOpt = if (myErrors.isEmpty) None else Some(myErrors.mkString(", "))
+      val matchingIndexes = smg.objectsIndexes(objsSlice)
       Ok(
         views.html.filterResult(configSvc, idx, parentIdx, result, flt, dep,
           myAggOp, showXRmt,
           maxPages, lst.size, objsSlice.size, tlObjects, availRemotes,
-          flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt, conf)
+          flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt, matchingIndexes, conf)
       )
     }
   }

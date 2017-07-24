@@ -124,6 +124,13 @@ trait GrapherApi {
   def objectIndexes(ov: SMGObjectView): Seq[SMGIndex]
 
   /**
+    * Get all indexes which would match any of the listed object views
+    * @param ovs
+    * @return
+    */
+  def objectsIndexes(ovs: Seq[SMGObjectView]): Seq[SMGIndex]
+
+  /**
     * Get a read-only snapshot from the current map of
     * command (pre-fetch or rrd object) id and execution times (in milliseconds)
     * Useful to find slow commands

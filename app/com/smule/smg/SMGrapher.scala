@@ -446,4 +446,10 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     getMatchingIndexes(nonAgs, allIndexes)
   }
 
+  override def objectsIndexes(ovs: Seq[SMGObjectView]): Seq[SMGIndex] = {
+    val nonAgs = ovs.flatMap { ov => if (ov.isAgg) ov.asInstanceOf[SMGAggObjectView].objs else Seq(ov) }
+    getMatchingIndexes(nonAgs, allIndexes)
+  }
+
+
 }
