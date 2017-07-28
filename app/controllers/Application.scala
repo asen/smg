@@ -491,12 +491,13 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param d
     * @return
     */
-  def fetch(oid: String, r:Option[Int], s: Option[String], e: Option[String],
+  def fetch(oid: String, r: Option[String], s: Option[String], e: Option[String],
             d:Boolean): Action[AnyContent] = Action.async {
+    val intres = SMGRrd.parsePeriod(r.getOrElse(""))
     val obj = smg.getObjectView(oid)
     if (obj.isEmpty) Future { Ok("Object Id Not Found") }
     else {
-      val params = SMGRrdFetchParams(r, s, e, filterNan = false)
+      val params = SMGRrdFetchParams(intres, s, e, filterNan = false)
       smg.fetch(obj.get, params).map { ret =>
         fetchCommon(obj.get, d, ret)
       }
@@ -514,8 +515,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param d - download or inline display
     * @return
     */
-  def fetchAgg(ids:String, op:String, gb: Option[String], r: Option[Int], s: Option[String], e: Option[String],
+  def fetchAgg(ids:String, op:String, gb: Option[String], r: Option[String], s: Option[String], e: Option[String],
                d:Boolean): Action[AnyContent] = Action.async {
+    val intres = SMGRrd.parsePeriod(r.getOrElse(""))
     val idLst = ids.split(',')
     val objList = idLst.filter( id => smg.getObjectView(id).nonEmpty ).map(id => smg.getObjectView(id).get)
     if (objList.isEmpty)
@@ -523,7 +525,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     else {
       val groupBy = SMGAggGroupBy.gbParamVal(gb)
       val aobj = SMGAggObjectView.build(objList, op, groupBy)
-      val params = SMGRrdFetchParams(r, s, e, filterNan = false)
+      val params = SMGRrdFetchParams(intres, s, e, filterNan = false)
       smg.fetchAgg(aobj, params).map { ret =>
         fetchCommon(aobj, d, ret)
       }

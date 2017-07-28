@@ -23,9 +23,10 @@ case class SMGRrdAggObject(id: String,
                           ) extends SMGObjectView with SMGObjectUpdate {
 
 
-  def showUrl:String = "/show/" + id
+  override def showUrl:String = "/show/" + id
 
-  def fetchUrl(period: String): String = "/fetch/" + id + "?s=" + period
+  override def fetchUrl(period: String, step: Option[Int]): String = "/fetch/" + id + "?s=" + period +
+    "&r=" + step.map(_.toString).getOrElse("")
 
   def fetchValues(confSvc: SMGConfigService): List[Double] = {
     val sources = ous.map(ou => confSvc.getCachedValues(ou)).toList

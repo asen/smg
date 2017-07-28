@@ -120,9 +120,10 @@ trait SMGAggObjectView extends SMGObjectView {
 
   override def parentDashUrl: Option[String] = None
 
-  override def fetchUrl(period: String): String = "/fetchAgg?s=" + period + "&op=" + op +
+  override def fetchUrl(period: String, step: Option[Int]): String = "/fetchAgg?s=" + period + "&op=" + op +
     "&ids=" + objs.map(_.id).mkString(",") +
-    (if (groupBy != SMGAggGroupBy.defaultGroupBy) s"&gb=${groupBy.toString}" else "")
+    (if (groupBy != SMGAggGroupBy.defaultGroupBy) s"&gb=${groupBy.toString}" else "") +
+    "&r=" + step.map(_.toString).getOrElse("")
 
   override val rrdFile = None
   override val isAgg = true

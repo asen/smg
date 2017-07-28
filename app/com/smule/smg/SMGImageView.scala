@@ -29,7 +29,7 @@ trait SMGImageView {
     */
   val remoteId: Option[String]
 
-  def fetchUrl = obj.fetchUrl(period)
+  def fetchUrl(step: Option[Int]): String = obj.fetchUrl(period, step)
 
-  def resolution(step: Option[Int]) = SMGRrd.getDataResolution(obj.interval, period, step)
+  def resolution(step: Option[Int]): String = SMGRrd.getDataResolution(obj.interval, period, step)
 }

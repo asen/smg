@@ -22,9 +22,10 @@ case class SMGraphObject(
     */
   override def showUrl: String = "/show/" + id
 
-  override def fetchUrl(period: String): String = "/fetch/" + id + "?s=" + period
+  override def fetchUrl(period: String, step: Option[Int]): String = "/fetch/" + id + "?s=" + period +
+    "&r=" + step.map(_.toString).getOrElse("")
 
   override val isAgg: Boolean = false
 
-  override val graphVarsIndexes = if (gvIxes.isEmpty) refObj.map(_.vars.indices).getOrElse(vars.indices) else gvIxes
+  override val graphVarsIndexes: Seq[Int] = if (gvIxes.isEmpty) refObj.map(_.vars.indices).getOrElse(vars.indices) else gvIxes
 }

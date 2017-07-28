@@ -32,9 +32,10 @@ case class SMGRrdObject(id: String,
                        ) extends SMGObjectView with SMGObjectUpdate with SMGFetchCommand {
 
 
-  def showUrl:String = "/show/" + id
+  override def showUrl:String = "/show/" + id
 
-  def fetchUrl(period: String): String = "/fetch/" + id + "?s=" + period
+  override def fetchUrl(period: String, step:Option[Int]): String = "/fetch/" + id + "?s=" + period +
+    "&r=" + step.map(_.toString).getOrElse("")
 
   private val log = SMGLogger
 

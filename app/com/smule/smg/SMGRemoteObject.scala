@@ -22,9 +22,10 @@ case class SMGRemoteObject(
     *
     * @return - a string representing an url to display this object details
     */
-  def showUrl:String = "/show/" + id
+  override def showUrl:String = "/show/" + id
 
-  def fetchUrl(period: String):String = "/fetch/" + id + "?s=" + period
+  override def fetchUrl(period: String, step: Option[Int]):String = "/fetch/" + id + "?s=" + period +
+    "&r=" + step.map(_.toString).getOrElse("")
 
   override val rrdFile: Option[String] = None
   override val isAgg: Boolean = false
@@ -69,9 +70,10 @@ case class SMGRemoteObjectCopy(
     * The "show" url for this object
     * @return - a string representing an url to display this object details
     */
-  def showUrl:String = "/show/" + id
+  override def showUrl:String = "/show/" + id
 
-  def fetchUrl(period: String):String = "/fetch/" + id + "?s=" + period
+  override def fetchUrl(period: String, step: Option[Int]):String = "/fetch/" + id + "?s=" + period +
+    "&r=" + step.map(_.toString).getOrElse("")
 
   override val isAgg: Boolean = false
 

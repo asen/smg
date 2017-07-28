@@ -97,7 +97,7 @@
                 @if(g.obj.stack) {
                   (stacked)
                 }
-                [<a href="@g.fetchUrl">csv</a>,<a href="@g.fetchUrl&d=1">dl</a>]
+                [<a href="@{g.fetchUrl(gopts.step)}">csv</a>,<a href="@{g.fetchUrl(gopts.step)}&d=1">dl</a>]
               </h4>
               @if(g.obj.isAgg){
                 <h5>@{g.obj.asInstanceOf[SMGAggObjectView].groupByKey.desc}</h5>

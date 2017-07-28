@@ -71,7 +71,7 @@ trait SMGObjectView extends SMGObjectBase {
     *
     * @return
     */
-  def fetchUrl(period: String): String
+  def fetchUrl(period: String, step: Option[Int]): String
 
   val rrdFile: Option[String]
 

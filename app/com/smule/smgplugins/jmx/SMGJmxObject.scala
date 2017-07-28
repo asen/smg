@@ -23,7 +23,8 @@ case class SMGJmxObject(baseId: String,
 
   override def showUrl:String = "/show/" + id
 
-  override def fetchUrl(period: String): String = "/fetch/" + id + "?s=" + period
+  override def fetchUrl(period: String, step: Option[Int]): String = "/fetch/" + id + "?s=" + period +
+    "&r=" + step.map(_.toString).getOrElse("")
 
   override val rrdFile: Option[String] = Some(rrdDir + "/" + id + ".rrd")
 
