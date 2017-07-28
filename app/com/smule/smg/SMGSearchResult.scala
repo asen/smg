@@ -18,30 +18,33 @@ trait SMGSearchResult {
 
 case class SMGSearchResultObject(ov: SMGObjectView) extends SMGSearchResult {
   val typeStr = "Object"
-  val showUrl = ov.dashUrl
-  val title = ov.title
-  val desc = s"${ov.id}: " + ov.filteredVars(true).map(_.getOrElse("label", "unlabelled")).mkString(", ")
-  val children = Seq()
-  val remoteId = SMGRemote.remoteId(ov.id)
+  val showUrl: String = ov.dashUrl
+  val title: String = ov.title
+  val desc: String = s"${ov.id}: " + ov.filteredVars(true).map(_.getOrElse("label", "unlabelled")).mkString(", ")
+  val children: Seq[SMGSearchResult] = Seq[SMGSearchResult]()
+  val remoteId: String = SMGRemote.remoteId(ov.id)
   override val idxOpt: Option[SMGIndex] = None
 }
 
 case class SMGSearchResultIndex(idx: SMGIndex, ovs: Seq[SMGObjectView]) extends SMGSearchResult {
   val typeStr = "Index"
-  val showUrl = "/dash?" + idx.asUrl
-  val remoteId = if (SMGRemote.isRemoteObj(idx.id))SMGRemote.remoteId(idx.id) else "Local"
-  val title = s"(${remoteId}) " + idx.title
-  val desc = idx.id + idx.desc.map(s => ": " + s).getOrElse("")
-  val children = ovs.map(SMGSearchResultObject)
+  val showUrl: String = "/dash?" + idx.asUrl
+  val remoteId: String = if (SMGRemote.isRemoteObj(idx.id))SMGRemote.remoteId(idx.id) else "Local"
+  val title: String = s"($remoteId) " + idx.title
+  val desc: String = idx.id + idx.desc.map(s => ": " + s).getOrElse("")
+  val children: Seq[SMGSearchResultObject] = ovs.map(SMGSearchResultObject)
   override val idxOpt: Option[SMGIndex] = Some(idx)
 }
 
 class SMGSearchQuery(q: String) {
   private val terms = q.split("\\s+").filter(_ != "").map(_.toLowerCase)
 
-  val isEmpty = terms.isEmpty
+  val isEmpty: Boolean = terms.isEmpty
 
-  private def indexText(idx: SMGIndex) = Seq(idx.id, idx.title, idx.desc.getOrElse("")).mkString(" ").toLowerCase
+  private def indexText(idx: SMGIndex) = {
+    val searchRemoteIdSeq = if (SMGRemote.isRemoteObj(idx.id)) Seq() else Seq("local")
+    (searchRemoteIdSeq ++ Seq(idx.id, idx.title, idx.desc.getOrElse(""))).mkString(" ").toLowerCase
+  }
 
   private def textMatches(txt: String): Boolean = if (terms.isEmpty) false else {
     terms.forall { term =>
@@ -53,9 +56,9 @@ class SMGSearchQuery(q: String) {
     }
   }
 
-  def indexMatches(idx: SMGIndex) = textMatches(indexText(idx))
+  def indexMatches(idx: SMGIndex): Boolean = textMatches(indexText(idx))
 
-  def objectMatches(ov: SMGObjectView) = textMatches(ov.searchText)
+  def objectMatches(ov: SMGObjectView): Boolean = textMatches(ov.searchText)
 
 
 }

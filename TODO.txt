@@ -2,6 +2,8 @@ v 0.5+
 
 == General Enhancements ==
 
+* respect Step in CSV link
+
 * Improve event log and UI
 
 * support external updates - objects which do not have an external command to execute but get the updates

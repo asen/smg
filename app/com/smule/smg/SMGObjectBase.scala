@@ -38,9 +38,11 @@ trait SMGObjectBase {
     */
   def searchVars : List[Map[String, String]]
 
-  lazy val searchText = Seq(id,
+  private def searchRemoteIdSeq = if (SMGRemote.isRemoteObj(id)) Seq() else Seq("local")
+
+  lazy val searchText: String = (searchRemoteIdSeq ++ Seq(id,
     title,
     searchVars.map(v => v.getOrElse("label","") + " " + v.getOrElse("mu", "") ).mkString(" ")
-  ).mkString(" ").toLowerCase
+  )).mkString(" ").toLowerCase
 
 }
