@@ -171,8 +171,8 @@ hostname and uptime at the end).
 Every RRD object also has an **interval** associated with it. That 
 determines how often the command specified in the config will 
 be executed and its output (numbers) recorded in the RRD file. 
-The default interval if not specified in the config is 300 seconds 
-(or every-5 minutes).
+The default interval if not specified in the config is 60 seconds 
+(or every minute).
 
 Check [RRD Objects configuration](admin/index.md#rrd-objects) for more 
 details on what properties are supported for given RRD object.
