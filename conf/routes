@@ -69,7 +69,9 @@ POST    /plugin/:pluginId  controllers.Application.pluginIndex(pluginId: String)
 GET     /api/config         controllers.Api.config
 GET     /api/fetch/:oid     controllers.Api.fetch(oid: String, r: Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
 GET     /api/fetchMany      controllers.Api.fetchMany(ids: String, r: Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
+POST    /api/fetchMany      controllers.Api.fetchManyPost
 GET     /api/fetchAgg       controllers.Api.fetchAgg(ids: String, op: String, gb: Option[String], r: Option[Int], s: Option[String], e: Option[String], fnan: Option[String])
+POST    /api/fetchAgg       controllers.Api.fetchAggPost
 POST    /api/reloadLocal    controllers.Api.reloadLocal
 GET     /api/reloadLocal    controllers.Api.reloadLocal
 POST    /api/reloadSlave/:slaveId   controllers.Api.reloadSlave(slaveId: String)

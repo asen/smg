@@ -82,11 +82,12 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def fetchMany(ids: String,
-            r: Option[Int],
-            s: Option[String],
-            e: Option[String],
-            fnan: Option[String]): Action[AnyContent] = Action.async {
+
+  def fetchManyCommon(ids: String,
+                r: Option[Int],
+                s: Option[String],
+                e: Option[String],
+                fnan: Option[String]): Future[Result] ={
     val oids = ids.split(",")
     if (oids.isEmpty) Future {
       NotFound("{}")
@@ -96,6 +97,45 @@ class Api  @Inject() (actorSystem: ActorSystem,
       val objs = oids.map(id => smg.getObjectView(id)).filter(_.isDefined).map(_.get)
       smg.fetchMany(objs, params).map { ret =>
         val json = Json.toJson(ret.toMap)
+        Ok(json)
+      }
+    }
+  }
+
+  def fetchMany(ids: String,
+            r: Option[Int],
+            s: Option[String],
+            e: Option[String],
+            fnan: Option[String]): Action[AnyContent] = Action.async {
+    fetchManyCommon(ids, r, s, e, fnan)
+  }
+
+  def fetchManyPost(): Action[AnyContent] = Action.async { request =>
+    val params = request.body.asFormUrlEncoded.get
+    fetchManyCommon(params("ids").head,
+      params("r").headOption.map(_.toInt),
+      params("s").headOption, params("e").headOption,
+      params("fnan").headOption)
+  }
+
+
+  def fetchAggCommon(ids: String,
+    op: String,
+    gb: Option[String],
+    r: Option[Int],
+    s: Option[String],
+    e: Option[String],
+    fnan: Option[String]): Future[Result] = {
+    val idLst = ids.split(',').toList
+    val objList = idLst.filter(id => smg.getObjectView(id).nonEmpty).map(id => smg.getObjectView(id).get)
+    if (objList.isEmpty)
+      Future {}.map { _ => NotFound("object ids not found") }
+    else {
+      val groupBy = SMGAggGroupBy.gbParamVal(gb)
+      val aobj = SMGAggObjectView.build(objList, op, groupBy)
+      val params = SMGRrdFetchParams(r, s, e, filterNan = fnan.getOrElse("false") == "true")
+      smg.fetchAgg(aobj, params).map { ret =>
+        val json = Json.toJson(ret)
         Ok(json)
       }
     }
@@ -118,19 +158,18 @@ class Api  @Inject() (actorSystem: ActorSystem,
                s: Option[String],
                e: Option[String],
                fnan: Option[String]): Action[AnyContent] = Action.async {
-    val idLst = ids.split(',').toList
-    val objList = idLst.filter(id => smg.getObjectView(id).nonEmpty).map(id => smg.getObjectView(id).get)
-    if (objList.isEmpty)
-      Future {}.map { _ => NotFound("object ids not found") }
-    else {
-      val groupBy = SMGAggGroupBy.gbParamVal(gb)
-      val aobj = SMGAggObjectView.build(objList, op, groupBy)
-      val params = SMGRrdFetchParams(r, s, e, filterNan = fnan.getOrElse("false") == "true")
-      smg.fetchAgg(aobj, params).map { ret =>
-        val json = Json.toJson(ret)
-        Ok(json)
-      }
-    }
+    fetchAggCommon(ids, op, gb, r, s, e, fnan)
+  }
+
+  def fetchAggPost(): Action[AnyContent] = Action.async { request =>
+    val params = request.body.asFormUrlEncoded.get
+    fetchAggCommon(params("ids").head,
+      params("op").head,
+      params("gb").headOption,
+      params("r").headOption.map(_.toInt),
+      params("s").headOption,
+      params("e").headOption,
+      params("fnan").headOption)
   }
 
   private def goptsFromParams(params: Map[String, Seq[String]]): GraphOptions = {
