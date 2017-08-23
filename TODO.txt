@@ -17,6 +17,8 @@ from external sources posting the data via some API. Probably a plugin.
 
 == Monitor ==
 
+* Silencing indexes so that newly added objects will be treated as silenced
+
 * combine UNKNOWN alerts for the same fetch command from diff intervals into a single one.
 
 == Documentation ==
