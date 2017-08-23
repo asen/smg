@@ -1,5 +1,6 @@
 package com.smule.smg
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -212,12 +213,12 @@ case class SMGLocalConfig(
     * Get all rrd objects which depend (at some level) on the given cmdId. If interval is provided
     * only objects having the specified interval will be returned.
     * @param cmdId
-    * @param intervalOpt
+    * @param forIntervals
     * @return
     */
-  def fetchCommandRrdObjects(cmdId: String, intervalOpt: Option[Int] = None) : Seq[SMGRrdObject] = {
+  def fetchCommandRrdObjects(cmdId: String, forIntervals: Seq[Int] = Seq()) : Seq[SMGRrdObject] = {
     val ret = ListBuffer[SMGRrdObject]()
-    val intvls = if (intervalOpt.isDefined) Seq(intervalOpt.get) else intervals.toSeq.sorted
+    val intvls = if (forIntervals.nonEmpty) forIntervals else intervals.toSeq.sorted
     intvls.foreach { intvl =>
       val topLevel = fetchCommandTrees.getOrElse(intvl, Seq())
       val root = SMGFetchCommandTree.findTreeWithRoot(cmdId, topLevel)
@@ -267,6 +268,19 @@ case class SMGLocalConfig(
       }
   }
 
+  private def buildPf2IntervalsMap: Map[String, Seq[Int]] = {
+    preFetches.map { t =>
+      val pfId = t._1
+      (pfId, fetchCommandRrdObjects(pfId).map(ou => ou.interval).distinct.sorted)
+    }
+  }
+
+  private val pf2IntervalsMap = buildPf2IntervalsMap
+
+  def preFetchCommandIntervals(pfId: String): Seq[Int] = {
+    pf2IntervalsMap.getOrElse(pfId, Seq())
+  }
+  
   // validate pre_fetch commands - specifying invalid command id would be ignored
   rrdObjects.foreach{ obj =>
     if (obj.preFetch.nonEmpty && preFetches.get(obj.preFetch.get).isEmpty) {

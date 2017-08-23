@@ -446,14 +446,14 @@ class SMGMonObjState(var ou: SMGObjectUpdate,
 
   override def alertKey: String = id
 
-  override def parentId: Option[String] = SMGMonPfState.fetchParentStateId(ou.preFetch, ou.interval, ou.pluginId)
+  override def parentId: Option[String] = ou.preFetch //SMGMonPfState.fetchParentStateId(ou.preFetch, ou.interval, ou.pluginId)
 
   override def ouids: Seq[String] = (Seq(ou.id) ++ configSvc.config.viewObjectsByUpdateId.getOrElse(ou.id, Seq()).map(_.id)).distinct
   override def vixOpt: Option[Int] = None
 
   override def oid: Option[String] = Some(ou.id)
   override def pfId: Option[String] = ou.preFetch
-  override def text: String = s"${ou.id}: ${ou.title}: $currentStateDesc"
+  override def text: String = s"${ou.id}(intvl=${ou.interval}): ${ou.title}: $currentStateDesc"
 
   override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
     pfNotifyCmdsAndBackoff(configSvc, ou.notifyConf, Seq(ou))
@@ -470,16 +470,16 @@ object SMGMonObjState {
 }
 
 class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
-                    interval:Int,
+                    intervals: Seq[Int],
                     val pluginId: Option[String],
                     val configSvc: SMGConfigService,
                     val monLog: SMGMonitorLogApi,
                     val notifSvc: SMGMonNotifyApi)  extends SMGMonBaseFetchState {
-  override val id: String = SMGMonPfState.stateId(pfCmd, interval)
-  override def parentId: Option[String] = SMGMonPfState.fetchParentStateId(pfCmd.preFetch, interval, pluginId)
+  override val id: String = pfCmd.id //SMGMonPfState.stateId(pfCmd, interval)
+  override def parentId: Option[String] = pfCmd.preFetch // SMGMonPfState.fetchParentStateId(pfCmd.preFetch, intervals.min, pluginId)
 
   private def myObjectUpdates = if (pluginId.isEmpty) {
-    configSvc.config.fetchCommandRrdObjects(pfCmd.id, Some(interval))
+    configSvc.config.fetchCommandRrdObjects(pfCmd.id, intervals)
   } else {
     configSvc.config.pluginFetchCommandUpdateObjects(pluginId.get, pfCmd.id)
   }
@@ -489,9 +489,9 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
   override def oid: Option[String] = None
   override def pfId: Option[String] = Some(pfCmd.id)
 
-  override def text: String = s"${pfCmd.id}(intvl=$interval): $currentStateDesc"
+  override def text: String = s"${pfCmd.id}(intvls=${intervals.mkString(",")}): $currentStateDesc"
 
-  override def alertSubject: String = s"${pfCmd.id}[intvl=$interval]"
+  override def alertSubject: String = s"${pfCmd.id}[intvls=${intervals.mkString(",")}]"
 
   override def alertKey: String = pfCmd.id
 
@@ -505,11 +505,12 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
 }
 
 object SMGMonPfState {
-  def stateId(pfCmd: SMGPreFetchCmd, interval: Int): String = stateId(pfCmd.id, interval)
-  def stateId(pfCmdId: String, interval:Int): String = s"$pfCmdId:$interval"
-  def fetchParentStateId(pfOpt: Option[String], interval: Int, pluginId: Option[String]) =
-    Some(pfOpt.map(pfid => SMGMonPfState.stateId(pfid, interval)).getOrElse(SMGMonRunState.stateId(interval, pluginId)))
-
+//  def stateId(pfCmd: SMGPreFetchCmd, interval: Int): String = stateId(pfCmd.id, interval)
+//  def stateId(pfCmdId: String, interval:Int): String = s"$pfCmdId:$interval"
+//  def fetchParentStateId(pfOpt: Option[String], interval: Int, pluginId: Option[String]) =
+//    Some(pfOpt.map(pfid => SMGMonPfState.stateId(pfid, interval)).getOrElse(SMGMonRunState.stateId(interval, pluginId)))
+//  def fetchParentStateId(pfOpt: Option[String], interval: Int, pluginId: Option[String]) =
+//    pfOpt.getOrElse(SMGMonRunState.stateId(interval, pluginId))
 }
 
 class SMGMonRunState(val interval: Int,

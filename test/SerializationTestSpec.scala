@@ -30,7 +30,7 @@ class SerializationTestSpec extends Specification {
           silencedUntil = None,
           oid = Some(s"some.object.id.$i"),
           pfId = Some(s"some.pf.id.${i % 10}"),
-          parentId = Some(SMGMonPfState.stateId(s"some.pf.id.${i % 10}", 60)),
+          parentId = Some(s"some.pf.id.${i % 10}"), //Some(SMGMonPfState.stateId(s"some.pf.id.${i % 10}", 60)),
           aggShowUrlFilter = Some(s"px=some.object.id.$i"),
           recentStates = Seq(),
           errorRepeat = 0,

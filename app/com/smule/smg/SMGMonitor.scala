@@ -96,9 +96,9 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     getOrCreateState[SMGMonObjState](stateId, createFn, if (update) Some(updateFn) else None)
   }
 
-  private def getOrCreatePfState(pf: SMGPreFetchCmd, interval: Int, pluginId: Option[String], update: Boolean = false): SMGMonPfState = {
-    val stateId = SMGMonPfState.stateId(pf, interval)
-    def createFn() = { new SMGMonPfState(pf, interval, pluginId, configSvc, monLogApi, notifSvc) }
+  private def getOrCreatePfState(pf: SMGPreFetchCmd, intervals: Seq[Int], pluginId: Option[String], update: Boolean = false): SMGMonPfState = {
+    val stateId = pf.id //SMGMonPfState.stateId(pf, interval)
+    def createFn() = { new SMGMonPfState(pf, intervals, pluginId, configSvc, monLogApi, notifSvc) }
     def updateFn(state: SMGMonPfState) = {
       if (state.pfCmd != pf) {
         log.warn(s"Updating changed object pre-fetch state with id ${state.id}")
@@ -136,28 +136,29 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   private def createStateTrees(config: SMGLocalConfig): List[SMGTree[SMGMonInternalState]] = {
-    val ret = config.updateObjects.groupBy(_.pluginId).flatMap { case (plidOpt, plSeq) =>
-      plSeq.groupBy(_.interval).flatMap { case (intvl, seq) =>
-        val leafsSeq = seq.flatMap { ou =>
-          ou.vars.indices.map { vix => getOrCreateVarState(ou,vix, update = true) }
-        }
-        val objsMap = seq.map { ou =>  getOrCreateObjState(ou, update = true) }.groupBy(_.id).map(t => (t._1,t._2.head) )
-        val pfsMap = if (plidOpt.isEmpty) config.preFetches.map { t =>
-          val pfState = getOrCreatePfState(t._2, intvl, plidOpt, update = true)
-          (pfState.id, pfState)
-        } else {
-          val pluginOpt = configSvc.pluginsById.get(plidOpt.get)
-          pluginOpt.map { pl =>
-            pl.preFetches.map { t =>
-              val pfState = getOrCreatePfState(t._2, intvl, plidOpt, update = true)
-              (pfState.id, pfState)
-            }
-          }.getOrElse(Map())
-        }
-        val runState = getOrCreateRunState(intvl, plidOpt)
-        val parentsMap: Map[String,SMGMonInternalState] =  objsMap ++ pfsMap ++ Map(runState.id -> runState)
-        SMGTree.buildTrees[SMGMonInternalState](leafsSeq, parentsMap)
-      }.toList
+    val ret = config.updateObjects.groupBy(_.pluginId).flatMap { case (plidOpt, seq) =>
+      val leafsSeq = seq.flatMap { ou =>
+        ou.vars.indices.map { vix => getOrCreateVarState(ou,vix, update = true) }
+      }
+      val objsMap = seq.map { ou =>  getOrCreateObjState(ou, update = true) }.groupBy(_.id).map(t => (t._1,t._2.head) )
+      val pfsMap = if (plidOpt.isEmpty) config.preFetches.map { t =>
+        val pfState = getOrCreatePfState(t._2, config.preFetchCommandIntervals(t._1), plidOpt, update = true)
+        (pfState.id, pfState)
+      } else {
+        val pluginOpt = configSvc.pluginsById.get(plidOpt.get)
+        pluginOpt.map { pl =>
+          pl.preFetches.map { t =>
+            val pfState = getOrCreatePfState(t._2, Seq(pl.interval), plidOpt, update = true)
+            (pfState.id, pfState)
+          }
+        }.getOrElse(Map())
+      }
+//      val runState = if (plidOpt.isDefined) {
+//        val pluginOpt = configSvc.pluginsById.get(plidOpt.get)
+//        getOrCreateRunState(intvl, plidOpt)
+//      }
+      val parentsMap: Map[String,SMGMonInternalState] =  objsMap ++ pfsMap //++ Map(runState.id -> runState)
+      SMGTree.buildTrees[SMGMonInternalState](leafsSeq, parentsMap)
     }.toList
     ret
   }
@@ -203,7 +204,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       log.error(s"SMGMonitor.receivePfMsg: did not find prefetch for id: ${msg.pfId}")
       return
     }
-    val pfState = getOrCreatePfState(pf.get, msg.interval, msg.pluginId)
+    val pfState = getOrCreatePfState(pf.get, Seq(msg.interval), msg.pluginId) // TODO just lookup insted of create?
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       // process pre-fetch error
       pfState.processError(msg.ts, msg.exitCode, msg.errors, isInherited = false)
@@ -461,8 +462,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def inspectPf(pfId: String, interval: Int): Option[String] = {
-    val stateId = SMGMonPfState.stateId(pfId, interval)
-    allMonitorStatesById.get(stateId).map(_.serialize.toString())
+//    val stateId = SMGMonPfState.stateId(pfId, interval)
+    allMonitorStatesById.get(pfId).map(_.serialize.toString())
   }
 
 
@@ -557,20 +558,25 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   private def processTree(id: String, procFn: (SMGMonInternalState) => Unit): Boolean = {
-    //XXX expand fetch-command id action to all intervals
-    val arr = id.split(":")
-    val myIds = if (arr.length > 1 && configSvc.config.preFetches.contains(arr(0))) {
-      configSvc.config.intervals.toSeq.map(iv => SMGMonPfState.stateId(arr(0),iv))
-    } else Seq(id)
-    var ret = false
-    myIds.foreach { myId =>
-      val mstopt = allMonitorStateTreesById.get(id)
-      if (mstopt.isDefined) {
-        mstopt.get.allNodes.foreach(procFn)
-        ret = true
-      }
-    }
-    ret
+//    //XXX expand fetch-command id action to all intervals
+//    val arr = id.split(":")
+//    val myIds = if (arr.length > 1 && configSvc.config.preFetches.contains(arr(0))) {
+//      configSvc.config.intervals.toSeq.map(iv => SMGMonPfState.stateId(arr(0),iv))
+//    } else Seq(id)
+//    var ret = false
+//    myIds.foreach { myId =>
+//      val mstopt = allMonitorStateTreesById.get(myId)
+//      if (mstopt.isDefined) {
+//        mstopt.get.allNodes.foreach(procFn)
+//        ret = true
+//      }
+//    }
+//    ret
+    val mstopt = allMonitorStateTreesById.get(id)
+    if (mstopt.isDefined) {
+      mstopt.get.allNodes.foreach(procFn)
+      true
+    } else false
   }
 
   override def acknowledge(id: String): Future[Boolean] = {
