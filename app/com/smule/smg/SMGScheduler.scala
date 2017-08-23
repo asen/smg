@@ -55,55 +55,57 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
 
 
   private def calcTickInterval(intervals: Seq[Int]): Int  = {
-    val ret = intervals.tail.foldLeft[Int](intervals.head) { (prev: Int, cur:Int ) => BigInt(cur).gcd(prev).toInt }
-    if (ret < MIN_INTERVAL) {
-      log.error("SMGScheduler.calcTickInterval: refusing to work with interval of less than " + MIN_INTERVAL +" seconds (" + ret + ") fall-back to 10 seconds")
+    if (intervals.isEmpty){
+      log.error("SMGScheduler.start: Config contains no intervals - aborting. Please update config and call reload")
       MIN_INTERVAL
-    } else if ( ret % 2 == 0 ) {
-      // use half the interval for improved accuracy
-      ret / 2
     } else {
-      log.warn("SMGScheduler.calcTickInterval: calculated odd tick interval " + ret)
-      ret
+      val ret = intervals.tail.foldLeft[Int](intervals.head) { (prev: Int, cur: Int) => BigInt(cur).gcd(prev).toInt }
+      if (ret < MIN_INTERVAL) {
+        log.error("SMGScheduler.calcTickInterval: refusing to work with interval of less than " + MIN_INTERVAL + " seconds (" + ret + ") fall-back to 10 seconds")
+        MIN_INTERVAL
+      } else if (ret % 2 == 0) {
+        // use half the interval for improved accuracy
+        ret / 2
+      } else {
+        log.warn("SMGScheduler.calcTickInterval: calculated odd tick interval " + ret)
+        ret
+      }
     }
   }
 
-  def start(): Unit = {
-    val intervals = configSvc.config.intervals.filter(_ > 0)
-    if (intervals.isEmpty) {
-      log.error("SMGScheduler.start: Config contains no intervals - aborting. Please update config and call reload")
+  private def timeToNextTick(tickIntvl: Int) = {
+    (tickIntvl - SMGRrd.tssNow % tickIntvl).seconds
+  }
+
+  private def getSchedulerIntervals = configSvc.config.intervals.filter(_ > 0).toSeq.sorted
+
+  private def tick(): Unit = {
+    // do this first
+    val tickTsSecs = SMGRrd.tssNow
+    if (isShuttingDown.get() || system.isTerminated) {
+      log.info("SMGScheduler.tick: (shutting down) " + tickTsSecs)
       return
     }
-    val tickInterval = calcTickInterval(intervals.toSeq.sorted)
-
-    def timeToNextTick = {
-      (tickInterval - SMGRrd.tssNow % tickInterval).seconds
-    }
-
-    log.info("SMGScheduler.start initializing with tickInterval=" + tickInterval)
-
-    def tick(): Unit = {
-      // do this first
-      val tickTsSecs = SMGRrd.tssNow
-      if (isShuttingDown.get() || system.isTerminated) {
-        log.info("SMGScheduler.tick: (shutting down) " + tickTsSecs)
-        return
-      }
-      log.info("SMGScheduler.tick: " + tickTsSecs)
-      for (i <- intervals.toSeq.sorted) {
-        if (tickTsSecs % i < MAX_TICK_JITTER) { // allow it to be up to MAX_TICK_JITTER second(s) late
-          try {
-            smg.run(i)
-          } catch {
-            case t: Throwable => log.ex(t, "Unexpected exception from smg.run(" + i +")")
-          }
+    log.info("SMGScheduler.tick: " + tickTsSecs)
+    val curIntervals = getSchedulerIntervals
+    val curTickInterval = calcTickInterval(curIntervals)
+    for (i <- curIntervals) {
+      if (tickTsSecs % i < MAX_TICK_JITTER) { // allow it to be up to MAX_TICK_JITTER second(s) late
+        try {
+          smg.run(i)
+        } catch {
+          case t: Throwable => log.ex(t, "Unexpected exception from smg.run(" + i +")")
         }
       }
-      system.scheduler.scheduleOnce(timeToNextTick)(tick())
-      notifyApi.tick()
     }
+    notifyApi.tick()
+    system.scheduler.scheduleOnce(timeToNextTick(curTickInterval))(tick())
+  }
 
-    system.scheduler.scheduleOnce(timeToNextTick)(tick())
+  def start(): Unit = {
+    val startTickInterval = calcTickInterval(getSchedulerIntervals)
+    log.info("SMGScheduler.start initializing with tickInterval=" + startTickInterval)
+    system.scheduler.scheduleOnce(timeToNextTick(startTickInterval))(tick())
   }
 
 }
