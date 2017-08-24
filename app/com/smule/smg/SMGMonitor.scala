@@ -97,9 +97,9 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   private def getOrCreatePfState(pf: SMGPreFetchCmd, intervals: Seq[Int], pluginId: Option[String], update: Boolean = false): SMGMonPfState = {
-    val stateId = pf.id //SMGMonPfState.stateId(pf, interval)
+    val stateId = SMGMonPfState.stateId(pf)
     def createFn() = { new SMGMonPfState(pf, intervals, pluginId, configSvc, monLogApi, notifSvc) }
-    def updateFn(state: SMGMonPfState) = {
+    def updateFn(state: SMGMonPfState): Unit = {
       if (state.pfCmd != pf) {
         log.warn(s"Updating changed object pre-fetch state with id ${state.id}")
         state.pfCmd = pf
@@ -153,11 +153,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
           }
         }.getOrElse(Map())
       }
-//      val runState = if (plidOpt.isDefined) {
-//        val pluginOpt = configSvc.pluginsById.get(plidOpt.get)
-//        getOrCreateRunState(intvl, plidOpt)
-//      }
-      val parentsMap: Map[String,SMGMonInternalState] =  objsMap ++ pfsMap //++ Map(runState.id -> runState)
+      val parentsMap: Map[String,SMGMonInternalState] =  objsMap ++ pfsMap
       SMGTree.buildTrees[SMGMonInternalState](leafsSeq, parentsMap)
     }.toList
     ret
@@ -461,8 +457,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     } else Some(strSeq.mkString("\n"))
   }
 
-  override def inspectPf(pfId: String, interval: Int): Option[String] = {
-//    val stateId = SMGMonPfState.stateId(pfId, interval)
+  override def inspectPf(pfId: String): Option[String] = {
+    val stateId = SMGMonPfState.stateId(pfId)
     allMonitorStatesById.get(pfId).map(_.serialize.toString())
   }
 
@@ -558,20 +554,6 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   private def processTree(id: String, procFn: (SMGMonInternalState) => Unit): Boolean = {
-//    //XXX expand fetch-command id action to all intervals
-//    val arr = id.split(":")
-//    val myIds = if (arr.length > 1 && configSvc.config.preFetches.contains(arr(0))) {
-//      configSvc.config.intervals.toSeq.map(iv => SMGMonPfState.stateId(arr(0),iv))
-//    } else Seq(id)
-//    var ret = false
-//    myIds.foreach { myId =>
-//      val mstopt = allMonitorStateTreesById.get(myId)
-//      if (mstopt.isDefined) {
-//        mstopt.get.allNodes.foreach(procFn)
-//        ret = true
-//      }
-//    }
-//    ret
     val mstopt = allMonitorStateTreesById.get(id)
     if (mstopt.isDefined) {
       mstopt.get.allNodes.foreach(procFn)

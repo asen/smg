@@ -446,7 +446,7 @@ class SMGMonObjState(var ou: SMGObjectUpdate,
 
   override def alertKey: String = id
 
-  override def parentId: Option[String] = ou.preFetch //SMGMonPfState.fetchParentStateId(ou.preFetch, ou.interval, ou.pluginId)
+  override def parentId: Option[String] = ou.preFetch.map(SMGMonPfState.stateId)
 
   override def ouids: Seq[String] = (Seq(ou.id) ++ configSvc.config.viewObjectsByUpdateId.getOrElse(ou.id, Seq()).map(_.id)).distinct
   override def vixOpt: Option[Int] = None
@@ -505,12 +505,8 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
 }
 
 object SMGMonPfState {
-//  def stateId(pfCmd: SMGPreFetchCmd, interval: Int): String = stateId(pfCmd.id, interval)
-//  def stateId(pfCmdId: String, interval:Int): String = s"$pfCmdId:$interval"
-//  def fetchParentStateId(pfOpt: Option[String], interval: Int, pluginId: Option[String]) =
-//    Some(pfOpt.map(pfid => SMGMonPfState.stateId(pfid, interval)).getOrElse(SMGMonRunState.stateId(interval, pluginId)))
-//  def fetchParentStateId(pfOpt: Option[String], interval: Int, pluginId: Option[String]) =
-//    pfOpt.getOrElse(SMGMonRunState.stateId(interval, pluginId))
+  def stateId(pfCmd: SMGPreFetchCmd): String = stateId(pfCmd.id)
+  def stateId(pfCmdId: String): String = pfCmdId
 }
 
 class SMGMonRunState(val interval: Int,
