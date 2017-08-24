@@ -1,0 +1,12 @@
+@import com.smule.smg.SMGImageView
+@import com.smule.smg.SMGConfigService
+
+@(cfSvc: SMGConfigService, g: SMGImageView)
+
+@if(g.fetchUrl(None).size < cfSvc.config.maxUrlSize) {
+  <a href="@{g.fetchUrl(None)}"><img src="@g.imageUrl" alt="@g.imageUrl" /></a>
+} else {
+  @defining(g.fetchUrl(None).split("\\?", 2)) { arr =>
+    <a style="cursor: pointer" onclick="smgPostString('@arr(0)','@{arr.lift(1).getOrElse("")}')"><img src="@g.imageUrl" alt="@g.imageUrl" /></a>
+  }
+}

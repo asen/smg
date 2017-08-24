@@ -242,6 +242,9 @@ trait SMGConfigService {
     }.min
     Math.max(ret,1)
   }
+
+  val URL_TOO_LONG_MSG: String = "This page URL is not share-able because the resulting URL would be too long. " +
+    "It will not auto-refresh either."
 }
 
 /**

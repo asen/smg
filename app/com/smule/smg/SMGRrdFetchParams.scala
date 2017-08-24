@@ -5,9 +5,17 @@ package com.smule.smg
   */
 case class SMGRrdFetchParams(resolution: Option[Int], start: Option[String], end: Option[String], filterNan: Boolean) {
 
-  def fetchUrlParams: String = {
+  private def paramsMap = {
     val filterNanOpt = if (filterNan) Some("true") else None
-    (for (t <- Map("r" -> resolution, "s" -> start, "e" -> end, "fnan" -> filterNanOpt).toList ;
+    Map("r" -> resolution, "s" -> start, "e" -> end, "fnan" -> filterNanOpt)
+  }
+
+  def fetchPostMap: Map[String, Seq[String]] = {
+    paramsMap.map(t => (t._1, if (t._2.isDefined) Seq(t._2.get.toString) else Seq()))
+  }
+
+  def fetchUrlParams: String = {
+    (for (t <- paramsMap.toList ;
           if t._2.nonEmpty) yield t._1 + "=" + t._2.get.toString).mkString("&")
   }
 
