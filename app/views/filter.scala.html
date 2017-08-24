@@ -281,15 +281,19 @@ object id suffix is included">Group By:</label>
           } else {
           "@{SMGAggGroupBy.defaultGroupBy}";
           }
+      var defaultXsort = "@{ix.flatMap(_.flt.gopts.xsort).getOrElse(0)}";
+      var defaultPeriod = "@{ix.flatMap(_.period).getOrElse(defaultPeriod)}";
+      var defaultCols = "@{ix.flatMap(_.cols).getOrElse(defaultCols)}";
+      var defaultRows = "@{ix.flatMap(_.rows).getOrElse(defaultRows)}";
       $(':input', this).each(function() {
           this.disabled = !($(this).val()) ||
                           ((this.name == "xagg") && (!indexHasXAgg) && ($(this).val() == "off")) ||
                           ((this.name == "gb") && ($(this).val() == defaultGroupBy)) ||
-                          ((this.name == "xsort") && ($(this).val() == 0)) ||
+                          ((this.name == "xsort") && ($(this).val() == defaultXsort)) ||
                           ((this.name == "pg") && ($(this).val() == 0)) ||
-                          ((this.name == "period") && ($(this).val() == "@defaultPeriod")) ||
-                          ((this.name == "cols") && ($(this).val() == "@defaultCols")) ||
-                          ((this.name == "rows") && ($(this).val() == "@defaultRows"))
+                          ((this.name == "period") && ($(this).val() == defaultPeriod)) ||
+                          ((this.name == "cols") && ($(this).val() == defaultCols)) ||
+                          ((this.name == "rows") && ($(this).val() == defaultRows))
                           ;
           if (!this.disabled && this.id) {
             gl_searchHistoryManager.addHistory(this.id, this.value);

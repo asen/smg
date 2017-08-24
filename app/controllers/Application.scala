@@ -119,7 +119,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     rows: Option[Int],
     pg: Int,
     xagg: Option[String],
-    xsort: Int,
+    xsort: Option[Int],
     dpp: String,
     d95p: String,
     maxy: Option[String],
@@ -129,7 +129,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
     def processParams(idx: Option[SMGIndex]): (SMGFilter, DashboardExtraParams) = {
       // use index gopts if available, form is overriding index spec
-      val myXSort = if (idx.isEmpty || (xsort > 0)) xsort else idx.get.flt.gopts.xsort.getOrElse(0)
+      val myXSort = if (idx.isEmpty || xsort.isDefined) xsort.getOrElse(0) else idx.get.flt.gopts.xsort.getOrElse(0)
       val istep = if (step.getOrElse("") != "") SMGRrd.parseStep(step.get) else None
       val myStep = if (idx.isEmpty || istep.isDefined) istep else idx.get.flt.gopts.step
       val myPl = if (idx.isEmpty || pl.isDefined) pl else idx.get.flt.gopts.pl
@@ -212,7 +212,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       rows = m.get("rows").map(_.toInt),
       pg = m.get("pg").map(_.toInt).getOrElse(0),
       xagg = m.get("xagg"),
-      xsort = m.get("xsort").map(_.toInt).getOrElse(0),
+      xsort = m.get("xsort").map(_.toInt),
       dpp = m.getOrElse("dpp", ""),
       d95p = m.getOrElse("d95p", ""),
       maxy = m.get("maxy"),
