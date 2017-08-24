@@ -5,12 +5,11 @@ import java.nio.file.{FileSystems, PathMatcher}
 import java.util
 
 import org.yaml.snakeyaml.Yaml
-import play.api.Configuration
 
+import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
-import scala.collection.JavaConversions._
 
 /**
   * Helper class to deal with Yaml parsing

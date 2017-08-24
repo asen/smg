@@ -1,20 +1,15 @@
 package com.smule.smg
 
 import java.io.File
-import java.nio.file.{FileSystems, PathMatcher}
-import java.util
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.{ActorSystem, DeadLetter, Props}
 import com.typesafe.config.ConfigFactory
-import org.yaml.snakeyaml.Yaml
 import play.api.Configuration
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.io.Source
 import scala.util.Try
 
 /**
@@ -247,6 +242,9 @@ trait SMGConfigService {
     }.min
     Math.max(ret,1)
   }
+
+  val URL_TOO_LONG_MSG: String = "This page URL is not share-able because the resulting URL would be too long. " +
+    "It will not auto-refresh either."
 }
 
 /**
@@ -410,7 +408,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     valuesCache.purgeObsoleteObjs(newConf.updateObjects)
   }
 
-  private def initExecutionContexts(intervals: Set[Int]) = {
+  private def initExecutionContexts(intervals: Set[Int]): Unit = {
     val defaultThreadsPerInterval: Int = configuration.getInt("smg.defaultThreadsPerInterval").getOrElse(4)
     val threadsPerIntervalMap: Map[Int, Int] = configuration.getConfig("smg.threadsPerIntervalMap") match {
       case Some(conf) => (for (i <- intervals.toList; if conf.getInt("interval_" + i).isDefined) yield (i, conf.getInt("interval_" + i).get)).toMap
@@ -426,7 +424,17 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   override val defaultInterval: Int = configParser.defaultInterval
   override val defaultTimeout: Int = configParser.defaultTimeout
 
+  private def createNonExistingRrds(newConf: SMGLocalConfig): Unit = {
+    newConf.updateObjects.foreach { ou =>
+      if (ou.rrdFile.isDefined) {
+        val upd = new SMGRrdUpdate(ou, this)
+        upd.checkOrCreateRrd()
+      }
+    }
+  }
+
   private var currentConfig = configParser.getNewConfig(plugins, topLevelConfigFile)
+  createNonExistingRrds(currentConfig)
   initExecutionContexts(currentConfig.intervals)
 
   /**
@@ -445,6 +453,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)
       try {
         val newConf = configParser.getNewConfig(plugins, topLevelConfigFile)
+        createNonExistingRrds(newConf)
         initExecutionContexts(newConf.intervals)
         currentConfig.synchronized {  // not really needed ...
           currentConfig = newConf

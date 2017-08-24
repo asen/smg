@@ -113,11 +113,11 @@ class Api  @Inject() (actorSystem: ActorSystem,
   def fetchManyPost(): Action[AnyContent] = Action.async { request =>
     val params = request.body.asFormUrlEncoded.get
     fetchManyCommon(params("ids").head,
-      params("r").headOption.map(_.toInt),
-      params("s").headOption, params("e").headOption,
-      params("fnan").headOption)
+      params.get("r").map(_.head.toInt),
+      params.get("s").map(_.head),
+      params.get("e").map(_.head),
+      params.get("fnan").map(_.head))
   }
-
 
   def fetchAggCommon(ids: String,
     op: String,
@@ -165,11 +165,11 @@ class Api  @Inject() (actorSystem: ActorSystem,
     val params = request.body.asFormUrlEncoded.get
     fetchAggCommon(params("ids").head,
       params("op").head,
-      params("gb").headOption,
-      params("r").headOption.map(_.toInt),
-      params("s").headOption,
-      params("e").headOption,
-      params("fnan").headOption)
+      params.get("gb").map(_.head),
+      params.get("r").map(_.head.toInt),
+      params.get("s").map(_.head),
+      params.get("e").map(_.head),
+      params.get("fnan").map(_.head))
   }
 
   private def goptsFromParams(params: Map[String, Seq[String]]): GraphOptions = {

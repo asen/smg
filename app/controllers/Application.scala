@@ -119,7 +119,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     rows: Option[Int],
     pg: Int,
     xagg: Option[String],
-    xsort: Int,
+    xsort: Option[Int],
     dpp: String,
     d95p: String,
     maxy: Option[String],
@@ -129,7 +129,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
     def processParams(idx: Option[SMGIndex]): (SMGFilter, DashboardExtraParams) = {
       // use index gopts if available, form is overriding index spec
-      val myXSort = if (idx.isEmpty || (xsort > 0)) xsort else idx.get.flt.gopts.xsort.getOrElse(0)
+      val myXSort = if (idx.isEmpty || xsort.isDefined) xsort.getOrElse(0) else idx.get.flt.gopts.xsort.getOrElse(0)
       val istep = if (step.getOrElse("") != "") SMGRrd.parseStep(step.get) else None
       val myStep = if (idx.isEmpty || istep.isDefined) istep else idx.get.flt.gopts.step
       val myPl = if (idx.isEmpty || pl.isDefined) pl else idx.get.flt.gopts.pl
@@ -212,7 +212,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       rows = m.get("rows").map(_.toInt),
       pg = m.get("pg").map(_.toInt).getOrElse(0),
       xagg = m.get("xagg"),
-      xsort = m.get("xsort").map(_.toInt).getOrElse(0),
+      xsort = m.get("xsort").map(_.toInt),
       dpp = m.getOrElse("dpp", ""),
       d95p = m.getOrElse("d95p", ""),
       maxy = m.get("maxy"),
@@ -306,7 +306,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
     // parse http params
     val dps = if (request.method == "POST") {
-      myErrors += "This page URL is not share-able because the resulting URL would be too long."
+      myErrors += configSvc.URL_TOO_LONG_MSG
       dashPostParams(request)
     }
     else
@@ -413,7 +413,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
         views.html.filterResult(configSvc, idx, parentIdx, result, flt, dep,
           myAggOp, showXRmt,
           maxPages, lst.size, objsSlice.size, tlObjects, availRemotes,
-          flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt, matchingIndexes, conf)
+          flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt, matchingIndexes,
+          conf, request.method == "POST")
       )
     }
   }
@@ -439,7 +440,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
           val lst = t(0).asInstanceOf[Seq[SMGImageView]]
           val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonState]]].flatMap(_._2).toList
           val ixes = smg.objectIndexes(obj)
-          Ok(views.html.show(configSvc, obj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms, ixes))
+          Ok(views.html.show(configSvc, obj, lst, cols, configSvc.config.rrdConf.imageCellWidth,
+            gopts, showMs, ms, ixes, request.method == "POST"))
         }
       }
       case None => Future { }.map { _ => NotFound("object id not found") }
@@ -457,6 +459,27 @@ class Application  @Inject() (actorSystem: ActorSystem,
     */
   def showAgg(ids:String, op:String, gb: Option[String], title: Option[String], cols: Int, dpp: String, d95p: String,
               maxy: Option[String], miny: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+    showAggCommon(ids, op, gb, title, cols, dpp, d95p, maxy, miny, request)
+  }
+
+  def showAggPost(): Action[AnyContent] = Action.async { implicit request =>
+    val params = request.body.asFormUrlEncoded.get
+    showAggCommon(params("ids").head,
+      params("op").head,
+      params.get("gb").map(_.head),
+      params.get("title").map(_.head),
+      params.get("cols").map(_.head.toInt).getOrElse(6), // TODO use default cols
+      params.get("dpp").map(_.head).getOrElse(""),
+      params.get("d95p").map(_.head).getOrElse(""),
+      params.get("maxy").map(_.head),
+      params.get("miny").map(_.head),
+      request)
+  }
+
+
+  def showAggCommon(ids:String, op:String, gb: Option[String], title: Option[String], cols: Int, dpp: String, d95p: String,
+              maxy: Option[String], miny: Option[String], request: Request[AnyContent] ): Future[Result] = {
+    implicit val theRequest: Request[AnyContent] = request
     val showMs = msEnabled(request)
     val gopts = GraphOptions(step = None, pl = None, xsort = None,
       disablePop = dpp == "on", disable95pRule = d95p == "on",
@@ -475,11 +498,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
       Future.sequence(Seq(gfut,mfut)).map { t =>
         val lst = t.head.asInstanceOf[Seq[SMGImageView]]
         val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonState]]].flatMap(_._2).toList
-        Ok(views.html.show(configSvc, aobj, lst, cols, configSvc.config.rrdConf.imageCellWidth, gopts, showMs, ms, ixes))
+        Ok(views.html.show(configSvc, aobj, lst, cols, configSvc.config.rrdConf.imageCellWidth,
+          gopts, showMs, ms, ixes, request.method == "POST"))
       }
     }
   }
-
 
   /**
     * Fetch data (rows) for given object id and render as csv
@@ -517,6 +540,23 @@ class Application  @Inject() (actorSystem: ActorSystem,
     */
   def fetchAgg(ids:String, op:String, gb: Option[String], r: Option[String], s: Option[String], e: Option[String],
                d:Boolean): Action[AnyContent] = Action.async {
+    fetchAggCommon(ids, op, gb, r, s, e, d)
+  }
+
+  def fetchAggPost(): Action[AnyContent] = Action.async { request =>
+    val params = request.body.asFormUrlEncoded.get
+    fetchAggCommon(params("ids").head,
+      params("op").head,
+      params.get("gb").map(_.head),
+      params.get("r").map(_.head),
+      params.get("s").map(_.head),
+      params.get("e").map(_.head),
+      params.get("d").map(_.head).getOrElse("0") == "1")
+  }
+
+
+  def fetchAggCommon(ids:String, op:String, gb: Option[String], r: Option[String], s: Option[String], e: Option[String],
+               d:Boolean): Future[Result] = {
     val intres = SMGRrd.parsePeriod(r.getOrElse(""))
     val idLst = ids.split(',')
     val objList = idLst.filter( id => smg.getObjectView(id).nonEmpty ).map(id => smg.getObjectView(id).get)

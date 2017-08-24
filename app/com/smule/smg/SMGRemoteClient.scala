@@ -339,9 +339,9 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   }
 
   def fetchRowsMany(oids: Seq[String], params: SMGRrdFetchParams): Future[Map[String,Seq[SMGRrdRow]]] = {
-    val fparams = if (params.fetchUrlParams == "") "" else "&" + params.fetchUrlParams
-    ws.url(remote.url + API_PREFIX + "fetchMany?ids=" + oids.mkString(",") + fparams).
-      withRequestTimeout(graphTimeoutMs).get().map { resp =>
+    val postMap: Map[String, Seq[String]] = Map("ids" -> Seq(oids.mkString(","))) ++ params.fetchPostMap
+    ws.url(remote.url + API_PREFIX + "fetchMany").
+      withRequestTimeout(graphTimeoutMs).post(postMap).map { resp =>
       val jsval = Json.parse(resp.body)
       jsval.as[Map[String,Seq[SMGRrdRow]]]
     }.recover {
@@ -361,10 +361,9 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     * @return
     */
   def fetchAggRows(oids: List[String], op: String, params: SMGRrdFetchParams): Future[Seq[SMGRrdRow]] = {
-    var fup = params.fetchUrlParams
-    if (fup != "") fup = "&" + fup
-    ws.url(remote.url + API_PREFIX + "fetchAgg?ids=" + oids.mkString(",") + "&op=" + op + fup).
-      withRequestTimeout(graphTimeoutMs).get().map { resp =>
+    val postMap = Map("ids" -> Seq(oids.mkString(",")), "op" -> Seq(op)) ++ params.fetchPostMap
+    ws.url(remote.url + API_PREFIX + "fetchAgg").
+      withRequestTimeout(graphTimeoutMs).post(postMap).map { resp =>
       val jsval = Json.parse(resp.body)
       jsval.as[Seq[SMGRrdRow]]
     }.recover {

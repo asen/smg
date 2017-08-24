@@ -16,9 +16,10 @@
   aggOp: Option[String], showXRemote: Boolean,
   maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int, availRemotes: Seq[SMGRemote],
   gopts: GraphOptions, showMs:Boolean, monData: Map[String, Seq[SMGMonState]],
-  monOverviewOids: Seq[String], errorMsg: Option[String], matchingIndexes : Seq[SMGIndex], conf:SMGLocalConfig)(implicit flash: Flash)
+  monOverviewOids: Seq[String], errorMsg: Option[String], matchingIndexes : Seq[SMGIndex],
+  conf:SMGLocalConfig, isPost: Boolean)(implicit flash: Flash)
 
-@main("SMG - " + (if (idx.isDefined) idx.get.title else flt.humanText), cfSvc) {
+@main("SMG - " + (if (idx.isDefined) idx.get.title else flt.humanText), cfSvc, if (isPost) 0 else 300) {
 
   @if(errorMsg.isDefined){
     <div align="center"><h4><font color="red">Error: @errorMsg.get</font></h4></div>
@@ -97,7 +98,7 @@
                 @if(g.obj.stack) {
                   (stacked)
                 }
-                [<a href="@{g.fetchUrl(gopts.step)}">csv</a>,<a href="@{g.fetchUrl(gopts.step)}&d=1">dl</a>]
+                @fetchLinks(cfSvc, g, gopts)
               </h4>
               @if(g.obj.isAgg){
                 <h5>@{g.obj.asInstanceOf[SMGAggObjectView].groupByKey.desc}</h5>
@@ -129,7 +130,7 @@
                 </div>
                 }
               </div>
-              <a href="@g.obj.showUrl"><img src="@g.imageUrl" alt="@g.imageUrl" /></a>
+              @filterImage(cfSvc, g)
             </div>
           </div>
           @if(((ix + 1) % dep.cols) == 0) {

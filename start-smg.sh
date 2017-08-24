@@ -39,6 +39,8 @@ nohup bin/smg $APP_CONF -J-Xmx$JVM_MEM $JMX_OPTS \
     -Dplay.crypto.secret=fabe980f8f27865e11eeaf9e4ff4fc65 \
     -Dhttp.port=$HTTP_PORT $BIND_OPT \
     -Dpidfile.path=run/play.pid \
+    -Dplay.server.netty.maxInitialLineLength=65535 \
+    -Dplay.server.netty.maxHeaderSize=65535 \
     >logs/nohup.out 2>&1 &
 
 if [ "$?" == "0" ] ; then

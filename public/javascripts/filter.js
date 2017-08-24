@@ -123,3 +123,31 @@ function clearElem(elemId) {
     elem.focus();
   }
 }
+
+function smgPostRequest(path, params) {
+   var form = document.createElement("form");
+   form.setAttribute("method", "post");
+   form.setAttribute("action", path);
+   for(var key in params) {
+       if(params.hasOwnProperty(key)) {
+           var hiddenField = document.createElement("input");
+           hiddenField.setAttribute("type", "hidden");
+           hiddenField.setAttribute("name", key);
+           hiddenField.setAttribute("value", params[key]);
+           form.appendChild(hiddenField);
+       }
+   }
+   document.body.appendChild(form);
+   form.submit();
+}
+
+function smgPostString(path, paramsStr) {
+  var result = {};
+  if (paramsStr != "") {
+    paramsStr.split("&").forEach(function(part) {
+      var item = part.split("=");
+      result[item[0]] = decodeURIComponent(item[1]);
+    });
+  }
+  smgPostRequest(path, result);
+}

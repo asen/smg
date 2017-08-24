@@ -1,0 +1,14 @@
+@import com.smule.smg.GraphOptions
+@import com.smule.smg.SMGImageView
+@import com.smule.smg.SMGConfigService
+
+@(cfSvc: SMGConfigService, g: SMGImageView, gopts: GraphOptions)
+
+@if(g.fetchUrl(gopts.step).size < cfSvc.config.maxUrlSize) {
+  [<a href="@{g.fetchUrl(gopts.step)}">csv</a>,<a href="@{g.fetchUrl(gopts.step)}&d=1">dl</a>]
+} else {
+  @defining(g.fetchUrl(gopts.step).split("\\?", 2)) { arr =>
+    [<button onclick="smgPostString('@arr(0)','@{arr.lift(1).getOrElse("")}')">csv</button>,
+      <button onclick="smgPostString('@arr(0)','@{arr.lift(1).getOrElse("")}' + '&d=1')">dl</button>]
+  }
+}

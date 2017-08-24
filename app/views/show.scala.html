@@ -8,9 +8,9 @@
 @import com.smule.smg.SMGMonStateAgg
 
 @(cfSvc: SMGConfigService, obj: SMGObjectView, lst: Seq[SMGImageView], cols: Int, cwidth: Int,
-  gopts: GraphOptions, showMs: Boolean, ms: Seq[SMGMonState], ixes: Seq[SMGIndex])(implicit flash: Flash)
+  gopts: GraphOptions, showMs: Boolean, ms: Seq[SMGMonState], ixes: Seq[SMGIndex], isPost: Boolean)(implicit flash: Flash)
 
-  @main("SMG - " + obj.title, cfSvc) {
+  @main("SMG - " + obj.title, cfSvc, if (isPost) 0 else 300) {
 
   <script>
   function mySubmitOnChange(elem) {
@@ -36,6 +36,9 @@
     window.location = myUrl;
   }
   </script>
+  @if(isPost){
+    <div align="center"><h4><font color="red">@{cfSvc.URL_TOO_LONG_MSG}</font></h4></div>
+  }
   <div class="panel panel-primary">
     <div class="panel-heading">
       <h2 class="panel-title">Display @if(obj.isAgg){Aggregate }Object: @obj.title (@obj.rrdType)</h2>
@@ -106,7 +109,7 @@ Changing this reloads the page.">Disable 95%-ile line:</label>
               [<a href="@{pa.actionUrl(g.obj, g.period)}">@{pa.name}</a>]
               }
             </h5>
-            <a href="@{g.fetchUrl(None)}"><img src="@g.imageUrl" alt="@g.imageUrl" /></a>
+            @showImage(cfSvc, g)
           </div>
         </div>
         @if(((ix + 1) % cols) == 0) {
