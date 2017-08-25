@@ -276,11 +276,7 @@ object id suffix is included">Group By:</label>
 <script language="JavaScript">
   function disableEmptyInputs() {
       var indexHasXAgg = @if(ix.isDefined && ix.get.xRemoteAgg) { true } else { false };
-      var defaultGroupBy = @if(ix.isDefined && ix.get.aggGroupBy.isDefined) {
-          "@{ix.get.aggGroupBy.get}";
-          } else {
-          "@{SMGAggGroupBy.defaultGroupBy}";
-          }
+      var defaultGroupBy = "@{ix.flatMap(_.aggGroupBy).getOrElse(SMGAggGroupBy.defaultGroupBy)}";
       var defaultXsort = "@{ix.flatMap(_.flt.gopts.xsort).getOrElse(0)}";
       var defaultPeriod = "@{ix.flatMap(_.period).getOrElse(defaultPeriod)}";
       var defaultCols = "@{ix.flatMap(_.cols).getOrElse(defaultCols)}";
