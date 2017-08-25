@@ -159,9 +159,26 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     ret
   }
 
+  // silence all children of silenced nodes which were just created
+  private def silenceNewNotSilencedChildren(stree: SMGTree[SMGMonInternalState]) {
+    if (stree.node.isSilenced) {
+      stree.children.foreach { ctree =>
+        // only silence newly created states (detected by recentStates.size less than max)
+        // XXX TODO this check may fail for states having maxHardErrorCount = 1 together with a race condition
+        // (should be a very rare case).
+        if ((!ctree.node.isSilenced) && (ctree.node.recentStates.size < ctree.node.maxRecentStates)){
+          log.info(s"Silencing newly created state with silenced parent: ${ctree.node.id} (parent: ${stree.node.id})")
+          ctree.node.slnc(ctree.node.silencedUntil.getOrElse(0)) // in case it just expired
+        }
+      }
+    }
+    stree.children.foreach(silenceNewNotSilencedChildren)
+  }
+
   override def reload(): Unit = {
     topLevelMonitorStateTrees = createStateTrees(configSvc.config)
     cleanupAllMonitorStates(topLevelMonitorStateTrees)
+    topLevelMonitorStateTrees.foreach(silenceNewNotSilencedChildren)
     allMonitorStateTreesById = buildIdToTreeMap(topLevelMonitorStateTrees)
     allMonitorStatesById.values.foreach(_.configReloaded())
     notifSvc.configReloaded()

@@ -84,7 +84,7 @@ trait SMGMonInternalState extends SMGMonState {
     myMaxHardErrorCount = Some(getMaxHardErrorCount)
   }
 
-  protected def maxRecentStates: Int = maxHardErrorCount
+  def maxRecentStates: Int = maxHardErrorCount + 1
 
   protected val log = SMGLogger
 
@@ -178,9 +178,7 @@ trait SMGMonInternalState extends SMGMonState {
     myStateIsInherited = isInherited
 
     // drop obsolete state(s)
-    while (myRecentStates.size > maxRecentStates) {
-      myRecentStates = myRecentStates.dropRight(1)
-    }
+    myRecentStates = myRecentStates.take(maxRecentStates)
 
     // remove any acknowledgements if states is OK
     if (state.state == SMGState.OK)
