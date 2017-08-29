@@ -1,11 +1,12 @@
 @import com.smule.smg.SMGMonState
 @(monStates: Seq[SMGMonState], svgColsW: Option[Int])
+@MAX_STATES = @{ 3 }
 @CELL_WIDTH = @{ 9 }
 @CELL_PADDING = @{ 1 }
 @CELL_SPACE = @{ CELL_WIDTH + CELL_PADDING }
 @SVG_WIDTH = @{svgColsW.map{ c => (c * CELL_SPACE) + 2}.getOrElse(600) }
 @CELL_HEIGHT = @{ 8 }
-@ROW_HEIGHT = @{ CELL_HEIGHT * 3 }
+@ROW_HEIGHT = @{ CELL_HEIGHT * MAX_STATES }
 @ROW_PADDING = @{ 1 }
 @ROW_SPACE = @{ ROW_HEIGHT + ROW_PADDING }
 @objsPerRow = @{ SVG_WIDTH / CELL_SPACE }
@@ -19,7 +20,7 @@
     @for((msvc, rowi) <- monStates.grouped(objsPerRow).zipWithIndex){
       @for((mso,ix) <- msvc.zipWithIndex){
       <a xlink:href= "@mso.showUrl" target="_parent" >
-        @for((ms,ixx) <- mso.recentStates.zipWithIndex){
+        @for((ms,ixx) <- mso.recentStates.take(MAX_STATES).zipWithIndex){
         <rect data-ixx="@ixx" fill="@{ms.stateColor}" width="@CELL_WIDTH" height="@CELL_HEIGHT"
               x="@{ix * CELL_SPACE}" y="@{(rowi * ROW_SPACE) + (ixx * CELL_HEIGHT)}" >
           <title>@mso.text</title>
