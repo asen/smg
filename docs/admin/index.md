@@ -1092,10 +1092,8 @@ trigger alert notifications.
     notify-strikes: 3
 
 > In order to disable fetch error notifications for given object one must
-set "_notify-disable: true_" on all vars. For pre-fetch it must be set to 
-true on all objects vars, otherwise fetch errors will still trigger
-notifications to any applicable (object or global) notification
-commands (recipients). 
+set "_notify-disable: true_" at the object level. Pre-fetch commands support
+notify-disable too.
 
 > When multiple conflicting notify-strikes values apply, SMG will 
 use the minimal from these. For fetch errors (applicable to object and 
