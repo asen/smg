@@ -1,12 +1,11 @@
 @import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.SMGMonitorLogMsg
+@import com.smule.smg.SMGMonitorLogFilter
 @import com.smule.smg.SMGState
 
-@(cfSvc: SMGConfigService, availRemotes:Seq[String], rmtId: Option[String], availStates:Seq[String],
-  minSeverity: Option[String], period:String, defPeriod:String, limit:Int, defLimit:Int, inclSoft: Boolean,
-  inclAckd: Boolean, inclSlncd: Boolean, rx: Option[String], rxx: Option[String],
-  logMsgs: Seq[SMGMonitorLogMsg])(implicit flash: Flash)
+@(cfSvc: SMGConfigService, availRemotes:Seq[String], availStates:Seq[String],
+  defPeriod:String, defLimit:Int, flt: SMGMonitorLogFilter, logMsgs: Seq[SMGMonitorLogMsg])(implicit flash: Flash)
 
 @main("SMG - Monitor event log", cfSvc) {
 
@@ -20,40 +19,40 @@
   <label class="autosubmit-lbl">Remote filter:</label>
   <select name="remote" class="select-remote" onchange="mySubmitOnChange(this);" >
     @for( rid <- availRemotes) {
-    <option value='@rid' @if(rid == rmtId.getOrElse("*")){ selected } >@if(rid == ""){Local}else{@rid}</option>
+    <option value='@rid' @if(rid == flt.rmtOpt.getOrElse("*")){ selected } >@if(rid == ""){Local}else{@rid}</option>
     }
   </select>
   }
   <label class="autosubmit-lbl">Minimal Severity filter:</label>
   <select name="ms" onchange="mySubmitOnChange(this);" >
     @for( sid <- availStates) {
-    <option value='@sid' @if(sid == minSeverity.getOrElse("OK")){ selected } >@sid</option>
+    <option value='@sid' @if(sid == flt.minSeverity.map(_.toString).getOrElse("WARNING")){ selected } >@sid</option>
     }
   </select>
   <label class="autosubmit-lbl">Limit since</label>
-  <input type="text" name="p" value="@period" onchange="mySubmitOnChange(this)" />
+  <input type="text" name="p" value="@{flt.periodStr}" onchange="mySubmitOnChange(this)" />
 
   <label class="autosubmit-lbl">Limit number</label>
-  <input type="number" name="l" value="@limit" min="1" max="100000" onchange="mySubmitOnChange(this);" />
+  <input type="number" name="l" value="@{flt.limit}" min="1" max="100000" onchange="mySubmitOnChange(this);" />
 
   <label class="autosubmit-lbl" for="cbSoft">Display soft errors</label>
-    <input id="cbSoft" type="checkbox" name="soft" onchange="mySubmitOnChange(this);" @if(inclSoft){ checked } />
+    <input id="cbSoft" type="checkbox" name="soft" onchange="mySubmitOnChange(this);" @if(flt.inclSoft){ checked } />
 
   <label class="autosubmit-lbl" for="cbAckd">Display acknowledged errors</label>
-    <input id="cbAckd" type="checkbox" name="ackd" onchange="mySubmitOnChange(this);" @if(inclAckd){ checked } />
+    <input id="cbAckd" type="checkbox" name="ackd" onchange="mySubmitOnChange(this);" @if(flt.inclAcked){ checked } />
 
   <label class="autosubmit-lbl" for="cbSlncd">Display silenced errors</label>
-    <input id="cbSlncd" type="checkbox" name="slncd" onchange="mySubmitOnChange(this);" @if(inclSlncd){ checked } />
+    <input id="cbSlncd" type="checkbox" name="slncd" onchange="mySubmitOnChange(this);" @if(flt.inclSilenced){ checked } />
 
   <br/>
 
   <label class="manualsubmit-lbl" for="inpRx"
          title="Display only states which have ids matching the specified case insensitive regular expression">Regex filter</label>
-    <input id="inpRx" type="text" name="rx" value='@{rx.getOrElse("")}' />
+    <input id="inpRx" type="text" name="rx" value='@{flt.rx.getOrElse("")}' />
 
   <label class="manualsubmit-lbl" for="inpRxx"
          title="Filter out states which have ids matching the specified case insensitive regular expression">Regex exclude filter</label>
-    <input id="inpRxx" type="text" name="rxx" value='@{rxx.getOrElse("")}' />
+    <input id="inpRxx" type="text" name="rxx" value='@{flt.rxx.getOrElse("")}' />
 
   <!-- separator -->
 
@@ -109,6 +108,6 @@
   }
 </ul>
 
-<p><i>Displaying @{logMsgs.size} messages (limit: @limit)</i></p>
+<p><i>Displaying @{logMsgs.size} messages (limit: @{flt.limit}).@if(logMsgs.size == flt.limit){ Increase limit to see more.}</i></p>
 
 }

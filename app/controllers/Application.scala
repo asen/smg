@@ -846,9 +846,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
       rx = rx,
       rxx = rxx)
     monitorApi.monLogApi.getAll(flt).map { logs =>
-      Ok(views.html.monitorLog(configSvc, availRemotes, rmtOpt, SMGState.values.toList.map(_.toString),
-        Some(minSev.toString), period, DEFAULT_LOGS_SINCE, limit, DEFAULT_LOGS_LIMIT,
-        inclSoft = inclSoft, inclAckd = includeAckd, inclSlncd = includeSlncd, rx, rxx, logs))
+      Ok(views.html.monitorLog(configSvc, availRemotes, SMGState.values.toList.map(_.toString),
+        DEFAULT_LOGS_SINCE, DEFAULT_LOGS_LIMIT, flt, logs))
     }
   }
 
