@@ -1,6 +1,7 @@
 package com.smule.smg
 
 import java.io.{File, FileWriter}
+import java.net.URLEncoder
 import java.nio.file.{Files, StandardCopyOption}
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -424,18 +425,19 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       get().map(_.body).recover{ case e: Exception => "" }
   }
 
-  def monitorLogs(periodStr: String, limit: Int,
-                  minSeverity: Option[SMGState.Value], inclSoft: Boolean,
-                  inclAcked: Boolean, inclSilenced: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
-    val softStr = if (inclSoft) "&soft=on" else ""
-    val ackdStr = if (inclAcked) "&ackd=on" else ""
-    val slncdStr = if (inclSilenced) "&slncd=on" else ""
-    val sevStr = if (minSeverity.isDefined) "&sev=" + minSeverity.get.toString else ""
+  def monitorLogs(flt: SMGMonitorLogFilter): Future[Seq[SMGMonitorLogMsg]] = {
+    val softStr = if (flt.inclSoft) "&soft=on" else ""
+    val ackdStr = if (flt.inclAcked) "&ackd=on" else ""
+    val slncdStr = if (flt.inclSilenced) "&slncd=on" else ""
+    val sevStr = if (flt.minSeverity.isDefined) "&sev=" + flt.minSeverity.get.toString else ""
+    val rxStr = if (flt.rx.isDefined) "&rx=" + URLEncoder.encode(flt.rx.get, "UTF-8") else ""
+    val rxxStr = if (flt.rxx.isDefined) "&rxx=" + URLEncoder.encode(flt.rxx.get, "UTF-8") else ""
+
     lazy val errRet = Seq(
       SMGMonitorLogMsg(
         ts = SMGState.tssNow,
         msid = None,
-        curState = SMGState(SMGState.tssNow, SMGState.E_SMGERR, "Remote logs fetch error"),
+        curState = SMGState(SMGState.tssNow, SMGState.SMGERR, "Remote logs fetch error"),
         prevState = None,
         repeat = 1,
         isHard = true,
@@ -447,7 +449,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       )
     )
     ws.url(remote.url + API_PREFIX + "monitor/logs?period=" +
-      SMGRrd.safePeriod(periodStr) + "&limit=" + limit + sevStr + softStr + ackdStr + slncdStr).
+      SMGRrd.safePeriod(flt.periodStr) + "&limit=" + flt.limit + sevStr + softStr + ackdStr + slncdStr + rxStr + rxxStr).
       withRequestTimeout(shortTimeoutMs).get().map { resp =>
       Try {
         val jsval = Json.parse(resp.body)
@@ -468,7 +470,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
   def heatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[SMGMonHeatmap] = {
     lazy val errRet = SMGMonHeatmap(List(SMGMonStateGlobal("Remote data unavailable", remote.id,
-      SMGState((System.currentTimeMillis() / 1000).toInt, SMGState.E_SMGERR, "data unavailable"))), 1)
+      SMGState(SMGState.tssNow, SMGState.SMGERR, "data unavailable"))), 1)
     val urlParams = flt.asUrl + ix.map(v => s"&ix=$v").getOrElse("") +
       maxSize.map(v => s"&maxSize=$v").getOrElse("") +
       offset.map(v => s"&offset=$v").getOrElse("") +
@@ -542,7 +544,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     val params = s"?" + flt.asUrlParams
     lazy val errRet = SMGMonitorStatesResponse( remote,
       Seq(SMGMonStateGlobal("Remote data unavailable", remote.id,
-      SMGState(SMGState.tssNow, SMGState.E_SMGERR, "data unavailable"))), isMuted = false)
+      SMGState(SMGState.tssNow, SMGState.SMGERR, "data unavailable"))), isMuted = false)
 
     ws.url(remote.url + API_PREFIX + "monitor/states" + params).
       withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
@@ -565,7 +567,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
   def monitorSilencedStates(): Future[Seq[SMGMonState]] = {
     lazy val errRet = Seq(SMGMonStateGlobal("Remote data unavailable", remote.id,
-      SMGState((System.currentTimeMillis() / 1000).toInt, SMGState.E_SMGERR, "data unavailable")))
+      SMGState(SMGState.tssNow, SMGState.SMGERR, "data unavailable")))
     ws.url(remote.url + API_PREFIX + "monitor/silenced").
       withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
       Try {

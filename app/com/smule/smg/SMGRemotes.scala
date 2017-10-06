@@ -124,18 +124,12 @@ trait SMGRemotesApi {
   def objectViewsStates(remoteId: String, ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]]
 
   /**
-    * Get all monitor logs since given period from the given remote
+    * Get all monitor logs matching the filter from the given remote
     * @param remoteId - id of the remote to get data from
-    * @param periodStr - period string
-    * @param limit - max entries to return
-    * @param inclSoft - whether to include soft errors or hard only
-    * @param inclAcked- whether to include acked errors
-    * @param inclSilenced - whether to include silenced errors
+    * @param flt - filter
     * @return
     */
-  def monitorLogs(remoteId: String, periodStr: String, limit: Int,
-                  minSeverity: Option[SMGState.Value], inclSoft: Boolean,
-                  inclAcked: Boolean, inclSilenced: Boolean): Future[Seq[SMGMonitorLogMsg]]
+  def monitorLogs(remoteId: String, flt: SMGMonitorLogFilter): Future[Seq[SMGMonitorLogMsg]]
 
   /**
     * Request heatmap from the given remote. A heatmap is (possibly condensed) list of SMGMonState squares.
@@ -463,11 +457,9 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     else Future { "" }
   }
 
-  override def monitorLogs(remoteId: String, periodStr: String, limit: Int,
-                           minSeverity: Option[SMGState.Value], inclSoft: Boolean,
-                           inclAcked: Boolean, inclSilenced: Boolean): Future[Seq[SMGMonitorLogMsg]] = {
+  override def monitorLogs(remoteId: String, flt: SMGMonitorLogFilter): Future[Seq[SMGMonitorLogMsg]] = {
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorLogs(periodStr, limit, minSeverity, inclSoft, inclAcked, inclSilenced)
+      clientForId(remoteId).get.monitorLogs(flt)
     else Future { Seq() }
   }
 

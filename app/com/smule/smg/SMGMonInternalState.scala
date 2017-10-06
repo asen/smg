@@ -225,7 +225,7 @@ trait SMGMonInternalState extends SMGMonState {
 
       myRecentStates = (src \ "rss").as[List[JsValue]].map { jsv =>
           SMGState((jsv \ "t").as[Int],
-            SMGState.withName((jsv \ "s").as[String]),
+            SMGState.fromName((jsv \ "s").as[String]),
             (jsv \ "d").as[String])
         }
 
@@ -324,7 +324,7 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
     val alertConfs = configSvc.objectValueAlertConfs(ou, vix)
     var ret : SMGState = null
     if (newVal.isNaN) {
-      ret = SMGState(ts, SMGState.E_ANOMALY, s"ANOM: value=NaN (${nanDesc.getOrElse("unknown")})")
+      ret = SMGState(ts, SMGState.ANOMALY, s"ANOM: value=NaN (${nanDesc.getOrElse("unknown")})")
     } else if (alertConfs.nonEmpty) {
       if (!alertConfs.exists(_.spike.isDefined)) movingStats.reset()
       var movingStatsUpdated = false
@@ -337,12 +337,12 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
         if (alertConf.crit.isDefined) {
           val alertDesc = alertConf.crit.get.checkAlert(newVal, numFmt)
           if (alertDesc.isDefined)
-            curRet = SMGState(ts, SMGState.E_VAL_CRIT, s"CRIT: ${alertDesc.get} : $descSx")
+            curRet = SMGState(ts, SMGState.CRITICAL, s"CRIT: ${alertDesc.get} : $descSx")
         }
         if ((curRet == null) && alertConf.warn.isDefined ) {
           val alertDesc = alertConf.warn.get.checkAlert(newVal, numFmt)
           if (alertDesc.isDefined)
-            curRet = SMGState(ts,SMGState.E_VAL_WARN, s"WARN: ${alertDesc.get} : $descSx")
+            curRet = SMGState(ts,SMGState.WARNING, s"WARN: ${alertDesc.get} : $descSx")
         }
         if (alertConf.spike.isDefined) {
           // Update short/long term averages, to be used for spike/drop detection
@@ -356,7 +356,7 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
           if (curRet == null) {
             val alertDesc = alertConf.spike.get.checkAlert(movingStats, stMaxCounts, ltMaxCounts, numFmt)
             if (alertDesc.isDefined)
-              curRet = SMGState(ts, SMGState.E_ANOMALY, s"ANOM: ${alertDesc.get}")
+              curRet = SMGState(ts, SMGState.ANOMALY, s"ANOM: ${alertDesc.get}")
           }
         }
         if (curRet == null) {
@@ -394,7 +394,7 @@ trait SMGMonBaseFetchState extends SMGMonInternalState {
 
   def processError(ts: Int, exitCode :Int, errors: List[String], isInherited: Boolean): Unit = {
     val errorMsg = s"Fetch error: exit=$exitCode, OUTPUT: " + errors.mkString("\n")
-    addState(SMGState(ts, SMGState.E_FETCH, errorMsg), isInherited)
+    addState(SMGState(ts, SMGState.UNKNOWN, errorMsg), isInherited)
   }
 
   def processSuccess(ts: Int, isInherited: Boolean): Unit = {
@@ -532,7 +532,7 @@ class SMGMonRunState(val interval: Int,
   def processOk(ts:Int): Unit = addState(SMGState(ts, SMGState.OK, s"interval $interval$pluginDesc - OK"), isInherited = false)
 
   def processOverlap(ts: Int): Unit = addState(
-    SMGState(ts, SMGState.E_SMGERR, s"interval $interval$pluginDesc - overlapping runs"),
+    SMGState(ts, SMGState.SMGERR, s"interval $interval$pluginDesc - overlapping runs"),
     isInherited = false)
 
   override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {

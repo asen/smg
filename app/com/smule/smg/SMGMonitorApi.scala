@@ -9,6 +9,7 @@ import play.api.libs.json._
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
+import scala.util.matching.Regex
 
 
 /**
@@ -18,7 +19,7 @@ import scala.concurrent.Future
 object SMGState extends Enumeration {
 
   // Sorted by severity
-  val OK, E_ANOMALY, E_VAL_WARN, E_FETCH, E_VAL_CRIT, E_SMGERR = Value
+  val OK, ANOMALY, WARNING, UNKNOWN, CRITICAL, SMGERR = Value
 
   val hmsTimeFormat = new SimpleDateFormat("HH:mm:ss")
 
@@ -28,6 +29,24 @@ object SMGState extends Enumeration {
 
   val YEAR_SECONDS = 365 * 24 * 3600
   val DAY_SECONDS = 24 * 3600
+
+  /**
+    * withName is final so can not be overriden - using this to allow backwards compatibility with old names
+    * calls withName unless known old name
+    * @param nm
+    * @return
+    */
+  def fromName(nm: String): SMGState.Value = {
+    // XXX backwards compatibility with old value names
+    nm match {
+      case "E_ANOMALY" => this.ANOMALY
+      case "E_VAL_WARN" => this.WARNING
+      case "E_FETCH" => this.UNKNOWN
+      case "E_VAL_CRIT" => this.CRITICAL
+      case "E_SMGERR" => this.SMGERR
+      case _ => this.withName(nm)
+    }
+  }
 
   def formatTss(ts: Int): String = {
     val tsDiff = Math.abs(tssNow - ts)
@@ -124,7 +143,7 @@ object SMGState extends Enumeration {
     //SMGState(ts: Int, state: SMGState.Value, desc: String)
     (
       (JsPath \ "ts").read[Int] and
-        (JsPath \ "state").read[String].map(s => SMGState.withName(s)) and
+        (JsPath \ "state").read[String].map(s => SMGState.fromName(s)) and
         (JsPath \ "desc").read[String]
       ) (SMGState.apply _)
   }
@@ -180,7 +199,7 @@ trait SMGMonState extends SMGTreeNode {
   def alertKey: String
   def alertSubject: String = alertKey // can be overriden
 
-  def currentStateVal: SMGState.Value = recentStates.headOption.map(_.state).getOrElse(SMGState.E_SMGERR) // XXX empty recentStates is smg err
+  def currentStateVal: SMGState.Value = recentStates.headOption.map(_.state).getOrElse(SMGState.SMGERR) // XXX empty recentStates is smg err
 
   private def urlPx = "/dash?remote=" + remote.id + "&"
 
@@ -377,9 +396,8 @@ case class SMGMonFilter(rx: Option[String],
                         includeSilenced: Boolean
                        ) {
 
-  private def ciRegex(so: Option[String]) = so.map( s => if (s.isEmpty) s else  "(?i)" + s ).map(_.r)
-  private lazy val ciRx = ciRegex(rx)
-  private lazy val ciRxx = ciRegex(rxx)
+  private lazy val ciRx = SMGMonFilter.ciRegex(rx)
+  private lazy val ciRxx = SMGMonFilter.ciRegex(rxx)
 
   def matchesState(ms: SMGMonState): Boolean = {
     if ((rx.getOrElse("") != "") && ciRx.get.findFirstIn(SMGRemote.localId(ms.id)).isEmpty)
@@ -414,6 +432,7 @@ object SMGMonFilter {
   val matchAll = SMGMonFilter(rx = None, rxx = None, minState = None,
     includeSoft = true, includeAcked = true, includeSilenced = true)
 
+  def ciRegex(so: Option[String]): Option[Regex] = so.map(s => if (s.isEmpty) s else  "(?i)" + s ).map(_.r)
 }
 
 case class SMGMonitorStatesResponse(remote: SMGRemote, states: Seq[SMGMonState], isMuted: Boolean)

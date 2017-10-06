@@ -22,10 +22,10 @@ object SMGMonNotifySeverity extends Enumeration {
   def fromStateValue(sv: SMGState.Value): SMGMonNotifySeverity.Value = {
     sv match {
       case SMGState.OK => this.RECOVERY
-      case SMGState.E_VAL_WARN => this.WARNING
-      case SMGState.E_VAL_CRIT => this.CRITICAL
-      case SMGState.E_FETCH => this.UNKNOWN
-      case SMGState.E_ANOMALY => this.ANOMALY
+      case SMGState.WARNING => this.WARNING
+      case SMGState.CRITICAL => this.CRITICAL
+      case SMGState.UNKNOWN => this.UNKNOWN
+      case SMGState.ANOMALY => this.ANOMALY
       case _ => this.SMGERR
 //        ACKNOWLEDGEMENT, THROTTLED and UNTHROTTLED are special
     }
@@ -265,7 +265,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
                                  isImprovement: Boolean): Future[Boolean] = {
     if (ncmds.isEmpty) {
       Future {
-        if (monState.currentStateVal > SMGState.E_ANOMALY) // TODO XXX temp logging to troubleshoot issue
+        if (monState.currentStateVal > SMGState.ANOMALY) // TODO XXX temp logging to troubleshoot issue
           log.info(s"SMGMonNotifySvc.sendAlertMessages: empty recipients list for ${monState.id} (${monState.currentStateVal})")
         false
       }

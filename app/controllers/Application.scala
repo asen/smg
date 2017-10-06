@@ -787,7 +787,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
                       ackd: Option[String],
                       slncd: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val (availRemotes, rmtOpt) = parseRemoteParam(remote)
-    val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_ANOMALY)
+    val minSev = ms.map{ s => SMGState.fromName(s) }.getOrElse(SMGState.ANOMALY)
     val inclSoft = soft.getOrElse("off") == "on"
     val inclAck = ackd.getOrElse("off") == "on"
     val inclSlnc = slncd.getOrElse("off") == "on"
@@ -826,18 +826,29 @@ class Application  @Inject() (actorSystem: ActorSystem,
   val DEFAULT_LOGS_LIMIT = 200
 
   def monitorLog(remote: String, p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String],
-                 ackd: Option[String], slncd: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+                 ackd: Option[String], slncd: Option[String], rx: Option[String],
+                 rxx: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val (availRemotes, rmtOpt) = parseRemoteParam(remote)
-    val minSev = ms.map{ s => SMGState.withName(s) }.getOrElse(SMGState.E_VAL_WARN)
+    val minSev = ms.map{ s => SMGState.fromName(s) }.getOrElse(SMGState.WARNING)
     val period = p.getOrElse(DEFAULT_LOGS_SINCE)
     val limit = l.getOrElse(DEFAULT_LOGS_LIMIT)
     val inclSoft = soft.getOrElse("off") == "on"
     val includeAckd = ackd.getOrElse("off") == "on"
     val includeSlncd = slncd.getOrElse("off") == "on"
-    monitorApi.monLogApi.getSince(period, rmtOpt, limit, Some(minSev), inclSoft, includeAckd, includeSlncd).map { logs =>
+    val flt = SMGMonitorLogFilter(
+      periodStr = period,
+      rmtOpt = rmtOpt,
+      limit = limit,
+      minSeverity = Some(minSev),
+      inclSoft = inclSoft,
+      inclAcked = includeAckd,
+      inclSilenced = includeSlncd,
+      rx = rx,
+      rxx = rxx)
+    monitorApi.monLogApi.getAll(flt).map { logs =>
       Ok(views.html.monitorLog(configSvc, availRemotes, rmtOpt, SMGState.values.toList.map(_.toString),
         Some(minSev.toString), period, DEFAULT_LOGS_SINCE, limit, DEFAULT_LOGS_LIMIT,
-        inclSoft = inclSoft, inclAckd = includeAckd, inclSlncd = includeSlncd, logs))
+        inclSoft = inclSoft, inclAckd = includeAckd, inclSlncd = includeSlncd, rx, rxx, logs))
     }
   }
 
@@ -858,7 +869,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
                    curl: Option[String]
                   ): Action[AnyContent] = Action.async { implicit request =>
     val conf = configSvc.config
-    val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.withName(s)),
+    val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.fromName(s)),
       includeSoft = hsoft == "off", includeAcked = hackd == "off",
       includeSilenced = hslncd == "off")
     val mySlncUntil = silenceAllUntil.map(slunt => SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0))

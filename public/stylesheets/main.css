@@ -84,10 +84,6 @@
   color: #009900;
 }
 
-.ml-type-CNTROVRF {
-  color: #33cccc;
-}
-
 .ml-type-ANOMALY {
   color: #33cccc;
 }
@@ -96,7 +92,7 @@
   color: #e6e600;
 }
 
-.ml-type-FETCHERR {
+.ml-type-UNKNOWN {
   color: #ff9900;
 }
 

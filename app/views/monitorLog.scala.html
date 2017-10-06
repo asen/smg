@@ -1,10 +1,12 @@
 @import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.SMGMonitorLogMsg
+@import com.smule.smg.SMGState
 
 @(cfSvc: SMGConfigService, availRemotes:Seq[String], rmtId: Option[String], availStates:Seq[String],
   minSeverity: Option[String], period:String, defPeriod:String, limit:Int, defLimit:Int, inclSoft: Boolean,
-  inclAckd: Boolean, inclSlncd: Boolean, logMsgs: Seq[SMGMonitorLogMsg])(implicit flash: Flash)
+  inclAckd: Boolean, inclSlncd: Boolean, rx: Option[String], rxx: Option[String],
+  logMsgs: Seq[SMGMonitorLogMsg])(implicit flash: Flash)
 
 @main("SMG - Monitor event log", cfSvc) {
 
@@ -43,6 +45,20 @@
   <label class="autosubmit-lbl" for="cbSlncd">Display silenced errors</label>
     <input id="cbSlncd" type="checkbox" name="slncd" onchange="mySubmitOnChange(this);" @if(inclSlncd){ checked } />
 
+  <br/>
+
+  <label class="manualsubmit-lbl" for="inpRx">Regex filter</label>
+    <input id="inpRx" type="text" name="rx" value='@{rx.getOrElse("")}' />
+
+  <label class="manualsubmit-lbl" for="inpRxx">Regex exclude filter</label>
+    <input id="inpRxx" type="text" name="rxx" value='@{rxx.getOrElse("")}' />
+
+  <!-- separator -->
+
+  <div class="form-group" style="width: 5px;">
+    &nbsp;
+  </div>
+
   <input style="display: none" id="btn_GET" type="submit">
   <input type="button" value="Refresh" onclick="mySubmitOnChange(this);">
 
@@ -74,20 +90,21 @@
 <hr/>
 
 <ul class="monlog">
-@for((hrts, mls) <- logMsgs.groupBy(_.hourTs).toSeq.sortBy(t => -t._1)) {
+  <li><b>---- (now) [@{SMGMonitorLogMsg.tsFmt(SMGState.tssNow)}]----</b></li>
+  @for((hrts, mls) <- logMsgs.groupBy(_.hourTs).toSeq.sortBy(t => -t._1)) {
+    @for(ms <- mls) {
+    <li>
+      [@{ if(ms.remote.id == "") "local" else ms.remote.id }]
+      [@{ms.tsFmt}]: <span class="ml-type-@{ms.mltype}">@{ms.mltype}</span>
+      @if(ms.ouids.nonEmpty) {
+        <a href="/dash?@{ms.objectsFilterWithRemote}">@{ms.msIdFmt}</a>
+      } else { @{ms.msIdFmt} }
+      (n=@{ms.repeat}, @if(ms.isHard){ <strong>HARD</strong> } else { SOFT })
+      <span class="ml-msg">@{ms.msg}</span>
+    </li>
+    }
   <li><b>----[@{mls.head.tsFmt(mls.head.hourTs)}]----</b></li>
-  @for(ms <- mls) {
-  <li>
-    [@{ if(ms.remote.id == "") "local" else ms.remote.id }]
-    [@{ms.tsFmt}]: <span class="ml-type-@{ms.mltype}">@{ms.mltype}</span>
-    @if(ms.ouids.nonEmpty) {
-      <a href="/dash?@{ms.objectsFilterWithRemote}">@{ms.msIdFmt}</a>
-    } else { @{ms.msIdFmt} }
-    (n=@{ms.repeat}, @if(ms.isHard){ <strong>HARD</strong> } else { SOFT })
-    <span class="ml-msg">@{ms.msg}</span>
-  </li>
   }
-}
 </ul>
 
 <p><i>Displaying @{logMsgs.size} messages (limit: @limit)</i></p>

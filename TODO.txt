@@ -4,17 +4,6 @@ v 0.5+
 
 * Improve event log and UI
 
-* support external updates - objects which do not have an external command to execute but get the updates
-from external sources posting the data via some API. Probably a plugin.
-
-* fix/improve x-sort (how?)
-
-* configurator (plugin?)
-
-* filter to hide empty graphs (?)
-
-* support "tags" (?) - be able to filter by tag.
-
 == Monitor ==
 
 * Silencing indexes so that newly added objects will be treated as silenced
@@ -36,3 +25,14 @@ from external sources posting the data via some API. Probably a plugin.
 * backups/replication (?) Currently can just copy out the rrd dir for a backup (and the conf - if not generated).
 
 * login system (?)
+
+* support external updates - objects which do not have an external command to execute but get the updates
+from external sources posting the data via some API. Probably a plugin.
+
+* fix/improve x-sort (how?)
+
+* configurator (plugin?)
+
+* filter to hide empty graphs (?)
+
+* support "tags" (?) - be able to filter by tag.

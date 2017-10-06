@@ -283,16 +283,26 @@ class Api  @Inject() (actorSystem: ActorSystem,
     ids.map(oid => objsById.get(oid)).filter(o => o.nonEmpty).map(o => o.get)
   }
 
-  def monitorLog(period: Option[String], limit: Option[Int], sev: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String]) = Action {
-    val minSev = sev.map{ s => SMGState.withName(s) }
-    val logs = monitorApi.monLogApi.getLocal(period.getOrElse("24h"),
-      limit.getOrElse(100), minSev, soft.getOrElse("off") == "on",
-      ackd.getOrElse("off") == "on", slncd.getOrElse("off") == "on")
+  def monitorLog(period: Option[String], limit: Option[Int], sev: Option[String], soft: Option[String],
+                 ackd: Option[String], slncd: Option[String],
+                 rx: Option[String], rxx: Option[String]) = Action {
+    val minSev = sev.map{ s => SMGState.fromName(s) }
+    val flt = SMGMonitorLogFilter(
+      periodStr = period.getOrElse("24h"),
+      rmtOpt = None,
+      limit = limit.getOrElse(100),
+      minSeverity = minSev,
+      inclSoft = soft.getOrElse("off") == "on",
+      inclAcked = ackd.getOrElse("off") == "on",
+      inclSilenced = slncd.getOrElse("off") == "on",
+      rx = rx,
+      rxx = rxx)
+    val logs = monitorApi.monLogApi.getLocal(flt)
     Ok(Json.toJson(logs))
   }
   
   def monitorStates(ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String]) = Action {
-    val myMs = ms.map(s => SMGState.withName(s)).getOrElse(SMGState.E_ANOMALY)
+    val myMs = ms.map(s => SMGState.fromName(s)).getOrElse(SMGState.ANOMALY)
     val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(myMs),
       includeSoft =  soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
       includeSilenced = slncd.getOrElse("off") == "on"
@@ -358,7 +368,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
                    rid: Option[String],
                    pg: Int,
                    lmt: Int) = Action {
-    val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.withName(s)),
+    val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.fromName(s)),
       includeSoft = soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
       includeSilenced = slncd.getOrElse("off") == "on")
     val tpl = monitorApi.localMonTrees(flt, rid, pg, lmt)
@@ -375,7 +385,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
                              slncd: Option[String],
                              rid: Option[String],
                              until: Int): Action[AnyContent] = Action.async {
-    val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.withName(s)),
+    val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.fromName(s)),
       includeSoft = soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
       includeSilenced = slncd.getOrElse("off") == "on")
     monitorApi.silenceAllTrees(SMGRemote.local.id, flt, rid, until).map { ret =>
