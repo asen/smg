@@ -83,12 +83,11 @@ case class SMGMonNotifyMsgData(severity: SMGMonNotifySeverity.Value,
                               )
 
 @Singleton
-class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
-                                 monitorCtx: ExecutionContext = ExecutionContexts.monitorCtx) extends SMGMonNotifyApi {
+class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNotifyApi {
 
-  val log = SMGLogger
+  private val log = SMGLogger
 
-  implicit private val ec = monitorCtx
+  implicit private val ec = ExecutionContexts.monitorCtx
 
   // alertKey -> cmds
   private val activeAlerts = TrieMap[String, List[SMGMonNotifyCmd]]()
@@ -238,7 +237,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService,
     }
   }
 
-  def tick():Unit = {
+  def tick(): Unit = {
     val intvl = throttleInterval
     val nowHourTs = (SMGRrd.tssNow / intvl) * intvl // rounded to beginning of throttle interval
     if (nowHourTs != currentThrottleTs) {

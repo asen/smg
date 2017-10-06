@@ -98,7 +98,10 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
         }
       }
     }
-    notifyApi.tick()
+    Future { // run these async
+      notifyApi.tick()
+      monitorApi.monLogApi.tick()
+    } (ExecutionContexts.monitorCtx)
     system.scheduler.scheduleOnce(timeToNextTick(curTickInterval))(tick())
   }
 

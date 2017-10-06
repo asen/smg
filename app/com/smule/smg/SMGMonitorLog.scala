@@ -148,6 +148,11 @@ trait SMGMonitorLogApi {
     */
   def getAll(flt: SMGMonitorLogFilter): Future[Seq[SMGMonitorLogMsg]]
 
+  /**
+    * Called by scheduler to flush logs to disc asynchronously
+    */
+  def tick():Unit
+
 }
 
 @Singleton
@@ -157,12 +162,15 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
 
   private def monlogBaseDir = configSvc.config.globals.getOrElse("$monlog_dir", "monlog")
 
-  new File(monlogBaseDir).mkdirs()
+  try {
+    new File(monlogBaseDir).mkdirs()
+  } catch {
+    case t: Throwable => {
+      log.ex(t, s"Unable to create monlog_dir: $monlogBaseDir")
+    }
+  }
 
   private val dateDirFmt = new SimpleDateFormat("/yyyy-MM-dd")
-
-  private val RECENTS_MAX_SIZE = 2000
-
 
   private val recentLogs = ListBuffer[SMGMonitorLogMsg]()
 
@@ -182,8 +190,12 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
       lb += loadLogFile(tsLogFn(ct))
       ct += 24 * 3600
     }
-    lb += recentLogs.toList
-    lb.flatten.toList.reverse.filter { m =>
+    // XXX there is a possible race condition here related to the most recent chunk
+    // but better keep the synchronization to minimum to avoid putting a bottleneck on updates
+    recentLogs.synchronized {
+      lb += recentLogs.toList
+    }
+    lb.flatten.toList.filter { m =>
       (m.ts >= startTss) &&
         (flt.inclSoft || m.isHard) &&
         (flt.inclAcked || !m.isAcked) &&
@@ -193,7 +205,7 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
           (m.curState.state == SMGState.OK && m.prevState.map(_.state).getOrElse(SMGState.OK) >= flt.minSeverity.get) ) &&
         ((flt.rx.getOrElse("") == "") || SMGMonFilter.ciRegex(flt.rx).get.findFirstIn(m.msIdFmt).nonEmpty) &&
         ((flt.rxx.getOrElse("") == "") || SMGMonFilter.ciRegex(flt.rxx).get.findFirstIn(m.msIdFmt).isEmpty)
-    }.take(flt.limit)
+    }.reverse.take(flt.limit)
   }
 
   override def getAll(flt: SMGMonitorLogFilter): Future[Seq[SMGMonitorLogMsg]] = {
@@ -204,22 +216,27 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
     val localFut = if (flt.rmtOpt.getOrElse(SMGRemote.local.id) == SMGRemote.local.id ) Future {
       getLocal(flt)
     } else Future { Seq() }
-
     val allFuts = Seq(localFut) ++ remoteFuts
     Future.sequence(allFuts).map { seqs =>
       seqs.flatten.sortBy(- _.ts).take(flt.limit) // most recent first
     }
   }
 
-
   private def loadLogFile(fn:String): List[SMGMonitorLogMsg] = {
-    if (new File(fn).exists()) {
-      Source.fromFile(fn).getLines().map { ln =>
-        val ret = SMGMonitorLogMsg.parseLogLine(ln)
-        if (ret.isEmpty && (ln != "")) log.error(s"SMGMonitorLog.loadLogFile($fn): bad line: " + ln)
-        ret
-      }.filter(_.isDefined).map(_.get).toList
-    } else List()
+    try {
+      if (new File(fn).exists()) {
+        Source.fromFile(fn).getLines().map { ln =>
+          val ret = SMGMonitorLogMsg.parseLogLine(ln)
+          if (ret.isEmpty && (ln != "")) log.error(s"SMGMonitorLog.loadLogFile($fn): bad line: " + ln)
+          ret
+        }.filter(_.isDefined).map(_.get).toList
+      } else List()
+    } catch {
+      case t: Throwable => {
+        log.ex(t, s"Error loading log file: $fn")
+        List()
+      }
+    }
   }
 
   private def tsToDate(ts: Int): Date = new Date(ts.toLong * 1000)
@@ -227,16 +244,22 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
   private def tsLogFn(ts: Int): String = monlogBaseDir + dateDirFmt.format(tsToDate(ts)) + "-json.log"
 
   private def saveChunkToFile(fname: String, chunk: List[SMGMonitorLogMsg]): Unit = {
-    log.debug(s"Saving chunk to file: $fname (chunk size=${chunk.size})")
-    val fw = new FileWriter(fname, true)
     try {
-      chunk.foreach { msg =>
-        fw.write(msg.serialize.toString())
-        fw.write("\n")
+      log.debug(s"Saving chunk to file: $fname (chunk size=${chunk.size})")
+      val fw = new FileWriter(fname, true)
+      try {
+        chunk.foreach { msg =>
+          fw.write(msg.serialize.toString())
+          fw.write("\n")
+        }
+      }
+      finally fw.close()
+      log.info(s"Saved chunk to file: $fname (chunk size=${chunk.size})")
+    } catch {
+      case t: Throwable => {
+        log.ex(t, s"Error saving chunk (chunk.size=${chunk.size}) to file: $fname")
       }
     }
-    finally fw.close()
-    log.info(s"Saved chunk to file: $fname (chunk size=${chunk.size})")
   }
 
   private def saveLogChunk(chunk: List[SMGMonitorLogMsg]): Unit = {
@@ -244,7 +267,7 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
     chunk.groupBy(m => tsLogFn(m.ts)).foreach { t => saveChunkToFile(t._1, t._2) }
   }
 
-  private def saveOnShutdown() = {
+  private def saveOnShutdown(): Unit = {
     recentLogs += SMGMonitorLogMsg(
       SMGState.tssNow, None,
       SMGState(SMGState.tssNow, SMGState.SMGERR, "SMG Shutdown"),
@@ -252,25 +275,23 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
     saveLogChunk(recentLogs.toList)
   }
 
-  private val logFlushIsRunning = new AtomicBoolean(false)
-
   override def logMsg(msg: SMGMonitorLogMsg): Unit = {
     log.debug("MONITOR_STATE_CHANGE: " + msg)
-    // TODO synchronization?
-    recentLogs += msg
-    Future {
-      val sz = recentLogs.size
-      if (sz >= RECENTS_MAX_SIZE) {
-        if (logFlushIsRunning.compareAndSet(false, true)) try {
-          // only one thread can get here
-          val toSave = recentLogs.toList
-          recentLogs.remove(0, toSave.size)
-          saveLogChunk(toSave)
-        } finally {
-          logFlushIsRunning.set(false)
-        }
-      }
-    } (ExecutionContexts.monitorCtx) //TODO use diff ctx?
+    recentLogs.synchronized {
+      recentLogs += msg
+    }
+  }
+
+  override def tick(): Unit = {
+    // minimize synchronized time - actual save does not block adding new log msgs
+    var toSave: Option[List[SMGMonitorLogMsg]] = None
+    recentLogs.synchronized {
+      toSave = Some(recentLogs.toList)
+      recentLogs.clear()
+    }
+    if (toSave.nonEmpty && toSave.get.nonEmpty) {
+      saveLogChunk(toSave.get)
+    }
   }
 
 }
