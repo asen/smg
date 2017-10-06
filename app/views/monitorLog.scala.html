@@ -47,10 +47,12 @@
 
   <br/>
 
-  <label class="manualsubmit-lbl" for="inpRx">Regex filter</label>
+  <label class="manualsubmit-lbl" for="inpRx"
+         title="Display only states which have ids matching the specified case insensitive regular expression">Regex filter</label>
     <input id="inpRx" type="text" name="rx" value='@{rx.getOrElse("")}' />
 
-  <label class="manualsubmit-lbl" for="inpRxx">Regex exclude filter</label>
+  <label class="manualsubmit-lbl" for="inpRxx"
+         title="Filter out states which have ids matching the specified case insensitive regular expression">Regex exclude filter</label>
     <input id="inpRxx" type="text" name="rxx" value='@{rxx.getOrElse("")}' />
 
   <!-- separator -->
