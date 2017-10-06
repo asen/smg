@@ -72,7 +72,7 @@
       $(':input', this).each(function() {
          this.disabled = ((this.name != "remote") && !($(this).val())) ||
            ((this.name == "remote") && ($(this).val() == "*")) ||
-           ((this.name == "ms") && ($(this).val() == "E_VAL_WARN")) ||
+           ((this.name == "ms") && ($(this).val() == "WARNING")) ||
            ((this.name == "p") && ($(this).val() == "@defPeriod")) ||
            ((this.name == "l") && ($(this).val() == "@defLimit"))
            ;

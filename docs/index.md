@@ -664,23 +664,24 @@ states, sorted by severity:
 - **OK** - The normal state - a valid value was retrieved and updated 
 in the RRD. 
 
-- **E\_ANOMALY** - Currently there are two types of anomalies, the first
- is a "counter overflow", meaning that a 32 bit counter passes 2^32 (or 
+- **ANOMALY** - Currently there are two types of anomalies, the first
+ is a "counter overflow", e.g. a 32 bit counter passes 2^32 (or 
  was reset) resulting in NaN value and the second one is a "spike" or 
  "drop" - read the notes below for more details on 
  [anomaly detection](#anomaly).
 
-- **E\_VAL\_WARN** - A retrieved value matched against some defined 
+- **WARNING** - A retrieved value matched against some defined 
 "warning" threshold. 
 
-- **E\_FETCH** - A data retrieval failed - the external command 
+- **UNKNOWN** - A data retrieval failed - the external command 
 (pre-)fetching data failed. This can happen for various reasons 
 including target host or service down. 
 
-- **E\_VAL\_CRIT** - A fetched value matched against some defined 
+- **CRITICAL** - A fetched value matched against some defined 
 "critical" threshold. 
 
-- **E\_SMGERR** - global SMG error (usually - overlapping runs).
+- **SMGERR** - global SMG error. Usually - overlapping runs (or
+SMG bug).
 
 Check [monitoring configuration](admin/index.md#monitoring) for more
 details on how the thresholds are defined in the yaml configuration.

@@ -99,21 +99,21 @@ object SMGState extends Enumeration {
 
 
   private val severityChars = Map(
-    0 -> "",   //OK
-    1 -> "~",  //E_ANOMALY
-    2 -> "^",  //E_VAL_WARN
-    3 -> "?",  //E_FETCH
-    4 -> "!",   //E_VAL_CRIT
-    5 -> "e"  //E_SMGERR
+    0 -> "",   // OK
+    1 -> "~",  // ANOMALY
+    2 -> "^",  // WARNING
+    3 -> "?",  // UNKNOWN
+    4 -> "!",  // CRITICAL
+    5 -> "e"   // SMGERR
   )
 
   private val severityTextColors = Map(
-    0 -> "white",   //OK
-    1 -> "black",  //E_ANOMALY
-    2 -> "black",  //E_VAL_WARN
-    3 -> "white",  //E_FETCH
-    4 -> "white",   //E_VAL_CRIT
-    5 -> "white"  //E_SMGERR
+    0 -> "white",  // OK
+    1 -> "black",  // ANOMALY
+    2 -> "black",  // WARNING
+    3 -> "white",  // UNKNOWN
+    4 -> "white",  // CRITICAL
+    5 -> "white"   // SMGERR
   )
 
   def stateChar(stateIx: Int): String = severityChars.getOrElse(stateIx, "e")
