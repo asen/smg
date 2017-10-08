@@ -1,24 +1,25 @@
 v 0.5+
 
-== General Enhancements ==
+== General enhancements ==
 
-* Improve event log and UI
+* Multi remote select
 
 == Monitor ==
 
 * Silencing indexes so that newly added objects will be treated as silenced
 
+* Forward silencing - define rx/rxx match to silence existing and future objects
+
 == Documentation ==
 
 * document JMX plugin config
+* document event log and UI
 
 == Known Bugs ==
 
 * GROUP-ing stacked graphs seems messed up
 
-* prevent saveStateToDisk when shutdown is already in progress
-
-== Longer term ==
+== Random longer term possibilities ==
 
 * slave mode - do not do RRD updates but forward to central update node ?
 
