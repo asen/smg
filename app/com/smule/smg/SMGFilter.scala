@@ -16,8 +16,7 @@ import scala.util.matching.Regex
   * @param rx - optional object id regex. if present, only object ids matching that regex will be selected
   * @param rxx - optional object id regex to exclude. if present, only objects with ids NOT matching that regex will be selected
   * @param trx - optional title regex. if present, only objects with titles matching that regex will be selected
-  * @param remote - optional remote id. if None, only local objecs will be selected. If set to a remote id,
-  *               only objects from that remote will be selected. If set to "*", all remotes will be matched
+  * @param remotes - optional list of remote ids. If set to "*", all remotes will be matched
   *               when selecting.
   */
 case class SMGFilter(px: Option[String],
@@ -25,7 +24,7 @@ case class SMGFilter(px: Option[String],
                      rx: Option[String],
                      rxx: Option[String],
                      trx: Option[String],
-                     remote: Option[String],
+                     remotes: Seq[String],
                      gopts: GraphOptions
                     ) {
 
@@ -71,7 +70,7 @@ case class SMGFilter(px: Option[String],
     if (rx.isDefined) sb.append("&rx=").append(URLEncoder.encode(rx.get,"UTF-8"))
     if (rxx.isDefined) sb.append("&rxx=").append(URLEncoder.encode(rxx.get,"UTF-8"))
     if (trx.isDefined) sb.append("&trx=").append(URLEncoder.encode(trx.get,"UTF-8"))
-    if (remote.isDefined) sb.append("&remote=").append(URLEncoder.encode(remote.get,"UTF-8"))
+    remotes.foreach { rmt => sb.append("&remote=").append(URLEncoder.encode(rmt,"UTF-8")) }
 
     if (gopts.step.isDefined) sb.append("&step=").append(URLEncoder.encode(gopts.step.get.toString,"UTF-8"))
     if (gopts.xsort.isDefined && (gopts.xsort.get != 0))
@@ -108,19 +107,23 @@ case class SMGFilter(px: Option[String],
 
   private val paramsHumanText = if (paramsIdHumanSeq.isEmpty) "*" else paramsIdHumanSeq.mkString(" AND ")
 
-  val humanText: String = paramsHumanText + (if (remote.isDefined) s" (remote=${remote.get})" else "")
+  val humanText: String = paramsHumanText +
+    (if (remotes.nonEmpty && (remotes != Seq(SMGRemote.local.id)))
+      s" (remotes=${remotes.map{ r =>
+        if (r == SMGRemote.local.id) "Local" else r }.mkString(",")})"
+    else "")
 }
 
 object SMGFilter {
 
-  val matchLocal = SMGFilter(None,None,None,None,None, None, GraphOptions.default )
+  val matchLocal = SMGFilter(None,None,None,None,None, Seq(SMGRemote.local.id), GraphOptions.default )
 
-  val matchAll = SMGFilter(None,None,None,None,None, Some(SMGRemote.wildcard.id), GraphOptions.default )
+  val matchAll = SMGFilter(None,None,None,None,None, Seq(SMGRemote.wildcard.id), GraphOptions.default )
 
-  def fromPrefixWithRemote(px:String, remoteId: Option[String]): SMGFilter =
-    SMGFilter(Some(px), None, None, None, None, remoteId, GraphOptions.default )
+  def fromPrefixWithRemote(px:String, remoteIds: Seq[String]): SMGFilter =
+    SMGFilter(Some(px), None, None, None, None, remoteIds, GraphOptions.default )
 
-  def fromPrefixLocal(px:String): SMGFilter = fromPrefixWithRemote(px, None)
+  def fromPrefixLocal(px:String): SMGFilter = fromPrefixWithRemote(px, Seq(SMGRemote.local.id))
 
 
   def fromParams(params: Map[String, Seq[String]]): SMGFilter = {
@@ -139,7 +142,7 @@ object SMGFilter {
       params.get("rx").map(_.head),
       params.get("rxx").map(_.head),
       params.get("trx").map(_.head),
-      params.get("remote").map(_.head),
+      params.getOrElse("remote", Seq(SMGRemote.local.id)), // TODO or use empty seq here?
       gopts
     )
   }

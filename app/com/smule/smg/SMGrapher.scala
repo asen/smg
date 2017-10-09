@@ -206,11 +206,19 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     * @inheritdoc
     */
   override def getFilteredObjects(filter: SMGFilter, ix: Option[SMGIndex]): Seq[SMGObjectView]  = {
-    val toFilter = if (filter.remote.getOrElse("") == SMGRemote.wildcard.id) {
+    val toFilter = if (filter.remotes.isEmpty) {
+      configSvc.config.viewObjects
+    } else if (filter.remotes.contains(SMGRemote.wildcard.id)) {
       configSvc.config.viewObjects ++ remotes.configs.flatMap(cfg => cfg.viewObjects)
     } else {
-      val remoteConf = remotes.byId(filter.remote.getOrElse(""))
-      if (remoteConf.nonEmpty) remoteConf.get.viewObjects else configSvc.config.viewObjects
+      filter.remotes.flatMap { rmtId =>
+        if (rmtId == SMGRemote.local.id) {
+          configSvc.config.viewObjects
+        } else {
+          val remoteConf = remotes.byId(rmtId)
+          if (remoteConf.nonEmpty) remoteConf.get.viewObjects else Seq()
+        }
+      }
     }
     toFilter.filter { obj =>
       if (ix.isDefined) {
@@ -439,9 +447,9 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     ovs.flatMap { ov =>
       allIxes.filter { ix =>
         (!ix.flt.matchesAnyObjectIdAndText) &&
-          ((ix.flt.remote.getOrElse("") == SMGRemote.wildcard.id) ||
+          ((ix.flt.remotes.contains(SMGRemote.wildcard.id) ||
             (SMGRemote.remoteId(ix.id) == SMGRemote.remoteId(ov.id))) &&
-          ix.flt.matches(ov)
+          ix.flt.matches(ov))
       }
     }.distinct.sortBy(_.title)
   }

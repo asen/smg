@@ -80,6 +80,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
     Try(opt.get.toDouble).toOption
   } else None
 
+  private def optStr2OptInt(opt: Option[String]): Option[Int] = if (opt.isDefined && (opt.get != "")) {
+    Try(opt.get.toInt).toOption
+  } else None
+
   case class DashboardExtraParams (
                                     period: String,
                                     cols: Int,
@@ -97,7 +101,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param sx - optional filter suffix
     * @param rx - optional filter regex
     * @param rxx - optional filter regex to NOT match
-    * @param remote - optional filter remote
+    * @param remotes - optional filter remotes
     * @param agg - optional aggregate function (can be STACK, SUM etc)
     * @param period - graphs period
     * @param cols - optional number of columns in which to display graphs
@@ -113,7 +117,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     rx: Option[String],
     rxx: Option[String],
     trx: Option[String],
-    remote: Option[String],
+    remotes: Seq[String],
     agg: Option[String],
     period: Option[String],
     pl: Option[String],
@@ -155,14 +159,19 @@ class Application  @Inject() (actorSystem: ActorSystem,
         maxY = myMaxY,
         minY = myMinY)
 
-      val myRemote = if (idx.isEmpty || remote.isDefined) remote else idx.get.flt.remote
+      val myRemotes = if (idx.isEmpty || remotes.nonEmpty)
+        remotes
+      else if (idx.get.flt.remotes.nonEmpty)
+        idx.get.flt.remotes
+      else
+        Seq(SMGRemote.local.id)
 
       val flt = SMGFilter(px = px, //myPx,
         sx = sx, //mySx,
         rx = rx, //myRx,
         rxx = rxx, //myRxx,
         trx = trx, //myTrx,
-        remote = myRemote,
+        remotes = myRemotes,
         gopts = myGopts)
 
       val myPeriod = if (idx.isEmpty || period.isDefined)
@@ -198,39 +207,39 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  private def dashParamsFromMap(m: Map[String, String]): DashboardParams = {
+  private def dashParamsFromMap(m: Map[String, Seq[String]]): DashboardParams = {
     DashboardParams (
-      ix = m.get("ix"),
-      px = m.get("px"),
-      sx = m.get("sx"),
-      rx = m.get("rx"),
-      rxx = m.get("rxx"),
-      trx = m.get("trx"),
-      remote = m.get("remote"),
-      agg = m.get("agg"),
-      period = m.get("period"),
-      pl = m.get("pl"),
-      step = m.get("step"),
-      cols = m.get("cols").map(_.toInt),
-      rows = m.get("rows").map(_.toInt),
-      pg = m.get("pg").map(_.toInt).getOrElse(0),
-      xagg = m.get("xagg"),
-      xsort = m.get("xsort").map(_.toInt),
-      dpp = m.getOrElse("dpp", ""),
-      d95p = m.getOrElse("d95p", ""),
-      maxy = m.get("maxy"),
-      miny = m.get("miny"),
-      gb = m.get("gb")
+      ix = m.get("ix").map(_.head),
+      px = m.get("px").map(_.head),
+      sx = m.get("sx").map(_.head),
+      rx = m.get("rx").map(_.head),
+      rxx = m.get("rxx").map(_.head),
+      trx = m.get("trx").map(_.head),
+      remotes = m.getOrElse("remote", Seq()),
+      agg = m.get("agg").map(_.head),
+      period = m.get("period").map(_.head),
+      pl = m.get("pl").map(_.head),
+      step = m.get("step").map(_.head),
+      cols = m.get("cols").flatMap(seq => optStr2OptInt(seq.headOption)),
+      rows = m.get("rows").flatMap(seq => optStr2OptInt(seq.headOption)),
+      pg = m.get("pg").flatMap(seq => optStr2OptInt(seq.headOption)).getOrElse(0),
+      xagg = m.get("xagg").map(_.head),
+      xsort = m.get("xsort").flatMap(seq => optStr2OptInt(seq.headOption)),
+      dpp = m.getOrElse("dpp", Seq("")).head,
+      d95p = m.getOrElse("d95p", Seq("")).head,
+      maxy = m.get("maxy").map(_.head),
+      miny = m.get("miny").map(_.head),
+      gb = m.get("gb").map(_.head)
     )
   }
 
   private def dashPostParams(req: Request[AnyContent]): DashboardParams = {
-    val myParams = req.body.asFormUrlEncoded.getOrElse(Map()).map(t => (t._1, t._2.head))
+    val myParams = req.body.asFormUrlEncoded.getOrElse(Map()) //.map(t => (t._1, t._2.head))
     dashParamsFromMap(myParams)
   }
 
   private def dashGetParams(req: Request[AnyContent]): DashboardParams = {
-    val myParams = req.queryString.map(t => (t._1, t._2.head))
+    val myParams = req.queryString //.map(t => (t._1, t._2.head))
     dashParamsFromMap(myParams)
   }
 

@@ -33,7 +33,8 @@ case class SMGAutoIndex(id: String, children: Seq[SMGAutoIndex], remoteId: Optio
   /**
     * @inheritdoc
     */
-  override val flt = SMGFilter.fromPrefixWithRemote(SMGRemote.localId(id), remoteId)
+  override val flt = SMGFilter.fromPrefixWithRemote(SMGRemote.localId(id),
+    if (remoteId.isEmpty) Seq(SMGRemote.local.id) else Seq(remoteId.get))
 
   /**
     * @inheritdoc

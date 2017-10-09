@@ -46,11 +46,7 @@
         <label class="manualsubmit-lbl"
                title="Display only objects from the specifed remote. Use * to match all remotes.">Remote filter:</label>
         <br />
-        <select id="smg-filter-remote" name="remote" class="select-remote">
-          @for(r <- availRemotes) {
-          <option value='@r.id' @if(r.id == flt.remote.getOrElse("")){ selected } >@if(r.id == ""){Local}else{@r.id}</option>
-          }
-        </select>
+        @remoteSelect(flt.remotes, availRemotes.map(_.id), "")
       </div>
       }
 
@@ -289,7 +285,8 @@ object id suffix is included">Group By:</label>
                           ((this.name == "pg") && ($(this).val() == 0)) ||
                           ((this.name == "period") && ($(this).val() == defaultPeriod)) ||
                           ((this.name == "cols") && ($(this).val() == defaultCols)) ||
-                          ((this.name == "rows") && ($(this).val() == defaultRows))
+                          ((this.name == "rows") && ($(this).val() == defaultRows)) ||
+                          ((this.name == "remote") && ($(this).val().length == 1) && ($(this).val()[0] == "@{SMGRemote.local.id}"))
                           ;
           if (!this.disabled && this.id) {
             gl_searchHistoryManager.addHistory(this.id, this.value);
@@ -348,10 +345,9 @@ object id suffix is included">Group By:</label>
   @if(ix.isDefined){
     function mergeIndexFilterAsUser(elem) {
       var myGetUserValue = function(name){
-        return document.getElementById("smg-filter-" + name).value
+        return $("#smg-filter-" + name).val()
       }
       var toMerge = {
-        "remote" : "@ix.get.flt.remote.getOrElse("")",
         "trx": "@ix.get.flt.trx",
         "px": "@ix.get.flt.px",
         "sx": "@ix.get.flt.sx",
@@ -366,6 +362,12 @@ object id suffix is included">Group By:</label>
           conflicts.push(nm);
         }
       }
+      var ixRemotes = ['@{ix.get.flt.remotes.mkString("', '")}'];
+      var ixRemoteStr = ixRemotes.join(",");
+      var ufltRemoteStr = myGetUserValue("remote").join(",");
+      if (ixRemoteStr != ufltRemoteStr) {
+        conflicts.push("remote");
+      }
       if (conflicts.length > 0) {
         if (!confirm("Warning: Some user filter value(s) conflict with index filter value(s) - " +
                      conflicts.join(", ") +
@@ -376,7 +378,7 @@ object id suffix is included">Group By:</label>
         }
       }
       var mySetUserValue = function(name, v){
-        document.getElementById("smg-filter-" + name).value = v
+         $("#smg-filter-" + name).val(v)
       }
       for(var nm in toMerge){
         var v = toMerge[nm];
@@ -384,6 +386,7 @@ object id suffix is included">Group By:</label>
           mySetUserValue(nm, v);
         }
       }
+      mySetUserValue("remote", ixRemotes);
       mySetUserValue("ix", "");
       mySubmitOnChange(elem);
     }

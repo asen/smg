@@ -28,7 +28,7 @@ object SMGRemote {
     * @param id
     * @return
     */
-  def remoteId(id: String): String = if (isRemoteObj(id)) { id.substring(1).split("\\.", 2)(0) } else ""
+  def remoteId(id: String): String = if (isRemoteObj(id)) { id.substring(1).split("\\.", 2)(0) } else SMGRemote.local.id
 
   def localId(id: String): String = if (isRemoteObj(id)) {
     val dotix = id.indexOf('.')

@@ -46,7 +46,8 @@ case class SMGConfIndex(id: String,
         if (yamlMap.contains("rx")) Some(yamlMap("rx").toString) else None,
         if (yamlMap.contains("rxx")) Some(yamlMap("rxx").toString) else None,
         if (yamlMap.contains("trx")) Some(yamlMap("trx").toString) else None,
-        if (yamlMap.contains("remote")) Some(yamlMap("remote").toString) else None,
+        // XXX TODO using coma to separate remote ids, use space instead?
+        if (yamlMap.contains("remote")) yamlMap("remote").toString.split(",").toSeq else Seq(),
         GraphOptions(
           if (yamlMap.contains("step")) Some(yamlMap("step").asInstanceOf[Int]) else None,
           if (yamlMap.contains("pl")) Some(yamlMap("pl").toString) else None,

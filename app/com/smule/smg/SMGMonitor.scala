@@ -426,9 +426,13 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
 
   override def heatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[Seq[(SMGRemote, SMGMonHeatmap)]] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
-    val myRemotes = configSvc.config.allRemotes.filter { rmt =>
-      val fltRemoteId = flt.remote.getOrElse(SMGRemote.local.id)
-      (fltRemoteId == SMGRemote.wildcard.id) || (rmt.id == fltRemoteId)
+    val myRemotes = if (flt.remotes.isEmpty) {
+      Seq(SMGRemote.local)
+    } else if (flt.remotes.contains(SMGRemote.wildcard.id)) {
+      configSvc.config.allRemotes
+    } else {
+      val fltSet = flt.remotes.toSet
+      configSvc.config.allRemotes.filter(r => fltSet.contains(r.id))
     }
     val futs = myRemotes.map { rmt =>
       if (rmt == SMGRemote.local)

@@ -62,7 +62,7 @@ trait SMGObjectView extends SMGObjectBase {
     val rmtId = SMGRemote.remoteId(id)
     val optDot = if (arr.length > 1) "." else ""
     "/dash?px=" + arr.dropRight(1).mkString(".") + optDot + "&sx=" + optDot + arr.lastOption.getOrElse("") +
-      (if (rmtId != "") "&remote=" + rmtId else "")
+      (if (rmtId != SMGRemote.local.id) "&remote=" + rmtId else "")
   }
 
   def parentDashUrl: Option[String] = Some("/dash?px=" + SMGRemote.localId(id).split("\\.").dropRight(1).mkString(".") + "&remote=" + SMGRemote.remoteId(id) )

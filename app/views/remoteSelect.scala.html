@@ -1,18 +1,17 @@
 @import com.smule.smg.SMGRemote
-@(selectedRemotes: Seq[String], availRemotes:Seq[String], labelClass: String, onChange: String)
+@(selectedRemotes: Seq[String], availRemotes:Seq[String], onChange: String)
 
-<label class="@labelClass">Remote filter:</label>
-<select id="smg-remote-select" class="smg-remote-select" name="remote" multiple="multiple" onchange="@onChange" >
+<select id="smg-filter-remote" class="smg-filter-remote" name="remote" multiple="multiple" onchange="@onChange" >
   @for( rid <- availRemotes) {
   <option value='@rid' @if(selectedRemotes.contains(rid)){ selected } >@if(rid == SMGRemote.local.id){Local}else{@rid}</option>
   }
 </select>
 
 <script type="text/javascript">
-    $('#smg-remote-select').select2();
+    $('#smg-filter-remote').select2();
 
-    $('#smg-remote-select').on('select2:selecting', function (e) {
-      var jqElem = $('#smg-remote-select')
+    $('#smg-filter-remote').on('select2:selecting', function (e) {
+      var jqElem = $('#smg-filter-remote')
       var myVals = jqElem.val(); // values before selecting
       var data = e.params.args.data;
       if (data.id == "@{SMGRemote.wildcard.id}") {
@@ -27,8 +26,8 @@
       }
     });
 
-    $('#smg-remote-select').on('select2:unselecting', function (e) {
-      var jqElem = $('#smg-remote-select')
+    $('#smg-filter-remote').on('select2:unselecting', function (e) {
+      var jqElem = $('#smg-filter-remote')
       var myVals = jqElem.val(); // values before selecting
       var data = e.params.args.data;
       if (data.id == "@{SMGRemote.wildcard.id}") {
