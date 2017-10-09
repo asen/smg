@@ -15,7 +15,7 @@ case class SMGRemote(id: String, url:String, slaveId: Option[String] = None)
   * Singleton defining helpers for dealing with remotes and their ids.
   */
 object SMGRemote {
-  val local = SMGRemote("", "")
+  val local = SMGRemote("^", "")
 
   val wildcard = SMGRemote("*", "")
 

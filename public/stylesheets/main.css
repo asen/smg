@@ -121,3 +121,7 @@
   width: 14px;
   cursor: pointer;
 }
+
+.smg-remote-select {
+  width: 250px;
+}

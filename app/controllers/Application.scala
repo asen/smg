@@ -39,22 +39,25 @@ class Application  @Inject() (actorSystem: ActorSystem,
   private def parseRemoteParam(remote: String): (List[String], Option[String]) = {
     val remoteIds = SMGRemote.local.id :: configSvc.config.remotes.map(_.id).toList
     val rmtOpt = remote match {
-      case "*" => None
+      case SMGRemote.wildcard.id => None
       case rmtId => remoteIds.find(_ == rmtId)
     }
-    val availRemotes = if (configSvc.config.remotes.isEmpty) List() else "*" :: remoteIds
+    val availRemotes = if (configSvc.config.remotes.isEmpty) List() else SMGRemote.wildcard.id :: remoteIds
     (availRemotes , rmtOpt)
   }
 
   /**
     * List all topl-level configured indexes
     */
-  def index(remote :String, lvls: Option[Int]): Action[AnyContent] = Action { implicit request =>
-    val (availRemotes, rmtOpt) = parseRemoteParam(remote)
-    val tlIndexesByRemote = smg.getTopLevelIndexesByRemote(rmtOpt)
+  def index(): Action[AnyContent] = Action { implicit request =>
+    val selectedRemotes: Seq[String] = request.queryString.getOrElse("remote", List(SMGRemote.wildcard.id))
+    val lvls: Option[Int] = request.queryString.get("lvls").map(_.head.toInt)
+    val remoteIds = SMGRemote.local.id :: configSvc.config.remotes.map(_.id).toList
+    val availRemotes = if (configSvc.config.remotes.isEmpty) List() else SMGRemote.wildcard.id :: remoteIds
+    val tlIndexesByRemote = smg.getTopLevelIndexesByRemote(selectedRemotes)
     val myLevels = lvls.getOrElse(configSvc.config.indexTreeLevels)
     val saneLevels = scala.math.min(scala.math.max(1, myLevels), MAX_INDEX_LEVELS)
-    Ok(views.html.index(rmtOpt, availRemotes, saneLevels, configSvc.config.indexTreeLevels,
+    Ok(views.html.index(selectedRemotes, availRemotes, saneLevels, configSvc.config.indexTreeLevels,
       tlIndexesByRemote, smg.detailPeriods.drop(1), configSvc))
   }
 

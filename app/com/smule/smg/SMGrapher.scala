@@ -138,12 +138,23 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   /**
     * @inheritdoc
     */
-  override def getTopLevelIndexesByRemote(rmt: Option[String]): Seq[(SMGRemote, Seq[SMGIndex])] = {
-    rmt match {
-      case Some("") => Seq(Tuple2(SMGRemote.local, filterTopLevel(configSvc.config.indexes)))
-      case Some(rmtId) => remotes.byId(rmtId).map { c => Seq(Tuple2(c.remote, filterTopLevel(c.indexes))) }.getOrElse(Seq())
-      case None => Seq(Tuple2(SMGRemote.local, filterTopLevel(configSvc.config.indexes))) ++
+  override def getTopLevelIndexesByRemote(rmtIds: Seq[String]): Seq[(SMGRemote, Seq[SMGIndex])] = {
+    if (rmtIds.isEmpty || rmtIds.contains(SMGRemote.wildcard.id)) {
+      Seq(Tuple2(SMGRemote.local, filterTopLevel(configSvc.config.indexes))) ++
         (for(c <- remotes.configs) yield (c.remote, filterTopLevel(c.indexes)))
+    } else {
+      rmtIds.flatMap { rid =>
+        if (rid == SMGRemote.local.id){
+          Seq(Tuple2(SMGRemote.local, filterTopLevel(configSvc.config.indexes)))
+        } else {
+          val myRmt = remotes.configs.find(c => c.remote.id == rid)
+          if (myRmt.isEmpty) {
+            Seq()
+          } else {
+            Seq(Tuple2(myRmt.get.remote, filterTopLevel(myRmt.get.indexes)))
+          }
+        }
+      }
     }
   }
 

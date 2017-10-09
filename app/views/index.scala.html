@@ -2,7 +2,7 @@
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.SMGConfigService
 
-@(rmtId: Option[String], availRemotes:Seq[String], lvls: Int, defaultLevels: Int,
+@(selectedRemotes: Seq[String], availRemotes:Seq[String], lvls: Int, defaultLevels: Int,
  remotesData: Seq[(SMGRemote, Seq[SMGIndex])], periods: Seq[String], cfSvc: SMGConfigService)(implicit flash: Flash)
 
 @main("SMG - Index", cfSvc) {
@@ -10,12 +10,7 @@
 <div>
   <form id="indexFilterForm" method="GET">
     @if(availRemotes.nonEmpty){
-    <label class="autosubmit-lbl">Remote filter:</label>
-    <select name="remote" class="select-remote" onchange="mySubmitOnChange(this);" >
-      @for( rid <- availRemotes) {
-      <option value='@rid' @if(rid == rmtId.getOrElse("*")){ selected } >@if(rid == ""){Local}else{@rid}</option>
-      }
-    </select>
+      @remoteSelect(selectedRemotes, availRemotes, "autosubmit-lbl", "mySubmitOnChange(this);")
     }
     <label class="autosubmit-lbl">Levels:</label>
     <input type="number" name="lvls" value="@lvls" min="1" max="5" onchange="mySubmitOnChange(this);" >
@@ -29,7 +24,7 @@
       $(':input', this).each(function() {
          // !($(this).val()) ||
          this.disabled = ((this.name == "lvls") && ($(this).val() == @defaultLevels)) ||
-           ((this.name == "remote") && ($(this).val() == "*"));
+         ((this.name == "remote") && ($(this).val() == "@{SMGRemote.wildcard.id}"));
       });
   };
 

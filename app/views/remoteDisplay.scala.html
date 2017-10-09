@@ -2,7 +2,7 @@
 @(rt: SMGRemote)
 <a name="rt_@{rt.id}"></a>
 <h4>
-  @if(rt.id == "") {
+  @if(rt.id == SMGRemote.local.id) {
   Local
   } else {
   @rt.id

@@ -1,0 +1,44 @@
+@import com.smule.smg.SMGRemote
+@(selectedRemotes: Seq[String], availRemotes:Seq[String], labelClass: String, onChange: String)
+
+<label class="@labelClass">Remote filter:</label>
+<select id="smg-remote-select" class="smg-remote-select" name="remote" multiple="multiple" onchange="@onChange" >
+  @for( rid <- availRemotes) {
+  <option value='@rid' @if(selectedRemotes.contains(rid)){ selected } >@if(rid == SMGRemote.local.id){Local}else{@rid}</option>
+  }
+</select>
+
+<script type="text/javascript">
+    $('#smg-remote-select').select2();
+
+    $('#smg-remote-select').on('select2:selecting', function (e) {
+      var jqElem = $('#smg-remote-select')
+      var myVals = jqElem.val(); // values before selecting
+      var data = e.params.args.data;
+      if (data.id == "@{SMGRemote.wildcard.id}") {
+        jqElem.val(['@{SMGRemote.wildcard.id}'])
+      } else {
+        var wcix = myVals.indexOf('@{SMGRemote.wildcard.id}');
+        if (wcix > -1){
+          myVals.splice(wcix,1);
+        }
+        myVals.push(data.id);
+        jqElem.val(myVals);
+      }
+    });
+
+    $('#smg-remote-select').on('select2:unselecting', function (e) {
+      var jqElem = $('#smg-remote-select')
+      var myVals = jqElem.val(); // values before selecting
+      var data = e.params.args.data;
+      if (data.id == "@{SMGRemote.wildcard.id}") {
+        e.preventDefault();
+      } else {
+        if (myVals.length == 1){
+          console.log("Unselecting last elem: " + data.id + " - select wildcard")
+          jqElem.val(['@{SMGRemote.wildcard.id}']);
+        }
+      }
+    });
+
+</script>

@@ -25,7 +25,7 @@ trait GrapherApi {
     * Get Top Level configured indexes, grouped by remote
     * @return - sequence of tuples containing the remote id and a sequence of idnexes
     */
-  def getTopLevelIndexesByRemote(rmt: Option[String]): Seq[(SMGRemote, Seq[SMGIndex])]
+  def getTopLevelIndexesByRemote(rmtIds: Seq[String]): Seq[(SMGRemote, Seq[SMGIndex])]
 
   /**
     * Get Top Level automatically discovered (by id) indexes

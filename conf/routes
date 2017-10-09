@@ -3,9 +3,9 @@
 # ~~~~
 
 # Home page
-GET     /               controllers.Application.index(remote :String ?= "*", lvls: Option[Int])
+GET     /               controllers.Application.index()
 GET     /s              controllers.Application.search(q: Option[String], lmt: Option[Int])
-GET     /ci             controllers.Application.index(remote :String ?= "*", lvls: Option[Int])
+GET     /ci             controllers.Application.index()
 GET     /autoindex      controllers.Application.autoindex(rt: String ?= "", el: Int ?= 1)
 GET     /autoindex/     controllers.Application.autoindex(rt: String ?= "", el: Int ?= 1)
 GET     /autoindex/:rt  controllers.Application.autoindex(rt: String, el: Int ?= 1)
