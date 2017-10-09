@@ -22,11 +22,11 @@ POST    /reload         controllers.Application.reloadConf
 GET     /reload         controllers.Application.reloadConf
 GET     /user/settings       controllers.Application.userSettings()
 POST    /user/settings       controllers.Application.userSettings()
-GET     /monitor             controllers.Application.monitorProblems(remote: String ?= "*", ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
+GET     /monitor             controllers.Application.monitorProblems(remote: Seq[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
 GET     /monitor/silenced    controllers.Application.monitorSilenced()
 GET     /monitor/trees       controllers.Application.monitorTrees(remote: String ?= "", rx: Option[String], rxx: Option[String], ms: Option[String], hsoft: String ?= "off", hackd: String ?= "off", hslncd: String ?= "off", rid: Option[String], pg: Int ?= 0, lmt: Option[Int], silenceAllUntil: Option[String], curl: Option[String])
 GET     /monitor/heatmap     controllers.Application.monitorHeatmap
-GET     /monitor/log         controllers.Application.monitorLog(remote: String ?= "*", p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rx: Option[String], rxx: Option[String])
+GET     /monitor/log         controllers.Application.monitorLog(remote: Seq[String], p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rx: Option[String], rxx: Option[String])
 GET     /monitor/runtree     controllers.Application.monitorRunTree(remote: String ?= "", root: Option[String], lvls: Option[Int])
 
 GET     /monitor/ack          controllers.Application.monitorAck(id: String, curl: String)

@@ -46,14 +46,20 @@ class Application  @Inject() (actorSystem: ActorSystem,
     (availRemotes , rmtOpt)
   }
 
+  private def availableRemotes(conf: SMGLocalConfig) = {
+    if (conf.remotes.nonEmpty)
+      Seq(SMGRemote.wildcard, SMGRemote.local) ++ conf.remotes
+    else
+      Seq[SMGRemote]()
+  }
+
   /**
     * List all topl-level configured indexes
     */
   def index(): Action[AnyContent] = Action { implicit request =>
     val selectedRemotes: Seq[String] = request.queryString.getOrElse("remote", List(SMGRemote.wildcard.id))
     val lvls: Option[Int] = request.queryString.get("lvls").map(_.head.toInt)
-    val remoteIds = SMGRemote.local.id :: configSvc.config.remotes.map(_.id).toList
-    val availRemotes = if (configSvc.config.remotes.isEmpty) List() else SMGRemote.wildcard.id :: remoteIds
+    val availRemotes = availableRemotes(configSvc.config).map(_.id)
     val tlIndexesByRemote = smg.getTopLevelIndexesByRemote(selectedRemotes)
     val myLevels = lvls.getOrElse(configSvc.config.indexTreeLevels)
     val saneLevels = scala.math.min(scala.math.max(1, myLevels), MAX_INDEX_LEVELS)
@@ -344,11 +350,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
     // get an immutable local config ref for the duration of this request
     val conf = configSvc.config
-    // get the list of remotes to display in the filter form deop down
-    val availRemotes = if (conf.remotes.nonEmpty)
-      Seq(SMGRemote.local) ++ conf.remotes ++ Seq(SMGRemote.wildcard)
-    else
-      Seq[SMGRemote]()
+    // get the list of remotes to display in the filter form drop down
+    val availRemotes = availableRemotes(conf)
 
     // filter results and slice according to pagination
     var maxPages = 1
@@ -793,12 +796,16 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorProblems(remote: String,
+  def monitorProblems(remote: Seq[String],
                       ms: Option[String],
                       soft: Option[String],
                       ackd: Option[String],
                       slncd: Option[String]): Action[AnyContent] = Action.async { implicit request =>
-    val (availRemotes, rmtOpt) = parseRemoteParam(remote)
+    // get the list of remotes to display in the filter form drop down
+    val availRemotes = availableRemotes(configSvc.config)
+    val myRemotes = if (remote.isEmpty) {
+      Seq(SMGRemote.wildcard.id)
+    } else remote
     val minSev = ms.map{ s => SMGState.fromName(s) }.getOrElse(SMGState.ANOMALY)
     val inclSoft = soft.getOrElse("off") == "on"
     val inclAck = ackd.getOrElse("off") == "on"
@@ -806,8 +813,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(minSev),
       includeSoft = inclSoft, includeAcked = inclAck, includeSilenced = inclSlnc)
     val availStates = (SMGState.values - SMGState.OK).toSeq.sorted.map(_.toString)
-    monitorApi.states(rmtOpt, flt).map { msr =>
-      Ok(views.html.monitorProblems(configSvc, availRemotes, availStates, rmtOpt,
+    monitorApi.states(myRemotes, flt).map { msr =>
+      Ok(views.html.monitorProblems(configSvc, availRemotes.map(_.id), availStates, myRemotes,
         msr, flt, request.uri))
     }
 
@@ -837,10 +844,13 @@ class Application  @Inject() (actorSystem: ActorSystem,
   val DEFAULT_LOGS_SINCE = "24h"
   val DEFAULT_LOGS_LIMIT = 200
 
-  def monitorLog(remote: String, p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String],
+  def monitorLog(remote: Seq[String], p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String],
                  ackd: Option[String], slncd: Option[String], rx: Option[String],
                  rxx: Option[String]): Action[AnyContent] = Action.async { implicit request =>
-    val (availRemotes, rmtOpt) = parseRemoteParam(remote)
+    val availRemotes = availableRemotes(configSvc.config).map(_.id)
+    val myRemotes = if (remote.isEmpty) {
+      Seq(SMGRemote.wildcard.id)
+    } else remote
     val minSev = ms.map{ s => SMGState.fromName(s) }.getOrElse(SMGState.WARNING)
     val period = p.getOrElse(DEFAULT_LOGS_SINCE)
     val limit = l.getOrElse(DEFAULT_LOGS_LIMIT)
@@ -849,7 +859,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val includeSlncd = slncd.getOrElse("off") == "on"
     val flt = SMGMonitorLogFilter(
       periodStr = period,
-      rmtOpt = rmtOpt,
+      rmtIds = myRemotes,
       limit = limit,
       minSeverity = Some(minSev),
       inclSoft = inclSoft,

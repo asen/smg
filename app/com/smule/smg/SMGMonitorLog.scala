@@ -9,8 +9,9 @@ import javax.inject.{Inject, Singleton}
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source
 
 /**
@@ -123,7 +124,7 @@ object SMGMonitorLogMsg extends Enumeration {
   }
 }
 
-case class SMGMonitorLogFilter(periodStr: String, rmtOpt:Option[String], limit: Int, minSeverity: Option[SMGState.Value],
+case class SMGMonitorLogFilter(periodStr: String, rmtIds: Seq[String], limit: Int, minSeverity: Option[SMGState.Value],
                                inclSoft: Boolean, inclAcked: Boolean, inclSilenced: Boolean,
                                rx: Option[String], rxx: Option[String])
 
@@ -209,15 +210,20 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
   }
 
   override def getAll(flt: SMGMonitorLogFilter): Future[Seq[SMGMonitorLogMsg]] = {
-    implicit val myEc = ExecutionContexts.monitorCtx
-    val remoteFuts = if (flt.rmtOpt.isEmpty || flt.rmtOpt.get == SMGRemote.wildcard.id) configSvc.config.remotes.map { rmt =>
+    implicit val myEc: ExecutionContext = ExecutionContexts.monitorCtx
+    val futs = if (flt.rmtIds.isEmpty || flt.rmtIds.contains(SMGRemote.wildcard.id))
+      Seq(Future { getLocal(flt) }) ++ configSvc.config.remotes.map { rmt =>
       remotes.monitorLogs(rmt.id, flt)
-    } else Seq(remotes.monitorLogs(flt.rmtOpt.get, flt))
-    val localFut = if (flt.rmtOpt.getOrElse(SMGRemote.local.id) == SMGRemote.local.id ) Future {
-      getLocal(flt)
-    } else Future { Seq() }
-    val allFuts = Seq(localFut) ++ remoteFuts
-    Future.sequence(allFuts).map { seqs =>
+    } else {
+      flt.rmtIds.map { rmtId =>
+        if (rmtId == SMGRemote.local.id) {
+          Future { getLocal(flt) }
+        } else {
+          remotes.monitorLogs(rmtId, flt)
+        }
+      }
+    }
+    Future.sequence(futs).map { seqs =>
       seqs.flatten.sortBy(- _.ts).take(flt.limit) // most recent first
     }
   }

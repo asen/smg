@@ -456,11 +456,11 @@ trait SMGMonitorApi {
   
   /**
     * Get all states matching given filter, by remote
-    * @param remoteId - when not specified - return matching states from all remotes
+    * @param remoteIds - when empty - return matching states from all remotes
     * @param flt
     * @return
     */
-  def states(remoteId: Option[String], flt: SMGMonFilter): Future[Seq[SMGMonitorStatesResponse]]
+  def states(remoteIds: Seq[String], flt: SMGMonFilter): Future[Seq[SMGMonitorStatesResponse]]
 
   def mute(remoteId: String): Future[Boolean]
 

@@ -289,7 +289,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     val minSev = sev.map{ s => SMGState.fromName(s) }
     val flt = SMGMonitorLogFilter(
       periodStr = period.getOrElse("24h"),
-      rmtOpt = None,
+      rmtIds = Seq(SMGRemote.local.id),
       limit = limit.getOrElse(100),
       minSeverity = minSev,
       inclSoft = soft.getOrElse("off") == "on",

@@ -5,24 +5,20 @@
 @import com.smule.smg.SMGMonFilter
 @import com.smule.smg.SMGMonitorStatesResponse
 
-@(cfSvc: SMGConfigService, availRemotes:Seq[String], availStates:Seq[String], rmtId: Option[String],
+@(cfSvc: SMGConfigService, availRemotes:Seq[String], availStates:Seq[String], selectedRemotes: Seq[String],
   monitorStates: Seq[SMGMonitorStatesResponse], flt:SMGMonFilter, curUrl: String)(implicit flash: Flash)
 
-@main("SMG - Monitor overview", cfSvc, 60) {
+@main("SMG - Monitor problems", cfSvc, 60) {
 
 @monitorMenu("problems")
 
 
-<h3>Overview</h3>
+<h3>Problems</h3>
 
 <form id="monProbsFilterForm" method="GET" action="/monitor" class="filter-form">
   @if(availRemotes.nonEmpty){
   <label class="autosubmit-lbl">Remote filter:</label>
-  <select name="remote" class="select-remote" onchange="mySubmitOnChange(this);" >
-    @for( rid <- availRemotes) {
-    <option value='@rid' @if(rid == rmtId.getOrElse("*")){ selected } >@if(rid == ""){Local}else{@rid}</option>
-    }
-  </select>
+  @remoteSelect(selectedRemotes, availRemotes, "mySubmitOnChange(this);")
   }
   <label class="autosubmit-lbl">Minimal Severity filter:</label>
   <select name="ms" onchange="mySubmitOnChange(this);" >
