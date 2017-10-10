@@ -3,8 +3,9 @@
 @import com.smule.smg.SMGMonFilter
 @import com.smule.smg.SMGTree
 @import com.smule.smg.SMGState
-@(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String], flt: SMGMonFilter,
-  rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], pg:Int, maxPages:Int,
+@import com.smule.smg.SMGRemote ; var curRemote = ""
+@(cfSvc: SMGConfigService, rmtIds: Seq[String], availRemotes: Seq[String], flt: SMGMonFilter,
+  rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], total: Int,
   limit: Int, defLimit: Int, curUrl: String)(implicit flash: Flash)
 
 @main("SMG - Monitor State trees", cfSvc, 300) {
@@ -16,14 +17,10 @@
 <div>
   <form id="runTreeFilterForm" method="GET">
     <label class="autosubmit-lbl">Limit:</label>
-    <input type="number" id="limit" name="lmt" value="@{limit}" min="2" max="9999" onchange="mySubmitOnChange(this);">
+    <input type="number" id="limit" name="lmt" value="@{limit}" min="2" max="9999999" onchange="mySubmitOnChange(this);">
     @if(availRemotes.nonEmpty){
     <label class="autosubmit-lbl">Remote filter:</label>
-    <select id='smg-filter-remote' name="remote" class="select-remote" onchange="remoteChanged(this);" >
-      @for( rid <- availRemotes ) {
-      <option value='@rid' @if(rid == rmtId){ selected } >@if(rid == ""){Local}else{@rid}</option>
-      }
-    </select>
+    @remoteSelect(rmtIds, availRemotes, "remoteChanged(this);")
     }
     <label class="autosubmit-lbl">Regex filter:</label>
       <input type="text" id="inpRx" name="rx" onchange="mySubmitOnChange(this);" value="@{flt.rx.getOrElse("")}">
@@ -43,7 +40,6 @@
     <label class="autosubmit-lbl" for="cbSlncd">Hide Silenced objects</label>
       <input id="cbSlncd" type="checkbox" name="hslncd" @if(!flt.includeSilenced){ checked } onchange="mySubmitOnChange(this);" />
 
-    <input type="hidden" id="treePage" name="pg" value="@pg">
     <input type="hidden" id="treeRoot" name="rid" value="@{rootId.getOrElse("")}">
     <input type="hidden" id="frmInpSilenceAllUntil" name="silenceAllUntil" value="">
     <input type="hidden" id="inpCurl" name="curl" value="">
@@ -53,6 +49,13 @@
 </div>
 
 <hr/>
+
+<div><h4>Displaying @{trees.size} out of @total matching state trees.
+  @if(trees.size < total){
+  Use "Limit" to increase the number of visible items or filtering to reduce matching items.
+  }
+</h4></div>
+
 
 <div>
   <input type="button" onclick="silenceAllMatching();" value="Silence ALL matching objects for">
@@ -73,7 +76,7 @@
     function disableEmptyInputs() {
         $(':input', this).each(function() {
            this.disabled = !($(this).val()) ||
-              ((this.name == "pg") && ($(this).val() == "0")) ||
+              ((this.name == "remote") && ($(this).val() == "@{SMGRemote.local.id}")) ||
               ((this.name == "ms") && ($(this).val() == "OK")) ||
               ((this.name == "lmt") && ($(this).val() == @defLimit))
         });
@@ -90,7 +93,6 @@
 
     function goToRoot(rootId) {
       document.getElementById("treeRoot").value = rootId
-      document.getElementById("treePage").value = 0
       document.getElementById("inpMs").value = ''
       document.getElementById("inpRx").value = ''
       document.getElementById("inpRxx").value = ''
@@ -98,43 +100,41 @@
       realSubmit();
     }
 
-    function goToPage(pgNum) {
-      document.getElementById("treePage").value = pgNum
-      realSubmit();
-    }
-
     function silenceAllMatching() {
       var until = document.getElementById("inpSilenceAllUntil").value
-      if (confirm("Silence all matching objects for " + until + "?")){
+      if (confirm("Silence all (@total@if(total > trees.size){, including not displayed}) matching state trees for " + until + "?")){
         document.getElementById("frmInpSilenceAllUntil").value = until;
-        document.getElementById("inpCurl").value = '@curUrl';
+        document.getElementById("inpCurl").value = '@Html(curUrl)';
         realSubmit();
       }
     }
     $('form#runTreeFilterForm').submit(disableEmptyInputs);
 </script>
 
-
 <h5><a href="?" onclick="goToRoot(''); return false">Top Level</a></h5>
 <ul>
   @for(tree <- trees){
+    @defining(SMGRemote.remoteId(tree.node.id)){ rmtId =>
+      @if( rmtId != curRemote) {
+        @defining(cfSvc.config.remotes.find(r => r.id == rmtId).getOrElse(SMGRemote.local)) { rmt =>
+      </ul>
+        @remoteDisplay(rmt)
+      <ul>
+        }
+      @{curRemote = rmtId}
+      }
+    }
     <li>
       @if(tree.node.parentId.isDefined){
       <p>Parent: <a href="?rid=@tree.node.parentId.get" onclick="goToRoot('@tree.node.parentId.get'); return false">@tree.node.parentId.get</a></p>
       }
-      @monitorStateTreeDisplay(tree, tree.node.id == rootId.getOrElse(""), pg, maxPages, curUrl)
+      @monitorStateTreeDisplay(tree, tree.node.id == rootId.getOrElse(""), curUrl)
     </li>
   }
 </ul>
 
-<p> Pages:
-@for(p <- 1 to maxPages) {
-  @if(p - 1 != pg){
-    [<a href="#" onclick="goToPage(@{p - 1}); return false">@p</a>]
-  } else {
-    [@p]
-  }
+@if(trees.size < total){
+<p><b>... (more than limit)</b></p>
 }
-</p>
 
 }

@@ -118,29 +118,4 @@ object SMGTree {
     validateTrees(leafObjs, topLevel)
     topLevel.toList
   }
-
-  def sliceTree[T <: SMGTreeNode](topLevel: Seq[SMGTree[T]], pg:Int, pgSz: Int): Seq[SMGTree[T]] = {
-    if (topLevel.isEmpty)
-      return topLevel
-    val offs = pg * pgSz
-    val max = offs + pgSz
-    val ret = ListBuffer[SMGTree[T]]()
-    var cur = 0
-    val tlIt = topLevel.iterator
-    var curTl = topLevel.head
-    while (cur < max - 1 && tlIt.hasNext) {
-      curTl = tlIt.next()
-      val csz = curTl.children.size
-      cur += 1
-      if (cur + csz > offs) {
-        val toSkip = if (offs > cur) offs - cur else 0
-        val toTake = max - cur
-        val newt = SMGTree[T](curTl.node, curTl.children.slice(toSkip, toSkip + toTake))
-        val newtsz = newt.children.size
-        ret += newt
-        cur += newtsz
-      } else cur += csz
-    }
-    ret.toList
-  }
 }

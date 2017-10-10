@@ -588,20 +588,19 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   }
 
   def monitorTrees(flt: SMGMonFilter, rootId: Option[String],
-               pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)] = {
-    val paramsBuf = ListBuffer[String](s"pg=$pg&lmt=$pgSz")
+                   limit: Int): Future[(Seq[SMGTree[SMGMonState]], Int)] = {
+    val paramsBuf = ListBuffer[String](s"lmt=$limit")
     val fltParams = flt.asUrlParams
     if (fltParams != "") paramsBuf += fltParams
     if (rootId.isDefined) paramsBuf += s"rid=${SMGRemote.localId(rootId.get)}"
     val params = s"?" + paramsBuf.mkString("&")
-
     ws.url(remote.url + API_PREFIX + "monitor/trees" + params).
       withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
       Try {
         val jsval = Json.parse(resp.body).as[Map[String, JsValue]]
         val seq = jsval("seq").as[Seq[SMGTree[SMGMonState]]]
-        val maxPg = jsval("maxpg").as[Int]
-        (seq, maxPg)
+        val total = jsval.get("total").map(_.as[Int]).getOrElse(0)
+        (seq, total)
       }.recover {
         case x => {
           log.ex(x, "remote monitor/trees parse error: " + remote.id)

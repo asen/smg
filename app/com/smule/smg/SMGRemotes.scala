@@ -171,11 +171,10 @@ trait SMGRemotesApi {
     * @param remoteId
     * @param flt
     * @param rootId
-    * @param pg
-    * @param pgSz
+    * @param limit
     * @return
     */
-  def monitorTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
+  def monitorTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], limit: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
   def monitorSilenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int): Future[Boolean]
 
@@ -514,9 +513,9 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
   }
 
   override def monitorTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String],
-                            pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]   = {
+                            limit: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]   = {
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorTrees(flt, rootId, pg, pgSz)
+      clientForId(remoteId).get.monitorTrees(flt, rootId, limit)
     else Future { (Seq(), 0) }
 
   }

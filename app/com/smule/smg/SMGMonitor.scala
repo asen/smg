@@ -353,7 +353,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     Future.sequence(allFuts)
   }
 
-  def localMatchingMonTrees(flt: SMGMonFilter, rootId: Option[String]): Seq[SMGTree[SMGMonInternalState]] = {
+  override def localMatchingMonTrees(flt: SMGMonFilter, rootId: Option[String]): Seq[SMGTree[SMGMonInternalState]] = {
     val allTreesToFilter = if (rootId.isDefined) {
       findTreeWithRootId(rootId.get).map { t =>
         Seq(t)
@@ -364,47 +364,69 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
-  override def localMonTrees(flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): (Seq[SMGTree[SMGMonState]], Int) = {
-    val allMatching = localMatchingMonTrees(flt, rootId)
-    val ret = SMGTree.sliceTree(allMatching, pg, pgSz)
-    val tlToDisplay = allMatching.size + allMatching.map(_.children.size).sum
-    val maxPg = (tlToDisplay / pgSz) + (if (tlToDisplay % pgSz == 0) 0 else 1)
-    (ret.map(_.asInstanceOf[SMGTree[SMGMonState]]), maxPg)
+  private def sanitizeRemoteIdsParam(remoteIds: Seq[String]): Seq[String] = {
+    if (remoteIds.contains(SMGRemote.wildcard.id)) {
+      Seq(SMGRemote.local.id) ++ configSvc.config.remotes.map(_.id)
+    } else if (remoteIds.isEmpty) {
+      Seq(SMGRemote.local.id)
+    } else {
+      remoteIds
+    }
   }
 
   /**
     *
-    * @param remoteId
+    * @param remoteIds
     * @param flt
     * @param rootId
-    * @param pg
-    * @param pgSz
+    * @param limit
     * @return a tuple with the resulting page of trees and the total number of pages
     */
-  override def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String],
-                        pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)] = {
+  override def monTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String],
+                        limit: Int): Future[(Seq[SMGTree[SMGMonState]], Int)] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
-    if (remoteId == SMGRemote.local.id) {
-      Future {
-        localMonTrees(flt, rootId, pg, pgSz)
+    val myRemoteIds = sanitizeRemoteIdsParam(remoteIds)
+    val futs = myRemoteIds.map { remoteId =>
+      if (remoteId == SMGRemote.local.id) {
+        Future {
+          val trees = localMatchingMonTrees(flt, rootId)
+          (trees.take(limit).map(_.asInstanceOf[SMGTree[SMGMonState]]), trees.size)
+        }
+      } else {
+        remotes.monitorTrees(remoteId, flt, rootId, limit)
       }
-    } else {
-      remotes.monitorTrees(remoteId, flt, rootId, pg, pgSz)
+    }
+    Future.sequence(futs).map { seq =>
+      var total = 0
+      val ret = ListBuffer[SMGTree[SMGMonState]]()
+      seq.foreach { tpl =>
+        total += tpl._2
+        val toTake = limit - ret.size
+        val treeSeq = tpl._1.take(toTake)
+        ret.appendAll(treeSeq)
+      }
+      (ret.toList, total)
     }
   }
 
-  override def silenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String],
+  override def silenceAllTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String],
                                until: Int): Future[Boolean] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
-    if (remoteId == SMGRemote.local.id) {
-      Future {
-        localMatchingMonTrees(flt, rootId).foreach { tlt =>
-          tlt.allNodes.foreach(_.slnc(until))
+    val myRemoteIds = sanitizeRemoteIdsParam(remoteIds)
+    val futs = myRemoteIds.map { rmtId =>
+      if (rmtId == SMGRemote.local.id) {
+        Future {
+          localMatchingMonTrees(flt, rootId).foreach { tlt =>
+            tlt.allNodes.foreach(_.slnc(until))
+          }
+          true
         }
-        true
+      } else {
+        remotes.monitorSilenceAllTrees(rmtId, flt, rootId, until)
       }
-    } else {
-      remotes.monitorSilenceAllTrees(remoteId, flt, rootId, until)
+    }
+    Future.sequence(futs).map { seq =>
+      seq.exists(b => b)
     }
   }
 

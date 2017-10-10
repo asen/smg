@@ -1,6 +1,6 @@
 @import com.smule.smg.SMGTree
 @import com.smule.smg.SMGMonState
-@(tree: SMGTree[SMGMonState], isRoot: Boolean, pg:Int, maxPages:Int, curUrl: String)
+@(tree: SMGTree[SMGMonState], isRoot: Boolean, curUrl: String)
 
 <div>
   @monitorStateTreeNodeDisplay(tree.node, isRoot, false, curUrl)

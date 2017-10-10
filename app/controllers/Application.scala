@@ -30,21 +30,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   val log = SMGLogger
 
-
   val SMG_MONITOR_STATE_COOKIE_NAME = "smg-monitor-state"
 
   val MAX_INDEX_LEVELS = 5
-
-
-  private def parseRemoteParam(remote: String): (List[String], Option[String]) = {
-    val remoteIds = SMGRemote.local.id :: configSvc.config.remotes.map(_.id).toList
-    val rmtOpt = remote match {
-      case SMGRemote.wildcard.id => None
-      case rmtId => remoteIds.find(_ == rmtId)
-    }
-    val availRemotes = if (configSvc.config.remotes.isEmpty) List() else SMGRemote.wildcard.id :: remoteIds
-    (availRemotes , rmtOpt)
-  }
 
   private def availableRemotes(conf: SMGLocalConfig) = {
     if (conf.remotes.nonEmpty)
@@ -873,10 +861,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-
-  val TREES_PAGE_DFEAULT_LIMIT = 200
-
-  def monitorTrees(remote: String,
+  def monitorTrees(remote: Seq[String],
                    rx: Option[String],
                    rxx: Option[String],
                    ms: Option[String],
@@ -884,7 +869,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
                    hackd: String,
                    hslncd: String,
                    rid: Option[String],
-                   pg: Int,
                    lmt: Option[Int],
                    silenceAllUntil: Option[String],
                    curl: Option[String]
@@ -894,37 +878,41 @@ class Application  @Inject() (actorSystem: ActorSystem,
       includeSoft = hsoft == "off", includeAcked = hackd == "off",
       includeSilenced = hslncd == "off")
     val mySlncUntil = silenceAllUntil.map(slunt => SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0))
+    val availRemotes = availableRemotes(conf).map(_.id)
+
+    val myRemotes = if (remote.isEmpty)
+      Seq(SMGRemote.local.id)
+    else
+      remote
     if (mySlncUntil.isDefined && curl.isDefined) {
-      monitorApi.silenceAllTrees(remote, flt, rid, mySlncUntil.get).map { ret =>
-        if (ret)
+      monitorApi.silenceAllTrees(myRemotes, flt, rid, mySlncUntil.get).map { ret =>
+        if (ret) {
           Redirect(curl.get)
-        else
-          NotFound("Some error occured")
+        } else
+          NotFound("Some error occured. Please hit the back button and try again. " +
+            "This may not work if some remote instance is down - try filtering it out in the remotse filter")
       }
     } else {
-      val myLimit = Math.max(2, lmt.getOrElse(TREES_PAGE_DFEAULT_LIMIT))
-      val offs = pg * myLimit
-      val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
-      val myPg = Math.max(0, pg)
-      monitorApi.monTrees(remote, flt, rid, myPg, myLimit).map { t =>
+      val myLimit = Math.max(2, lmt.getOrElse(configSvc.TREES_PAGE_DFEAULT_LIMIT))
+      monitorApi.monTrees(myRemotes, flt, rid, myLimit).map { t =>
         val seq = t._1
-        val maxPg = t._2
-        Ok(views.html.monitorStateTrees(configSvc, remote, remoteIds, flt, rid, seq, myPg, maxPg,
-          myLimit, TREES_PAGE_DFEAULT_LIMIT, request.uri))
+        val total = t._2
+        Ok(views.html.monitorStateTrees(configSvc, myRemotes, availRemotes, flt, rid, seq, total,
+          myLimit, configSvc.TREES_PAGE_DFEAULT_LIMIT, request.uri))
       }
     }
   }
 
-  def monitorRunTree(remote: String, root: Option[String],
+  def monitorRunTree(remote: Option[String], root: Option[String],
                      lvls: Option[Int]): Action[AnyContent] = Action.async { implicit request =>
     val conf = configSvc.config
     val rootStr = root.getOrElse("")
-    val treesMapFut = if (remote == "") {
+    val treesMapFut = if (remote.isEmpty || (remote.get == SMGRemote.local.id)) {
       Future {
         conf.fetchCommandTreesWithRoot(root)
       }
     } else {
-      remotes.monitorRunTree(remote, root)
+      remotes.monitorRunTree(remote.get, root)
     }
 
     treesMapFut.map { treesMap =>
@@ -933,7 +921,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       }
       val maxLevels = if (rootStr != "") conf.MAX_RUNTREE_LEVELS else lvls.getOrElse(conf.runTreeLevelsDisplay)
       val remoteIds = SMGRemote.local.id :: conf.remotes.map(_.id).toList
-      Ok(views.html.runTrees(configSvc, remote, remoteIds,
+      Ok(views.html.runTrees(configSvc, remote.getOrElse(SMGRemote.local.id), remoteIds,
         treesMap, rootStr, parentId, maxLevels, conf.runTreeLevelsDisplay, request.uri))
     }
   }

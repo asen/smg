@@ -482,24 +482,21 @@ trait SMGMonitorApi {
     *
     * @param flt
     * @param rootId
-    * @param pg
-    * @param pgSz
     * @return
     */
-  def localMonTrees(flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): (Seq[SMGTree[SMGMonState]], Int)
+  def localMatchingMonTrees(flt: SMGMonFilter, rootId: Option[String]): Seq[SMGTree[SMGMonInternalState]]
 
   /**
     *
-    * @param remoteId
+    * @param remoteIds
     * @param flt
     * @param rootId
-    * @param pg
-    * @param pgSz
+    * @param limit
     * @return a tuple with the resulting page of trees and the total number of pages
     */
-  def monTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], pg: Int, pgSz: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
+  def monTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String], limit: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
-  def silenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int): Future[Boolean]
+  def silenceAllTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String], until: Int): Future[Boolean]
 
   /**
     * Acknowledge an error for given monitor state. Acknowledgement is automatically cleared on recovery.

@@ -1,6 +1,7 @@
 @import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGFetchCommandTree
 @import com.smule.smg.SMGMonState
+@import com.smule.smg.SMGRemote
 @(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String],
   trees: Map[Int,Seq[SMGFetchCommandTree]], rootId: String, parentId: Option[String],
   maxLevels: Int, defaultLevels: Int, curUrl: String)(implicit flash: Flash)
@@ -17,7 +18,7 @@
       <label class="autosubmit-lbl">Remote filter:</label>
       <select name="remote" class="select-remote" onchange="remoteChanged(this);" >
         @for( rid <- availRemotes ) {
-        <option value='@rid' @if(rid == rmtId){ selected } >@if(rid == ""){Local}else{@rid}</option>
+        <option value='@rid' @if(rid == rmtId){ selected } >@if(rid == SMGRemote.local.id){Local}else{@rid}</option>
         }
       </select>
       }
@@ -41,7 +42,8 @@
     function disableEmptyInputs() {
         $(':input', this).each(function() {
            this.disabled = !($(this).val()) ||
-              ((this.name == "lvls") && ($(this).val() == @defaultLevels))
+              ((this.name == "lvls") && ($(this).val() == @defaultLevels)) ||
+              ((this.name == "remote") && ($(this).val() == "@SMGRemote.local.id"))
         });
     };
 

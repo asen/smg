@@ -245,6 +245,8 @@ trait SMGConfigService {
 
   val URL_TOO_LONG_MSG: String = "This page URL is not share-able because the resulting URL would be too long. " +
     "It will not auto-refresh either."
+
+  val TREES_PAGE_DFEAULT_LIMIT = 200
 }
 
 /**

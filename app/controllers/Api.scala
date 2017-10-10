@@ -366,13 +366,13 @@ class Api  @Inject() (actorSystem: ActorSystem,
                    ackd: Option[String],
                    slncd: Option[String],
                    rid: Option[String],
-                   pg: Int,
-                   lmt: Int) = Action {
+                   lmt: Option[Int]) = Action {
     val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.fromName(s)),
       includeSoft = soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
       includeSilenced = slncd.getOrElse("off") == "on")
-    val tpl = monitorApi.localMonTrees(flt, rid, pg, lmt)
-    val m = Map("seq" -> Json.toJson(tpl._1), "maxpg" -> Json.toJson(tpl._2))
+    val limit = lmt.getOrElse(configSvc.TREES_PAGE_DFEAULT_LIMIT)
+    val trees = monitorApi.localMatchingMonTrees(flt, rid)
+    val m = Map("seq" -> Json.toJson(trees.take(limit).map(_.asInstanceOf[SMGTree[SMGMonState]])), "total" -> Json.toJson(trees.size))
     Ok(Json.toJson(m))
   }
 
@@ -388,7 +388,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.fromName(s)),
       includeSoft = soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
       includeSilenced = slncd.getOrElse("off") == "on")
-    monitorApi.silenceAllTrees(SMGRemote.local.id, flt, rid, until).map { ret =>
+    monitorApi.silenceAllTrees(Seq(SMGRemote.local.id), flt, rid, until).map { ret =>
       if (ret)
         Ok("")
       else
