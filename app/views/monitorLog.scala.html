@@ -2,7 +2,7 @@
 @import com.smule.smg.SMGRemote
 @import com.smule.smg.SMGMonitorLogMsg
 @import com.smule.smg.SMGMonitorLogFilter
-@import com.smule.smg.SMGState
+@import com.smule.smg.SMGState ; var prevHrTs = 0
 
 @(cfSvc: SMGConfigService, availRemotes:Seq[String], availStates:Seq[String],
   defPeriod:String, defLimit:Int, flt: SMGMonitorLogFilter, logMsgs: Seq[SMGMonitorLogMsg])(implicit flash: Flash)
@@ -88,10 +88,14 @@
 
 <ul class="monlog">
   <li><b>---- (now) [@{SMGMonitorLogMsg.tsFmt(SMGState.tssNow)}]----</b></li>
+  @{prevHrTs = SMGMonitorLogMsg.hourTs(SMGState.tssNow)}
   @for((hrts, mls) <- logMsgs.groupBy(_.hourTs).toSeq.sortBy(t => -t._1)) {
+    @if(prevHrTs - hrts > 3600){
+    <li><b>---- ... @{ ((prevHrTs - hrts) / 3600) - 1 }h ... ----</b></li>
+    }
     @for(ms <- mls) {
     <li>
-      [@{ if(ms.remote.id == "") "local" else ms.remote.id }]
+      [@{ if(ms.remote.id == SMGRemote.local.id) "Local" else ms.remote.id }]
       [@{ms.tsFmt}]: <span class="ml-type-@{ms.mltype}">@{ms.mltype}</span>
       @if(ms.ouids.nonEmpty) {
         <a href="/dash?@{ms.objectsFilterWithRemote}">@{ms.msIdFmt}</a>
@@ -101,6 +105,7 @@
     </li>
     }
   <li><b>----[@{mls.head.tsFmt(mls.head.hourTs)}]----</b></li>
+  @{prevHrTs = hrts}
   }
 </ul>
 

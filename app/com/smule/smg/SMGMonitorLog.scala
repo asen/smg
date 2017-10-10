@@ -47,19 +47,19 @@ case class SMGMonitorLogMsg(ts: Int,
 
   lazy val tsFmt: String = tsFmt(ts)
 
-  def hourTs = (ts / 3600) * 3600
+  def hourTs: Int = SMGMonitorLogMsg.hourTs(ts)
 
   def tsFmt(t :Int): String = SMGMonitorLogMsg.tsFmt(t)
 
-  lazy val ouidFmt = if (ouids.isEmpty) "-" else ouids.mkString(",")
-  lazy val msIdFmt = msid.getOrElse(ouidFmt)
+  lazy val ouidFmt: String = if (ouids.isEmpty) "-" else ouids.mkString(",")
+  lazy val msIdFmt: String = msid.getOrElse(ouidFmt)
 
-  lazy val vixFmt = vix.map(_.toString).getOrElse("-")
-  lazy val hardStr = if (isHard) "HARD" else "SOFT"
+  lazy val vixFmt: String = vix.map(_.toString).getOrElse("-")
+  lazy val hardStr: String = if (isHard) "HARD" else "SOFT"
 
-  lazy val logLine = s"[$tsFmt]: $ts $mltype $msIdFmt $vixFmt $repeat ${hardStr} $msg\n"
+  lazy val logLine = s"[$tsFmt]: $ts $mltype $msIdFmt $vixFmt $repeat $hardStr $msg\n"
 
-  def objectsFilter = SMGMonStateAgg.objectsUrlFilter(ouids)
+  def objectsFilter: String = SMGMonStateAgg.objectsUrlFilter(ouids)
   def objectsFilterWithRemote = s"remote=${remote.id}&$objectsFilter"
 
   def serialize: JsValue = {
@@ -87,6 +87,8 @@ object SMGMonitorLogMsg extends Enumeration {
   val logTsFmt = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZ")
 
   def tsFmt(t :Int): String = logTsFmt.format(new Date(t.toLong * 1000))
+
+  def hourTs(ts: Int): Int = (ts / 3600) * 3600
 
   def smgMonitorLogMsgReads(remote: SMGRemote): Reads[com.smule.smg.SMGMonitorLogMsg] = {
     implicit val smgStateReads = SMGState.smgStateReads
