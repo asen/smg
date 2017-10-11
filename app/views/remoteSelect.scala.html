@@ -17,9 +17,13 @@
       if (data.id == "@{SMGRemote.wildcard.id}") {
         jqElem.val(['@{SMGRemote.wildcard.id}'])
       } else {
-        var wcix = myVals.indexOf('@{SMGRemote.wildcard.id}');
-        if (wcix > -1){
-          myVals.splice(wcix,1);
+        if (myVals){
+          var wcix = myVals.indexOf('@{SMGRemote.wildcard.id}');
+          if (wcix > -1){
+            myVals.splice(wcix,1);
+          }
+        } else {
+          myVals = [];
         }
         myVals.push(data.id);
         jqElem.val(myVals);
@@ -34,7 +38,6 @@
         e.preventDefault();
       } else {
         if (myVals.length == 1){
-          console.log("Unselecting last elem: " + data.id + " - select wildcard")
           jqElem.val(['@{SMGRemote.wildcard.id}']);
         }
       }

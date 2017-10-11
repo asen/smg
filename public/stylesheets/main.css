@@ -13,6 +13,7 @@
   -moz-columns: 2;
 }
 
+/* Filter styles */
 .filter-form .form-group {
     display: inline-block;
 }
@@ -58,6 +59,24 @@
 
 .btn-submit-manual {
     color : green;
+}
+
+.inline-img-button {
+   vertical-align: middle;
+}
+
+.clear-button {
+  height: 14px;
+  width: 14px;
+  cursor: pointer;
+}
+
+.smg-filter-remote {
+  width: 250px;
+}
+
+.select2-container--default .select2-selection--multiple {
+  cursor: default;
 }
 
 /* Sub-title line formatting */
@@ -110,18 +129,4 @@
 
 .ml-msg {
    font-style: italic;
-}
-
-.inline-img-button {
-   vertical-align: middle;
-}
-
-.clear-button {
-  height: 14px;
-  width: 14px;
-  cursor: pointer;
-}
-
-.smg-filter-remote {
-  width: 250px;
 }

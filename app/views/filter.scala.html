@@ -285,8 +285,7 @@ object id suffix is included">Group By:</label>
                           ((this.name == "pg") && ($(this).val() == 0)) ||
                           ((this.name == "period") && ($(this).val() == defaultPeriod)) ||
                           ((this.name == "cols") && ($(this).val() == defaultCols)) ||
-                          ((this.name == "rows") && ($(this).val() == defaultRows)) ||
-                          ((this.name == "remote") && ($(this).val().length == 1) && ($(this).val()[0] == "@{SMGRemote.local.id}"))
+                          ((this.name == "rows") && ($(this).val() == defaultRows))
                           ;
           if (!this.disabled && this.id) {
             gl_searchHistoryManager.addHistory(this.id, this.value);

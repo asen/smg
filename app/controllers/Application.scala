@@ -153,12 +153,13 @@ class Application  @Inject() (actorSystem: ActorSystem,
         maxY = myMaxY,
         minY = myMinY)
 
-      val myRemotes = if (idx.isEmpty || remotes.nonEmpty)
-        remotes
-      else if (idx.get.flt.remotes.nonEmpty)
+      val myRemotes = if (remotes.isEmpty && idx.isDefined && idx.get.flt.remotes.nonEmpty)
         idx.get.flt.remotes
-      else
+      else if (remotes.isEmpty) {
         Seq(SMGRemote.local.id)
+      } else {
+        remotes
+      }
 
       val flt = SMGFilter(px = px, //myPx,
         sx = sx, //mySx,
