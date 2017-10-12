@@ -65,9 +65,10 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
                    confFile: String): (List[SMGJmxObject], SMGPreFetchCmd) = {
     val hostPort = ymap("hostPort").asInstanceOf[String]
     val pfId = hostPortPfId(hostPort)
+    val parentState = if (ymap.containsKey("parentState")) { Some(ymap("parentState").toString) } else None
     val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, pfId,
       ymap.toMap.map(kv => (kv._1, kv._2.toString)))
-    val pf = SMGPreFetchCmd(pfId, SMGCmd(s"jmx://$hostPort"), None, ignoreTs = true, childConc = 1, notifyConf)
+    val pf = SMGPreFetchCmd(pfId, SMGCmd(s"jmx://$hostPort"), parentState, ignoreTs = true, childConc = 1, notifyConf)
     var ret = ListBuffer[SMGJmxObject]()
     ymap("objs").asInstanceOf[java.util.ArrayList[java.util.Map[String, Object]]].foreach { oymap =>
       val t = myCfParser.keyValFromMap(oymap)
