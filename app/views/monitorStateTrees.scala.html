@@ -42,6 +42,8 @@
 
     <input type="hidden" id="treeRoot" name="rid" value="@{rootId.getOrElse("")}">
     <input type="hidden" id="frmInpSilenceAllUntil" name="silenceAllUntil" value="">
+    <input type="hidden" id="frmInpStickySilence" name="sticky" value="">
+    <input type="hidden" id="frmInpStickySilenceDesc" name="stickyDesc" value="">
     <input type="hidden" id="inpCurl" name="curl" value="">
     <input style="display: none" id="btn_GET" type="submit">
     <input type="button" value="Refresh" onclick="mySubmitOnChange(this);">
@@ -58,8 +60,21 @@
 
 
 <div>
-  <input type="button" onclick="silenceAllMatching();" value="Silence ALL matching objects for">
-  <input type="text" size="10" id="inpSilenceAllUntil" value="2h">
+  <input type="button" onclick="silenceAllMatching();" value="Silence ALL matching objects for" />
+  <input type="text" size="10" id="inpSilenceAllUntil" value="2h" />
+  @if(rootId.isEmpty &&
+     (flt.minState.getOrElse(SMGState.OK) == SMGState.OK) &&
+     flt.includeAcked && flt.includeSilenced && flt.includeSoft){
+  <label for="inpStickySilence"
+         title="When checked SMG will apply silencing to newly defined state trees matching the regex/regex exclude filters too">
+    Sticky silencing:
+  </label>
+  <input type="checkbox" id="inpStickySilence" onclick="stickySilenceChange()" />
+  <span id="spanStickySilenceDesc" style="display: none">
+    <label for="inpStickySilenceDesc">Stickly silencing description:</label>
+      <input type="text" id="inpStickySilenceDesc">
+  </span>
+  }
 </div>
 
 <!-- strip empty params from the form so that urls are less cluttered -->
@@ -67,6 +82,17 @@
 
     smgAutocompleteSetup('inpRx',     '/json/cmdtokens');
     smgAutocompleteSetup('inpRxx',    '/json/cmdtokens');
+
+    function stickySilenceChange(){
+      var stickyVal = document.getElementById("inpStickySilence").checked;
+      var descElem = document.getElementById("inpStickySilenceDesc");
+      if (stickyVal) {
+        $("#spanStickySilenceDesc").show();
+      } else {
+        descElem.value = "";
+        $("#spanStickySilenceDesc").hide();
+      }
+    }
 
     function remoteChanged(elem) {
       document.getElementById("treeRoot").value = "" ;
@@ -101,10 +127,23 @@
     }
 
     function silenceAllMatching() {
-      var until = document.getElementById("inpSilenceAllUntil").value
-      if (confirm("Silence all (@total@if(total > trees.size){, including not displayed}) matching state trees for " + until + "?")){
+      var until = document.getElementById("inpSilenceAllUntil").value;
+      var stickyVal = document.getElementById("inpStickySilence").checked;
+      var stickyDescVal = document.getElementById("inpStickySilenceDesc").value;
+      if (stickyVal && (stickyDescVal == "")){
+        alert("Please enter some description for the sticky silencing")
+        document.getElementById("inpStickySilenceDesc").focus();
+        return;
+      }
+      var sickyConfirmStr = stickyVal ? " and any matching ones defined in the future" : "";
+      if (confirm("Silence all @total matching state trees@if(total > trees.size){ (including not displayed)}" + sickyConfirmStr +
+          " for " + until + "?")){
         document.getElementById("frmInpSilenceAllUntil").value = until;
         document.getElementById("inpCurl").value = '@Html(curUrl)';
+        if (stickyVal){
+          document.getElementById("frmInpStickySilence").value = stickyVal ? "on" : "off";
+          document.getElementById("frmInpStickySilenceDesc").value = stickyDescVal;
+        }
         realSubmit();
       }
     }

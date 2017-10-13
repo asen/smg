@@ -2,11 +2,12 @@ package com.smule.smg
 
 import java.net.URLEncoder
 import java.text.{DecimalFormat, SimpleDateFormat}
-import java.util.Date
+import java.util.{Date, UUID}
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.util.matching.Regex
@@ -433,6 +434,70 @@ object SMGMonFilter {
     includeSoft = true, includeAcked = true, includeSilenced = true)
 
   def ciRegex(so: Option[String]): Option[Regex] = so.map(s => if (s.isEmpty) s else  "(?i)" + s ).map(_.r)
+
+  val jsReads: Reads[SMGMonFilter] = {
+    (
+      (JsPath \ "rx").readNullable[String] and
+        (JsPath \ "rxx").readNullable[String] and
+        (JsPath \ "mins").readNullable[String].map(sopt => sopt.map(s =>SMGState.fromName(s))) and
+        (JsPath \ "isft").readNullable[Int].map(iopt => iopt.getOrElse(1) == 0) and
+        (JsPath \ "iack").readNullable[Int].map(iopt => iopt.getOrElse(1) == 0) and
+        (JsPath \ "islc").readNullable[Int].map(iopt => iopt.getOrElse(1) == 0)
+      ) (SMGMonFilter.apply _)
+  }
+
+  val jsWrites = new Writes[SMGMonFilter] {
+    def writes(flt: SMGMonFilter) = {
+      val mm = mutable.Map[String,JsValue]()
+      if (flt.rx.isDefined) mm += ("rx" -> Json.toJson(flt.rx.get))
+      if (flt.rxx.isDefined) mm += ("rxx" -> Json.toJson(flt.rxx.get))
+      if (flt.minState.isDefined) mm += ("mins" -> Json.toJson(flt.minState.get.toString))
+      if (!flt.includeSoft) mm += ("isft" -> Json.toJson(0))
+      if (!flt.includeAcked) mm += ("iack" -> Json.toJson(0))
+      if (!flt.includeSilenced) mm += ("islc" -> Json.toJson(0))
+      Json.toJson(mm.toMap)
+    }
+  }
+}
+
+case class SMGMonStickySilence(flt: SMGMonFilter, silenceUntilTs: Int, desc: Option[String], uid: Option[String] = None) {
+  val uuid: String = if (uid.isDefined) uid.get else UUID.randomUUID().toString
+
+  val humanDesc = (if (flt.rx.isDefined && flt.rxx.isDefined)
+    s"regex=${flt.rx.get}, regex exclude=${flt.rxx.get}"
+  else if (flt.rx.isDefined)
+    s"regex=${flt.rx.get}"
+  else if (flt.rxx.isDefined)
+    s"regex exclude=${flt.rxx.get}"
+  else
+    "* (match anything)") + ", until " + new Date(silenceUntilTs.toLong * 1000).toString
+}
+
+object SMGMonStickySilence {
+  implicit private val smgMonFilterReads: Reads[SMGMonFilter] = SMGMonFilter.jsReads
+
+  def jsReads(pxFn: (String) => String): Reads[SMGMonStickySilence] = {
+    (
+      (JsPath \ "flt").read[SMGMonFilter] and
+        (JsPath \ "slu").read[Int] and
+        (JsPath \ "desc").readNullable[String] and
+        (JsPath \ "uid").read[String].map(uid => Some(pxFn(uid)))
+      ) (SMGMonStickySilence.apply _)
+  }
+
+  implicit private val smgMonFilterWrites: Writes[SMGMonFilter] = SMGMonFilter.jsWrites
+
+  val jsWrites = new Writes[SMGMonStickySilence] {
+    def writes(slc: SMGMonStickySilence) = {
+      val mm = mutable.Map(
+        "flt" -> Json.toJson(slc.flt),
+        "slu" -> Json.toJson(slc.silenceUntilTs),
+        "uid" -> Json.toJson(slc.uuid)
+      )
+      if (slc.desc.isDefined) mm += ("desc" -> Json.toJson(slc.desc.get))
+      Json.toJson(mm.toMap)
+    }
+  }
 }
 
 case class SMGMonitorStatesResponse(remote: SMGRemote, states: Seq[SMGMonState], isMuted: Boolean)
@@ -470,13 +535,13 @@ trait SMGMonitorApi {
     * Return all local silenced states
     * @return
     */
-  def localSilencedStates(): Seq[SMGMonState]
+  def localSilencedStates(): (Seq[SMGMonState], Seq[SMGMonStickySilence])
 
   /**
     * Return all currently silenced states (by remote)
     * @return
     */
-  def silencedStates(): Future[Seq[(SMGRemote, Seq[SMGMonState])]]
+  def silencedStates(): Future[Seq[(SMGRemote, Seq[SMGMonState], Seq[SMGMonStickySilence])]]
 
   /**
     *
@@ -496,7 +561,20 @@ trait SMGMonitorApi {
     */
   def monTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String], limit: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
-  def silenceAllTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String], until: Int): Future[Boolean]
+  /**
+    *
+    * @param remoteIds
+    * @param flt
+    * @param rootId
+    * @param until
+    * @param sticky
+    * @param stickyDesc
+    * @return
+    */
+  def silenceAllTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String], until: Int,
+                      sticky: Boolean, stickyDesc: Option[String]): Future[Boolean]
+
+  def removeStickySilence(uid: String): Future[Boolean]
 
   /**
     * Acknowledge an error for given monitor state. Acknowledgement is automatically cleared on recovery.

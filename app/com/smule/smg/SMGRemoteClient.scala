@@ -98,7 +98,6 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "gopts").readNullable[GraphOptions].map(go => go.getOrElse(GraphOptions.default))
     )(SMGFilter.apply _)
 
-
   implicit val smgConfIndexReads: Reads[SMGConfIndex] = (
     (JsPath \ "id").read[String].map(id => prefixedId(id)) and
       (JsPath \ "title").read[String] and
@@ -125,7 +124,6 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
         Reads(v => JsSuccess(Some(remote.id)))
       )(SMGImage.apply _)
   }
-
 
   implicit val smgRrdRowReads: Reads[SMGRrdRow] = {
     (
@@ -155,6 +153,10 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
         (JsPath \ "remote").readNullable[String].map(s => remote)
       ) (SMGMonStateView.apply _)
   }
+
+  implicit val smgMonFilterReads: Reads[SMGMonFilter] = SMGMonFilter.jsReads
+
+  implicit val smgMonStickySilenceReads: Reads[SMGMonStickySilence] = SMGMonStickySilence.jsReads(prefixedId)
 
   implicit val smgMonHeatmapReads: Reads[SMGMonHeatmap] = {
      (
@@ -566,13 +568,16 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   }
 
 
-  def monitorSilencedStates(): Future[Seq[SMGMonState]] = {
-    lazy val errRet = Seq(SMGMonStateGlobal("Remote data unavailable", remote.id,
-      SMGState(SMGState.tssNow, SMGState.SMGERR, "data unavailable")))
+  def monitorSilenced(): Future[(Seq[SMGMonState], Seq[SMGMonStickySilence])] = {
+    lazy val errRet = (Seq(SMGMonStateGlobal("Remote data unavailable", remote.id,
+      SMGState(SMGState.tssNow, SMGState.SMGERR, "data unavailable"))), Seq())
     ws.url(remote.url + API_PREFIX + "monitor/silenced").
       withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
       Try {
-        Json.parse(resp.body).as[Seq[SMGMonState]]
+        val jsval = Json.parse(resp.body).as[Map[String,JsValue]]
+        val monStates = jsval("sts").as[Seq[SMGMonState]]
+        val stickySilences = jsval("sls").as[Seq[SMGMonStickySilence]]
+        (monStates, stickySilences)
       }.recover {
         case x => {
           log.ex(x, "remote monitor/silenced parse error: " + remote.id)
@@ -616,11 +621,15 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   }
 
   def monitorSilenceAllTrees(flt: SMGMonFilter, rootId: Option[String],
-                   until: Int): Future[Boolean] = {
+                   until: Int, sticky: Boolean, stickyDesc: Option[String]): Future[Boolean] = {
     val paramsBuf = ListBuffer[String](s"until=$until")
     val fltParams = flt.asUrlParams
     if (fltParams != "") paramsBuf += fltParams
     if (rootId.isDefined) paramsBuf += s"rid=${SMGRemote.localId(rootId.get)}"
+    if (sticky) {
+      paramsBuf += s"sticky=on"
+      if (stickyDesc.isDefined) paramsBuf += s"stickyDesc=${URLEncoder.encode(stickyDesc.get, "UTF-8")}"
+    }
     val params = s"?" + paramsBuf.mkString("&")
     ws.url(remote.url + API_PREFIX + "monitor/slncall" + params).
       withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
@@ -628,6 +637,20 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }.recover {
       case x => {
         log.ex(x, "remote monitor/slncall error: " + remote.id)
+        false
+      }
+    }
+  }
+
+  def removeStickySilence(remoteUid: String): Future[Boolean] = {
+    val rluid: String = toLocalId(remoteUid)
+    val postMap = Map("uid" -> Seq(rluid))
+    ws.url(remote.url + API_PREFIX + "monitor/rmstickysl").
+      withRequestTimeout(shortTimeoutMs).post(postMap).map { resp =>
+      resp.status == 200
+    }.recover {
+      case x => {
+        log.ex(x, "remote monitor/rmstickyslc error: " + remote.id)
         false
       }
     }
@@ -993,6 +1016,18 @@ object SMGRemoteClient {
      )
     }
   }
-  
-}
 
+  implicit val smgMonFilterWrites = SMGMonFilter.jsWrites
+
+  implicit val smgMonStickySilence = new Writes[SMGMonStickySilence] {
+    def writes(slc: SMGMonStickySilence) = {
+      Json.toJson(Map(
+        "flt" -> Json.toJson(slc.flt),
+        "slu" -> Json.toJson(slc.silenceUntilTs),
+        "desc" -> Json.toJson(slc.desc),
+        "uid" -> Json.toJson(slc.uuid)
+      ))
+    }
+  }
+
+}

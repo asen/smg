@@ -809,13 +809,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   }
 
-  def monitorSilenced(): Action[AnyContent] = Action.async { implicit request =>
-    monitorApi.silencedStates().map { seq =>
-      Ok(views.html.monitorSilenced(configSvc, seq, request.uri))
-    }
-  }
-
-
   val DEFAULT_HEATMAP_MAX_SIZE = 1800
 
   def monitorHeatmap: Action[AnyContent] = Action.async { implicit request =>
@@ -872,6 +865,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
                    rid: Option[String],
                    lmt: Option[Int],
                    silenceAllUntil: Option[String],
+                   sticky: Option[String],
+                   stickyDesc: Option[String],
                    curl: Option[String]
                   ): Action[AnyContent] = Action.async { implicit request =>
     val conf = configSvc.config
@@ -886,12 +881,14 @@ class Application  @Inject() (actorSystem: ActorSystem,
     else
       remote
     if (mySlncUntil.isDefined && curl.isDefined) {
-      monitorApi.silenceAllTrees(myRemotes, flt, rid, mySlncUntil.get).map { ret =>
-        if (ret) {
-          Redirect(curl.get)
-        } else
-          NotFound("Some error occured. Please hit the back button and try again. " +
-            "This may not work if some remote instance is down - try filtering it out in the remotse filter")
+      val stickyB = sticky.getOrElse("off") == "on"
+      monitorApi.silenceAllTrees(myRemotes, flt, rid, mySlncUntil.get, stickyB, stickyDesc).map { ret =>
+        Redirect(curl.get).flashing(if (ret) {
+              "success" -> "Successfull silencing action"
+            } else {
+              "error" -> "Some error(s) occured. Check application log for more details."
+            }
+          )
       }
     } else {
       val myLimit = Math.max(2, lmt.getOrElse(configSvc.TREES_PAGE_DFEAULT_LIMIT))
@@ -903,6 +900,35 @@ class Application  @Inject() (actorSystem: ActorSystem,
       }
     }
   }
+
+  def monitorSilenced(): Action[AnyContent] = Action.async { implicit request =>
+    if (request.method == "POST") {
+      val params = request.body.asFormUrlEncoded.getOrElse(Map())
+      val redirUrl = params.get("curl").map(_.head).getOrElse("")
+      val uuid = params.get("uid").map(_.head)
+      if (uuid.isDefined) {
+        monitorApi.removeStickySilence(uuid.get).map { b =>
+          val m = if (b) {
+            Map("success" -> "Successfully removed sticky silence")
+          } else {
+            Map("error" -> "Some error occured while trying to remove sticky silence")
+          }
+          Redirect(redirUrl).flashing(m.toSeq:_*)
+        }
+      } else {
+        Future {
+          Redirect(redirUrl).flashing("error" -> "uid parameter is required for post action")
+        }
+      }
+    } else {
+      monitorApi.silencedStates().map { seq =>
+        val statesSeq = seq.map(t => (t._1, t._2)).filter(t => t._2.nonEmpty)
+        val stickySlncSeq = seq.map(t => (t._1, t._3)).filter(t => t._2.nonEmpty)
+        Ok(views.html.monitorSilenced(configSvc, statesSeq, stickySlncSeq, request.uri))
+      }
+    }
+  }
+
 
   def monitorRunTree(remote: Option[String], root: Option[String],
                      lvls: Option[Int]): Action[AnyContent] = Action.async { implicit request =>

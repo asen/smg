@@ -311,9 +311,14 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(SMGMonitorStatesResponse(SMGRemote.local, states, isMuted = notifyApi.isMuted)))
   }
 
-  def monitorSilencedStates()  = Action {
+  def monitorSilenced()  = Action {
     val states = monitorApi.localSilencedStates()
-    Ok(Json.toJson(states))
+    Ok(
+      Json.toJson(Map(
+      "sts" -> Json.toJson(states._1),
+      "sls" -> Json.toJson(states._2)
+      ))
+    )
   }
 
   def monitorHeatmap = Action { request =>
@@ -384,11 +389,14 @@ class Api  @Inject() (actorSystem: ActorSystem,
                              ackd: Option[String],
                              slncd: Option[String],
                              rid: Option[String],
-                             until: Int): Action[AnyContent] = Action.async {
+                             until: Int,
+                             sticky: Option[String],
+                             stickyDesc: Option[String]): Action[AnyContent] = Action.async {
     val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.fromName(s)),
       includeSoft = soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
       includeSilenced = slncd.getOrElse("off") == "on")
-    monitorApi.silenceAllTrees(Seq(SMGRemote.local.id), flt, rid, until).map { ret =>
+    val stickyB = sticky.getOrElse("off") == "on"
+    monitorApi.silenceAllTrees(Seq(SMGRemote.local.id), flt, rid, until, stickyB, stickyDesc).map { ret =>
       if (ret)
         Ok("")
       else
@@ -396,6 +404,22 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def removeStickySilence: Action[AnyContent] = Action.async { request =>
+    val uuid = request.body.asFormUrlEncoded.getOrElse(Map()).get("uid").map(_.head)
+    if (uuid.isDefined) {
+      monitorApi.removeStickySilence(uuid.get).map { b =>
+        if (b) {
+          Ok("success")
+        } else {
+          NotFound("removeStickySilence returned false")
+        }
+      }
+    } else {
+      Future {
+        NotFound("missing uid parameter")
+      }
+    }
+  }
 
   def monitorAck(id: String): Action[AnyContent] = Action.async {
     monitorApi.acknowledge(id).map { b =>

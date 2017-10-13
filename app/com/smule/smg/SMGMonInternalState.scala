@@ -24,6 +24,10 @@ trait SMGMonInternalState extends SMGMonState {
   override def isSilenced: Boolean = silencedUntil.isDefined
   def isInherited: Boolean = myStateIsInherited
 
+  // XXX flag to distinguish newly created states, this is set to false in
+  // SMGMonitor.silenceNewNotSilencedChildren (where it is checked) and also in deserialize
+  var justCreated: Boolean = true
+
   override def silencedUntil: Option[Int] = {
     val sopt = myIsSilencedUntil // copy to avoid race condition in the if clause
     if (sopt.isDefined && sopt.get < SMGState.tssNow) {
@@ -213,6 +217,8 @@ trait SMGMonInternalState extends SMGMonState {
 
   def deserialize(src: JsValue): Unit = {
     try {
+      justCreated = false
+
       val sts = (src \ "sts").get.as[Int]
       //val statsAge = SMGState.tssNow - sts
       val sid = (src \ "sid").get.as[String]

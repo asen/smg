@@ -3,13 +3,34 @@
 @import com.smule.smg.SMGMonState
 @import com.smule.smg.SMGState
 @import com.smule.smg.SMGMonFilter
+@import com.smule.smg.SMGMonStickySilence
 
-@(cfSvc: SMGConfigService, monitorStates: Seq[(SMGRemote, Seq[SMGMonState])], curUrl: String)(implicit flash: Flash)
+@(cfSvc: SMGConfigService, monitorStates: Seq[(SMGRemote, Seq[SMGMonState])],
+  stickySilences: Seq[(SMGRemote, Seq[SMGMonStickySilence])], curUrl: String)(implicit flash: Flash)
 
 @main("SMG - Monitor silenced states", cfSvc, 60) {
 
 @monitorMenu("silenced")
 
+@if(stickySilences.nonEmpty) {
+<h3>Sticky silences</h3>
+  @for((r, sss) <- stickySilences) {
+    @remoteDisplay(r)
+    <ul>
+      @for(ss <- sss) {
+      <li>
+        <h5>@ss.desc.getOrElse("(empty)") [ @ss.humanDesc ]
+        <form method="post" style="display: inline-block">
+          <input type="hidden" name="uid" value="@ss.uuid">
+          <input type="hidden" name="curl" value="@Html(curUrl)">
+          <input type="submit" value="Remove">
+        </form>
+        </h5>
+      </li>
+      }
+    </ul>
+  }
+}
 
 <h3>All silenced states</h3>
 

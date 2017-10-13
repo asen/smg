@@ -24,7 +24,8 @@ GET     /user/settings       controllers.Application.userSettings()
 POST    /user/settings       controllers.Application.userSettings()
 GET     /monitor             controllers.Application.monitorProblems(remote: Seq[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
 GET     /monitor/silenced    controllers.Application.monitorSilenced()
-GET     /monitor/trees       controllers.Application.monitorTrees(remote: Seq[String], rx: Option[String], rxx: Option[String], ms: Option[String], hsoft: String ?= "off", hackd: String ?= "off", hslncd: String ?= "off", rid: Option[String], lmt: Option[Int], silenceAllUntil: Option[String], curl: Option[String])
+POST    /monitor/silenced    controllers.Application.monitorSilenced()
+GET     /monitor/trees       controllers.Application.monitorTrees(remote: Seq[String], rx: Option[String], rxx: Option[String], ms: Option[String], hsoft: String ?= "off", hackd: String ?= "off", hslncd: String ?= "off", rid: Option[String], lmt: Option[Int], silenceAllUntil: Option[String], sticky: Option[String], stickyDesc: Option[String], curl: Option[String])
 GET     /monitor/heatmap     controllers.Application.monitorHeatmap
 GET     /monitor/log         controllers.Application.monitorLog(remote: Seq[String], p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rx: Option[String], rxx: Option[String])
 GET     /monitor/runtree     controllers.Application.monitorRunTree(remote: Option[String], root: Option[String], lvls: Option[Int])
@@ -83,9 +84,10 @@ POST    /api/agg            controllers.Api.agg
 GET     /api/rrd/:oid       controllers.Api.downloadRrd(oid: String)
 
 GET     /api/monitor/states     controllers.Api.monitorStates(ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
-GET     /api/monitor/silenced   controllers.Api.monitorSilencedStates()
+GET     /api/monitor/silenced   controllers.Api.monitorSilenced()
 GET     /api/monitor/trees      controllers.Api.monitorTrees(rx: Option[String], rxx: Option[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rid: Option[String], lmt: Option[Int])
-GET     /api/monitor/slncall    controllers.Api.monitorSilenceAllTrees(rx: Option[String], rxx: Option[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rid: Option[String], until: Int)
+GET     /api/monitor/slncall    controllers.Api.monitorSilenceAllTrees(rx: Option[String], rxx: Option[String], ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rid: Option[String], until: Int, sticky: Option[String], stickyDesc: Option[String])
+POST    /api/monitor/rmstickysl controllers.Api.removeStickySilence
 GET     /api/monitor/runtree    controllers.Api.monitorRunTree(root: Option[String])
 GET     /api/monitor/logs       controllers.Api.monitorLog(period: Option[String], limit: Option[Int], sev: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String], rx: Option[String], rxx: Option[String])
 GET     /api/monitor/heatmap    controllers.Api.monitorHeatmap

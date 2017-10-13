@@ -37,10 +37,15 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   private val MONSTATE_META_FILENAME = "metadata.json"
   private val MONSTATE_BASE_FILENAME = "monstates"
   private val NOTIFY_STATES_FILENAME = "notif.json"
+  private val STICKY_SILENCES_FILENAME = "sticky.json"
 
   private def monStateMetaFname = s"$monStateDir/$MONSTATE_META_FILENAME"
   private def monStateBaseFname = s"$monStateDir/$MONSTATE_BASE_FILENAME"
   private def notifyStatesFname = s"$monStateDir/$NOTIFY_STATES_FILENAME"
+  private def stickySilencesFname = s"$monStateDir/$NOTIFY_STATES_FILENAME"
+
+  private val myStickySilencesSyncObj = new Object()
+  private var myStickySilences: List[SMGMonStickySilence] = List()
 
   private val allMonitorStatesById = TrieMap[String, SMGMonInternalState]()
 
@@ -51,11 +56,29 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     allMonitorStateTreesById.get(rootId)
   }
 
+  private def monStateStickySilencedUntil(ms: SMGMonState): Option[Int] = {
+    val matching = localStickySilences.filter(ss => ss.flt.matchesState(ms))
+    if (matching.isEmpty){
+      None
+    } else {
+      Some(matching.maxBy(_.silenceUntilTs).silenceUntilTs)
+    }
+  }
+
   private def getOrCreateState[T <: SMGMonInternalState](stateId: String,
                                                          createFn: () => SMGMonInternalState,
                                                          updateFn: Option[(T) => Unit]
                                                     ): T = {
-    val ret = allMonitorStatesById.getOrElseUpdate(stateId, { createFn() })
+
+    def wrappedCreateFn(): SMGMonInternalState = {
+      val ret = createFn()
+      val stickySilencedUntil = monStateStickySilencedUntil(ret)
+      if (stickySilencedUntil.isDefined)
+        ret.slnc(stickySilencedUntil.get)
+      ret
+    }
+
+    val ret = allMonitorStatesById.getOrElseUpdate(stateId, { wrappedCreateFn() })
     try {
       val myRet = ret.asInstanceOf[T]
       if (updateFn.isDefined) updateFn.get(myRet)
@@ -163,15 +186,14 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   private def silenceNewNotSilencedChildren(stree: SMGTree[SMGMonInternalState]) {
     if (stree.node.isSilenced) {
       stree.children.foreach { ctree =>
-        // only silence newly created states (detected by recentStates.size less than max)
-        // XXX TODO this check may fail for states having maxHardErrorCount = 1 together with a race condition
-        // (should be a very rare case).
-        if ((!ctree.node.isSilenced) && (ctree.node.recentStates.size < ctree.node.maxRecentStates)){
+        // only silence newly created states
+        if ((!ctree.node.isSilenced) && ctree.node.justCreated){
           log.info(s"Silencing newly created state with silenced parent: ${ctree.node.id} (parent: ${stree.node.id})")
-          ctree.node.slnc(ctree.node.silencedUntil.getOrElse(0)) // in case it just expired
+          ctree.node.slnc(stree.node.silencedUntil.getOrElse(0)) // in case it just expired
         }
       }
     }
+    stree.node.justCreated = false
     stree.children.foreach(silenceNewNotSilencedChildren)
   }
 
@@ -335,19 +357,21 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
 
-  override def localSilencedStates(): Seq[SMGMonState] = {
-    localStatesMatching({ ms =>
+  override def localSilencedStates(): (Seq[SMGMonState], Seq[SMGMonStickySilence]) = {
+    val states = localStatesMatching({ ms =>
       ms.isSilenced
     })
+    (states, localStickySilences)
   }
 
-  override def silencedStates(): Future[Seq[(SMGRemote, Seq[SMGMonState])]] = {
+  override def silencedStates(): Future[Seq[(SMGRemote, Seq[SMGMonState], Seq[SMGMonStickySilence])]] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
     val remoteFuts = configSvc.config.remotes.map { rmt =>
-      remotes.monitorSilencedStates(rmt.id).map((rmt,_))
+      remotes.monitorSilenced(rmt.id).map(tpl => (rmt, tpl._1, tpl._2))
     }
     val localFut = Future {
-      (SMGRemote.local, localSilencedStates())
+      val t = localSilencedStates()
+      (SMGRemote.local, t._1, t._2)
     }
     val allFuts = Seq(localFut) ++ remoteFuts
     Future.sequence(allFuts)
@@ -409,20 +433,28 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
-  override def silenceAllTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String],
-                               until: Int): Future[Boolean] = {
+  override def silenceAllTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String], until: Int,
+                               sticky: Boolean, stickyDesc: Option[String]): Future[Boolean] = {
     implicit val ec = ExecutionContexts.rrdGraphCtx
     val myRemoteIds = sanitizeRemoteIdsParam(remoteIds)
     val futs = myRemoteIds.map { rmtId =>
       if (rmtId == SMGRemote.local.id) {
         Future {
+          if (sticky) {
+            if (rootId.isEmpty && (flt.minState.getOrElse(SMGState.OK) == SMGState.OK) &&
+              flt.includeAcked && flt.includeSilenced && flt.includeSoft) {
+              addLocalStickySilence(flt, until, stickyDesc)
+            } else {
+              log.error("Attempt to use sticky silence with incompatible filter which is not allowed")
+            }
+          }
           localMatchingMonTrees(flt, rootId).foreach { tlt =>
             tlt.allNodes.foreach(_.slnc(until))
           }
           true
         }
       } else {
-        remotes.monitorSilenceAllTrees(rmtId, flt, rootId, until)
+        remotes.monitorSilenceAllTrees(rmtId, flt, rootId, until, sticky, stickyDesc)
       }
     }
     Future.sequence(futs).map { seq =>
@@ -430,6 +462,32 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
+  private def localStickySilences: Seq[SMGMonStickySilence] = {
+    myStickySilencesSyncObj.synchronized {
+      myStickySilences = myStickySilences.filter(_.silenceUntilTs > SMGState.tssNow)
+      myStickySilences
+    }
+  }
+
+  private def addLocalStickySilence(flt: SMGMonFilter, until: Int, stickyDesc: Option[String]): Unit = {
+    myStickySilencesSyncObj.synchronized {
+      myStickySilences = SMGMonStickySilence(flt, until, stickyDesc) :: myStickySilences
+    }
+  }
+
+  override def removeStickySilence(uid: String): Future[Boolean] = {
+    implicit val ec = ExecutionContexts.rrdGraphCtx
+    if (SMGRemote.isLocalObj(uid)) {
+      Future {
+        myStickySilencesSyncObj.synchronized {
+          myStickySilences = myStickySilences.filter(ss => ss.uuid != uid)
+        }
+        true
+      }
+    } else {
+      remotes.removeStickySilence(uid)
+    }
+  }
 
   private def condenseHeatmapStates(allStates: Seq[SMGMonInternalState], maxSize: Int): (List[SMGMonState], Int) = {
     val chunkSize = (allStates.size / maxSize) + (if (allStates.size % maxSize == 0) 0 else 1)
@@ -562,6 +620,12 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       try {
         fw3.write(notifyStatesStr)
       } finally fw3.close()
+      implicit val stickySilenceWrites = SMGMonStickySilence.jsWrites
+      val stickySilencesStr = Json.toJson(localStickySilences).toString()
+      val fw4 = new FileWriter(stickySilencesFname, false)
+      try {
+        fw4.write(stickySilencesStr)
+      } finally fw4.close()
       log.info("SMGMonitor.saveStateToDisk END")
     } catch {
       case t: Throwable => log.ex(t, "Unexpected exception in SMGMonitor.saveStateToDisk")
@@ -593,6 +657,14 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       if (new File(notifyStatesFname).exists()) {
         val stateStr = Source.fromFile(notifyStatesFname).getLines().mkString
         notifSvc.deserializeState(stateStr)
+      }
+      if (new File(stickySilencesFname).exists()) {
+        implicit val jsReads = SMGMonStickySilence.jsReads({s: String => s})
+        val jsStr = Source.fromFile(stickySilencesFname).getLines().mkString
+        Json.parse(jsStr).as[Seq[SMGMonStickySilence]].foreach { ss =>
+          if (ss.silenceUntilTs > SMGState.tssNow)
+            myStickySilences = ss :: myStickySilences
+        }
       }
       log.info(s"SMGMonitor.loadStateFromDisk END - $cnt states loaded")
     } catch {
@@ -807,5 +879,4 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
   loadStateFromDisk()
-
 }

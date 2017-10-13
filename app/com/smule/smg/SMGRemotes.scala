@@ -164,7 +164,9 @@ trait SMGRemotesApi {
     * @param remoteId
     * @return
     */
-  def monitorSilencedStates(remoteId: String): Future[Seq[SMGMonState]]
+  def monitorSilenced(remoteId: String): Future[(Seq[SMGMonState], Seq[SMGMonStickySilence])]
+
+  def removeStickySilence(remoteUid: String): Future[Boolean]
 
   /**
     * remote call to get a page of monitor state trees items
@@ -176,7 +178,8 @@ trait SMGRemotesApi {
     */
   def monitorTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], limit: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
-  def monitorSilenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int): Future[Boolean]
+  def monitorSilenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int,
+                             sticky: Boolean, stickyDesc: Option[String]): Future[Boolean]
 
   def monitorMute(remoteId: String): Future[Boolean]
 
@@ -506,10 +509,10 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
   }
 
 
-  override def monitorSilencedStates(remoteId: String): Future[Seq[SMGMonState]] = {
+  override def monitorSilenced(remoteId: String): Future[(Seq[SMGMonState], Seq[SMGMonStickySilence])] = {
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorSilencedStates()
-    else Future { Seq() }
+      clientForId(remoteId).get.monitorSilenced()
+    else Future { (Seq(), Seq()) }
   }
 
   override def monitorTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String],
@@ -520,12 +523,19 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
 
   }
 
-  override def monitorSilenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int): Future[Boolean] = {
+  override def monitorSilenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int,
+                                      sticky: Boolean, stickyDesc: Option[String]): Future[Boolean] = {
     if (clientForId(remoteId).nonEmpty)
-      clientForId(remoteId).get.monitorSilenceAllTrees(flt, rootId, until)
+      clientForId(remoteId).get.monitorSilenceAllTrees(flt, rootId, until, sticky, stickyDesc)
     else Future { false }
   }
 
+  override def removeStickySilence(remoteUid: String): Future[Boolean] = {
+    val remoteId = SMGRemote.remoteId(remoteUid)
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.removeStickySilence(remoteUid)
+    else Future { false }
+  }
 
   override def monitorAck(id: String): Future[Boolean] = {
     val remoteId = SMGRemote.remoteId(id)

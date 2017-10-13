@@ -4,7 +4,7 @@
 <form style="display: inline-block;" method="GET" action="/monitor/@tgt">
   <input type="hidden" name="id" value="@{msid}">
   @if(curUrl.isDefined){
-  <input type="hidden" name="curl" value="@{curUrl.get}">
+  <input type="hidden" name="curl" value="@Html({curUrl.get})">
   <input type="submit" value="@btnTitle">
   } else {
     @defining(java.util.UUID.randomUUID.toString) { formUUID =>
