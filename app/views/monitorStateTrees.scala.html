@@ -88,6 +88,7 @@
       var descElem = document.getElementById("inpStickySilenceDesc");
       if (stickyVal) {
         $("#spanStickySilenceDesc").show();
+        descElem.focus();
       } else {
         descElem.value = "";
         $("#spanStickySilenceDesc").hide();
