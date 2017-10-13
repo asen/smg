@@ -42,7 +42,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   private def monStateMetaFname = s"$monStateDir/$MONSTATE_META_FILENAME"
   private def monStateBaseFname = s"$monStateDir/$MONSTATE_BASE_FILENAME"
   private def notifyStatesFname = s"$monStateDir/$NOTIFY_STATES_FILENAME"
-  private def stickySilencesFname = s"$monStateDir/$NOTIFY_STATES_FILENAME"
+  private def stickySilencesFname = s"$monStateDir/$STICKY_SILENCES_FILENAME"
 
   private val myStickySilencesSyncObj = new Object()
   private var myStickySilences: List[SMGMonStickySilence] = List()
@@ -87,7 +87,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       case cc: ClassCastException => {
         // this should never happen
         log.ex(cc, s"Incompatible monitor state returned for var state: $ret")
-        val myRet = createFn()
+        val myRet = wrappedCreateFn()
         allMonitorStatesById(myRet.id) = myRet
         myRet.asInstanceOf[T]
       }
