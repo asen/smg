@@ -82,7 +82,12 @@ object SMGTree {
     if (leafObjs.isEmpty)
       return Seq()
     val allObjs = leafObjs ++ parentObjs.values.toList.distinct
-    val allByParent = allObjs.groupBy(_.parentId.getOrElse(""))
+    val allByParent = allObjs.groupBy { o =>
+      val pid = o.parentId.getOrElse("")
+      if (parentObjs.contains(pid)){
+        pid
+      } else ""
+    }
     val leafTreesById = leafObjs.map(o => SMGTree[T](o, Seq())).groupBy(_.node.id).map { t =>
       if (t._2.tail.nonEmpty) {
         SMGLogger.warn(s"SMGTree.buildTrees: leafs list contains duplicate items: ${t._1} -> ${t._2}")

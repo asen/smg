@@ -3,7 +3,7 @@
 
 <select id="smg-filter-remote" class="smg-filter-remote" name="remote" multiple="multiple" onchange="@onChange" >
   @for( rid <- availRemotes) {
-  <option value='@rid' @if(selectedRemotes.contains(rid)){ selected } >@if(rid == SMGRemote.local.id){Local}else{@rid}</option>
+  <option value='@rid' @if(selectedRemotes.contains(rid)){ selected } >@if(rid == SMGRemote.local.id){@{SMGRemote.localName}}else{@rid}</option>
   }
 </select>
 

@@ -95,7 +95,7 @@
     }
     @for(ms <- mls) {
     <li>
-      [@{ if(ms.remote.id == SMGRemote.local.id) "Local" else ms.remote.id }]
+      [@{ if(ms.remote.id == SMGRemote.local.id) SMGRemote.localName else ms.remote.id }]
       [@{ms.tsFmt}]: <span class="ml-type-@{ms.mltype}">@{ms.mltype}</span>
       @if(ms.ouids.nonEmpty) {
         <a href="/dash?@{ms.objectsFilterWithRemote}">@{ms.msIdFmt}</a>

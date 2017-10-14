@@ -70,12 +70,12 @@ case class SMGLocalConfig(
 
   val viewObjectsByUpdateId: Map[String, Seq[SMGObjectView]] = viewObjects.groupBy(o => o.refObj.map(_.id).getOrElse(o.id))
 
-  private def pluginUpdateObjects(pluginId: String) = pluginObjects(pluginId).filter(ov => ov.refObj.isDefined || ov.isInstanceOf[SMGObjectUpdate]).map {
+  private def getUpdateObjectsFromViewObjects(ovs: Seq[SMGObjectView]) = ovs.filter(ov => ov.refObj.isDefined || ov.isInstanceOf[SMGObjectUpdate]).map {
     case update: SMGObjectUpdate => update
     case ov => ov.refObj.get
   }.distinct
   
-  private val pluginsUpdateObjects = pluginObjects.flatMap(t => pluginUpdateObjects(t._1))
+  private val pluginsUpdateObjects = pluginObjects.flatMap(t => getUpdateObjectsFromViewObjects(t._2))
 
   val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++ rrdAggObjects ++ pluginsUpdateObjects
 
@@ -187,12 +187,12 @@ case class SMGLocalConfig(
     * @param interval - interval for which we want the run trees
     * @return
     */
-  def fetchCommandsTree(interval: Int): Seq[SMGFetchCommandTree] = {
+  def getFetchCommandsTrees(interval: Int): Seq[SMGFetchCommandTree] = {
     fetchCommandTrees.getOrElse(interval, Seq())
   }
 
-  def fetchCommandsTreesByInterval: Map[Int,Seq[SMGFetchCommandTree]] = {
-    intervals.map(i => (i, fetchCommandsTree(i))).filter(_._2.nonEmpty).toMap
+  def getFetchCommandsTreesByInterval: Map[Int,Seq[SMGFetchCommandTree]] = {
+    intervals.map(i => (i, getFetchCommandsTrees(i))).filter(_._2.nonEmpty).toMap
   }
 
   /**
@@ -201,7 +201,7 @@ case class SMGLocalConfig(
     * @param root
     * @return
     */
-  def fetchCommandTreesWithRoot(root: Option[String]): Map[Int, Seq[SMGFetchCommandTree]] = {
+  def getFetchCommandTreesWithRoot(root: Option[String]): Map[Int, Seq[SMGFetchCommandTree]] = {
     if (root.isDefined) {
       fetchCommandTrees.map { t =>
         (t._1, t._2.map(t => t.findTree(root.get)).filter(_.isDefined).map(_.get))
@@ -216,7 +216,7 @@ case class SMGLocalConfig(
     * @param forIntervals
     * @return
     */
-  def fetchCommandRrdObjects(cmdId: String, forIntervals: Seq[Int] = Seq()) : Seq[SMGRrdObject] = {
+  def getFetchCommandRrdObjects(cmdId: String, forIntervals: Seq[Int] = Seq()) : Seq[SMGRrdObject] = {
     val ret = ListBuffer[SMGRrdObject]()
     val intvls = if (forIntervals.nonEmpty) forIntervals else intervals.toSeq.sorted
     intvls.foreach { intvl =>
@@ -228,12 +228,12 @@ case class SMGLocalConfig(
     ret.toList
   }
 
-  // build and keep the plugin commands trees (a sequence of trees for each plugon)
+  // build and keep the plugin commands trees (a sequence of trees for each plugin)
   private val pluginCommandTrees: Map[String, Seq[SMGTree[SMGTreeNode]]] = pluginObjects.map { t =>
     val pluginId = t._1
     val objs = t._2
     val pfsMap = pluginPreFetches.getOrElse(pluginId, Map())
-    (pluginId, SMGTree.buildTrees[SMGTreeNode](pluginUpdateObjects(pluginId), pfsMap))
+    (pluginId, SMGTree.buildTrees[SMGTreeNode](getUpdateObjectsFromViewObjects(objs), pfsMap))
   }
 
   /**
@@ -243,7 +243,7 @@ case class SMGLocalConfig(
     * @param cmdId
     * @return
     */
-  def pluginFetchCommandUpdateObjects(pluginId: String, cmdId: String) : Seq[SMGObjectUpdate] = {
+  def getPluginFetchCommandUpdateObjects(pluginId: String, cmdId: String) : Seq[SMGObjectUpdate] = {
     val ret = ListBuffer[SMGObjectUpdate]()
     val topLevel = pluginCommandTrees.getOrElse(pluginId, Seq())
     val root = SMGTree.findTreeWithRoot(cmdId, topLevel)
@@ -271,7 +271,7 @@ case class SMGLocalConfig(
   private def buildPf2IntervalsMap: Map[String, Seq[Int]] = {
     preFetches.map { t =>
       val pfId = t._1
-      (pfId, fetchCommandRrdObjects(pfId).map(ou => ou.interval).distinct.sorted)
+      (pfId, getFetchCommandRrdObjects(pfId).map(ou => ou.interval).distinct.sorted)
     }
   }
 

@@ -3,7 +3,7 @@
 <a name="rt_@{rt.id}"></a>
 <h4>
   @if(rt.id == SMGRemote.local.id) {
-  Local
+  @{SMGRemote.localName}
   } else {
   @rt.id
   [<a href="@rt.url"><small>Direct</small></a>]

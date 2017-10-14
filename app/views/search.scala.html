@@ -1,5 +1,6 @@
 @import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGSearchResult
+@import com.smule.smg.SMGRemote
 
 @(q: String, res: Seq[SMGSearchResult], hasMore: Boolean, lmt:Int, defaultLmt:Int,
   cfSvc: SMGConfigService)(implicit flash: Flash)
@@ -73,7 +74,10 @@ Enter regex(es) and click "Graphs text regex filter" to display matching graphs 
   @for(sr <- res){
     <li>
       <div>
-        <b>@{sr.typeStr}: <a href="@{sr.showUrl}">@{sr.title}</a></b>
+        <b>@{sr.typeStr}: @if(cfSvc.config.remotes.nonEmpty){
+          (@if(sr.remoteId == SMGRemote.local.id){@{SMGRemote.localName}} else {@{sr.remoteId}})
+          }
+          <a href="@{sr.showUrl}">@{sr.title}</a></b>
         @if(sr.idxOpt.isDefined){ @monStateIndexDetails(sr.idxOpt.get.id) }
         <br/>@{sr.desc}
       </div>

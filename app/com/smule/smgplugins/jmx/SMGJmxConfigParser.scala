@@ -59,12 +59,10 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
     }
   }
 
-  def hostPortPfId(hostPort: String) = s"$pluginId.${hostPort.replace(':', '.')}"
-
   def parseHostDef(rrdDir: String, interval: Int, baseId: String, ymap: java.util.Map[String, Object],
                    confFile: String): (List[SMGJmxObject], SMGPreFetchCmd) = {
     val hostPort = ymap("hostPort").asInstanceOf[String]
-    val pfId = hostPortPfId(hostPort)
+    val pfId = baseId
     val parentState = if (ymap.containsKey("parentState")) { Some(ymap("parentState").toString) } else None
     val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, pfId,
       ymap.toMap.map(kv => (kv._1, kv._2.toString)))

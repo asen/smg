@@ -18,7 +18,7 @@
       <label class="autosubmit-lbl">Remote filter:</label>
       <select name="remote" class="select-remote" onchange="remoteChanged(this);" >
         @for( rid <- availRemotes ) {
-        <option value='@rid' @if(rid == rmtId){ selected } >@if(rid == SMGRemote.local.id){Local}else{@rid}</option>
+        <option value='@rid' @if(rid == rmtId){ selected } >@if(rid == SMGRemote.local.id){@{SMGRemote.localName}}else{@rid}</option>
         }
       </select>
       }

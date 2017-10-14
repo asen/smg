@@ -29,8 +29,8 @@ case class SMGSearchResultObject(ov: SMGObjectView) extends SMGSearchResult {
 case class SMGSearchResultIndex(idx: SMGIndex, ovs: Seq[SMGObjectView]) extends SMGSearchResult {
   val typeStr = "Index"
   val showUrl: String = "/dash?" + idx.asUrl
-  val remoteId: String = if (SMGRemote.isRemoteObj(idx.id))SMGRemote.remoteId(idx.id) else "Local"
-  val title: String = s"($remoteId) " + idx.title
+  val remoteId: String = SMGRemote.remoteId(idx.id)
+  val title: String = idx.title
   val desc: String = idx.id + idx.desc.map(s => ": " + s).getOrElse("")
   val children: Seq[SMGSearchResultObject] = ovs.map(SMGSearchResultObject)
   override val idxOpt: Option[SMGIndex] = Some(idx)
@@ -42,8 +42,8 @@ class SMGSearchQuery(q: String) {
   val isEmpty: Boolean = terms.isEmpty
 
   private def indexText(idx: SMGIndex) = {
-    val searchRemoteIdSeq = if (SMGRemote.isRemoteObj(idx.id)) Seq() else Seq("local")
-    (searchRemoteIdSeq ++ Seq(idx.id, idx.title, idx.desc.getOrElse(""))).mkString(" ").toLowerCase
+    val searchRemoteIdSeq = if (SMGRemote.isRemoteObj(idx.id)) Seq(SMGRemote.remoteId(idx.id)) else Seq(SMGRemote.localName)
+    (Seq(SMGRemote.localId(idx.id)) ++ searchRemoteIdSeq ++ Seq(idx.title, idx.desc.getOrElse(""))).mkString(" ").toLowerCase
   }
 
   private def textMatches(txt: String): Boolean = if (terms.isEmpty) false else {

@@ -56,7 +56,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     */
   override def run(interval: Int):Unit = {
     val conf = configSvc.config
-    val commandTrees = conf.fetchCommandsTree(interval)
+    val commandTrees = conf.getFetchCommandsTrees(interval)
     val sz = if (commandTrees.isEmpty) 0 else commandTrees.map(_.size).sum
     if (sz == 0) {
       log.info(s"SMGrapher.run(interval=$interval): No commands to execute")
@@ -120,7 +120,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
 
   override def runCommandsTree(interval: Int, cmdId: String): Boolean = {
     val conf = configSvc.config
-    val commandTrees = conf.fetchCommandsTree(interval)
+    val commandTrees = conf.getFetchCommandsTrees(interval)
     val topLevel = commandTrees.find(t => t.findTree(cmdId).isDefined)
     if (topLevel.isDefined){
       val root = topLevel.get.findTree(cmdId).get
@@ -374,12 +374,16 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       graphAggObjectXRemote(aobj, periods, gopts)
     } else {
       val byRemote = aobj.splitByRemoteId
-      val localFuts = Future.sequence(if (byRemote.contains("")) {
-        for (p <- periods) yield graphLocalAggObject(byRemote(""), p, gopts)
+      val localFuts = Future.sequence(if (byRemote.contains(SMGRemote.local.id)) {
+        for (p <- periods) yield graphLocalAggObject(byRemote(SMGRemote.local.id), p, gopts)
       } else Seq())
       val remoteFuts = for (rc <- remotes.configs; if byRemote.contains(rc.remote.id))
-        yield remotes.graphAgg(rc.remote.id, byRemote(rc.remote.id), periods, gopts)
-      Future.sequence(Seq(localFuts) ++ remoteFuts).map { sofs => sofs.flatten }
+        yield {
+          remotes.graphAgg(rc.remote.id, byRemote(rc.remote.id), periods, gopts)
+        }
+      Future.sequence(Seq(localFuts) ++ remoteFuts).map { sofs =>
+        sofs.flatten
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 
 - host.localhost.jmx.smg.jvm:
+#  parentState: host.localhost.ping
   hostPort: "127.0.0.1:9001"
   objs:
     - heapMem:

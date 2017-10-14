@@ -34,14 +34,15 @@ class SMGJmxUpdateActor(
       log.debug(s"SMGUpdateActor received SMGJmxUpdateMessage for ${objs.map(_.id)}")
       Future {
         val errOpt = jmxClient.checkJmxConnection(hostPort)
+        lazy val pfId = objs.headOption.map(_.baseId).getOrElse("unexpected.jmx.missing.objects")
         if (errOpt.isDefined) {
           smgConfSvc.sendPfMsg(SMGDFPfMsg(SMGState.tssNow,
-            confParser.hostPortPfId(hostPort), plugin.interval, objs, -1,
+            pfId, plugin.interval, objs, -1,
             List(errOpt.get), Some(plugin.pluginId)))
           objs.foreach { obj => incrementCounter() }
         } else {
           smgConfSvc.sendPfMsg(SMGDFPfMsg(SMGState.tssNow,
-            confParser.hostPortPfId(hostPort), plugin.interval, objs, 0,
+            pfId, plugin.interval, objs, 0,
             List(), Some(plugin.pluginId)))
           objs.foreach { obj =>
 

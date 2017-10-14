@@ -98,10 +98,10 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val stateId = SMGMonVarState.stateId(ou, vix)
     def createFn() = { new SMGMonVarState(ou, vix, configSvc, monLogApi, notifSvc) }
     def updateFn(state: SMGMonVarState) = {
-      if (state.ou != ou) {
+      if (state.objectUpdate != ou) {
         // this is logged at object level
         //log.warn(s"Updating changed object var state with id ${ret.id}")
-        state.ou = ou
+        state.objectUpdate = ou
       }
     }
     getOrCreateState[SMGMonVarState](stateId, createFn, if (update) Some(updateFn) else None)
@@ -111,9 +111,9 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val stateId = SMGMonObjState.stateId(ou)
     def createFn() = { new SMGMonObjState(ou, configSvc, monLogApi, notifSvc) }
     def updateFn(state: SMGMonObjState) = {
-      if (state.ou != ou) {
+      if (state.objectUpdate != ou) {
         log.warn(s"Updating changed object state with id ${state.id}")
-        state.ou = ou
+        state.objectUpdate = ou
       }
     }
     getOrCreateState[SMGMonObjState](stateId, createFn, if (update) Some(updateFn) else None)
@@ -159,27 +159,21 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   private def createStateTrees(config: SMGLocalConfig): List[SMGTree[SMGMonInternalState]] = {
-    val ret = config.updateObjects.groupBy(_.pluginId).flatMap { case (plidOpt, seq) =>
-      val leafsSeq = seq.flatMap { ou =>
-        ou.vars.indices.map { vix => getOrCreateVarState(ou,vix, update = true) }
+    val seq = config.updateObjects
+    val leafsSeq = seq.flatMap { ou =>
+      ou.vars.indices.map { vix => getOrCreateVarState(ou,vix, update = true) }
+    }
+    val objsMap = seq.map { ou =>  getOrCreateObjState(ou, update = true) }.groupBy(_.id).map(t => (t._1,t._2.head) )
+    // Combine regular and plugin prefetch states - plugin can references regular state as parent
+    val pfsMap = config.preFetches.map { t =>
+      (t._1, getOrCreatePfState(t._2, config.preFetchCommandIntervals(t._1), None, update = true))
+    } ++ configSvc.plugins.flatMap { pl =>
+      pl.preFetches.map { t =>
+        (t._1, getOrCreatePfState(t._2, Seq(pl.interval), Some(pl.pluginId), update = true))
       }
-      val objsMap = seq.map { ou =>  getOrCreateObjState(ou, update = true) }.groupBy(_.id).map(t => (t._1,t._2.head) )
-      val pfsMap = if (plidOpt.isEmpty) config.preFetches.map { t =>
-        val pfState = getOrCreatePfState(t._2, config.preFetchCommandIntervals(t._1), plidOpt, update = true)
-        (pfState.id, pfState)
-      } else {
-        val pluginOpt = configSvc.pluginsById.get(plidOpt.get)
-        pluginOpt.map { pl =>
-          pl.preFetches.map { t =>
-            val pfState = getOrCreatePfState(t._2, Seq(pl.interval), plidOpt, update = true)
-            (pfState.id, pfState)
-          }
-        }.getOrElse(Map())
-      }
-      val parentsMap: Map[String,SMGMonInternalState] =  objsMap ++ pfsMap
-      SMGTree.buildTrees[SMGMonInternalState](leafsSeq, parentsMap)
-    }.toList
-    ret
+    }
+    val parentsMap: Map[String,SMGMonInternalState] =  objsMap ++ pfsMap
+    SMGTree.buildTrees[SMGMonInternalState](leafsSeq, parentsMap).toList
   }
 
   // silence all children of silenced nodes which were just created
@@ -242,10 +236,20 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val pfState = getOrCreatePfState(pf.get, Seq(msg.interval), msg.pluginId) // TODO just lookup insted of create?
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       // process pre-fetch error
-      pfState.processError(msg.ts, msg.exitCode, msg.errors, isInherited = false)
+      // failing plugin pre-fetch with failing parent non-plugin prefetch is considered inherited
+      val myIsInherited = if (msg.pluginId.nonEmpty && pf.get.preFetch.isDefined){
+        val parentPfState = allMonitorStatesById.get(pf.get.preFetch.get)
+        parentPfState.isDefined &&
+          parentPfState.get.pluginId.isEmpty &&
+          (parentPfState.get.currentState.state == SMGState.UNKNOWN)
+      } else false
+      pfState.processError(msg.ts, msg.exitCode, msg.errors, isInherited = myIsInherited)
       //update all children as they are not getting messages
       findTreeWithRootId(pfState.id).foreach { stTree =>
-        stTree.allNodes.tail.foreach(st => st.addState(pfState.currentState, isInherited = true))
+        //filter only same-plugin prefetches as the plugin ones will get their own PfMsg.
+        stTree.allNodes.tail.filter {ms => ms.pluginId == msg.pluginId}.foreach {st =>
+          st.addState(pfState.currentState, isInherited = true)
+        }
       }
     } else {
       //process pre-fetch OK, child fetches will get their own OK msg

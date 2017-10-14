@@ -39,6 +39,8 @@ trait SMGMonInternalState extends SMGMonState {
   override def severity: Double = currentStateVal.id.toDouble
   override def remote: SMGRemote = SMGRemote.local
 
+  def pluginId: Option[String]
+
   def errorRepeat: Int = {
     val mylst = myRecentStates.take(maxHardErrorCount)
     if (mylst.head.isOk)
@@ -260,7 +262,7 @@ trait SMGMonInternalState extends SMGMonState {
   }
 }
 
-class SMGMonVarState(var ou: SMGObjectUpdate,
+class SMGMonVarState(var objectUpdate: SMGObjectUpdate,
                      vix: Int,
                      val configSvc: SMGConfigService,
                      val monLog: SMGMonitorLogApi,
@@ -268,35 +270,38 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
 
   override def alertKey: String = id
 
-  override val id: String = SMGMonVarState.stateId(ou,vix)
-  override val parentId: Option[String] = Some(ou.id)
+  override val id: String = SMGMonVarState.stateId(objectUpdate, vix)
+  override val parentId: Option[String] = Some(objectUpdate.id)
 
-  override def ouids: Seq[String] = (Seq(ou.id) ++ configSvc.config.viewObjectsByUpdateId.getOrElse(ou.id, Seq()).map(_.id)).distinct
+  override def pluginId: Option[String] = objectUpdate.pluginId
+
+  override def ouids: Seq[String] = (Seq(objectUpdate.id) ++
+    configSvc.config.viewObjectsByUpdateId.getOrElse(objectUpdate.id, Seq()).map(_.id)).distinct
   override def vixOpt: Option[Int] = Some(vix)
-  override def oid: Option[String] = Some(ou.id)
-  override def pfId: Option[String] = ou.preFetch
+  override def oid: Option[String] = Some(objectUpdate.id)
+  override def pfId: Option[String] = objectUpdate.preFetch
 
-  private def label =  ou.vars(vix).getOrElse("label", "ds" + vix)
+  private def label =  objectUpdate.vars(vix).getOrElse("label", "ds" + vix)
 
-  override def alertSubject: String = s"${ou.id}[$vix]:$label"
+  override def alertSubject: String = s"${objectUpdate.id}[$vix]:$label"
 
-  override def text: String = s"${ou.id}[$vix]:$label: ${ou.title}: $currentStateDesc"
+  override def text: String = s"${objectUpdate.id}[$vix]:$label: ${objectUpdate.title}: $currentStateDesc"
 
-  myMovingStatsOpt = Some(new SMGMonValueMovingStats(ou.id, vix, ou.interval))
+  myMovingStatsOpt = Some(new SMGMonValueMovingStats(objectUpdate.id, vix, objectUpdate.interval))
 //  myCounterPrevValue = Double.NaN
 //  myCounterPrevTs = 0
 
   private def movingStats = myMovingStatsOpt.get
 
   private def numFmt(num: Double): String = {
-    val myNum = ou.vars(vix).get("cdef").map(cdf => SMGRrd.computeCdef(cdf, num)).getOrElse(num)
-    SMGState.numFmt(myNum, ou.vars(vix).get("mu"))
+    val myNum = objectUpdate.vars(vix).get("cdef").map(cdf => SMGRrd.computeCdef(cdf, num)).getOrElse(num)
+    SMGState.numFmt(myNum, objectUpdate.vars(vix).get("mu"))
   }
 
   private def processCounterUpdate(ts: Int, rawVal: Double): Option[(Double,Option[String])] = {
     val tsDelta = ts - myCounterPrevTs
 
-    val ret = if (tsDelta > (ou.interval * 3)) {
+    val ret = if (tsDelta > (objectUpdate.interval * 3)) {
       if (myCounterPrevTs > 0) {
         log.debug(s"SMGMonVarState.processCounterUpdate($id): Time delta is too big: $ts - $myCounterPrevTs = $tsDelta")
       }
@@ -305,7 +310,7 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
       log.error(s"SMGMonVarState.processCounterUpdate($id): Non-positive time delta detected: $ts - $myCounterPrevTs = $tsDelta")
       None
     } else {
-      val maxr = ou.vars(vix).get("max").map(_.toDouble)
+      val maxr = objectUpdate.vars(vix).get("max").map(_.toDouble)
       val r = (rawVal - myCounterPrevValue) / tsDelta
       val tpl = if ((r < 0) || (maxr.isDefined && (maxr.get < r))){
         log.debug(s"SMGMonVarState.processCounterUpdate($id): Counter overflow detected: p=$myCounterPrevValue/$myCounterPrevTs c=$rawVal/$ts r=$r maxr=$maxr")
@@ -320,14 +325,14 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
   }
 
   def processValue(ts: Int, rawVal: Double): Unit = {
-    val valOpt = if (ou.isCounter) {
+    val valOpt = if (objectUpdate.isCounter) {
       processCounterUpdate(ts, rawVal)
     } else Some((rawVal, None))
     if (valOpt.isEmpty) {
       return
     }
     val (newVal, nanDesc) = valOpt.get
-    val alertConfs = configSvc.objectValueAlertConfs(ou, vix)
+    val alertConfs = configSvc.objectValueAlertConfs(objectUpdate, vix)
     var ret : SMGState = null
     if (newVal.isNaN) {
       ret = SMGState(ts, SMGState.ANOMALY, s"ANOM: value=NaN (${nanDesc.getOrElse("unknown")})")
@@ -352,8 +357,8 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
         }
         if (alertConf.spike.isDefined) {
           // Update short/long term averages, to be used for spike/drop detection
-          val ltMaxCounts = alertConf.spike.get.maxLtCnt(ou.interval)
-          val stMaxCounts = alertConf.spike.get.maxStCnt(ou.interval)
+          val ltMaxCounts = alertConf.spike.get.maxLtCnt(objectUpdate.interval)
+          val stMaxCounts = alertConf.spike.get.maxStCnt(objectUpdate.interval)
           if (!movingStatsUpdated) {
             movingStats.update(ts, newVal, stMaxCounts, ltMaxCounts)
             movingStatsUpdated = true
@@ -376,18 +381,18 @@ class SMGMonVarState(var ou: SMGObjectUpdate,
       ret = SMGState(ts, SMGState.OK, s"OK: value=${numFmt(newVal)}")
     }
     if (ret.state != SMGState.OK) {
-      log.debug(s"MONITOR: ${ou.id} : $vix : $ret")
+      log.debug(s"MONITOR: ${objectUpdate.id} : $vix : $ret")
     }
     addState(ret, isInherited = false)
   }
 
   override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
     lazy val mntype = SMGMonNotifySeverity.fromStateValue(currentStateVal)
-    configSvc.objectVarNotifyCmdsAndBackoff(ou, Some(vix), mntype)
+    configSvc.objectVarNotifyCmdsAndBackoff(objectUpdate, Some(vix), mntype)
   }
 
   override protected def getMaxHardErrorCount: Int = {
-    configSvc.objectVarNotifyStrikes(ou, Some(vix))
+    configSvc.objectVarNotifyStrikes(objectUpdate, Some(vix))
   }
 
 }
@@ -442,29 +447,32 @@ trait SMGMonBaseFetchState extends SMGMonInternalState {
   }
 }
 
-class SMGMonObjState(var ou: SMGObjectUpdate,
+class SMGMonObjState(var objectUpdate: SMGObjectUpdate,
                      val configSvc: SMGConfigService,
                      val monLog: SMGMonitorLogApi,
                      val notifSvc: SMGMonNotifyApi) extends SMGMonBaseFetchState {
-  override val id: String = SMGMonObjState.stateId(ou)
+  override val id: String = SMGMonObjState.stateId(objectUpdate)
 
   override def alertKey: String = id
 
-  override def parentId: Option[String] = ou.preFetch.map(SMGMonPfState.stateId)
+  override def parentId: Option[String] = objectUpdate.preFetch.map(SMGMonPfState.stateId)
 
-  override def ouids: Seq[String] = (Seq(ou.id) ++ configSvc.config.viewObjectsByUpdateId.getOrElse(ou.id, Seq()).map(_.id)).distinct
+  override def pluginId: Option[String] = objectUpdate.pluginId
+
+  override def ouids: Seq[String] = (Seq(objectUpdate.id) ++
+    configSvc.config.viewObjectsByUpdateId.getOrElse(objectUpdate.id, Seq()).map(_.id)).distinct
   override def vixOpt: Option[Int] = None
 
-  override def oid: Option[String] = Some(ou.id)
-  override def pfId: Option[String] = ou.preFetch
-  override def text: String = s"${ou.id}(intvl=${ou.interval}): ${ou.title}: $currentStateDesc"
+  override def oid: Option[String] = Some(objectUpdate.id)
+  override def pfId: Option[String] = objectUpdate.preFetch
+  override def text: String = s"${objectUpdate.id}(intvl=${objectUpdate.interval}): ${objectUpdate.title}: $currentStateDesc"
 
   override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
-    pfNotifyCmdsAndBackoff(configSvc, ou.notifyConf, Seq(ou))
+    pfNotifyCmdsAndBackoff(configSvc, objectUpdate.notifyConf, Seq(objectUpdate))
   }
 
   override protected def getMaxHardErrorCount: Int = {
-    pfMaxHardErrorCount(configSvc, ou.notifyConf, Seq(ou))
+    pfMaxHardErrorCount(configSvc, objectUpdate.notifyConf, Seq(objectUpdate))
   }
 
 }
@@ -483,9 +491,9 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
   override def parentId: Option[String] = pfCmd.preFetch // SMGMonPfState.fetchParentStateId(pfCmd.preFetch, intervals.min, pluginId)
 
   private def myObjectUpdates = if (pluginId.isEmpty) {
-    configSvc.config.fetchCommandRrdObjects(pfCmd.id, intervals)
+    configSvc.config.getFetchCommandRrdObjects(pfCmd.id, intervals)
   } else {
-    configSvc.config.pluginFetchCommandUpdateObjects(pluginId.get, pfCmd.id)
+    configSvc.config.getPluginFetchCommandUpdateObjects(pluginId.get, pfCmd.id)
   }
 
   override def ouids: Seq[String] = myObjectUpdates.map(_.id)

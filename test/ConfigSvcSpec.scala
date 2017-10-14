@@ -14,7 +14,7 @@ class ConfigSvcSpec extends Specification {
     "work" in {
 
       val cs = new TestConfigSvc()
-      val fct = cs.config.fetchCommandsTree(60)
+      val fct = cs.config.getFetchCommandsTrees(60)
 //      println(fct.map(_.node.id))
       fct must have size 2
       fct(0).leafNodes must have size 1

@@ -119,7 +119,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   private def getRunTreeIdsByRemote: Future[Map[String, Seq[String]]] = {
     implicit val ec = ExecutionContexts.defaultCtx
     val localFut = Future {
-      ("", configSvc.config.fetchCommandsTreesByInterval)
+      (SMGRemote.local.id, configSvc.config.getFetchCommandsTreesByInterval)
     }
     val remoteFuts = configSvc.config.remotes.map { rmt =>
       remotesApi.monitorRunTree(rmt.id, None).map(m => (rmt.id, m))
@@ -257,7 +257,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
       remotesApi.byId(rmt.id).map(_.indexes).getOrElse(Seq())
     }
 
-  private def getAllViewObjectsByRemote: Seq[(String,Seq[SMGObjectView])] = Seq(("", configSvc.config.viewObjects)) ++
+  private def getAllViewObjectsByRemote: Seq[(String,Seq[SMGObjectView])] = Seq((SMGRemote.local.id, configSvc.config.viewObjects)) ++
     configSvc.config.remotes.map { rmt => // preserving order
       (rmt.id, remotesApi.byId(rmt.id).map(_.viewObjects).getOrElse(Seq()))
     }

@@ -297,7 +297,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val byRemoteMap = lst.groupBy(img => img.remoteId.getOrElse(SMGRemote.local.id))
       val byRemote = (List(SMGRemote.local.id) ++ remotes.configs.map(rc => rc.remote.id)).
         filter(rid => byRemoteMap.contains(rid)).map(rid => (rid, byRemoteMap(rid))).map { t =>
-        (if (t._1 == SMGRemote.local.id) "Local" else s"Remote: ${t._1}", t._2)
+        (if (t._1 == SMGRemote.local.id) SMGRemote.localName else s"Remote: ${t._1}", t._2)
       }
       byRemote.map {t => DashboardGraphsGroup(t._1 :: dg.levels, t._2)}
     }
@@ -936,7 +936,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val rootStr = root.getOrElse("")
     val treesMapFut = if (remote.isEmpty || (remote.get == SMGRemote.local.id)) {
       Future {
-        conf.fetchCommandTreesWithRoot(root)
+        conf.getFetchCommandTreesWithRoot(root)
       }
     } else {
       remotes.monitorRunTree(remote.get, root)

@@ -254,6 +254,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
       val aggObj = SMGAggObjectView.build(lst, op, groupBy, title)
       smg.graphAggObject(aggObj, periods, gopts, xRemote = false)
     } else Future {
+      log.error(s"Api.aggCommon: No objects matching provided list: $ids")
       Seq()
     }
   }
@@ -360,7 +361,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
   }
 
   def monitorRunTree(root: Option[String]) = Action {
-    val trees = configSvc.config.fetchCommandTreesWithRoot(root)
+    val trees = configSvc.config.getFetchCommandTreesWithRoot(root)
     Ok(Json.toJson(trees.map(t => (t._1.toString, Json.toJson(t._2)))))
   }
 

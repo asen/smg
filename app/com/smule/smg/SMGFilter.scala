@@ -110,7 +110,7 @@ case class SMGFilter(px: Option[String],
   val humanText: String = paramsHumanText +
     (if (remotes.nonEmpty && (remotes != Seq(SMGRemote.local.id)))
       s" (remotes=${remotes.map{ r =>
-        if (r == SMGRemote.local.id) "Local" else r }.mkString(",")})"
+        if (r == SMGRemote.local.id) SMGRemote.localName else r }.mkString(",")})"
     else "")
 }
 
