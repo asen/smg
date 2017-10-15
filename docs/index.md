@@ -93,11 +93,18 @@ more than 10 is rarely a good idea)
 * single instance/config can specify and work with different update 
 periods - like evey minute (the default), every 5 minutes, every hour
 etc.
-* script\_outputting\_var\_value.sh can be a mrtg helper script (with 
-max 2 vars)
-* Multi-colos support. One can have multiple instances spread across 
+* script\_outputting\_var\_value.sh can be a mrtg-compatible helper script
+* Remote instances support. One can have multiple instances spread across 
 different geo locations but use single UI access point for all.
 * Built in monitoring (as of 0.2+)
+* Scala plugins support - it is possible to extend SMG by writing plugins
+for custom functionality including custom data input sources which do not
+necessarily fit the model where external command is executed on regular
+interval to fetch the values for updates. E.g. SMG comes with a JMX plugin
+which keeps persistent connections to the target Java JMX servers. It is
+also possible to create custom actions attached to graphs using plugins
+including e.g. visualizations. SMG comes with javascript-based "Zoom" 
+functionality based on the open source plot.ly JS graphing library.
 
 See concepts overview below for more details.
 
@@ -133,8 +140,8 @@ what to expect from these. Check the tool homepage for more details but
 in a nutshell RRD files are with fixed (upon creation) size which store 
 series of numbers over different periods using bigger averaging steps
 the older the data gets. So rrdtool (and in turn - SMG) keeps most 
-recent data (usually 48h in SMG) into the minimal for SMG run interval 
-(every minute) granularity (which corresponds to maximal resolution) 
+recent data (by default - 96h in SMG) into the minimal for SMG run interval 
+(default -every minute) granularity (which corresponds to maximal resolution) 
 and older data gets averaged over longer period and kept like that 
 (at smaller resolution).
 
@@ -202,20 +209,15 @@ not interfere too much with fast every-minute commands. Aggregate RRD
 object updates happen after all regular rrd objects have been updated,
 at the end of the interval run.
 
-There are two ways this can work:
-
-- By default SMG will use its internal scheduler to trigger the 
+By default SMG will use its internal scheduler to trigger the 
 regular runs. Without getting into too much detail here (check 
 [Developers documentation](dev/index.md) for more info) it will 
 trigger (separate) runs for every discovered unique rrd object 
 (or plugin) interval value, whenever the applicable time comes.
-- If desired one can also use an external scheduler like cron. For this 
+If desired one can also use an external scheduler like cron. For this 
 to work one needs to set *smg.useInternalScheduler* in application.conf 
 to *false* and then schedule the smgscripts/run-job.sh script as cron 
 jobs (per interval, passed as param to run-job.sh) as needed.
-
-So far the internal scheduler has been working fine for us at Smule so 
-don't see any reasons to want to use the external scheduler option.
 
 
 <a name="pre_fetch" />
@@ -262,7 +264,7 @@ An important note is that SMG will execute child pre-fetch commands in sequence 
 not rrd object commands which are always parallelized up to the max concurrency 
 level configured for the interval). The intent is to be able to limit the number of
 concurrent probes hitting some target host to 1 per interval. This behavior can be
-overriden by setting the **child_conc** property on the pre-fetch command to more
+overriden by setting the **child\_conc** property on the pre-fetch command to more
 than the default 1 (setting the number of max concurrent threads that can execute
 child pre-fetches of this pre-fetch).
 
@@ -301,7 +303,7 @@ configured in the yaml for quick access. Also any filter result
 can be shared by just sharing its SMG URL - the filter fields
 are sent as plain URL params to SMG.
 
-**Note:** Using text filter on object id and title to define groups
+**Note:** Using regex filter on object id and title to define groups
 of objects may look awkward at first sight but is actually quite 
 powerful (and the idea was "borrowed" from 
 [mrtg indexmaker](http://oss.oetiker.ch/mrtg/doc/indexmaker.en.html)).
@@ -314,10 +316,10 @@ use the filters to define arbitrary groups later when needed.
 <a name="flt-remote" />
 
 ##### Remote filter
-- a drop down to select a specific [remote instance](#remotes) to 
+- a drop down to select a specific [remote instances](#remotes) to 
 search in or to search in all remotes via the special 
 asterisk _\*_ remote id. Note that this filter is not visible
-unless there is at least one configured remote.
+unless there is at least one configured remote instance.
 
 <a name="flt-titlerx" />
 
@@ -341,7 +343,8 @@ e.g dots are not special match-all symbols).
 
 - when set, only object ids having the specified 
 suffix string (ending with it) will be matched by the filter. 
-Note that this is not a regexp but a direct string comparison.
+Note that similar to prefix filter this is not a regexp but a
+direct string comparison.
 
 <a name="flt-regex" />
 
@@ -361,11 +364,12 @@ specified regular expressions will be matched by the filter.
 
 ##### Index filter
 
-- Where Index ([described below](#indexes)) itself defines a filter, the index id is
-a "first class" filter member too. So when visiting an Index url one sees the index
-filter separately from the user filter and the user filter works only within the already
-filtered by the index objects. The UI provides options to remove the index filter or merge
-it with the user filter resulting in a index-free filter.
+- Where Index ([described below](#indexes)) itself defines a filter,
+the index id is a "first class" filter member too. So when visiting
+an Index url one sees the index filter separately from the user filter
+and the user filter works only within the already filtered by the index
+filter list of objects. The UI provides options to remove the index
+filter or merge it with the user filter resulting in a index-free filter.
 
 
 <a name="indexes" />
@@ -388,7 +392,11 @@ for more details on indexes.
 #### Graph options
 
 These generally allow one to set some non-default graph options, 
-when desired.
+when desired. By default SMG will plot the data for the requested
+period but also plot the previous period of the same length using
+dotted lines. It will also plot a dashed line at the 95 perecntile
+value for each plotted variable. Both of these can be disabled using
+the respective check-box in the filter UI.
 
 <a name="step" />
 
@@ -484,6 +492,10 @@ see gaps where one of the component has NaN value for the time point
 where SUMN will happily conver the NaNs to 0 and still display a line.
 - **AVG** - similar to SUM but displaying graphs for the average value of
 the same-typed lines.
+- **MAX** - similar to SUM but displaying graphs for the max value across
+the same-typed lines.
+- **MIN** - similar to SUM but displaying graphs for the min value across
+the same-typed lines.
 
 By default (and when the filter results in objects from multiple 
 remotes) SMG will do the aggregation "by remote", i.e will produce 
@@ -502,8 +514,8 @@ so it is expected to be somewhat slower.
 In addition to the mentioned RRD objects, SMG also supports *View 
 objects*. These are defined on top of RRD objects - every View object 
 must reference a RRD Object. Technically SMG cares only about RRD 
-(update) objects when doing the interval runs but only cares about
-View objects when filtering for display. 
+(update) objects when doing the interval runs for updates but only
+cares about View objects when filtering for display. 
 
 By default every RRD Object is also a View object so one does not 
 need to explicitly define View objects except in some cases described 
@@ -565,8 +577,8 @@ prefixed with *@&lt;remoteid>.* when merged into the local object ids
 namespace to avoid name conflicts (the '@' symbol is otherwise 
 forbidden in object ids).
 
-Then [filters](#filters) can specify filtering within a single specific 
-remote or can specify the special '*' (wildcard) remote id to match 
+Then [filters](#filters) can specify filtering within one or more specific 
+remotes or can specify the special '*' (wildcard) remote id to match 
 objects across all remotes.
 
 Internally this works over remote (json-response) http APIs which 
@@ -658,7 +670,7 @@ or as part of indexes (including "hidden" indexes which sole
 current purpose is to define alerts).
 
 The [monitoring page](/monitor) page displays all (local or remote)
-current issues (anything with non-OK state). SMG supports the following
+current problems (anything with non-OK state). SMG supports the following
 states, sorted by severity:
 
 - **OK** - The normal state - a valid value was retrieved and updated 
@@ -690,12 +702,13 @@ These states come in two flavors - "**HARD**" (at least consecutive 3
 non-ok states) and "**SOFT**" (less than 3 consecutive non-ok states).
 The OK state is always HARD. These concepts are borrowed from nagios.
 
-All the in-memory state for monitoring is saved to json files (in the
-directory specified by the **$monstate\_dir** global config value)
-on shut-down and loaded on start-up.
+On shut-down all the in-memory state for monitoring is saved to json
+files (in the directory specified by the **$monstate\_dir** global
+config value) and loaded on start-up.
 
 SMG also supports "silencing" alerts which is basically hiding them 
-from the error page. There are two types of silencing:
+from the error page and preventing alert notifications. There are two
+types of silencing:
 
 - **Acknowledge** - this will "silence" a current error until it gets
 back into a normal state which will automatically clear the 
@@ -704,36 +717,57 @@ acknowledgement.
 - **Silence for** - silence some error for given time period after 
 which the silencing will expire. Silencing does not clear on
 recovery which is different than acknowledgement and is useful
-for services which are in "flapping" state - flipping between OK and 
-non-OK states (otherwise acknowlegement is better).
+when one wants to prevent alerts upfront when some host or service
+has planned maintenance and downtime and also for services which are
+in "flapping" state - flipping between OK and non-OK states (otherwise
+acknowlegement is better).
 
-By default SMG will not show Soft, Acknowledged or Silenced error - 
-this can be toggled for each type using the respective checkboxes.
+- **Sticky silencing** - this allows one to define regex (and regex exlude)
+filters which will silence all matching objects but also matching ones
+defined in the future (until the silencing period expires).
+This function is available as a check-box in the Monitor - State trees page
+described below.
+
+By default SMG will not show Soft, Acknowledged or Silenced errors in
+the Monitor page - this can be toggled for each type using the
+respective checkboxes.
 
 In addition to current error states SMG keeps track of recent error
-events on the [monitor logs page](/monitor/log). Internally these
+events on the Monitor - [Event log](/monitor/log) page. Internally these
 are stored in log files under the directory speciified by the 
 **$monlog\_dir** global config value. This area is work in progress 
 and subject to improvements.
 
-There is also a [heatmaps page](/monitor/heatmap) available (also 
-work in progress and subject to change).
+One can browse the current SMG state trees (built based on the Run trees
+mentioned above) in the Monitor - [State trees](/monitor/trees) page.
+This page allows easy upfront silencing of mutltiple hosts/services
+when these have maintenance/downtime pending. This is also where the
+Sticky silencing check-box is available.
 
-While currently SMG's monitoring is not yet good-enough to replace 
-Nagios it is already an excellent "secondary" monitoring system (and 
-the ability to send alert notifications is high on the TODO list).
+All currently silenced states and also currently active Sticky silences
+can be seen in the Monitor - [Silenced states][/monitor/silenced] page.
+This page useful to explicitly un-silence objects and remove active
+Sticky silences before the silencing period has expired.
+
+Ths Monitor - [Run trees](/monitor/runtree) page display the entire internal
+SMG Run trees (per-interval) structure. Useful to troubleshoot config issues
+and sanity checking what SMG does on every interval run.
+
+There is also a [heatmaps page](/monitor/heatmap) available where one
+can see a graphical representation of the overal systems health (work in
+progress and subject to change).
 
 <a name="anomaly">
 
 ##### Anomaly detection
  
-The SMG "data feed" based anomaly detection works based on a threshold
-for "difference" (default = 1.5) and two time periods - shorter (default
+The SMG "data feed" based anomaly detection works based on a "threshold
+for difference" (default = 1.5) and two time periods - shorter (default
 30 minutes) and longer (default - 30 hours). Will use the default values
 in the examples below.
 
-First, for any value which has a "spike check" configuration enabled 
-("alert-spike") SMG will start keeping in-memory stats about the most 
+First, for any value which has a "spike check" configuration ("alert-spike")
+enabled  SMG will start keeping in-memory stats about the most 
 recent values. The number of stats that will be kept depends on the
 object interval compared to the configured check periods - e.g. for
 a graph updated every minute, 30 minutes would map to 30 data points
