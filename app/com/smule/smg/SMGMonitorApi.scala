@@ -250,7 +250,7 @@ trait SMGMonState extends SMGTreeNode {
     s"$smgBaseUrl/dash?remote=${URLEncoder.encode(smgRemoteId.getOrElse(SMGRemote.local.id), "UTF-8")}&${myShowUrlFilter.get}"
 
   def notifyBody(smgBaseUrl: String, smgRemoteId: Option[String]): String = {
-      s"REMOTE: ${smgRemoteId.getOrElse("local")}\n\n" +
+      s"REMOTE: ${smgRemoteId.getOrElse(SMGRemote.localName)}\n\n" +
       s"MSG: $text\n\n" +
       s"LINK: ${bodyLink(smgBaseUrl, smgRemoteId)}\n\n"
   }
