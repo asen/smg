@@ -759,9 +759,9 @@ cache hit % in this case) [explained below](#cdef_vars-cdef)
           cdef: "$ds1,100,*,$ds0,/"
 </pre>
 
-One should not set both gv and cdef_vars on the same View object. If 
+One should not set both gv and cdef\_vars on the same View object. If 
 one does that the gv values will be ignored. Note that technically it 
-is possible to do what gv does using just cdef_vars except 
+is possible to do what gv does using just cdef\_vars except 
 that gv provides a simpler way to just select a subset or reorder graph
 lines.
 
@@ -772,9 +772,7 @@ conflict with other view or rrd objects). Check
 [RRD Objects](#rrd-objects) for more info on allowed and good object 
 ids.
 
-- **ref**: mandatory reference (string) to a RRD object id. Note:
-Currently there is a limitation that the ref RRD object must be defined 
-in the yaml before the View objects it will be referenced in.
+- **ref**: mandatory reference (string) to a RRD object id
 
 - **title**: - free form text description of the object. If not 
 specified, the ref object title will be used.
@@ -847,21 +845,22 @@ Here is an example Index definition:
       cols: 6                    # optional (default - the value of $dash-default-cols) how many coulmns of graph images to display
       rows: 10                   # optional (default - the value of $dash-default-rows) how many rows (max) to display. excess rows are paginated
       px: "host.localhost."      # optional filter: rrd object id prefix to match. Ignored if null (which is the default).
-#      sx: ...                   # optional filter: rrd object id suffix to match. Ignored if null (which is the default).
-#      rx: ...                   # optional filter: rrd object id regex to match. Ignored if null (which is the default).
-#      rxx: ...                  #
-#      trx: ...                  #
+      sx: ...                    # optional filter: rrd object id suffix to match. Ignored if null (which is the default).
+      rx: ...                    # optional filter: regex to match against rrd object id. Ignored if null (which is the default).
+      rxx: ...                   # optional filter: exclude objects which ids match the supplied regex. Ignored if null (which is the default).
+      trx: ...                   # optional filter: regex to match against object text representation (including title, var names etc). Ignored if null (which is the default). 
       parent: some.index.id      # optinal parent index id. Indexes without parent are considered top-level
       children:                  # optional list of child index ids to display under this index
-        - iid1
-        - iid2
-      remote: "*"                # optional - index remote, default is null, use "*" to specify cross-colo index and
-                                 # should be left unspecified otherwise (SMG will populate it accordingly)
+        - example.index.id1
+        - example.index.id2
+        - ...
+      remote: "*"                # optional - index remote, default is null, use "*" to specify index matching all remotes.
+                                 # Individual remote instances can be specified by using their comma-separated ids.
 </pre>
 
 Index objects support the following properties:
 
-- the **index id**: This is the unique index id (must not
+- the **index id**: This is the unique index id, starting with the ^ symbol (must not
 conflict with other index ids).
 
 - **title**: - free form text title of the index. If not 
@@ -904,8 +903,8 @@ The end point of the graphs can be set to be different than
 [graph option](#graph-options).
 
 - **agg\_op**: (default - None) - A SMG aggregate operation string (one
-of _GROUP_, _STACK_, _SUM_, _SUMN_ or _AVG_ ). If that is specified
-SMG will directly apply the respective 
+of _GROUP_, _STACK_, _SUM_, _SUMN_, _AVG_, _MAX_ or _MIN_ ). If that is
+specified SMG will directly apply the respective 
 [aggregate operation](../index.md#aggregate-functions) to the
 graphs resulting from the filter, before display.
 
