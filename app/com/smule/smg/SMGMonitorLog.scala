@@ -60,7 +60,7 @@ case class SMGMonitorLogMsg(ts: Int,
   lazy val logLine = s"[$tsFmt]: $ts $mltype $msIdFmt $vixFmt $repeat $hardStr $msg\n"
 
   def objectsFilter: String = SMGMonStateAgg.objectsUrlFilter(ouids)
-  def objectsFilterWithRemote = s"remote=${remote.id}&$objectsFilter"
+  def objectsFilterWithRemote = s"remote=${java.net.URLEncoder.encode(remote.id, "UTF-8")}&$objectsFilter"
 
   def serialize: JsValue = {
     implicit val monLogWrites = SMGRemoteClient.smgMonitorLogWrites

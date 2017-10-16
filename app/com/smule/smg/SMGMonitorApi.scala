@@ -202,7 +202,7 @@ trait SMGMonState extends SMGTreeNode {
 
   def currentStateVal: SMGState.Value = recentStates.headOption.map(_.state).getOrElse(SMGState.SMGERR) // XXX empty recentStates is smg err
 
-  private def urlPx = "/dash?remote=" + remote.id + "&"
+  private def urlPx = "/dash?remote=" + java.net.URLEncoder.encode(remote.id, "UTF-8") + "&"
 
   private def myShowUrlFilter: Option[String] = if (aggShowUrlFilter.isDefined) {
     aggShowUrlFilter
@@ -245,9 +245,9 @@ trait SMGMonState extends SMGTreeNode {
   }
 
   private def bodyLink(smgBaseUrl: String, smgRemoteId: Option[String]) = if (myShowUrlFilter.isEmpty)
-    s"$smgBaseUrl/monitor#${smgRemoteId.getOrElse("")}"
+    s"$smgBaseUrl/monitor#rt_${URLEncoder.encode(smgRemoteId.getOrElse(SMGRemote.local.id), "UTF-8")}"
   else
-    s"$smgBaseUrl/dash?remote=${smgRemoteId.getOrElse(SMGRemote.local.id)}&${myShowUrlFilter.get}"
+    s"$smgBaseUrl/dash?remote=${URLEncoder.encode(smgRemoteId.getOrElse(SMGRemote.local.id), "UTF-8")}&${myShowUrlFilter.get}"
 
   def notifyBody(smgBaseUrl: String, smgRemoteId: Option[String]): String = {
       s"REMOTE: ${smgRemoteId.getOrElse("local")}\n\n" +

@@ -112,9 +112,10 @@ trait SMGAggObjectView extends SMGObjectView {
     (if (groupBy != SMGAggGroupBy.defaultGroupBy) s"&gb=${groupBy.toString}" else "")
 
   override def dashUrl: String = {
+    val rmtId = SMGRemote.remoteId(id)
     val rx = s"^(${objs.map(obj => SMGRemote.localId(obj.id)).distinct.mkString("|")})$$"
     "/dash?rx=" + java.net.URLEncoder.encode(rx, "UTF-8") + "&agg=" + op +
-      "&remote=" + SMGRemote.remoteId(id) +
+      (if (rmtId != SMGRemote.local.id) "&remote=" + java.net.URLEncoder.encode(rmtId, "UTF-8") else "") +
       (if (groupBy != SMGAggGroupBy.defaultGroupBy) s"&gb=${groupBy.toString}" else "")
   }
 
