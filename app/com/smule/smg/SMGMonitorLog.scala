@@ -94,7 +94,7 @@ object SMGMonitorLogMsg extends Enumeration {
     implicit val smgStateReads = SMGState.smgStateReads
 
     def myPrefixedId(s: String) = {
-      if (remote.id == "") s else SMGRemote.prefixedId(remote.id, s)
+      SMGRemote.prefixedId(remote.id, s)
     }
     (
       (JsPath \ "ts").read[Int] and
