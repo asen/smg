@@ -3,7 +3,7 @@
 @import com.smule.smg.SMGMonFilter
 @import com.smule.smg.SMGTree
 @import com.smule.smg.SMGState
-@import com.smule.smg.SMGRemote ; var curRemote = ""
+@import com.smule.smg.SMGRemote
 @(cfSvc: SMGConfigService, rmtIds: Seq[String], availRemotes: Seq[String], flt: SMGMonFilter,
   rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], total: Int,
   limit: Int, defLimit: Int, curUrl: String)(implicit flash: Flash)
@@ -152,26 +152,25 @@
 </script>
 
 <h5><a href="?" onclick="goToRoot(''); return false">Top Level</a></h5>
-<ul>
-  @for(tree <- trees){
-    @defining(SMGRemote.remoteId(tree.node.id)){ rmtId =>
-      @if( rmtId != curRemote) {
-        @defining(cfSvc.config.remotes.find(r => r.id == rmtId).getOrElse(SMGRemote.local)) { rmt =>
-      </ul>
-        @remoteDisplay(rmt)
-      <ul>
-        }
-      @{curRemote = rmtId}
-      }
-    }
+@defining(trees.groupBy{t => SMGRemote.remoteId(t.node.id)}) { byRmtId =>
+  @defining(
+  (Seq(SMGRemote.local) ++ cfSvc.config.remotes).map { r => (r, byRmtId.getOrElse(r.id, Seq()))}.filter(t => t._2.nonEmpty)
+  ){ byRemote =>
+  @for(tpl <- byRemote) {
+  @remoteDisplay(tpl._1)
+  <ul>
+  @for(tree <- tpl._2){
     <li>
       @if(tree.node.parentId.isDefined){
       <p>Parent: <a href="?rid=@tree.node.parentId.get" onclick="goToRoot('@tree.node.parentId.get'); return false">@tree.node.parentId.get</a></p>
       }
       @monitorStateTreeDisplay(tree, tree.node.id == rootId.getOrElse(""), curUrl)
     </li>
+    }
+  </ul>
   }
-</ul>
+}
+}
 
 @if(trees.size < total){
 <p><b>... (more than limit)</b></p>
