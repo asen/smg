@@ -28,13 +28,13 @@ object SMGState extends Enumeration {
 
   val longTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
-  val YEAR_SECONDS = 365 * 24 * 3600
-  val DAY_SECONDS = 24 * 3600
+  val YEAR_SECONDS: Int = 365 * 24 * 3600  //roughly
+  val DAY_SECONDS: Int = 24 * 3600
 
   /**
     * withName is final so can not be overriden - using this to allow backwards compatibility with old names
     * calls withName unless known old name
-    * @param nm
+    * @param nm - the string value name
     * @return
     */
   def fromName(nm: String): SMGState.Value = {
@@ -300,8 +300,8 @@ case class SMGMonStateAgg(id: String, lst: Seq[SMGMonState], showUrlFilter: Stri
   override val isSilenced: Boolean = lst.forall(_.isSilenced)
   private val minSilencedUntil = lst.map(ovs => ovs.silencedUntil.getOrElse(Int.MaxValue)).min
   override val silencedUntil: Option[Int] = if (minSilencedUntil == Int.MaxValue) None else Some(minSilencedUntil)
-  override val oid = None
-  override val pfId = None
+  override val oid: Option[String] = None
+  override val pfId: Option[String] = None
   override val aggShowUrlFilter = Some(showUrlFilter)
 
   override val errorRepeat: Int = lst.map(_.errorRepeat).max
@@ -337,7 +337,7 @@ object SMGMonStateAgg {
   def aggByParentId(lst: Seq[SMGMonState]): Map[String, SMGMonState]= {
     val ret = lst.filter(_.parentId.isDefined).groupBy(_.parentId.get).map { t =>
       val pid = t._1
-      val msa = SMGMonStateAgg(pid, t._2, s"rx=${pid}")
+      val msa = SMGMonStateAgg(pid, t._2, s"rx=$pid")
       (pid,msa)
     }
     ret
@@ -361,10 +361,10 @@ case class SMGMonStateGlobal(title: String,
   lazy val isHard = true
   override val isAcked = false // TODO
   override val isSilenced = false // TODO
-  override val silencedUntil = None
-  override val aggShowUrlFilter = None
-  override val oid = None
-  override val pfId = None
+  override val silencedUntil: Option[Int] = None
+  override val aggShowUrlFilter: Option[String] = None
+  override val oid: Option[String] = None
+  override val pfId: Option[String] = None
 
   override val remote: SMGRemote = SMGRemote.local
 
@@ -446,8 +446,8 @@ object SMGMonFilter {
       ) (SMGMonFilter.apply _)
   }
 
-  val jsWrites = new Writes[SMGMonFilter] {
-    def writes(flt: SMGMonFilter) = {
+  val jsWrites: Writes[SMGMonFilter] = new Writes[SMGMonFilter] {
+    override def writes(flt: SMGMonFilter): JsValue = {
       val mm = mutable.Map[String,JsValue]()
       if (flt.rx.isDefined) mm += ("rx" -> Json.toJson(flt.rx.get))
       if (flt.rxx.isDefined) mm += ("rxx" -> Json.toJson(flt.rxx.get))
@@ -463,7 +463,7 @@ object SMGMonFilter {
 case class SMGMonStickySilence(flt: SMGMonFilter, silenceUntilTs: Int, desc: Option[String], uid: Option[String] = None) {
   val uuid: String = if (uid.isDefined) uid.get else UUID.randomUUID().toString
 
-  val humanDesc = (if (flt.rx.isDefined && flt.rxx.isDefined)
+  val humanDesc: String = (if (flt.rx.isDefined && flt.rxx.isDefined)
     s"regex=${flt.rx.get}, regex exclude=${flt.rxx.get}"
   else if (flt.rx.isDefined)
     s"regex=${flt.rx.get}"
@@ -487,8 +487,8 @@ object SMGMonStickySilence {
 
   implicit private val smgMonFilterWrites: Writes[SMGMonFilter] = SMGMonFilter.jsWrites
 
-  val jsWrites = new Writes[SMGMonStickySilence] {
-    def writes(slc: SMGMonStickySilence) = {
+  val jsWrites: Writes[SMGMonStickySilence] = new Writes[SMGMonStickySilence] {
+    override def writes(slc: SMGMonStickySilence): JsValue = {
       val mm = mutable.Map(
         "flt" -> Json.toJson(slc.flt),
         "slu" -> Json.toJson(slc.silenceUntilTs),
@@ -514,7 +514,7 @@ trait SMGMonitorApi {
 
   /**
     * Get all matching states for the given filter
-    * @param flt
+    * @param flt - the filter
     * @return
     */
   def localStates(flt: SMGMonFilter, includeInherited: Boolean): Seq[SMGMonState]
@@ -522,7 +522,7 @@ trait SMGMonitorApi {
   /**
     * Get all states matching given filter, by remote
     * @param remoteIds - when empty - return matching states from all remotes
-    * @param flt
+    * @param flt - the filter
     * @return
     */
   def states(remoteIds: Seq[String], flt: SMGMonFilter): Future[Seq[SMGMonitorStatesResponse]]
