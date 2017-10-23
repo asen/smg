@@ -745,7 +745,7 @@ when these have maintenance/downtime pending. This is also where the
 Sticky silencing check-box is available.
 
 All currently silenced states and also currently active Sticky silences
-can be seen in the Monitor - [Silenced states][/monitor/silenced] page.
+can be seen in the Monitor - [Silenced states](/monitor/silenced) page.
 This page useful to explicitly un-silence objects and remove active
 Sticky silences before the silencing period has expired.
 

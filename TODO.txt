@@ -1,14 +1,8 @@
 v 0.5+
 
-== General enhancements ==
+== Short term plan ==
 
-* Multi remote select
-
-== Monitor ==
-
-* Silencing indexes so that newly added objects will be treated as silenced
-
-* Forward silencing - define rx/rxx match to silence existing and future objects
+...
 
 == Documentation ==
 
@@ -37,3 +31,5 @@ from external sources posting the data via some API. Probably a plugin.
 * filter to hide empty graphs (?)
 
 * support "tags" (?) - be able to filter by tag.
+
+* Silencing indexes so that newly added objects will be treated as silenced (already covered by sticky silence?)

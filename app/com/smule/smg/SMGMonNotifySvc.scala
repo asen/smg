@@ -147,7 +147,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
       val condensedSubjects = msgsToCondense.map(_.subjStr).take(MAX_CONDENSED_SUBJECTS)
       val msgBody = s"$msgSubj. Some example subjects (displaying ${condensedSubjects.size}/${msgsToCondense.size}):\n\n" +
         condensedSubjects.mkString("\n") +
-        s"\n\nURL: ${configSvc.config.notifyBaseUrl}/monitor#${configSvc.config.notifyRemoteId.getOrElse("")}"
+        s"\n\nURL: ${configSvc.config.notifyBaseUrl}/monitor#rt_${configSvc.config.notifyRemoteId.getOrElse("")}"
       realRunStateCommands(allRcpts,
         SMGMonNotifySeverity.UNTHROTTLED,
         SMGMonNotifySeverity.UNTHROTTLED.toString,
