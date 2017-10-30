@@ -19,11 +19,11 @@ case class SMGRrdConfig(rrdTool: String ,
                         rrdGraphFont: Option[String]) {
   private val log = SMGLogger
 
-  def flushSocket(): Unit = {
+  def flushRrdCachedFile(rrdFile: String): Unit = {
     if (rrdToolSocket.isDefined) {
-      log.debug("SMGRrdConfig.flushSocket: flushing updates via " + rrdToolSocket.get)
+      log.debug(s"SMGRrdConfig.flushSocket: flushing $rrdFile via " + rrdToolSocket.get)
       try {
-        SMGCmd("echo FLUSHALL | socat - UNIX-CONNECT:" + rrdToolSocket.get, 120).run
+        SMGCmd(s"$rrdTool flushcached --daemon ${rrdToolSocket.get} $rrdFile", 120).run
       } catch {
         case t: Throwable => log.ex(t, "Unexpected exception while flushing socket")
       }
@@ -230,6 +230,9 @@ object SMGRrd {
                         period: String, pl:Option[String], step: Option[Int],
                         maxY: Option[Double], minY: Option[Double]): String = {
     val c = new mutable.StringBuilder("graph ").append(outFn).append(" --imgformat=PNG")
+    if (rrdConf.rrdToolSocket.isDefined) {
+      c.append(s" --daemon ${rrdConf.rrdToolSocket.get}")
+    }
     c.append(" --font '").append(rrdConf.rrdGraphFont.getOrElse("LEGEND:7:monospace")).append("'")
     c.append(" --title '").append(title).append("'")
     c.append(" --start=now-").append(safePeriod(period))
@@ -559,7 +562,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
       new LabelMaker(defLabelMakersPrefix(i))
     }
 
-  private def resetDefLabelMakers() = defLabelMakers.foreach(lm => lm.reset())
+  private def resetDefLabelMakers(): Unit = defLabelMakers.foreach(lm => lm.reset())
 
   private def getAllDefsAndLabelsByVarCdef(period : Option[String]): Seq[Seq[(String,String)]] = {
     val ret = for (v <- aggObj.vars)
@@ -829,7 +832,11 @@ class SMGRrdFetch(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
   }
 
   private def fetchCommand(resolution: Option[Int], start: Option[String], end: Option[String] = None): String = {
-    val c = new mutable.StringBuilder(rrdConf.rrdTool).append(" fetch ").append(rrdFname).append(" ").append(FETCH_CF)
+    val c = new mutable.StringBuilder(rrdConf.rrdTool).append(" fetch ")
+    if (rrdConf.rrdToolSocket.isDefined) {
+      c.append(s" --daemon ${rrdConf.rrdToolSocket.get}").append(" ")
+    }
+    c.append(rrdFname).append(" ").append(FETCH_CF)
     if (resolution.isDefined) c.append(" --resolution=").append(resolution.get)
     if (start.isDefined) c.append(" --start=-").append(safePeriod(start.get))
     if (end.isDefined) c.append(" --end=-").append(safePeriod(end.get))
@@ -931,7 +938,9 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
 
   private def rrdUpdateCommand(tss: String, vals: List[Double]): String = {
     val c = new mutable.StringBuilder(rrdConf.rrdTool).append(" update ")
-    if (rrdConf.rrdToolSocket.nonEmpty) c.append("--daemon unix:").append(rrdConf.rrdToolSocket.get).append(" ")
+    if (rrdConf.rrdToolSocket.nonEmpty) {
+      c.append("--daemon ").append(rrdConf.rrdToolSocket.get).append(" ")
+    }
     c.append(rrdFname)
     c.append(" ").append(tss).append(":").append(vals.map{ x => numRrdFormat(x, nanAsU = true)}.mkString(":"))
     c.toString

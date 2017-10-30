@@ -105,7 +105,6 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
 
   private def onRunCompleteFunc(logMsg: String): () => Unit = {
     def ret(): Unit = {
-      configSvc.config.rrdConf.flushSocket()
       cleanupCommandExecutionTimes() // TODO run this less often?
       log.info(logMsg)
     }

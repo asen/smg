@@ -603,9 +603,14 @@ class SMGConfigParser(log: SMGLoggerApi) {
     } // def parseConf
 
     def createRrdConf = {
+      val socketOpt = (if (globalConf.contains("$rrd_socket")) Some(globalConf("$rrd_socket")) else None).map { sock =>
+        if (sock.contains(":")){
+          sock
+        } else "unix:" + sock
+      }
       SMGRrdConfig(
         if (globalConf.contains("$rrd_tool")) globalConf("$rrd_tool") else rrdTool,
-        if (globalConf.contains("$rrd_socket")) Some(globalConf("$rrd_socket")) else None,
+        socketOpt,
         if (globalConf.contains("$rrd_graph_width")) globalConf("$rrd_graph_width").toInt else 539,
         if (globalConf.contains("$rrd_graph_height")) globalConf("$rrd_graph_height").toInt else 135,
         globalConf.get("$rrd_graph_font")

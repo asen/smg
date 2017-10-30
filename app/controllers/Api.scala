@@ -262,6 +262,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
   def downloadRrd(oid: String) = Action {
     val obj = smg.getObjectView(oid)
     if (obj.isDefined && obj.get.rrdFile.isDefined) {
+      configSvc.config.rrdConf.flushRrdCachedFile(obj.get.rrdFile.get)
       Ok.sendFile(new java.io.File(obj.get.rrdFile.get))
     } else {
       NotFound("object id not found")
