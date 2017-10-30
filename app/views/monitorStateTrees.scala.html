@@ -18,15 +18,6 @@
   <form id="runTreeFilterForm" method="GET">
     <label class="autosubmit-lbl">Limit:</label>
     <input type="number" id="limit" name="lmt" value="@{limit}" min="2" max="9999999" onchange="mySubmitOnChange(this);">
-    @if(availRemotes.nonEmpty){
-    <label class="autosubmit-lbl">Remote filter:</label>
-    @remoteSelect(rmtIds, availRemotes, "remoteChanged(this);")
-    }
-    <label class="autosubmit-lbl">Regex filter:</label>
-      <input type="text" id="inpRx" name="rx" onchange="mySubmitOnChange(this);" value="@{flt.rx.getOrElse("")}">
-    <label class="autosubmit-lbl">Top-level regex exclude filter:</label>
-      <input type="text" id="inpRxx" name="rxx" onchange="mySubmitOnChange(this);" value="@{flt.rxx.getOrElse("")}">
-    <br/>
     <label class="autosubmit-lbl">Minimal severity filter:</label>
     <select id="inpMs" name="ms" onchange="mySubmitOnChange(this);" >
       @for( sid <- SMGState.values.toList.map(_.toString)) {
@@ -39,7 +30,15 @@
       <input id="cbAcked" type="checkbox" name="hackd" @if(!flt.includeAcked){ checked } onchange="mySubmitOnChange(this);" />
     <label class="autosubmit-lbl" for="cbSlncd">Hide Silenced objects</label>
       <input id="cbSlncd" type="checkbox" name="hslncd" @if(!flt.includeSilenced){ checked } onchange="mySubmitOnChange(this);" />
-
+    <br/>
+    @if(availRemotes.nonEmpty){
+    <label class="manualsubmit-lbl">Remote filter:</label>
+    @remoteSelect(rmtIds, availRemotes, "")
+    }
+    <label class="manualsubmit-lbl">Regex filter:</label>
+    <input type="text" id="inpRx" name="rx" value="@{flt.rx.getOrElse("")}">
+    <label class="manualsubmit-lbl">Top-level regex exclude filter:</label>
+    <input type="text" id="inpRxx" name="rxx" value="@{flt.rxx.getOrElse("")}">
     <input type="hidden" id="treeRoot" name="rid" value="@{rootId.getOrElse("")}">
     <input type="hidden" id="frmInpSilenceAllUntil" name="silenceAllUntil" value="">
     <input type="hidden" id="frmInpStickySilence" name="sticky" value="">

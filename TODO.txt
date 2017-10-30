@@ -2,7 +2,7 @@ v 0.5+
 
 == Short term plan ==
 
-...
+* do not flushall with rrdcached but pass socket to rrdgraph (and flush individual files before rrd download)
 
 == Documentation ==
 
