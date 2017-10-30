@@ -243,18 +243,18 @@ the default PATH.
 <a name="rrd_socket" />
 
 - **$rrd\_socket**: - _(default is None)_. Otherwise one can specify
-a string value like /path/to/socket.file. If specified that path will 
-be passed to the rrdtool update command with the 
+a string value like unix:/path/to/socket.file. If specified it will 
+be passed to the relevant rrdtool update, graph or fetch commands with the 
 --daemon unix:/path/to/socket.file option. This in turn is
 intended for use with rrdcached (a rrdtool daemon used for doing
 updates more efficiently). rrdcached is highly recommended on more
 demanding setups.
 
 - **$monlog\_dir**: _"monlog"_ - the directory where the monitoring
-system saves logs with events.
+system saves logs with events in json format (one file per calendar date).
 
 - **$monstate\_dir**: _"monstate"_ - the directory where the monitoring
-system saves its memory state on shut down (and every hour).
+system saves its memory state on shut down.
 
 - **$include**: _(no default value)_ "path/to/some/\*.yml" - whenever 
 the SMG config parser encounters an $include global it will interpret
