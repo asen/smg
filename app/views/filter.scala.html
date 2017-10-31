@@ -110,7 +110,7 @@ matching all of the provided space separated case insensitive regular expression
 
       <div class="form-group">
         <label class="autosubmit-lbl" for="smg-filter-period"
-               title="Period (time since) to cover in the graphs.
+               title="Period (time since) to cover in the graphs. Some examples are 24h, 3d, 2w etc. Check admin docs for supported suffixes.
 Changing this reloads the page.">Period since:</label>
         <input class="form-control" type="text"
                id="smg-filter-period"
@@ -120,7 +120,7 @@ Changing this reloads the page.">Period since:</label>
 
       <div class="form-group">
         <label class="autosubmit-lbl" for="smg-filter-pl"
-               title="Optional period range (length) to cover in the graphs. Default is the entire range until current time.
+               title="Optional period range (length) to cover in the graphs. Same formats as the Period since field are supported. Default is the entire range until current time.
 Changing this reloads the page.">Period len:</label>
         <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Remove option" onclick="clearElem('smg-filter-pl');" />
         <input class="form-control" type="text"
@@ -131,7 +131,7 @@ Changing this reloads the page.">Period len:</label>
 
       <div class="form-group">
         <label class="autosubmit-lbl" for="smg-filter-step"
-               title="Requested graphs step (resolution). Specified in seconds (as number), minutes (e.g. 5m) or hours (e.g. 5h).
+               title="Requested graphs step (resolution). Specified in seconds (as number), minutes (e.g. 5M), hours (e.g. 1h), etc. Check admin docs for supported formats.
 Changing this reloads the page.">Step:</label>
         <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Remove option" onclick="clearElem('smg-filter-step');" />
         <input class="form-control" type="text" id="smg-filter-step"

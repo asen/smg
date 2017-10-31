@@ -893,10 +893,10 @@ time specifier which can be one of the following:
     - _y_ - for years, 
     - _m_ - this is currently used for both minutes and months, 
     If the number is less than 13 it will be considered to be a month 
-    otherwise - minutes. Use seconds if you really want graphs covering 
-    less than 13 minutes (unlikely).
+    otherwise - minutes. Use M to force specifying minutes.
     - _d_ - for days
     - _h_ - for hours
+    _ _M_ - for minutes
     - (None, just a number) - assumed to be seconds.
 The end point of the graphs can be set to be different than
 "now" by using a "period length" (**pl**)

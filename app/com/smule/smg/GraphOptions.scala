@@ -24,7 +24,7 @@ case class GraphOptions(
     val goptsSx = (if (disablePop) "-dpp" else "") + (if (disable95pRule) "-d95p" else "") +
       maxY.map(x => s"-mxy$x").getOrElse("") + minY.map(x => s"-mny$x").getOrElse("")
 
-    "-" + SMGRrd.safePeriod(period) + pl.map("-pl" + SMGRrd.safePeriod(_)).getOrElse("") +
+    "-" + SMGRrd.safePeriod(period, m2sec = false) + pl.map("-pl" + SMGRrd.safePeriod(_, m2sec = false)).getOrElse("") +
       step.map("-" + _).getOrElse("") + goptsSx
   }
 }

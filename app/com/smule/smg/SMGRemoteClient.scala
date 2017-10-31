@@ -452,7 +452,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       )
     )
     ws.url(remote.url + API_PREFIX + "monitor/logs?period=" +
-      SMGRrd.safePeriod(flt.periodStr) + "&limit=" + flt.limit + sevStr + softStr + ackdStr + slncdStr + rxStr + rxxStr).
+      SMGRrd.safePeriod(flt.periodStr, m2sec = false) + "&limit=" + flt.limit + sevStr + softStr + ackdStr + slncdStr + rxStr + rxxStr).
       withRequestTimeout(shortTimeoutMs).get().map { resp =>
       Try {
         val jsval = Json.parse(resp.body)

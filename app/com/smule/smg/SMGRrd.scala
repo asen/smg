@@ -79,21 +79,18 @@ object SMGRrd {
 
   def lineColor(v: Map[String,String], cm: ColorMaker): String = if (v.get("clr").isDefined) v("clr") else cm.nextColor
 
-  def safePeriod(period: String): String = if (period.matches("^\\w+$") ) period else {
-    log.error("safePeriod: bad period provided: " + period)
-    "UNKNOWN"
+  //XXX the m suffix is ambiguous and M is not recognized by rrdtool - convert to seconds if m2sec is true
+  def safePeriod(period: String, m2sec: Boolean = true): String = {
+    if (m2sec && period.matches("^\\w+[Mm]$")) {
+      parseRrdPeriod(period).toString
+    } else if (period.matches("^\\w+$")) period else {
+      log.error("safePeriod: bad period provided: " + period)
+      "24h" // TODO use default period
+    }
   }
 
   def parseStep(s:String): Option[Int] = {
-    if (s.matches("^\\d+[mhd]?$")) {
-      val subs = s.substring(0, s.length - 1)
-      s.last match {
-        case 'm' => Some(subs.toInt * 60)
-        case 'h' => Some(subs.toInt * 3600)
-        case 'd' => Some(subs.toInt * 86400)
-        case _ => Some(s.toInt)
-      }
-    } else None
+    parsePeriod(s)
   }
 
   def parsePeriod(s:String): Option[Int] = {
@@ -102,9 +99,10 @@ object SMGRrd {
   }
 
   private def parseRrdPeriod(s:String) : Int = {
-    if (s.matches("^\\d+[mhdyw]?$")) {
+    if (s.matches("^\\d+[Mmhdyw]?$")) {
       val subs = s.substring(0, s.length - 1)
       s.last match {
+        case 'M' => subs.toInt * 60
         case 'm' => if (subs.toInt > 12) subs.toInt * 60 else subs.toInt * 86400 * 30
         case 'h' => subs.toInt * 3600
         case 'd' => subs.toInt * 86400
@@ -121,7 +119,7 @@ object SMGRrd {
     rem = rem % 86400
     val hours = if (rem >= 3600) (rem / 3600).toString + "h" else ""
     rem = rem % 3600
-    val minutes = if (rem >= 60) (rem / 60).toString + "m" else ""
+    val minutes = if (rem >= 60) (rem / 60).toString + "M" else ""
     rem = rem % 60
     val seconds = if (rem > 0) rem.toString + "s" else ""
     days + hours + minutes + seconds
