@@ -27,6 +27,11 @@ case class SMGJsGraphHistogramAction(pluginId: String) extends SMGJsGraphPluginA
   override val name: String = "Histogram"
 }
 
+case class SMGJsGraphDerive1Action(pluginId: String) extends SMGJsGraphPluginAction {
+  override val actionId: String = "deriv1"
+  override val name: String = "Deriv"
+}
+
 class SMGJsGraphPlugin(val pluginId: String,
                        val interval: Int,
                        val pluginConfFile: String,
@@ -111,7 +116,8 @@ class SMGJsGraphPlugin(val pluginId: String,
 
   override val actions: Seq[SMGPluginAction] = Seq(
     SMGJsGraphZoomAction(this.pluginId),
-    SMGJsGraphHistogramAction(this.pluginId)
+    SMGJsGraphHistogramAction(this.pluginId),
+    SMGJsGraphDerive1Action(this.pluginId)
   )
 
 }

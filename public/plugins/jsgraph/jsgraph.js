@@ -8,8 +8,9 @@
 var gl_smgHeader = null;
 var gl_smgRows = null;
 
-function unpack(rows, key) {
-    return rows.map(function(row) { return row[key]; });
+// Some simple helper functions
+function jsgraph_unpack(rows, key) {
+  return rows.map(function(row) { return row[key]; });
 }
 
 function wrapText(txt, max) {
@@ -26,12 +27,13 @@ function wrapText(txt, max) {
   return ret.join("<br>\n");
 }
 
-function plotlyChart(data) {
+function plotlyChart(data, subtitle) {
+  var myTitle = wrapText(gl_smgObjectView.title, 120)
   var layout = {
-       title: wrapText(gl_smgObjectView.title, 120),
+       title: subtitle == "" ? myTitle : myTitle + " (" + subtitle + ")",
      };
 
-  console.log(data);
+  //console.log(data);
   var plContainer = document.getElementById('plContainer')
   Plotly.purge(plContainer);
   Plotly.plot(plContainer, data, layout);
@@ -44,8 +46,8 @@ function zoomChartData(hdr, rows) {
 
   var plData = hdr.slice(1).map(function(hdr, ix){
     return {
-      x: unpack(rows, 0).map(function(u){ return new Date(u) }),
-      y: unpack(rows, ix+1),
+      x: jsgraph_unpack(rows, 0).map(function(u){ return new Date(u) }),
+      y: jsgraph_unpack(rows, ix+1),
       mode: 'lines+markers',
       name: hdr
     };
@@ -66,7 +68,7 @@ function histogramChartData(hdr, rows, ix) {
 
  var plData = [
    {
-     x: unpack(rows, ix + 1),
+     x: jsgraph_unpack(rows, ix + 1),
      type: 'histogram',
      marker: {
         color: 'rgba(100,250,100,0.7)',
@@ -108,6 +110,39 @@ function createVarSelectInput() {
 //////////////////////////////////////////////////
 
 
+//////////////////////////////////////////////////
+/// Derive (a.k.a. 1st derivative) chart
+
+function derive1(arr, deltaT) {
+  if ((arr.length == 0) || (deltaT == 0)) {
+    return []
+  }
+  var prev = arr[0];
+  return arr.slice(1).map(function(cur){
+    var ret = (cur - prev) / deltaT
+    prev = cur
+    return ret
+  });
+}
+
+function derive1ChartData(hdr, rows, deltaT) {
+  //console.log("using deltaT=" + deltaT);
+  var plData = hdr.slice(1).map(function(hdr, ix){
+    return {
+      // the derive1 function reduces data points array length with 1 so skip one ts
+      x: jsgraph_unpack(rows, 0).slice(1).map(function(u){ return new Date(u) }),
+      y: derive1(jsgraph_unpack(rows, ix+1), deltaT),
+      mode: 'lines+markers',
+      name: hdr + " (dY / " + deltaT + ")"
+    };
+  });
+
+  return plData;
+}
+
+/// Derive (a.k.a. 1st derivative) chart
+//////////////////////////////////////////////////
+
 
 //////////////////////////////////////////////////
 /// Common
@@ -118,11 +153,19 @@ function displayChart(action, hdr, rows) {
     case "hist":
       createVarSelectInput();
       plData = histogramChartData(hdr, rows, gl_DefaultHistogramVar);
-      plotlyChart(plData);
+      plotlyChart(plData, "Histogram");
     break;
     case "zoom":
       plData = zoomChartData(hdr, rows);
-      plotlyChart(plData);
+      plotlyChart(plData, "");
+    break;
+    case "deriv1":
+      // calculate deltaT based on the first two timestamps.
+      // luckily with rrdtool we always get them normalized (same between time series values)
+      var twoTss = rows.slice(0,2)
+      var deltaT =  twoTss.length < 2 ? 1 : (twoTss[1][0] - twoTss[0][0]) / 1000
+      plData = derive1ChartData(hdr, rows, deltaT);
+      plotlyChart(plData, "1st derivative: dY / " + deltaT + " seconds");
     break;
     default: $('#plContainer').html("Invalid action") ;
   }
