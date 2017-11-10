@@ -1,10 +1,11 @@
-@(oids: Seq[String])
+@(oids: Seq[String], inPageHrefs: Boolean)
 <div id="pageStatesSvg" class="svgwrapper"></div>
 
 <script language="JavaScript">
 $(document).ready ( function(){
+  var inPgHref = @if(inPageHrefs){ "on" }else{ "off" };
   $.post('/monitor/objectsSvg',
-        { oids: '@{oids.mkString(",")}' },
+        { oids: '@{oids.mkString(",")}', inpghref: inPgHref },
         function(data) {
           $('#pageStatesSvg').html(data);
         }

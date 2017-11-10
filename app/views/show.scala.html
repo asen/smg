@@ -83,7 +83,7 @@ Changing this reloads the page.">Disable 95%-ile line:</label>
   @if(showMs) {
   <div>
     <div class="subtitle-div">
-    @monitorSvgObjects(ms, Some(ms.size))
+    @monitorSvgObjects(ms, Some(ms.size), false)
     </div>
     @if(!obj.isAgg){
     <div class="subtitle-div">

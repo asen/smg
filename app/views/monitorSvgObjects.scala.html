@@ -1,5 +1,5 @@
 @import com.smule.smg.SMGMonState
-@(monStates: Seq[SMGMonState], svgColsW: Option[Int])
+@(monStates: Seq[SMGMonState], svgColsW: Option[Int], inPageHrefs: Boolean)
 @MAX_STATES = @{ 3 }
 @CELL_WIDTH = @{ 9 }
 @CELL_PADDING = @{ 1 }
@@ -19,7 +19,8 @@
   @if(monStates.nonEmpty){
     @for((msvc, rowi) <- monStates.grouped(objsPerRow).zipWithIndex){
       @for((mso,ix) <- msvc.zipWithIndex){
-      <a xlink:href= "@mso.showUrl" target="_parent" >
+      @defining(if (inPageHrefs) { mso.oid.map(oid => "#" + oid).getOrElse (mso.showUrl)  } else { mso.showUrl }) { hrefUrl =>
+      <a xlink:href= "@hrefUrl" target="_parent" >
         @for((ms,ixx) <- mso.recentStates.take(MAX_STATES).zipWithIndex){
         <rect data-ixx="@ixx" fill="@{ms.stateColor}" width="@CELL_WIDTH" height="@CELL_HEIGHT"
               x="@{ix * CELL_SPACE}" y="@{(rowi * ROW_SPACE) + (ixx * CELL_HEIGHT)}" >
@@ -32,6 +33,7 @@
         </text>
         }
       </a>
+      }
       }
     }
   } else {

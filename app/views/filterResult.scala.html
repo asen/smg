@@ -73,7 +73,7 @@
     </div>
 
     @if(showMs){
-      @monitorSvgRefObjects(monOverviewOids)
+      @monitorSvgRefObjects(monOverviewOids, aggOp.isEmpty)
       @monStateListActions(monData.values.toSeq.flatten)
     }
 
@@ -116,7 +116,7 @@
                 @if(showMs && monData.contains(g.obj.id)){
                 <div>
                   <div class="subtitle-div">
-                    @monitorSvgObjects(monData(g.obj.id), None)
+                    @monitorSvgObjects(monData(g.obj.id), None, false)
                   </div>
                   @if(aggOp.isEmpty && monData.contains(g.obj.id)){
                     @defining(SMGMonStateAgg.aggByParentId(monData(g.obj.id)).headOption.map(_._2)) { objStateOpt =>

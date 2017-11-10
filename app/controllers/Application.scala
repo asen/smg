@@ -772,7 +772,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   def monitorObjectsSvgHtml(): Action[AnyContent] = Action.async { request =>
-    val oidsParam = request.body.asFormUrlEncoded.get.get("oids")
+    val bodyParams = request.body.asFormUrlEncoded.get
+    val inPageHrefs = bodyParams.get("inpghref").flatMap(_.headOption).getOrElse("off") == "on"
+    val oidsParam = bodyParams.get("oids")
     if (oidsParam.isEmpty)
       Future {  Ok(views.html.monitorSvgNotFound()) }
     else {
@@ -780,7 +782,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val ovs = oids.distinct.map { oid => smg.getObjectView(oid) }.filter(_.isDefined).map(_.get)
       monitorApi.objectViewStates(ovs).map { byObj =>
         val mss = ovs.flatMap(ov => byObj.getOrElse(ov.id, Seq()))
-        Ok(views.html.monitorSvgObjects(mss.toSeq, None))
+        Ok(views.html.monitorSvgObjects(mss.toSeq, None, inPageHrefs))
       }
     }
   }
