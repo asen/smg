@@ -160,15 +160,15 @@ class SMGCalcPlugin (val pluginId: String,
         </p>
         <hr/>
         <div class="row">
-          <div class="col-md-2" style="width: 12em;">
+          <div class="col-md-2" style="width: 13em;">
             <label class="manualsubmit-lbl" for="id_period">Period:</label>
               {scala.xml.Unparsed(textInput("period", period, 9))}
           </div>
-          <div class="col-md-2" style="width: 12em;">
+          <div class="col-md-2" style="width: 13em;">
             <label class="manualsubmit-lbl" for="id_step">Step:</label>
               {scala.xml.Unparsed(textInput("step", gopts.step.map(_.toString).getOrElse(""), 9))}
           </div>
-          <div class="col-md-2" style="width: 14em;">
+          <div class="col-md-2" style="width: 15em;">
             <label class="manualsubmit-lbl" for="id_maxy">MaxY:</label>
               {scala.xml.Unparsed(textInput("maxy", gopts.maxY.map(_.toString).getOrElse(""), 14))}
           </div>
