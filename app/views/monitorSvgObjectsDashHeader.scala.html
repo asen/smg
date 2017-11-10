@@ -1,0 +1,20 @@
+@import com.smule.smg.SMGMonState
+@(ovids : Seq[String], monData: Map[String, Seq[SMGMonState]])
+<div id="pageStatesSvg" class="svgwrapper" style="display: none">
+  @monitorSvgObjects(ovids.flatMap { ovid => monData.getOrElse(ovid, Seq()) }, None, true, monData.flatMap { tpl =>
+    tpl._2.map { ms =>
+      (ms.oid.getOrElse(""), tpl._1)
+    }
+  }.toMap)
+</div>
+
+<script language="JavaScript">
+
+$(document).ready ( function(){
+  setTimeout(
+        function() {
+          $('#pageStatesSvg').show();
+        }, 0);
+  })
+
+</script>

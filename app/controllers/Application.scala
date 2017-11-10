@@ -401,14 +401,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
       } else {
         groupByRemote(sortedGroups)
       }
-      //keep mon overview ordered same as display order
-      val monOverviewOids = result.flatMap { dg =>
-        dg.lst.flatMap { iv =>
-          if (iv.obj.isAgg) {
-            iv.obj.asInstanceOf[SMGAggObjectView].objs.map(_.id)
-          } else Seq(iv.obj.id)
-        }
-      }
       // XXX make sure we find agg objects op even if not specified in url params or index but e.g. coming from a plugin
       val myAggOp = if (dep.agg.isDefined) dep.agg else lst.find(_.obj.isAgg).map(_.obj.asInstanceOf[SMGAggObjectView].op)
       val errorsOpt = if (myErrors.isEmpty) None else Some(myErrors.mkString(", "))
@@ -417,7 +409,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
         views.html.filterResult(configSvc, idx, parentIdx, result, flt, dep,
           myAggOp, showXRmt,
           maxPages, lst.size, objsSlice.size, tlObjects, availRemotes,
-          flt.gopts, showMs, monStatesByImgView, monOverviewOids, errorsOpt, matchingIndexes,
+          flt.gopts, showMs, monStatesByImgView, errorsOpt, matchingIndexes,
           conf, request.method == "POST")
       )
     }
@@ -767,22 +759,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
         val hmLst = hms.map(_._2)
         val combinedHm = SMGMonHeatmap.join(hmLst)
         Ok(views.html.monitorSvgHeatmap(combinedHm)).as("image/svg+xml")
-      }
-    }
-  }
-
-  def monitorObjectsSvgHtml(): Action[AnyContent] = Action.async { request =>
-    val bodyParams = request.body.asFormUrlEncoded.get
-    val inPageHrefs = bodyParams.get("inpghref").flatMap(_.headOption).getOrElse("off") == "on"
-    val oidsParam = bodyParams.get("oids")
-    if (oidsParam.isEmpty)
-      Future {  Ok(views.html.monitorSvgNotFound()) }
-    else {
-      val oids = oidsParam.get.head.split(",")
-      val ovs = oids.distinct.map { oid => smg.getObjectView(oid) }.filter(_.isDefined).map(_.get)
-      monitorApi.objectViewStates(ovs).map { byObj =>
-        val mss = ovs.flatMap(ov => byObj.getOrElse(ov.id, Seq()))
-        Ok(views.html.monitorSvgObjects(mss.toSeq, None, inPageHrefs))
       }
     }
   }
