@@ -30,7 +30,7 @@ function wrapText(txt, max) {
 function plotlyChart(data, subtitle) {
   var myTitle = wrapText(gl_smgObjectView.title, 120)
   var layout = {
-       title: subtitle == "" ? myTitle : myTitle + " (" + subtitle + ")",
+       title: myTitle + " (" + subtitle + ")",
      };
 
   //console.log(data);
@@ -157,7 +157,7 @@ function displayChart(action, hdr, rows) {
     break;
     case "zoom":
       plData = zoomChartData(hdr, rows);
-      plotlyChart(plData, "");
+      plotlyChart(plData, "Zoom");
     break;
     case "deriv1":
       // calculate deltaT based on the first two timestamps.
