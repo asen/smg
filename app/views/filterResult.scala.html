@@ -73,7 +73,12 @@
     </div>
 
     @if(showMs){
-      @monitorSvgRefObjects(monOverviewOids, aggOp.isEmpty)
+      @monitorSvgRefObjects(monOverviewOids,
+          // only use in-page state URLs when non-agg object and no aliases displayed
+          // TODO fix this to work for these too
+          aggOp.isEmpty && result.flatMap(_.lst).forall{ img =>
+              monData.get(img.obj.id).map{ msl => msl.forall { mso => mso.oid.getOrElse("") == img.obj.id } }.getOrElse(false)
+          } )
       @monStateListActions(monData.values.toSeq.flatten)
     }
 
