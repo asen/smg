@@ -210,9 +210,9 @@ trait SMGMonState extends SMGTreeNode {
     Some(SMGMonState.oidFilter(oid.get))
   } else None
 
-  def showUrl: String = if (myShowUrlFilter.isDefined) {
-    urlPx + myShowUrlFilter.get
-  } else "/monitor"
+  def showUrl: String = myShowUrlFilter.map { flt =>
+    urlPx + flt
+  }.getOrElse("/monitor")
 
   def isOk: Boolean = currentStateVal == SMGState.OK
   def severityStr: String = SMGMonState.severityStr(severity)
