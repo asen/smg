@@ -142,38 +142,43 @@ class SMGCalcPlugin (val pluginId: String,
     s"<img src='${g.imageUrl}'></img>"
   }
 
-  private def textInput(nm: String, v : String, sz: Int) = s"<input size='$sz' type='text' name='$nm' value='$v' />"
+  private def textInput(nm: String, v : String, sz: Int) = s"<input id='id_$nm' size='$sz' type='text' name='$nm' value='$v' />"
 
-  private def cbInput(nm: String, checked: Boolean) = s"<input type='checkbox' name='$nm' ${if (checked) "checked" else ""} />"
+  private def cbInput(nm: String, checked: Boolean) = s"<input id='id_$nm' type='checkbox' name='$nm' ${if (checked) "checked" else ""} />"
 
   private def renderHtmlContent(expOpt: Option[SMGCalcExpr], errOpt: Option[String], gOpt: Option[SMGImageView],
                                 period: String, gopts: GraphOptions, httpParams: Map[String,String]): String = {
-    <h3>Custom Calculated Graph (Experimental/Beta)</h3>
+    <h3>Custom Calculated Graph (Beta)</h3>
       <form method="GET">
         <p>
           <label for="calc_expr_textartea">Enter expression below.<br/>
             An expression consists of object ids (optionally) followed by [idx] (where idx is the 0-based var index,
             0 if not specified) or number literals with an arithmetic operation (one of +, -, * and /) between those.<br/>
-            Use "ADDNAN" for NaN safe addition. Parentheses ("(" and ")") must be used to ensure operators precedence
+            Use "ADDNAN" for NaN safe addition (treat NaN as 0.0). Parentheses ("(" and ")") MUST be used to ensure operators precedence
             (otherwise expression is processed left to right).</label><br/>
           <textarea id="calc_expr_textartea" name="expr" cols="160" rows="6">{expOpt.map(_.toS).getOrElse("")}</textarea>
         </p>
         <hr/>
         <div class="row">
-          <div class="col-md-1">
-            <label>Period:</label>{scala.xml.Unparsed(textInput("period", period, 9))}
+          <div class="col-md-2" style="width: 12em;">
+            <label class="manualsubmit-lbl" for="id_period">Period:</label>
+              {scala.xml.Unparsed(textInput("period", period, 9))}
           </div>
-          <div class="col-md-1">
-            <label>Step:</label>{scala.xml.Unparsed(textInput("step", gopts.step.map(_.toString).getOrElse(""), 9))}
+          <div class="col-md-2" style="width: 12em;">
+            <label class="manualsubmit-lbl" for="id_step">Step:</label>
+              {scala.xml.Unparsed(textInput("step", gopts.step.map(_.toString).getOrElse(""), 9))}
           </div>
-          <div class="col-md-1">
-            <label>MaxY:</label>{scala.xml.Unparsed(textInput("maxy", gopts.maxY.map(_.toString).getOrElse(""), 12))}
+          <div class="col-md-2" style="width: 14em;">
+            <label class="manualsubmit-lbl" for="id_maxy">MaxY:</label>
+              {scala.xml.Unparsed(textInput("maxy", gopts.maxY.map(_.toString).getOrElse(""), 14))}
           </div>
-          <div class="col-md-2">
-            <label>Disable Period-Over-Period:</label>{scala.xml.Unparsed(cbInput("dpp", gopts.disablePop))}
+          <div class="col-md-2" style="width: 17em;">
+            <label class="manualsubmit-lbl" for="id_dpp">Disable Period-Over-Period:</label>
+              {scala.xml.Unparsed(cbInput("dpp", gopts.disablePop))}
           </div>
-          <div class="col-md-2">
-            <label>Disable 95%-ile line:</label>{scala.xml.Unparsed(cbInput("d95p", gopts.disable95pRule))}
+          <div class="col-md-2" style="width: 15em;">
+            <label class="manualsubmit-lbl" for="id_d95p">Disable 95%-ile line:</label>
+              {scala.xml.Unparsed(cbInput("d95p", gopts.disable95pRule))}
           </div>
         </div>
         <hr/>
