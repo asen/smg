@@ -2,6 +2,6 @@
 @import com.smule.smg.SMGConfigService
 @(plugin: SMGPlugin, htmlContent: String, cfSvc: SMGConfigService)(implicit flash: Flash)
 
-@main("SMG - " + plugin.pluginId + " Index", cfSvc, if (plugin.autoRefresh) 300 else 0) {
+@main("SMG - " + plugin.pluginId, cfSvc, if (plugin.autoRefresh) 300 else 0) {
   @Html(htmlContent)
 }
