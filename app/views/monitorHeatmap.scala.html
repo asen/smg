@@ -15,19 +15,8 @@
   @for((r, ms) <- monitorStates) {
      @remoteDisplay(r)
 
-    <div class="hm-to-show" style="display: none">
+    <div>
       @monitorSvgHeatmap(ms)
     </div>
   }
 }
-
-<script language="JavaScript">
-
-$(document).ready ( function(){
-  setTimeout(
-        function() {
-          $('.hm-to-show').show();
-        }, 0);
-  })
-
-</script>
