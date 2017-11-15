@@ -128,8 +128,13 @@
 
     function silenceAllMatching() {
       var until = document.getElementById("inpSilenceAllUntil").value;
-      var stickyVal = document.getElementById("inpStickySilence").checked;
-      var stickyDescVal = document.getElementById("inpStickySilenceDesc").value;
+      var stickyVal = false;
+      var stickyDescVal = "";
+      var stickySElem = document.getElementById("inpStickySilence");
+      if (stickySElem) {
+        stickyVal = stickySElem.checked;
+        stickyDescVal = document.getElementById("inpStickySilenceDesc").value;
+      }
       if (stickyVal && (stickyDescVal == "")){
         alert("Please enter some description for the sticky silencing")
         document.getElementById("inpStickySilenceDesc").focus();
