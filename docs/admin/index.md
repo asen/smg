@@ -462,14 +462,18 @@ them:
 </pre>
 </blockquote>
 
-> The actual command gets executed with the following environment variables 
-available in the environment:
-> - $SMG_ALERT_SEVERITY - one of  RECOVERY, ACKNOWLEDGEMENT, ANOMALY, 
+> The actual command gets executed with the following variables 
+set by SMG in the child process environment:
+
+> - $SMG\_ALERT\_SEVERITY - one of  RECOVERY, ACKNOWLEDGEMENT, ANOMALY, 
   WARNING, UNKNOWN, CRITICAL, SMGERR, THROTTLED, UNTHROTTLED
-> - $SMG_ALERT_KEY - the affected object/var, pre-fetch or global issue 
+
+> - $SMG\_ALERT\_KEY - the affected object/var, pre-fetch or global issue 
     identification string.
-> - $SMG_ALERT_SUBJECT - the "subject" for the message to be sent
-> - $SMG_ALERT_BODY - the "body" of the message to be sent
+
+> - $SMG\_ALERT\_SUBJECT - the "subject" for the message to be sent
+
+> - $SMG\_ALERT\_BODY - the "body" of the message to be sent
 
 > Check smgscripts/notif-mail.sh for an example of how this could work
 
