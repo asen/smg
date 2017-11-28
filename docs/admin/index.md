@@ -462,19 +462,16 @@ them:
 </pre>
 </blockquote>
 
-> The actual command gets executed with the following parameters 
-appended to the command string:
-
-> - $SEVERITY - one of  RECOVERY, ACKNOWLEDGEMENT, ANOMALY, 
+> The actual command gets executed with the following environment variables 
+available in the environment:
+> - $SMG_ALERT_SEVERITY - one of  RECOVERY, ACKNOWLEDGEMENT, ANOMALY, 
   WARNING, UNKNOWN, CRITICAL, SMGERR, THROTTLED, UNTHROTTLED
-> - $ALERT_KEY - the affected object/var, pre-fetch or global issue 
+> - $SMG_ALERT_KEY - the affected object/var, pre-fetch or global issue 
     identification string.
-> - $SUBJ - the "subject" for the message to be sent
-> - $BODY - the "body" of the message to be sent
+> - $SMG_ALERT_SUBJECT - the "subject" for the message to be sent
+> - $SMG_ALERT_BODY - the "body" of the message to be sent
 
-> Example command that could be executed:
-
-> smgscripts/notif-mail.sh 'asen@smule.com somebodyelse@smule.com' WARNING host.xxx.sysload:1 'WARNING sl5min > 20' 'A bit more detailed warning info here'
+> Check smgscripts/notif-mail.sh for an example of how this could work
 
 - **$notify-global**: a comma separated list of list of $notify-command 
 ids, to be executed on any global SMG errors (usually - overlaps)
