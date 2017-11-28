@@ -93,8 +93,15 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "rx").readNullable[String] and
       (JsPath \ "rxx").readNullable[String] and
       (JsPath \ "trx").readNullable[String] and
-      (JsPath \ "remote").readNullable[String].map { remoteIds => if (remoteIds.isDefined) remoteIds.get.split(",").toSeq
-          else Seq(remote.id) } and
+      (JsPath \ "remote").readNullable[String].map { remoteIds =>
+        if (remoteIds.isDefined) {
+          val ret = remoteIds.get.split(",").toSeq
+          if (ret == Seq(SMGRemote.local.id)) // XXX Workaround for mis-configuration where an index has remote: ^ set
+            Seq(remote.id)
+          else
+            ret
+        } else
+          Seq(remote.id) } and
       (JsPath \ "gopts").readNullable[GraphOptions].map(go => go.getOrElse(GraphOptions.default))
     )(SMGFilter.apply _)
 
