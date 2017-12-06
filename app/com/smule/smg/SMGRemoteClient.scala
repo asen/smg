@@ -107,7 +107,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
   implicit val smgConfIndexReads: Reads[SMGConfIndex] = (
     (JsPath \ "id").read[String].map(id => prefixedId(id)) and
-      (JsPath \ "title").read[String] and
+      (JsPath \ "title").read[String].map { ttl => s"(${remote.id}) $ttl" } and
       (JsPath \ "flt").read[SMGFilter] and
       (JsPath \ "cols").readNullable[Int] and
       (JsPath \ "rows").readNullable[Int] and
