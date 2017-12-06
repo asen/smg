@@ -754,7 +754,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
       Future {  Ok(views.html.monitorSvgDisabled()).as("image/svg+xml") }
     } else {
       // XXX use index filter here directly vs supplying filter and index to getFilteredObjects
-      val tpl = (ixid, smg.getFilteredObjects(ixObj.get.flt, None))
       monitorApi.heatmap(ixObj.get.flt, None, Some(DEFAULT_INDEX_HEATMAP_MAX_SIZE), None, None).map { hms =>
         val hmLst = hms.map(_._2)
         val combinedHm = SMGMonHeatmap.join(hmLst)

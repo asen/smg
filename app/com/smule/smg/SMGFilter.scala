@@ -28,6 +28,9 @@ case class SMGFilter(px: Option[String],
                      gopts: GraphOptions
                     ) {
 
+  // Local version of the filter (pinned to "local" remote)
+  def asLocalFilter = SMGFilter(px = px, sx = sx, rx = rx, rxx = rxx, trx = trx, remotes = Seq(SMGRemote.local.id), gopts = gopts)
+
   // make regexes case insensitive
   private def ciRegex(so: Option[String]): Option[Regex] = so.map(s => if (s.isEmpty) s else  "(?i)" + s ).
     map( s =>

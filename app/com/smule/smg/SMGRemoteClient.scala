@@ -481,7 +481,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   def heatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[SMGMonHeatmap] = {
     lazy val errRet = SMGMonHeatmap(List(SMGMonStateGlobal("Remote data unavailable", remote.id,
       SMGState(SMGState.tssNow, SMGState.SMGERR, "data unavailable"))), 1)
-    val urlParams = flt.asUrl + ix.map(v => s"&ix=$v").getOrElse("") +
+    val urlParams = flt.asLocalFilter.asUrl + ix.map(v => s"&ix=$v").getOrElse("") +
       maxSize.map(v => s"&maxSize=$v").getOrElse("") +
       offset.map(v => s"&offset=$v").getOrElse("") +
       limit.map(v => s"&limit=$v").getOrElse("")

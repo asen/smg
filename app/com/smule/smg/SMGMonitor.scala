@@ -505,7 +505,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
 
   override def localHeatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): SMGMonHeatmap = {
     // TODO include global/run issues?
-    val objList = smg.getFilteredObjects(flt, ix).filter(o => SMGRemote.isLocalObj(o.id)) // XXX or clone the filter with empty remote?
+    val objList = smg.getFilteredObjects(flt.asLocalFilter, ix)
     val objsSlice = objList.slice(offset.getOrElse(0), offset.getOrElse(0) + limit.getOrElse(objList.size))
     val allStates = objsSlice.flatMap( ov => localNonAgObjectStates(ov))
     val ct = if (maxSize.isDefined && allStates.nonEmpty) condenseHeatmapStates(allStates, maxSize.get) else (allStates.toList, 1)
