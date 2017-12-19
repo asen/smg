@@ -37,7 +37,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
 
   override def commandExecutionTimes: Map[String, Long] = myCommandExecutionTimes.toMap
 
-  private def cleanupCommandExecutionTimes() = {
+  private def cleanupCommandExecutionTimes(): Unit = {
     val toCheck = myCommandExecutionTimes.keySet
     val myConf = configSvc.config
     toCheck.foreach { id =>
@@ -443,20 +443,6 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
   }
 
-
-  private def allIndexes: Seq[SMGIndex] = searchCache.getAllIndexes
-
-  private def getMatchingIndexes(ovs: Seq[SMGObjectView], allIxes: Seq[SMGIndex]): Seq[SMGIndex] = {
-    ovs.flatMap { ov =>
-      allIxes.filter { ix =>
-        (!ix.flt.matchesAnyObjectIdAndText) &&
-          ((ix.flt.remotes.contains(SMGRemote.wildcard.id) ||
-            (SMGRemote.remoteId(ix.id) == SMGRemote.remoteId(ov.id))) &&
-          ix.flt.matches(ov))
-      }
-    }.distinct.sortBy(_.title)
-  }
-
   /**
     * Get all indexes which would match this object view
     *
@@ -464,13 +450,11 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     * @return
     */
   override def objectIndexes(ov: SMGObjectView): Seq[SMGIndex] = {
-    val nonAgs = if (ov.isAgg) ov.asInstanceOf[SMGAggObjectView].objs else Seq(ov)
-    getMatchingIndexes(nonAgs, allIndexes)
+    objectsIndexes(Seq(ov))
   }
 
   override def objectsIndexes(ovs: Seq[SMGObjectView]): Seq[SMGIndex] = {
-    val nonAgs = ovs.flatMap { ov => if (ov.isAgg) ov.asInstanceOf[SMGAggObjectView].objs else Seq(ov) }
-    getMatchingIndexes(nonAgs, allIndexes)
+    searchCache.getMatchingIndexes(ovs)
   }
 
 

@@ -57,7 +57,7 @@ trait SMGMonInternalState extends SMGMonState {
   protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int)
   protected def getMaxHardErrorCount: Int
 
-  //protected val configSvc: SMGConfigService
+  protected val configSvc: SMGConfigService
   protected val monLog: SMGMonitorLogApi
   protected val notifSvc: SMGMonNotifyApi
 
@@ -75,7 +75,7 @@ trait SMGMonInternalState extends SMGMonState {
 
   // XXX these are applicable to var state only but are put here to simplify serisalization/deserialization
   protected var myMovingStatsOpt: Option[SMGMonValueMovingStats] = None
-  protected var myCounterPrevValue = Double.NaN
+  protected var myCounterPrevValue: Double = Double.NaN
   protected var myCounterPrevTs = 0
 
   private var myMaxHardErrorCount: Option[Int] = None
@@ -92,7 +92,7 @@ trait SMGMonInternalState extends SMGMonState {
 
   def maxRecentStates: Int = maxHardErrorCount + 1
 
-  protected val log = SMGLogger
+  protected val log: SMGLoggerApi = SMGLogger
 
   override def aggShowUrlFilter: Option[String] = {
     if (ouids.isEmpty)
@@ -259,6 +259,16 @@ trait SMGMonInternalState extends SMGMonState {
     } catch {
       case x: Throwable => log.ex(x, s"SMGMonInternalState.deserialize: Unexpected exception for $id: src=$src")
     }
+  }
+
+  override def getLocalMatchingIndexes: Seq[SMGIndex] = {
+    val ovs = ouids.map { ouid => configSvc.config.viewObjectsById.get(ouid) }.filter(_.isDefined).map(_.get)
+    val allIxes = configSvc.config.indexes
+    ovs.flatMap { ov =>
+      allIxes.filter { ix =>
+        (!ix.flt.matchesAnyObjectIdAndText) && ix.flt.matches(ov)
+      }
+    }.distinct.sortBy(_.title)
   }
 }
 

@@ -186,6 +186,8 @@ trait SMGMonState extends SMGTreeNode {
 
   def recentStates: Seq[SMGState]
 
+  def getLocalMatchingIndexes: Seq[SMGIndex]
+
   def errorRepeat: Int
 
   def alertKey: String
@@ -241,9 +243,21 @@ trait SMGMonState extends SMGTreeNode {
     s"$smgBaseUrl/dash?remote=${URLEncoder.encode(smgRemoteId.getOrElse(SMGRemote.local.id), "UTF-8")}&${myShowUrlFilter.get}"
 
   def notifyBody(smgBaseUrl: String, smgRemoteId: Option[String]): String = {
-    s"REMOTE: ${smgRemoteId.getOrElse(SMGRemote.localName)}\n\n" +
-      s"MSG: $text\n\n" +
-      s"LINK: ${bodyLink(smgBaseUrl, smgRemoteId)}\n\n"
+    val ret = s"Remote: ${smgRemoteId.getOrElse(SMGRemote.localName)}\n\n" +
+      s"Message: $text\n\n" +
+      s"Object(s) link: ${bodyLink(smgBaseUrl, smgRemoteId)}\n\n"
+    val maxIxes = 60 //sane limit
+    val ixes = getLocalMatchingIndexes
+    val ixesTxt = if (ixes.isEmpty) {
+      ""
+    } else {
+      "Relevant index links:\n\n" +
+      ixes.take(maxIxes).map { ix =>
+        val remoteUrl = s"$smgBaseUrl/dash?ix=" + smgRemoteId.map(rmt => s"@$rmt.").getOrElse("") + ix.id
+        s"- ${ix.title} [ $remoteUrl ]"
+      }.mkString("\n") + "\n\n" + (if (ixes.lengthCompare(maxIxes) > 0) "(list truncated ...)\n\n" else "")
+    }
+    ret
   }
 
   def asJson: JsValue = {
@@ -271,6 +285,13 @@ case class SMGMonStateView(id: String,
                           ) extends SMGMonState {
 
   override def alertKey: String = id
+
+  override def getLocalMatchingIndexes: Seq[SMGIndex] = {
+    // TODO XXX this should never be called ... throw a runtime error instead? For now just log
+    // may have to do some refactoring to fix that
+    SMGLogger.error(s"getLocalMatchingIndexes called for SMGMonStateView($id)")
+    Seq()
+  }
 }
 
 // local agg (condensed) mon state
@@ -312,6 +333,9 @@ case class SMGMonStateAgg(id: String, lst: Seq[SMGMonState], showUrlFilter: Stri
   override def alertKey: String = lst.map(_.alertKey.split(":")(0)).distinct.mkString(",")
 
   override def parentId: Option[String] = None
+
+  override def getLocalMatchingIndexes: Seq[SMGIndex] =
+    lst.flatMap(_.getLocalMatchingIndexes ).sortBy(_.title).distinct
 }
 
 object SMGMonStateAgg {
@@ -366,4 +390,8 @@ case class SMGMonStateGlobal(title: String,
   override def recentStates: Seq[SMGState] = Seq(currentState)
 
   override def parentId: Option[String] = None
+
+  override def getLocalMatchingIndexes: Seq[SMGIndex] = {
+    Seq()
+  }
 }

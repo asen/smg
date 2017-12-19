@@ -26,6 +26,7 @@ trait SMGSearchCache extends SMGConfigReloadListener {
 
   def getPfRxTokens(flt: String, rmtId: String): Seq[String]
 
+  def getMatchingIndexes(ovs: Seq[SMGObjectView]): Seq[SMGIndex]
 }
 
 
@@ -351,4 +352,22 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   override def getPfRxTokens(flt: String, rmtId: String): Seq[String] = {
     getTokensCommon(flt, rmtId, cmdTknsByRemote)
   }
+
+  override def getMatchingIndexes(ovsToMatch: Seq[SMGObjectView]): Seq[SMGIndex] = {
+    val ovs = ovsToMatch.flatMap { ov => if (ov.isAgg) ov.asInstanceOf[SMGAggObjectView].objs else Seq(ov) }
+    val allIxes: Seq[SMGIndex] = getAllIndexes
+    val ret = mutable.Set[SMGIndex]()
+    ovs.foreach { ov =>
+      allIxes.foreach { ix =>
+        val matches = (!ix.flt.matchesAnyObjectIdAndText) &&
+          ((ix.flt.remotes.contains(SMGRemote.wildcard.id) ||
+            (SMGRemote.remoteId(ix.id) == SMGRemote.remoteId(ov.id))) &&
+            ix.flt.matches(ov))
+        if (matches)
+          ret.add(ix)
+      }
+    }
+    ret.toSeq.sortBy(_.title)
+  }
+
 }

@@ -75,15 +75,15 @@ trait SMGMonNotifyApi {
 
 }
 
-case class SMGMonNotifyMsgData(severity: SMGMonNotifySeverity.Value,
-                               alertKey: String,
-                               subjStr: String,
-                               bodyStr: String,
-                               cmds: Seq[SMGMonNotifyCmd]
-                              )
-
 @Singleton
 class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNotifyApi {
+
+  // object to store throttled msg data until next unthrottled msg / flush
+  case class SMGMonThrottledMsgData(severity: SMGMonNotifySeverity.Value,
+                                    alertKey: String,
+                                    subjStr: String,
+                                    cmds: Seq[SMGMonNotifyCmd]
+                                   )
 
   private val log = SMGLogger
 
@@ -97,7 +97,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
   private val throttleSyncObj = new Object()
   private var currentThrottleTs = 0
   private var currentThrottleCnt = 0
-  private val throttledMsgs = mutable.ListBuffer[SMGMonNotifyMsgData]()
+  private val throttledMsgs = mutable.ListBuffer[SMGMonThrottledMsgData]()
   private var throttledIsSent = false
   private var myIsMuted: Boolean = false
 
@@ -137,7 +137,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
 
   def remoteSubjStr: String = configSvc.config.notifyRemoteId.map(s => s"($s)").getOrElse("")
 
-  private def sendQueuedMsgs(msgsToCondense: Seq[SMGMonNotifyMsgData]): Future[Boolean] = {
+  private def sendUnthrottledMsg(msgsToCondense: Seq[SMGMonThrottledMsgData]): Future[Boolean] = {
     // send condensed states as a single msg, async
     if (msgsToCondense.isEmpty) Future { false }
     else Future {
@@ -155,13 +155,13 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
     }
   }
 
-  def flushQueuedMessages(nowHourTs: Int): Future[Boolean] = throttleSyncObj.synchronized {
+  private def flushThrottledMessages(nowHourTs: Int): Future[Boolean] = throttleSyncObj.synchronized {
     val msgsToCondense = throttledMsgs.toList
     throttledMsgs.clear()
     throttledIsSent = false
     currentThrottleCnt = 1
     currentThrottleTs = nowHourTs
-    sendQueuedMsgs(msgsToCondense)
+    sendUnthrottledMsg(msgsToCondense)
   }
 
   private def sendThrottledMsg(addNcmds: Seq[SMGMonNotifyCmd], cnt: Int, maxCnt: Int, throttledUntil: Int): Future[Boolean] = {
@@ -203,7 +203,6 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
   private def updateThrottleCounters(severity: SMGMonNotifySeverity.Value,
                                      akey: String,
                                      subj: String,
-                                     body: String,
                                      ncmds: Seq[SMGMonNotifyCmd]): Future[Boolean] = {
     if (dontThrottleSeverities.contains(severity)) {
       Future { true }
@@ -214,9 +213,9 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
         throttleSyncObj.synchronized {
           currentThrottleCnt += 1
           if (currentThrottleCnt >= throttleMaxCount) {
-            throttledMsgs += SMGMonNotifyMsgData(
+            throttledMsgs += SMGMonThrottledMsgData(
               severity,
-              akey, subj, body, ncmds)
+              akey, subj, ncmds)
             val shouldSendThrottle = if (!throttledIsSent) {
               throttledIsSent = true
               true
@@ -232,7 +231,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
         }
       } else {
         // new throttle period
-        flushQueuedMessages(nowHourTs).map(b => true)
+        flushThrottledMessages(nowHourTs).map(b => true)
       }
     }
   }
@@ -243,7 +242,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
     if (nowHourTs != currentThrottleTs) {
       // new throttle period
       log.debug(s"SMGMonNotifySvc.tick: new throttle interval ($throttleMaxCount/$throttleInterval) throttledMsgs.isEmpty=${throttledMsgs.isEmpty}")
-      flushQueuedMessages(nowHourTs)
+      flushThrottledMessages(nowHourTs)
     }
   }
 
@@ -251,10 +250,10 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
                                     isRepeat: Boolean, isImprovement: Boolean): Future[Boolean] = {
     val improvedStr = if (isImprovement) "(improved) " else ""
     val subj = improvedStr + monState.notifySubject(configSvc.config.notifyBaseUrl, configSvc.config.notifyRemoteId, isRepeat)
-    val body = monState.notifyBody(configSvc.config.notifyBaseUrl, configSvc.config.notifyRemoteId)
     val severity = SMGMonNotifySeverity.fromStateValue(monState.currentStateVal)
-    updateThrottleCounters(severity, monState.alertKey, subj, body, ncmds).map { shouldSend =>
+    updateThrottleCounters(severity, monState.alertKey, subj, ncmds).map { shouldSend =>
       if (shouldSend) {
+        val body = monState.notifyBody(configSvc.config.notifyBaseUrl, configSvc.config.notifyRemoteId)
         realRunStateCommands(ncmds, SMGMonNotifySeverity.fromStateValue(monState.currentStateVal), monState.alertKey, subj, body)
       } else false
     }
@@ -356,7 +355,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
 
   def configReloaded(): Unit = {
     // TODO too dangerous?
-    def cleanupMap(m: mutable.Map[String,_]) = {
+    def cleanupMap(m: mutable.Map[String,_]): Unit = {
       m.keys.toList.foreach { ac =>
         val ids = ac.split(",").toList
         ids.foreach { idlbl =>
