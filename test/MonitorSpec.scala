@@ -8,6 +8,7 @@ import org.mockito.Matchers._
 import helpers._
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
+import play.libs.Akka
 
 
 
@@ -361,11 +362,10 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 
   "SMGMonitor.processPfMsg" should {
     "work and not send messages and logs on OK states" in {
-
       val startOfTest = SMGRrd.tssNow
       cs.cleanTestOut
-      val notifSvc = mock[SMGMonNotifyApi]
-      when(notifSvc.serializeState()) thenReturn Json.toJson(Map[String, String]())
+
+      val notifSvc = new SMGMonNotifySvc(cs)
       val monlog = mock[SMGMonitorLogApi]
       val mon = new SMGMonitor(cs, smg, remotes, monlog, notifSvc, appLifecycle)
 
@@ -393,7 +393,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       }
 
 
-      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
+      //verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
       verify(monlog, times(0)).logMsg(any[SMGMonitorLogMsg]())
 
       val ov = cs.config.viewObjectsById("test.pf.object.1")
@@ -407,78 +407,67 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       ms(1).recentStates.head.desc shouldEqual "OK: value=2"
     }
 
-//    "work and send messages and logs on pf error states" in {
-//
-//      val startOfTest = SMGRrd.tssNow
-//      cs.cleanTestOut
-//      val notifSvc = mock[SMGMonNotifyApi]
-//      when(notifSvc.serializeState()) thenReturn Json.toJson(Map[String, String]())
-//      val monlog = mock[SMGMonitorLogApi]
-//      val mon = new SMGMonitor(cs, smg, remotes, monlog, notifSvc, appLifecycle)
-//
-//      val pf = cs.config.preFetches("test.prefetch")
-//      val pfObj1 = cs.config.updateObjectsById("test.pf.object.1")
-//      val pfObj2 = cs.config.updateObjectsById("test.pf.object.2")
-//      val pfObj3 = cs.config.updateObjectsById("test.pf.object.3")
-//      val pfObjs = Seq(pfObj1, pfObj2, pfObj3)
-//
-//      // step 0, send some OK data
-//
-//      mon.receivePfMsg(SMGDFPfMsg(startOfTest, pf.id, pfObjs, 0, List()))
-//      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(startOfTest, pfo, List(1.0, 2.0), 0, List()))
-//      }
-//
-//      var curTs = startOfTest + 60
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
-//      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(2.0, 1.0), 0, List()))
-//      }
-//
-//      curTs = startOfTest + 120
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
-//      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(1.0, 2.0), 0, List()))
-//      }
-//
-//      // step 1 send error msgs
-//      curTs = startOfTest + 180
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
-//      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
-//      }
-//
-//      curTs = startOfTest + 240
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
-//      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
-//      }
-//
-//      curTs = startOfTest + 300
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
-//      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
-//      }
-//
-//      curTs = startOfTest + 360
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
-//      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
-//      }
-//
-//      verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
-//      verify(monlog, times(3)).logMsg(any[SMGMonitorLogMsg]())
-//
-//      val ov = cs.config.viewObjectsById("test.pf.object.1")
-//      val ms = mon.localObjectViewsState(Seq(ov))(ov.id)
-//      ms.size shouldEqual 2
-//      ms.head.isOk shouldEqual false
-//      ms.head.recentStates.head.ts shouldEqual curTs
-//      ms.head.recentStates.head.desc shouldEqual "Fetch error: exit=7, OUTPUT: pf error"
-//      ms(1).isOk shouldEqual false
-//      ms(1).recentStates.head.ts shouldEqual curTs
-//      ms(1).recentStates.head.desc shouldEqual "Fetch error: exit=7, OUTPUT: pf error"
-//    }
+    "work and send messages and logs on pf error states" in {
+      val startOfTest = SMGRrd.tssNow
+      cs.cleanTestOut
+
+      val notifSvc = new SMGMonNotifySvc(cs)
+
+      val monlog = mock[SMGMonitorLogApi]
+      val mon = new SMGMonitor(cs, smg, remotes, monlog, notifSvc, appLifecycle)
+
+      val pf = cs.config.preFetches("test.prefetch")
+      val pfObj1 = cs.config.updateObjectsById("test.pf.object.1")
+      val pfObj2 = cs.config.updateObjectsById("test.pf.object.2")
+      val pfObj3 = cs.config.updateObjectsById("test.pf.object.3")
+      val pfObjs = Seq(pfObj1, pfObj2, pfObj3)
+
+      // step 0, send some OK data
+
+      mon.receivePfMsg(SMGDFPfMsg(startOfTest, pf.id, 60, pfObjs, 0, List(), None))
+      pfObjs.foreach { pfo =>
+        mon.receiveObjMsg(SMGDFObjMsg(startOfTest, pfo, List(1.0, 2.0), 0, List()))
+      }
+
+      var curTs = startOfTest + 60
+      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 0, List(), None))
+      pfObjs.foreach { pfo =>
+        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(2.0, 1.0), 0, List()))
+      }
+
+      curTs = startOfTest + 120
+      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 0, List(), None))
+      pfObjs.foreach { pfo =>
+        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(1.0, 2.0), 0, List()))
+      }
+
+      // step 1 send error msgs
+      curTs = startOfTest + 180
+      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
+
+      curTs = startOfTest + 240
+      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
+
+      curTs = startOfTest + 300
+      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
+
+      curTs = startOfTest + 360
+      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
+
+//        verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
+      verify(monlog, times(2)).logMsg(any[SMGMonitorLogMsg]())
+
+      val ov = cs.config.viewObjectsById("test.pf.object.1")
+      val ms = mon.localObjectViewsState(Seq(ov))(ov.id)
+      ms.size shouldEqual 2
+      ms.head.isOk shouldEqual false
+      ms.head.recentStates.head.ts shouldEqual curTs
+      ms.head.recentStates.head.desc shouldEqual "Fetch error: exit=7, OUTPUT: pf error"
+      ms(1).isOk shouldEqual false
+      ms(1).recentStates.head.ts shouldEqual curTs
+      ms(1).recentStates.head.desc shouldEqual "Fetch error: exit=7, OUTPUT: pf error"
+    }
+
 //
 //    "work and only send logs on pf acknowledged error states" in {
 //

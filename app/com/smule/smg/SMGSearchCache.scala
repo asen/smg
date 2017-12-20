@@ -118,7 +118,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   }
 
   private def getRunTreeIdsByRemote: Future[Map[String, Seq[String]]] = {
-    implicit val ec = ExecutionContexts.defaultCtx
+    implicit val ec = configSvc.executionContexts.defaultCtx
     val localFut = Future {
       (SMGRemote.local.id, configSvc.config.getFetchCommandsTreesByInterval)
     }
@@ -152,7 +152,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   }
 
   private def reloadCmdTokensAsync(): Unit = {
-    implicit val ec = ExecutionContexts.defaultCtx
+    implicit val ec = configSvc.executionContexts.defaultCtx
     getRunTreeIdsByRemote.map { byRemote =>
       log.info(s"SMGSearchCache.reloadCmdTokensAsync - received remotes data (${byRemote.keys.size})")
       var maxMaxLevels = 0
@@ -245,7 +245,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
         } finally {
           reloadsRunning -= 1
         }
-      }(ExecutionContexts.defaultCtx)
+      }(configSvc.executionContexts.defaultCtx)
     } else {
       log.error(s"SMGSearchCache.reload: aborting due to reloadsRunning=$reloadsRunning (max=$MAX_RELOADS)")
     }

@@ -3,6 +3,8 @@ package com.smule.smg
 import java.util.Date
 import javax.inject.{Inject, Singleton}
 
+import play.api.Mode
+import play.api.Play
 import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.concurrent.TrieMap
@@ -87,7 +89,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
 
   private val log = SMGLogger
 
-  implicit private val ec = ExecutionContexts.monitorCtx
+  implicit private val ec = configSvc.executionContexts.monitorCtx
 
   // alertKey -> cmds
   private val activeAlerts = TrieMap[String, List[SMGMonNotifyCmd]]()

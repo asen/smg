@@ -27,6 +27,8 @@ trait SMGConfigService {
 
   protected val log = SMGLogger
 
+  def executionContexts: ExecutionContexts
+
   val smgVersionStr: String
 
   val defaultInterval: Int
@@ -256,7 +258,9 @@ trait SMGConfigService {
   */
 @Singleton
 class SMGConfigServiceImpl @Inject() (configuration: Configuration,
-                                      override val actorSystem: ActorSystem) extends SMGConfigService {
+                                      override val actorSystem: ActorSystem,
+                                      override val executionContexts: ExecutionContexts
+                                     ) extends SMGConfigService {
 
   /**
   * @inheritdoc
@@ -416,7 +420,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       case Some(conf) => (for (i <- intervals.toList; if conf.getInt("interval_" + i).isDefined) yield (i, conf.getInt("interval_" + i).get)).toMap
       case None => Map[Int, Int]()
     }
-    ExecutionContexts.initializeUpdateContexts(intervals.toSeq, threadsPerIntervalMap, defaultThreadsPerInterval)
+    executionContexts.initializeUpdateContexts(intervals.toSeq, threadsPerIntervalMap, defaultThreadsPerInterval)
   }
 
   private val topLevelConfigFile: String = configuration.getString("smg.config").getOrElse("/etc/smg/config.yml")

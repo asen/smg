@@ -264,11 +264,15 @@ trait SMGMonInternalState extends SMGMonState {
   override def getLocalMatchingIndexes: Seq[SMGIndex] = {
     val ovs = ouids.map { ouid => configSvc.config.viewObjectsById.get(ouid) }.filter(_.isDefined).map(_.get)
     val allIxes = configSvc.config.indexes
-    ovs.flatMap { ov =>
-      allIxes.filter { ix =>
-        (!ix.flt.matchesAnyObjectIdAndText) && ix.flt.matches(ov)
+    val ret = mutable.Set[SMGIndex]()
+    ovs.foreach { ov =>
+      allIxes.foreach { ix =>
+        val matches = (!ix.flt.matchesAnyObjectIdAndText) && ix.flt.matches(ov)
+        if (matches)
+          ret.add(ix)
       }
-    }.distinct.sortBy(_.title)
+    }
+    ret.toSeq.sortBy(_.title)
   }
 }
 

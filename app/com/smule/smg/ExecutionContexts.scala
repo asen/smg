@@ -1,10 +1,10 @@
 package com.smule.smg
 
-import java.util.concurrent.{Executors, ConcurrentHashMap}
+import java.util.concurrent.{ConcurrentHashMap, Executors}
+import javax.inject.{Inject, Singleton}
 
 import scala.collection.concurrent
 import scala.collection.JavaConversions._
-
 import play.libs.Akka
 
 import scala.concurrent.ExecutionContext
@@ -13,14 +13,25 @@ import scala.concurrent.ExecutionContext
  * Created by asen on 10/24/15.
  */
 
+trait ExecutionContexts {
+  def defaultCtx: ExecutionContext
+  def rrdGraphCtx: ExecutionContext
+  def monitorCtx: ExecutionContext
+  def ctxForInterval(interval: Int): ExecutionContext
+  def initializeUpdateContexts(intervals: Seq[Int],
+                               threadsPerIntervalMap: Map[Int,Int],
+                               defaultThreadsPerInterval: Int): Unit
+}
+
 /**
   * The various execution contexts used by SMG
   */
-object ExecutionContexts {
+@Singleton
+class SMGExecutionContexts @Inject() () extends ExecutionContexts {
   /**
     * The default (Akka/Play) context used for Akka message communications
     */
-  val defaultCtx = play.api.libs.concurrent.Execution.Implicits.defaultContext
+  val defaultCtx: ExecutionContext = play.api.libs.concurrent.Execution.Implicits.defaultContext
 
   /**
     * Context used when executing external rrdtool commands to graph images

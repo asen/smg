@@ -212,7 +212,7 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
   }
 
   override def getAll(flt: SMGMonitorLogFilter): Future[Seq[SMGMonitorLogMsg]] = {
-    implicit val myEc: ExecutionContext = ExecutionContexts.monitorCtx
+    implicit val myEc: ExecutionContext = configSvc.executionContexts.monitorCtx
     val futs = if (flt.rmtIds.isEmpty || flt.rmtIds.contains(SMGRemote.wildcard.id))
       Seq(Future { getLocal(flt) }) ++ configSvc.config.remotes.map { rmt =>
       remotes.monitorLogs(rmt.id, flt)

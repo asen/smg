@@ -20,6 +20,8 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
 
   val log = SMGLogger
 
+  def ecForInterval(interval: Int): ExecutionContext = configSvc.executionContexts.ctxForInterval(interval)
+
   override def receive: Receive = {
 
     case SMGUpdateObjectMessage(obj: SMGObjectUpdate,
@@ -154,8 +156,6 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
 object SMGUpdateActor {
 
  // val SLOW_UPDATE_THRESH = 600
-
-  def ecForInterval(interval: Int): ExecutionContext = ExecutionContexts.ctxForInterval(interval)
 
 //  def props = Props[SMGUpdateActor]
   case class SMGUpdateObjectMessage(

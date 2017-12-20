@@ -257,7 +257,7 @@ trait SMGMonState extends SMGTreeNode {
         s"- ${ix.title} [ $remoteUrl ]"
       }.mkString("\n") + "\n\n" + (if (ixes.lengthCompare(maxIxes) > 0) "(list truncated ...)\n\n" else "")
     }
-    ret
+    ret + ixesTxt
   }
 
   def asJson: JsValue = {

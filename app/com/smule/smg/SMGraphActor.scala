@@ -21,7 +21,9 @@ class SMGraphActor extends Actor {
   val CACHE_FOR = 10000 // TODO 10 seconds, make more(?) and configurable
 
   override def receive: Receive = {
-    case SMGraphMessage(rrdConf:SMGRrdConfig, obj:SMGObjectView, period:String, gopts: GraphOptions, outFn:String) => {
+    case SMGraphMessage(configSvc: SMGConfigService, obj:SMGObjectView, period:String, gopts: GraphOptions, outFn:String) => {
+      val rrdConf: SMGRrdConfig = configSvc.config.rrdConf
+      val rrdGraphCtx = configSvc.executionContexts.rrdGraphCtx
       val mySender = sender()
       Future {
         try {
@@ -40,10 +42,12 @@ class SMGraphActor extends Actor {
           }
         }
         //log.info("Message sent back")
-      } (ExecutionContexts.rrdGraphCtx)
+      } (rrdGraphCtx)
     }
 
-    case SMGraphAggMessage(rrdConf:SMGRrdConfig, obj:SMGAggObjectView, period:String, gopts: GraphOptions, outFn:String) => {
+    case SMGraphAggMessage(configSvc: SMGConfigService, obj:SMGAggObjectView, period:String, gopts: GraphOptions, outFn:String) => {
+      val rrdConf: SMGRrdConfig = configSvc.config.rrdConf
+      val rrdGraphCtx = configSvc.executionContexts.rrdGraphCtx
       //log.info("--- SMGraphActor ---")
       val mySender = sender() // sender() is not available in our rrdGraphCtx future so use a reference stored here
       Future {
@@ -63,7 +67,7 @@ class SMGraphActor extends Actor {
           }
         }
         //log.info("Message sent back")
-      } (ExecutionContexts.rrdGraphCtx)
+      } (rrdGraphCtx)
     }
 
   }
@@ -71,7 +75,7 @@ class SMGraphActor extends Actor {
 
 object SMGraphActor {
   def props = Props[SMGraphActor]
-  case class SMGraphMessage(rrdConf:SMGRrdConfig, obj:SMGObjectView, period:String, gopts: GraphOptions, outFn:String)
-  case class SMGraphAggMessage(rrdConf:SMGRrdConfig, obj: SMGAggObjectView, period:String, gopts: GraphOptions, outFn:String)
+  case class SMGraphMessage(configSvc: SMGConfigService, obj:SMGObjectView, period:String, gopts: GraphOptions, outFn:String)
+  case class SMGraphAggMessage(configSvc: SMGConfigService, obj: SMGAggObjectView, period:String, gopts: GraphOptions, outFn:String)
   case class SMGraphReadyMessage(id: String, period: String, cached: Boolean, error: Boolean)
 }

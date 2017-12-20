@@ -67,7 +67,7 @@ case class SMGCalcExpr(seq: Seq[ExprElem]) {
 
 }
 
-object SMGCalcRrd {
+class SMGCalcRrd(configSvc: SMGConfigService) {
   val log = new SMGPluginLogger("calc")
 
   def parseExpr(smg: GrapherApi, remotesApi: SMGRemotesApi, strExpr: String): SMGCalcExpr  = {
@@ -94,7 +94,7 @@ object SMGCalcRrd {
       }
     }
 
-    implicit val futEc = ExecutionContexts.rrdGraphCtx
+    implicit val futEc = configSvc.executionContexts.rrdGraphCtx
 
     val futsSeq = seq.toList.map { e =>
       if (e.kind == "OV" && SMGRemote.isRemoteObj(e.asInstanceOf[SMGObjectViewElem].ov.id)) {

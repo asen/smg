@@ -88,6 +88,8 @@ class SMGCalcPlugin (val pluginId: String,
 
   val log = new SMGPluginLogger(pluginId)
 
+  val smgCalcRrd = new SMGCalcRrd(smgConfSvc)
+
   override def htmlContent(httpParams: Map[String,String]): String = {
     val ixOpt = if (httpParams.contains("ix")) expressions.find(_.id == httpParams("ix")) else None
 
@@ -105,10 +107,10 @@ class SMGCalcPlugin (val pluginId: String,
     val gopts = GraphOptions.withSome(step = stepOpt, xsort = None,
       disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = maxYOpt, minY = None) // TODO support minY
     val expOpt = if (strExpOpt.isDefined) {
-      Some(SMGCalcRrd.parseExpr(smg, remotes, strExpOpt.get))
+      Some(smgCalcRrd.parseExpr(smg, remotes, strExpOpt.get))
     } else None
     val (gOpt, errOpt) = if (expOpt.isDefined) {
-      SMGCalcRrd.graph(smgConfSvc, expOpt.get, strPeriod, gopts, titleOpt)
+      smgCalcRrd.graph(smgConfSvc, expOpt.get, strPeriod, gopts, titleOpt)
     } else
       (None, Some("No expression provided"))
     renderHtmlContent(expOpt, errOpt, gOpt, strPeriod, gopts, httpParams)

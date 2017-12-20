@@ -264,7 +264,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
         } finally {
           finished()
         }
-      } (ExecutionContexts.defaultCtx)
+      } (smgConfSvc.executionContexts.defaultCtx)
       true
     } else false
   }
@@ -319,7 +319,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
         } finally {
           finished()
         }
-      } (ExecutionContexts.defaultCtx)
+      } (smgConfSvc.executionContexts.defaultCtx)
       true
     } else false
   }

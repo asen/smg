@@ -16,6 +16,7 @@ import play.api.{Configuration, Environment}
 class SMGModule(environment: Environment, configuration: Configuration) extends  AbstractModule {
 
   override def configure(): Unit = {
+    bind(classOf[ExecutionContexts]).to(classOf[SMGExecutionContexts])
     bind(classOf[SMGConfigService]).to(classOf[SMGConfigServiceImpl])
     bind(classOf[SMGRemotesApi]).to(classOf[SMGRemotes])
     bind(classOf[SMGSearchCache]).to(classOf[SMGSearchCacheImpl])

@@ -8,7 +8,7 @@ import com.smule.smg._
   */
 class TestConfigSvc() extends SMGConfigService {
 
-  def cleanTestOut = {
+  def cleanTestOut: Unit = {
     SMGCmd("rm -f test-out/*").run
   }
 
@@ -33,6 +33,7 @@ class TestConfigSvc() extends SMGConfigService {
       "$monstate_dir" -> "test-out",
       "$notify-spike" -> "test-notify",
       "$notify-warn" -> "test-notify",
+      "$notify-unkn" -> "test-notify",
       "$notify-crit" -> "test-notify",
       "$notify-global" -> "test-notify"
     ),
@@ -42,7 +43,21 @@ class TestConfigSvc() extends SMGConfigService {
       rrdObject("test.pf.object.2", 2, Some("test.prefetch")),
       rrdObject("test.pf.object.3", 2, Some("test.prefetch"))
     ),
-    indexes = Seq(),
+    indexes = Seq(
+      SMGConfIndex(id = "test.index.1",
+        title = "Test Index 1",
+        flt = SMGFilter.fromPrefixLocal("test."),
+        cols = None,
+        rows = None,
+        aggOp = None,
+        xRemoteAgg = false,
+        aggGroupBy = None,
+        period = None,
+        desc = None,
+        parentId = None,
+        childIds= Seq[String](),
+        disableHeatmap = false)
+    ),
     rrdConf = SMGRrdConfig("rrdtool", None, 607, 400, None),
     imgDir = "test-out",
     urlPrefix = "",
@@ -76,7 +91,8 @@ class TestConfigSvc() extends SMGConfigService {
         )
       )
     ),
-    notifyCommands = Map("test-notify" -> SMGMonNotifyCmd("test-notify", "echo", 30)),
+    notifyCommands = Map("test-notify" ->
+      SMGMonNotifyCmd("test-notify", "env >test-out/test.out ; echo >> test-out/test.out", 30)),
     objectNotifyConfs = Map(),
     hiddenIndexes = Map(),
     configErrors = List()
@@ -100,6 +116,8 @@ class TestConfigSvc() extends SMGConfigService {
   override def notifyReloadListeners(ctx: String): Unit = {}
 
   override val actorSystem: ActorSystem = null
+
+  override val executionContexts: ExecutionContexts = new TestExecutionContexts()
 
   /**
     * Store recently fetched object value into cache.

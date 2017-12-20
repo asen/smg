@@ -289,7 +289,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def objectViewStates(ovs: Seq[SMGObjectView]): Future[Map[String,Seq[SMGMonState]]] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     val expadedObjs = ovs.map( ov => (ov.id, expandOv(ov))).toMap
     val byRemote = expadedObjs.values.flatten.toSeq.groupBy(ov => SMGRemote.remoteId(ov.id))
     val futs = byRemote.map{ case (rmtId, myOvs) =>
@@ -335,7 +335,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def states(remoteIds: Seq[String], flt: SMGMonFilter): Future[Seq[SMGMonitorStatesResponse]] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     val futs = ListBuffer[(Future[SMGMonitorStatesResponse])]()
     if (remoteIds.isEmpty || remoteIds.contains(SMGRemote.wildcard.id)) {
       futs += Future {
@@ -369,7 +369,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def silencedStates(): Future[Seq[(SMGRemote, Seq[SMGMonState], Seq[SMGMonStickySilence])]] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     val remoteFuts = configSvc.config.remotes.map { rmt =>
       remotes.monitorSilenced(rmt.id).map(tpl => (rmt, tpl._1, tpl._2))
     }
@@ -412,7 +412,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     */
   override def monTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String],
                         limit: Int): Future[(Seq[SMGTree[SMGMonState]], Int)] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     val myRemoteIds = sanitizeRemoteIdsParam(remoteIds)
     val futs = myRemoteIds.map { remoteId =>
       if (remoteId == SMGRemote.local.id) {
@@ -439,7 +439,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
 
   override def silenceAllTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String], until: Int,
                                sticky: Boolean, stickyDesc: Option[String]): Future[Boolean] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     val myRemoteIds = sanitizeRemoteIdsParam(remoteIds)
     val futs = myRemoteIds.map { rmtId =>
       if (rmtId == SMGRemote.local.id) {
@@ -480,7 +480,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def removeStickySilence(uid: String): Future[Boolean] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     if (SMGRemote.isLocalObj(uid)) {
       Future {
         myStickySilencesSyncObj.synchronized {
@@ -513,7 +513,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def heatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[Seq[(SMGRemote, SMGMonHeatmap)]] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     val myRemotes = if (flt.remotes.isEmpty) {
       Seq(SMGRemote.local)
     } else if (flt.remotes.contains(SMGRemote.wildcard.id)) {
@@ -685,7 +685,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def acknowledge(id: String): Future[Boolean] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     if (SMGRemote.isLocalObj(id)) {
       Future {
         val rootmsopt = allMonitorStateTreesById.get(id)
@@ -698,7 +698,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def unacknowledge(id: String): Future[Boolean] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     if (SMGRemote.isLocalObj(id)) {
       Future {
         processTree(id, {ms => ms.unack()})
@@ -707,7 +707,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def silence(id: String, slunt: Int): Future[Boolean] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     if (SMGRemote.isLocalObj(id)) {
       Future {
         processTree(id, {ms => ms.slnc(slunt)})
@@ -716,7 +716,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def unsilence(id: String): Future[Boolean] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     if (SMGRemote.isLocalObj(id)) {
       Future {
         processTree(id, {ms => ms.unslnc()})
@@ -816,7 +816,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     * @return
     */
   override def acknowledgeList(ids: Seq[String]): Future[Boolean] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     val futs = ids.groupBy(id => SMGRemote.remoteId(id)).map { t =>
       val rmtId = t._1
       val rmtIds = t._2
@@ -835,7 +835,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     * @return
     */
   override def silenceList(ids: Seq[String], slunt: Int): Future[Boolean] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
     val futs = ids.groupBy(id => SMGRemote.remoteId(id)).map { t =>
       val rmtId = t._1
       val rmtIds = t._2
@@ -850,7 +850,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   private def muteUnmuteCommon(remoteId: String,
                                localMuteUnmute: () => Unit,
                                remoteMuteUnmite: (String) => Future[Boolean]): Future[Boolean] = {
-    implicit val ec = ExecutionContexts.rrdGraphCtx
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
 
     def myMuteLocal() =  Future {
       localMuteUnmute()
