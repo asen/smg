@@ -1,3 +1,5 @@
+import java.io.File
+
 import com.smule.smg._
 import org.scalatest.mockito.MockitoSugar
 import play.api.inject.ApplicationLifecycle
@@ -9,6 +11,8 @@ import helpers._
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
 import play.libs.Akka
+
+import scala.io.Source
 
 
 
@@ -24,7 +28,13 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 
   //  implicit lazy val app: FakeApplication = FakeApplication()
 
+  def fileContains(fn: String, content: String): Boolean = {
+    val str = Source.fromFile(fn).mkString
+    str.contains(content)
+  }
+
   val cs = new TestConfigSvc()
+  cs.cleanTestOut
 
   val smg = mock[GrapherApi]
   val remotes = mock[SMGRemotesApi]
@@ -365,7 +375,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       val startOfTest = SMGRrd.tssNow
       cs.cleanTestOut
 
-      val notifSvc = new SMGMonNotifySvc(cs)
+      val notifSvc = mock[SMGMonNotifySvc]
       val monlog = mock[SMGMonitorLogApi]
       val mon = new SMGMonitor(cs, smg, remotes, monlog, notifSvc, appLifecycle)
 
@@ -392,9 +402,8 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
         mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, pfo, List(1.0, 2.0), 0, List()))
       }
 
-
-      //verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
       verify(monlog, times(0)).logMsg(any[SMGMonitorLogMsg]())
+      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
 
       val ov = cs.config.viewObjectsById("test.pf.object.1")
       val ms = mon.localObjectViewsState(Seq(ov))(ov.id)
@@ -454,7 +463,6 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       curTs = startOfTest + 360
       mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
 
-//        verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
       verify(monlog, times(2)).logMsg(any[SMGMonitorLogMsg]())
 
       val ov = cs.config.viewObjectsById("test.pf.object.1")
@@ -466,6 +474,13 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       ms(1).isOk shouldEqual false
       ms(1).recentStates.head.ts shouldEqual curTs
       ms(1).recentStates.head.desc shouldEqual "Fetch error: exit=7, OUTPUT: pf error"
+
+      // verify that alert message was sent and it contained a ref to Test Index 1
+      Thread.sleep(500)
+      fileContains("test-out/test.out", "Test Index 1") shouldEqual true
+      cs.cleanTestOut
+
+      true shouldEqual true
     }
 
 //
