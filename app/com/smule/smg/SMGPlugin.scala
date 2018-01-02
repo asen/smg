@@ -4,6 +4,29 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
   * Created by asen on 12/3/15.
+  *
+  * Plugins can be used to extend SMG in various ways including:
+  * - define its own object types which do not necessarily conform to the run-external-command-to-get-values model
+  *   E.g. for JMX polling its usually better to keep the connections alive vs reconnect very often, that is
+  *   implemented in the bundled JMX plugin
+  * - Gets its run() method called every interval seconds. In addition to updating objects a plugin can do various
+  *   other tasks such as cleanup/maintenance
+  * - Plugins can implement graph actions (visible as links near graphs). These in turn can do various things
+  *   including custom data visualisations via the htmlContent method (see jsgraph plugin for example)
+  * - Plugin can implement monitor checks (via valueChecks method) to extend the available by default
+  *   alert-[warn|crit]-[gt[e]|lt[e]|eq] options. E.g. one can check for value anomalies etc. See the mon plugin
+  *   for example.
+  *
+  * A plugin can be any class implementing the SMGPlugin trait with a constructor looking like this:
+  *
+  * class SMGSomePlugin(val pluginId: String,
+  *                     val interval: Int,
+  *                     val pluginConfFile: String,
+  *                     val smgConfSvc: SMGConfigService
+  *                    ) extends SMGPlugin
+  *
+  * The class name must be set in application.conf together with the plugin id, interval and plugin conf file.
+  * 
   */
 
 trait SMGPluginAction {
@@ -84,10 +107,19 @@ trait SMGPlugin {
   // XXX move these below away from the trait in to a base plugin implementation
   def htmlContent(httpParams: Map[String,String]): String = "This Plugin does not provide html content view: <b>" + pluginId + "</b>"
 
+  /**
+    * Whether the plugin page should auto refresh
+    */
   val autoRefresh: Boolean = true
 
+  /**
+   * Called by plugin remote api data call. To be used for plugin remote API access
+   */
   def rawData(httpParams: Map[String,String]): String = ""
 
+  /**
+    * Any graph actions the plugin implements
+    */
   val actions: Seq[SMGPluginAction] = Seq()
 
   // primitives to help plugins detect overlapping runs

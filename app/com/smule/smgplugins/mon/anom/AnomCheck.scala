@@ -153,7 +153,7 @@ class AnomCheck(val ckId: String, log: SMGLoggerApi) extends SMGMonCheck {
         }
       }
     }
-    threshConfs.clear() // cleaning this hourly is safe and avoids leaks
+    threshConfs.clear()
     log.info("AnomCheck.cleanupObsoleteStates END")
   }
 
