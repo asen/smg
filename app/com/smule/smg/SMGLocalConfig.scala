@@ -129,6 +129,8 @@ case class SMGLocalConfig(
   // option to notify slaves on reload conf, this may be removed in the future
   val reloadSlaveRemotes: Boolean = globals.getOrElse("$reload-slave-remotes", "false") == "true"
 
+  val monStateDir: String = globals.getOrElse("$monstate_dir", "monstate")
+
 
   private def buildCommandsTree(rrdObjs: Seq[SMGRrdObject], myPreFetches: Map[String, SMGPreFetchCmd]): Seq[SMGFetchCommandTree] = {
     val ret = ListBuffer[SMGFetchCommandTree]()

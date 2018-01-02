@@ -32,7 +32,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
 
   private val MAX_STATES_PER_CHUNK = 2500
 
-  private def monStateDir = configSvc.config.globals.getOrElse("$monstate_dir", "monstate")
+  private def monStateDir = configSvc.config.monStateDir
 
   private val MONSTATE_META_FILENAME = "metadata.json"
   private val MONSTATE_BASE_FILENAME = "monstates"

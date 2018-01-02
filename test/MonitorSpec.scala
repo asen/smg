@@ -66,7 +66,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       ms.size shouldEqual 2
       ms.head.isOk shouldEqual true
       ms.head.recentStates.head.ts shouldEqual startOfTest + 120
-      ms.head.recentStates.head.desc shouldEqual "OK: value=1.5 : ( 3 / 5 )"
+      ms.head.recentStates.head.desc shouldEqual "OK: value=1.5 : warn-gte: 3, crit-gte: 5, crit-eq: 0"
       ms(1).isOk shouldEqual true
       ms(1).recentStates.head.ts shouldEqual startOfTest + 120
       ms(1).recentStates.head.desc shouldEqual "OK: value=2.5"
@@ -101,7 +101,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       ms.size shouldEqual 2
       ms.head.isOk shouldEqual false
       ms.head.recentStates.head.ts shouldEqual startOfTest + 420
-      ms.head.recentStates.head.desc shouldEqual "CRIT: 6 >= 5 : ( 3 / 5 )"
+      ms.head.recentStates.head.desc shouldEqual "CRIT: 6 >= 5 : warn-gte: 3, crit-gte: 5"
       ms(1).isOk shouldEqual true
       ms(1).recentStates.head.ts shouldEqual startOfTest + 420
       ms(1).recentStates.head.desc shouldEqual "OK: value=1"
@@ -138,7 +138,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       ms.size shouldEqual 2
       ms.head.isOk shouldEqual false
       ms.head.recentStates.head.ts shouldEqual startOfTest + 480
-      ms.head.recentStates.head.desc shouldEqual "CRIT: 6 >= 5 : ( 3 / 5 )"
+      ms.head.recentStates.head.desc shouldEqual "CRIT: 6 >= 5 : warn-gte: 3, crit-gte: 5"
       ms(1).isOk shouldEqual true
       ms(1).recentStates.head.ts shouldEqual startOfTest + 480
       ms(1).recentStates.head.desc shouldEqual "OK: value=1"
@@ -410,7 +410,7 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       ms.size shouldEqual 2
       ms.head.isOk shouldEqual true
       ms.head.recentStates.head.ts shouldEqual startOfTest + 120
-      ms.head.recentStates.head.desc shouldEqual "OK: value=1 : ( 3 / 5 )"
+      ms.head.recentStates.head.desc shouldEqual "OK: value=1 : warn-gte: 3, crit-gte: 5"
       ms(1).isOk shouldEqual true
       ms(1).recentStates.head.ts shouldEqual startOfTest + 120
       ms(1).recentStates.head.desc shouldEqual "OK: value=2"

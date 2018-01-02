@@ -1,14 +1,12 @@
-package com.smule.smg
+package com.smule.smgplugins.mon.anom
 
-import java.text.DecimalFormat
-
+import com.smule.smg.{SMGLogger, SMGLoggerApi, SMGRrd}
 import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import scala.math._
 
-case class SMGMonValueChunkStats(cnt: Int, avg: Double, variance: Double, p90: Double) {
+case class ValueChunkStats(cnt: Int, avg: Double, variance: Double, p90: Double) {
 
   def serialize: JsValue = {
     val mm = mutable.Map[String, JsValue](
@@ -20,51 +18,44 @@ case class SMGMonValueChunkStats(cnt: Int, avg: Double, variance: Double, p90: D
     Json.toJson(mm.toMap)
   }
 
-  def isSimilar(changeThresh: Double, oth: SMGMonValueChunkStats): Boolean = {
+  def isSimilar(changeThresh: Double, oth: ValueChunkStats): Boolean = {
     (max(avg,oth.avg) < changeThresh * min(avg, oth.avg)) ||
       (max(variance, oth.variance) < changeThresh * min(variance, oth.variance)) ||
       (max(p90,oth.p90) < changeThresh * min(p90, oth.p90))
   }
 }
 
-object SMGMonValueChunkStats {
+object ValueChunkStats {
 
-  def fromSeq(lst: Seq[Double]): SMGMonValueChunkStats = {
-    if (lst.isEmpty) return SMGMonValueChunkStats(0, 0.0, 0.0, 0.0)
+  def fromSeq(lst: Seq[Double]): ValueChunkStats = {
+    if (lst.isEmpty) return ValueChunkStats(0, 0.0, 0.0, 0.0)
     val cnt = lst.size
     val avg = lst.sum / lst.size
     val variance = lst.map(v => pow(v - avg, 2)).sum / cnt
     val lstsz = lst.size
     val p90 = if (lstsz == 1) lst.head else lst.sorted.take( (lstsz * 9) / 10 ).lastOption.getOrElse(0.0)
-    SMGMonValueChunkStats(cnt, avg, variance, p90)
+    ValueChunkStats(cnt, avg, variance, p90)
   }
 
-  def aggregate(lst: Seq[SMGMonValueChunkStats]): SMGMonValueChunkStats = {
+  def aggregate(lst: Seq[ValueChunkStats]): ValueChunkStats = {
     val newCnt = lst.map(_.cnt).sum
     val newAvg = lst.map(cs => cs.avg * cs.cnt).sum / newCnt
     val newVariance = lst.map(cs => cs.variance * cs.cnt).sum / newCnt
     val newP90 = if (lst.isEmpty) Double.NaN else lst.map(_.p90).max
-    SMGMonValueChunkStats(newCnt, newAvg, newVariance, newP90)
+    ValueChunkStats(newCnt, newAvg, newVariance, newP90)
   }
 
-  def deserialize(src: JsValue): SMGMonValueChunkStats = {
+  def deserialize(src: JsValue): ValueChunkStats = {
     val cnt = (src \ "cnt").asOpt[Int].getOrElse(0)
     val avg = (src \ "avg").asOpt[Double].getOrElse(0.0)
     val variance = (src \ "variance").asOpt[Double].getOrElse(0.0)
     val p90 = (src \ "p90").asOpt[Double].getOrElse(0.0)
-    // TODO XXX temp code to workaround a previous serialization bug - use p90 instead of broken variance and avg
-    val fixedVariance = if ((variance == cnt.toDouble) || (variance == 0.0)) p90 else variance
-    val fixedAvg = if (avg == 0.0) p90 else avg
-    SMGMonValueChunkStats(cnt, fixedAvg, fixedVariance, p90)
+    ValueChunkStats(cnt, avg, variance, p90)
   }
 }
 
 //Mutable short-term values + long-term averaged stats object
-class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
-
-  val log = SMGLogger
-
-  private lazy val idIxStr = s"$ouid:$vix"
+class ValueMovingStats(val idStr: String, log: SMGLoggerApi) {
 
   // "short term" values up to given (in update) size
   val stVals = new mutable.Queue[Double]()
@@ -72,37 +63,43 @@ class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
   val prevStVals = new mutable.Queue[Double]()
   // long term stats - a moving queue of fixed max size where older objects are discarded when new are added in
   // the actual objects are a struct of cnt/avg/variance values calculated from prevStVals on aggregation
-  val ltStats = new mutable.Queue[SMGMonValueChunkStats]()
+  val ltStats = new mutable.Queue[ValueChunkStats]()
 
   var lastUpdateTs = 0
 
   //calc cnt/avg/variance object from the short term stats
-  def calcStStat = SMGMonValueChunkStats.fromSeq(prevStVals.toList ++ stVals.toList)
+  def calcStStat: ValueChunkStats = ValueChunkStats.fromSeq(prevStVals.toList ++ stVals.toList)
 
   // calculate a long-term cnt/avg/variance object using the ltStats
-  def calcLtAggStat = SMGMonValueChunkStats.aggregate(ltStats.toList)
+  def calcLtAggStat: ValueChunkStats = ValueChunkStats.aggregate(ltStats.toList)
 
   // long term chunks contain overlapping maxStCnt intervals where each long term stat is
   // offset-ed with half maxStCnt data points. never return less than 2
-  def maxLtStatsSize(maxStCnt: Int, maxLtCnt: Int) = max(maxLtCnt / (maxStCnt / 2), 2)
+  def maxLtStatsSize(maxStCnt: Int, maxLtCnt: Int): Int = max(maxLtCnt / (maxStCnt / 2), 2)
 
-  def maxGap(maxStCnt: Int) = max(maxStCnt * interval / 2, 2 * interval) // at least 2 intervals
+  def maxGap(maxStCnt: Int, interval: Int): Int = max(maxStCnt * interval / 2, 2 * interval) // at least 2 intervals
 
 
   // Update the stats with a new value. also provide (possibly updated via confg) max "short term" and "long-term"
   // data points to consider
-  def update(ts:Int, fetchedVal: Double, maxStCnt: Int, maxLtCnt: Int ): Unit = {
+  def update(interval:Int, ts:Int, fetchedVal: Double, maxStCnt: Int, maxLtCnt: Int ): Unit = {
     // sanity checks first
     if (maxLtCnt < maxStCnt) {
-      log.error(s"SMGMonValueMovingStats.update [$idIxStr]: maxLtCnt < maxStCnt ($maxLtCnt < $maxStCnt)")
+      log.error(s"ValueMovingStats.update [$idStr]: maxLtCnt < maxStCnt ($maxLtCnt < $maxStCnt)")
       return
     }
 
-    val maxg = maxGap(maxStCnt)
+    // check for and avoid multiple updates in the same interval
     val tsDiff = ts - lastUpdateTs
+    if (tsDiff < (interval / 2)) {
+      log.warn(s"ValueMovingStats.update [$idStr]: ignoring update due to tsDiff=$tsDiff < interval=$interval / 2")
+      return
+    }
+
+    val maxg = maxGap(maxStCnt, interval)
     if (tsDiff > maxg) {
       if (lastUpdateTs != 0) // do not log the an initial reset()
-        log.info(s"SMGMonValueMovingStats.update [$idIxStr]: resetting stats due to tsDiff=$tsDiff, maxGap=$maxg")
+        log.info(s"ValueMovingStats.update [$idStr]: resetting stats due to tsDiff=$tsDiff, maxGap=$maxg")
       reset()
     }
     lastUpdateTs = ts
@@ -118,14 +115,14 @@ class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
       val newLtVal = stVals.dequeue()
       prevStVals += newLtVal
       val maxPrevStCnt = maxStCnt / 2
-      while (prevStVals.size >= maxPrevStCnt ) {
+      while (prevStVals.lengthCompare(maxPrevStCnt) >= 0 ) {
         val chunkToCondense = (prevStVals ++ stVals).take(maxStCnt)
         // condense the chunk and add to long term list
-        val newLtStats = SMGMonValueChunkStats.fromSeq(chunkToCondense)
+        val newLtStats = ValueChunkStats.fromSeq(chunkToCondense)
         // drop entries from the prevStVals and ltStats Queues
         (1 to maxPrevStCnt).foreach(_ => prevStVals.dequeue())
         val maxLtSz = maxLtStatsSize(maxStCnt, maxLtCnt)
-        val ltStatsCountToDrop = if (ltStats.size < maxLtSz) 0 else ltStats.size - maxLtSz+ 1
+        val ltStatsCountToDrop = if (ltStats.lengthCompare(maxLtSz) < 0) 0 else ltStats.size - maxLtSz+ 1
         (1 to ltStatsCountToDrop).foreach(_ => ltStats.dequeue())
         ltStats += newLtStats
       }
@@ -139,14 +136,15 @@ class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
     ltStats.clear()
   }
 
-  def hasEnoughData(maxStCnt: Int, maxLtCnt: Int) = (maxStCnt > 0) &&  // sanity  check
+  def hasEnoughData(maxStCnt: Int, maxLtCnt: Int): Boolean = (maxStCnt > 0) &&  // sanity  check
     (maxLtCnt > maxStCnt) && // sanity check
     (maxLtStatsSize(maxStCnt, maxLtCnt) * 0.75 <= ltStats.size)  // require at least 75% of the max long term stats
 
-  def checkAnomaly(changeThresh: Double, maxStCnt: Int, maxLtCnt: Int, numFmt: (Double) => String): Option[String] = {
+  def checkAnomaly(interval: Int, changeThresh: Double, maxStCnt: Int, maxLtCnt: Int,
+                   numFmt: (Double) => String): Option[String] = {
     // sanity checks first
 
-    val maxg = maxGap(maxStCnt)
+    val maxg = maxGap(maxStCnt, interval)
     val tsDiff = SMGRrd.tssNow - lastUpdateTs
     if (tsDiff > maxg)
       return None  // data too old to consider.
@@ -215,8 +213,8 @@ class SMGMonValueMovingStats(val ouid: String, val vix: Int, interval: Int) {
 
 }
 
-object SMGMonValueMovingStats {
-  def deserialize(src: JsValue, tgt: SMGMonValueMovingStats): Unit = {
+object ValueMovingStats {
+  def deserialize(src: JsValue, tgt: ValueMovingStats): Unit = {
 
     val lastUpdateTsJsv = src \ "lastUpdateTs"
 
@@ -238,7 +236,8 @@ object SMGMonValueMovingStats {
 
     val ltStatsJsv = src \ "ltStats"
     if (ltStatsJsv.toOption.isDefined) {
-      ltStatsJsv.as[List[JsValue]].foreach(v => tgt.ltStats += SMGMonValueChunkStats.deserialize(v))
+      ltStatsJsv.as[List[JsValue]].foreach(v => tgt.ltStats += ValueChunkStats.deserialize(v))
     }
   }
 }
+

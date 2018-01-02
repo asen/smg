@@ -165,7 +165,7 @@
   rrd_init_source: localhost.spike.check.rrd.old
   vars:
     - label: num
-      alert-spike: ""
+      alert-p-mon-anom: "1.5:15m:2h:0"
 
 
 - localhost.ex1.cdef:

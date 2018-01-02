@@ -132,6 +132,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
     val rraDefs = mutable.Map[String, SMGRraDef]()
     val configErrors = ListBuffer[String]()
 
+    val pluginChecks = plugins.flatMap(p => p.valueChecks.map { t => (p.pluginId + "-" + t._1, t._2)}).toMap
+
     // Agg and graph objects contain references to other objects which may be defined later,
     // on first pass we only store their position within allViewObjectIds and record state for later use
     // note that agg objects can reference view objects and view objects can reference agg objects
@@ -302,7 +304,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
             alertsLst.foreach { m =>
               val sm = m.map(t => (t._1, t._2.toString)).toMap
               val src = if (isHidden) SMGMonAlertConfSource.HINDEX else SMGMonAlertConfSource.INDEX
-              val ac = SMGMonVarAlertConf.fromVarMap(src, idx.id, sm)
+              val ac = SMGMonVarAlertConf.fromVarMap(src, idx.id, sm, pluginChecks)
               if (ac.isDefined) indexAlertConfs += Tuple3(idx, sm.getOrElse("label","ds" + idx), ac.get)
               val nc = SMGMonNotifyConf.fromVarMap(src, idx.id, sm)
               if (nc.isDefined) indexNotifyConfs += Tuple3(idx, sm.getOrElse("label","ds" + idx), nc.get)
@@ -323,7 +325,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       myYmapVars.zipWithIndex.foreach { t =>
         val ix = t._2
         val m = t._1
-        val ac = SMGMonVarAlertConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m)
+        val ac = SMGMonVarAlertConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m, pluginChecks)
         if (ac.isDefined) {
           addAlertConf(oid, ix, ac.get)
         }

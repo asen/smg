@@ -7,9 +7,11 @@ import javax.inject.{Inject, Singleton}
 import akka.actor.{ActorSystem, DeadLetter, Props}
 import com.typesafe.config.ConfigFactory
 import play.api.Configuration
+import play.api.inject.ApplicationLifecycle
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Future
 import scala.util.Try
 
 /**
@@ -259,7 +261,8 @@ trait SMGConfigService {
 @Singleton
 class SMGConfigServiceImpl @Inject() (configuration: Configuration,
                                       override val actorSystem: ActorSystem,
-                                      override val executionContexts: ExecutionContexts
+                                      override val executionContexts: ExecutionContexts,
+                                      lifecycle: ApplicationLifecycle
                                      ) extends SMGConfigService {
 
   /**
@@ -442,6 +445,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   private var currentConfig = configParser.getNewConfig(plugins, topLevelConfigFile)
   createNonExistingRrds(currentConfig)
   initExecutionContexts(currentConfig.intervals)
+  plugins.foreach(_.onConfigReloaded())
 
   /**
   * @inheritdoc
@@ -466,6 +470,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
         }
         cleanupCachedValuesMap(newConf)
         notifyReloadListeners("ConfigService.reload")
+        plugins.foreach(_.onConfigReloaded())
         val t1 = System.currentTimeMillis()
         log.info("SMGConfigServiceImpl.reload: completed for " + (t1 - t0) + "ms. rrdConf=" + newConf.rrdConf +
           " imgDir=" + newConf.imgDir + " urlPrefix=" + newConf.urlPrefix +
@@ -478,6 +483,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     }
   }
 
+  lifecycle.addStopHook { () =>
+    Future.successful {
+      log.info("SMGConfigServiceImpl: shutting down plugins ...")
+      plugins.foreach(_.onShutdown())
+      log.info("SMGConfigServiceImpl: done shutting down plugins.")
+    }
+  }
   // register an Akka DeadLetter listener, to detect issues
   private val deadLetterListener = actorSystem.actorOf(Props(classOf[SMGDeadLetterActor]))
   actorSystem.eventStream.subscribe(deadLetterListener, classOf[DeadLetter])

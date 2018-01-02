@@ -1,5 +1,5 @@
-import com.smule.smg.{SMGMonSpikeThresh, SMGMonValueMovingStats, SMGRrd, SMGState}
-import com.smule.smgplugins.spiker.SpikeCheckParams
+import com.smule.smg.{SMGLogger, SMGRrd, SMGState}
+import com.smule.smgplugins.mon.anom.{AnomThreshConf, ValueMovingStats}
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
@@ -10,7 +10,7 @@ import scala.math._
   * Created by asen on 1/4/16.
   */
 @RunWith(classOf[JUnitRunner])
-class SpikerSpec extends Specification {
+class ValueMovingStatsSpec extends Specification {
 
 //  "SpikeDetector" should {
 //
@@ -54,7 +54,7 @@ class SpikerSpec extends Specification {
   val stMaxMinutes = 30
   val ltMaxMinutes = 1800
   val ltMinutesToFill = 3 * ltMaxMinutes + 3 * stMaxMinutes + 7
-  val aThresh = SMGMonSpikeThresh("1.5:30m:30h")
+  val aThresh = AnomThreshConf("1.5:30m:30h")
 
   val normData = (1 to ltMinutesToFill).map(_ => rnd.nextInt(100)) ++ (1 to stMaxMinutes).map(_ => rnd.nextInt(100))
 
@@ -75,18 +75,18 @@ class SpikerSpec extends Specification {
   def myNumFmt(n: Double) = SMGState.numFmt(n, None)
 
   def testData(data: Seq[Int], debug: Boolean = false) = {
-    val o = new SMGMonValueMovingStats("blah", 0, 60)
+    val o = new ValueMovingStats("blah", SMGLogger)
     var spikes = 0
     var lastSpikeStr = ""
     var lastSerializedStr = ""
     var cts = SMGRrd.tssNow - (data.size * 60)
     data.foreach { v =>
       cts += 60
-      o.update(cts, v, stMaxMinutes, ltMaxMinutes)
+      o.update(60, cts, v, stMaxMinutes, ltMaxMinutes)
       if (debug) {
         println(o.serialize)
       }
-      val r = aThresh.checkAlert(o, stMaxMinutes, ltMaxMinutes, myNumFmt)
+      val r = aThresh.checkAlert(o, 60, stMaxMinutes, ltMaxMinutes, myNumFmt)
       if (r.isDefined){
         //          println(o.serialize)
         spikes += 1
@@ -98,7 +98,7 @@ class SpikerSpec extends Specification {
     spikes
   }
 
-  "SMGMonValueMovingStats" should {
+  "ValueMovingStats" should {
     "detect spike" in {
       testData(spikeData, debug = false) mustNotEqual 0
     }

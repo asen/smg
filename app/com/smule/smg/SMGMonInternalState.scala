@@ -3,6 +3,7 @@ package com.smule.smg
 import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 /**
   * Created by asen on 11/12/16.
@@ -74,7 +75,6 @@ trait SMGMonInternalState extends SMGMonState {
   protected var myStateIsInherited = false
 
   // XXX these are applicable to var state only but are put here to simplify serisalization/deserialization
-  protected var myMovingStatsOpt: Option[SMGMonValueMovingStats] = None
   protected var myCounterPrevValue: Double = Double.NaN
   protected var myCounterPrevTs = 0
 
@@ -213,7 +213,6 @@ trait SMGMonInternalState extends SMGMonState {
     if (myIsAcked) mm += ("ack" -> Json.toJson("true"))
     if (myIsSilencedUntil.isDefined) mm += ("slc" -> Json.toJson(myIsSilencedUntil.get))
     if (myStateIsInherited) mm += ("sih" -> Json.toJson("true"))
-    if (myMovingStatsOpt.isDefined) mm += ("mvs" -> myMovingStatsOpt.get.serialize)
     Json.toJson(mm.toMap)
   }
 
@@ -247,15 +246,6 @@ trait SMGMonInternalState extends SMGMonState {
       myIsAcked = (src \ "ack").asOpt[String].contains("true")
       myStateIsInherited = (src \ "sih").asOpt[String].contains("true")
       myIsSilencedUntil = (src \ "slc").asOpt[Int]
-
-      val mvsOpt = (src \ "mvs").asOpt[JsValue]
-
-      if (mvsOpt.isDefined && myMovingStatsOpt.isDefined) {
-        SMGMonValueMovingStats.deserialize(mvsOpt.get, myMovingStatsOpt.get)
-      } else if (mvsOpt.isDefined != myMovingStatsOpt.isDefined) {
-        log.error(s"SMGMonInternalState.deserialize: unexpected moving stats state: " +
-          s"js -> ${mvsOpt.isDefined}, mine -> ${myMovingStatsOpt.isDefined}")
-      }
     } catch {
       case x: Throwable => log.ex(x, s"SMGMonInternalState.deserialize: Unexpected exception for $id: src=$src")
     }
@@ -301,17 +291,6 @@ class SMGMonVarState(var objectUpdate: SMGObjectUpdate,
 
   override def text: String = s"${objectUpdate.id}[$vix]:$label: ${objectUpdate.title}: $currentStateDesc"
 
-  myMovingStatsOpt = Some(new SMGMonValueMovingStats(objectUpdate.id, vix, objectUpdate.interval))
-//  myCounterPrevValue = Double.NaN
-//  myCounterPrevTs = 0
-
-  private def movingStats = myMovingStatsOpt.get
-
-  private def numFmt(num: Double): String = {
-    val myNum = objectUpdate.vars(vix).get("cdef").map(cdf => SMGRrd.computeCdef(cdf, num)).getOrElse(num)
-    SMGState.numFmt(myNum, objectUpdate.vars(vix).get("mu"))
-  }
-
   private def processCounterUpdate(ts: Int, rawVal: Double): Option[(Double,Option[String])] = {
     val tsDelta = ts - myCounterPrevTs
 
@@ -327,8 +306,11 @@ class SMGMonVarState(var objectUpdate: SMGObjectUpdate,
       val maxr = objectUpdate.vars(vix).get("max").map(_.toDouble)
       val r = (rawVal - myCounterPrevValue) / tsDelta
       val tpl = if ((r < 0) || (maxr.isDefined && (maxr.get < r))){
-        log.debug(s"SMGMonVarState.processCounterUpdate($id): Counter overflow detected: p=$myCounterPrevValue/$myCounterPrevTs c=$rawVal/$ts r=$r maxr=$maxr")
-        (Double.NaN, Some(s"Counter overflow: p=${numFmt(myCounterPrevValue)} c=${numFmt(rawVal)} td=$tsDelta r=${numFmt(r)} maxr=${numFmt(maxr.getOrElse(Double.NaN))}"))
+        log.debug(s"SMGMonVarState.processCounterUpdate($id): Counter overflow detected: " +
+          s"p=$myCounterPrevValue/$myCounterPrevTs c=$rawVal/$ts r=$r maxr=$maxr")
+        (Double.NaN, Some(s"ANOM: Counter overflow: p=${objectUpdate.numFmt(myCounterPrevValue, vix)} " +
+          s"c=${objectUpdate.numFmt(rawVal, vix)} td=$tsDelta r=${objectUpdate.numFmt(r, vix)} " +
+          s"maxr=${objectUpdate.numFmt(maxr.getOrElse(Double.NaN), vix)}"))
       } else
         (r, None)
       Some(tpl)
@@ -337,6 +319,8 @@ class SMGMonVarState(var objectUpdate: SMGObjectUpdate,
     myCounterPrevTs = ts
     ret
   }
+
+  private def myNumFmt(d: Double): String = objectUpdate.numFmt(d, vix)
 
   def processValue(ts: Int, rawVal: Double): Unit = {
     val valOpt = if (objectUpdate.isCounter) {
@@ -347,52 +331,20 @@ class SMGMonVarState(var objectUpdate: SMGObjectUpdate,
     }
     val (newVal, nanDesc) = valOpt.get
     val alertConfs = configSvc.objectValueAlertConfs(objectUpdate, vix)
-    var ret : SMGState = null
-    if (newVal.isNaN) {
-      ret = SMGState(ts, SMGState.ANOMALY, s"ANOM: value=NaN (${nanDesc.getOrElse("unknown")})")
+    val ret: SMGState = if (newVal.isNaN) {
+      SMGState(ts, SMGState.ANOMALY, s"ANOM: value=NaN (${nanDesc.getOrElse("unknown")})")
     } else if (alertConfs.nonEmpty) {
-      if (!alertConfs.exists(_.spike.isDefined)) movingStats.reset()
-      var movingStatsUpdated = false
-      val allAlertStates = alertConfs.map { alertConf =>
-        var curRet: SMGState = null
-        val warnThreshVal = alertConf.warn.map(_.value).getOrElse(Double.NaN)
-        val critThreshVal = alertConf.crit.map(_.value).getOrElse(Double.NaN)
-        val descSx = s"( ${numFmt(warnThreshVal)} / ${numFmt(critThreshVal)} )"
-
-        if (alertConf.crit.isDefined) {
-          val alertDesc = alertConf.crit.get.checkAlert(newVal, numFmt)
-          if (alertDesc.isDefined)
-            curRet = SMGState(ts, SMGState.CRITICAL, s"CRIT: ${alertDesc.get} : $descSx")
-        }
-        if ((curRet == null) && alertConf.warn.isDefined ) {
-          val alertDesc = alertConf.warn.get.checkAlert(newVal, numFmt)
-          if (alertDesc.isDefined)
-            curRet = SMGState(ts,SMGState.WARNING, s"WARN: ${alertDesc.get} : $descSx")
-        }
-        if (alertConf.spike.isDefined) {
-          // Update short/long term averages, to be used for spike/drop detection
-          val ltMaxCounts = alertConf.spike.get.maxLtCnt(objectUpdate.interval)
-          val stMaxCounts = alertConf.spike.get.maxStCnt(objectUpdate.interval)
-          if (!movingStatsUpdated) {
-            movingStats.update(ts, newVal, stMaxCounts, ltMaxCounts)
-            movingStatsUpdated = true
-          }
-          // check for spikes
-          if (curRet == null) {
-            val alertDesc = alertConf.spike.get.checkAlert(movingStats, stMaxCounts, ltMaxCounts, numFmt)
-            if (alertDesc.isDefined)
-              curRet = SMGState(ts, SMGState.ANOMALY, s"ANOM: ${alertDesc.get}")
-          }
-        }
-        if (curRet == null) {
-          curRet = SMGState(ts,SMGState.OK, s"OK: value=${numFmt(newVal)} : $descSx")
-        }
-        curRet
+      val allCheckStates = alertConfs.map { alertConf =>
+        alertConf.checkValue(objectUpdate, vix, ts, newVal)
       }
-      ret = allAlertStates.maxBy(_.state)
-    } else movingStats.reset()
-    if (ret == null) {
-      ret = SMGState(ts, SMGState.OK, s"OK: value=${numFmt(newVal)}")
+      val errRet = allCheckStates.maxBy(_.state)
+      if (alertConfs.nonEmpty && (errRet.state == SMGState.OK)) {
+        val descSx = alertConfs.map { _.threshDesc(myNumFmt) }.mkString(", ")
+        SMGState(ts,SMGState.OK, s"OK: value=${myNumFmt(newVal)} : $descSx")
+      } else
+        errRet
+    } else {
+      SMGState(ts, SMGState.OK, s"OK: value=${myNumFmt(newVal)}")
     }
     if (ret.state != SMGState.OK) {
       log.debug(s"MONITOR: ${objectUpdate.id} : $vix : $ret")

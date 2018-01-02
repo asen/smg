@@ -70,13 +70,22 @@ class TestConfigSvc() extends SMGConfigService {
     objectAlertConfs = Map(
       "test.object.1" -> SMGMonObjAlertConf(
         varConfs = Map(
-          0 -> Seq(SMGMonVarAlertConf(
-            SMGMonAlertConfSource.OBJ,
-            "test.object.1",
-            crit = Some(SMGMonAlertThresh(5.0, "gte")),
-            warn = Some(SMGMonAlertThresh(3.0, "gte")),
-            spike = Some(SMGMonSpikeThresh(""))
-          ))
+          0 -> Seq(
+            SMGMonVarAlertConf(
+              SMGMonAlertConfSource.OBJ,
+              "test.object.1",
+              crit = Some(SMGMonAlertThresh(5.0, "gte")),
+              warn = Some(SMGMonAlertThresh(3.0, "gte")),
+              pluginChecks = Seq()
+            ),
+            SMGMonVarAlertConf(
+              SMGMonAlertConfSource.OBJ,
+              "test.object.1",
+              crit = Some(SMGMonAlertThresh(0.0, "eq")),
+              warn = None,
+              pluginChecks = Seq()
+            )
+          )
         )
       ),
       "test.pf.object.1" -> SMGMonObjAlertConf(
@@ -86,7 +95,7 @@ class TestConfigSvc() extends SMGConfigService {
             "test.pf.object.1",
             crit = Some(SMGMonAlertThresh(5.0, "gte")),
             warn = Some(SMGMonAlertThresh(3.0, "gte")),
-            spike = Some(SMGMonSpikeThresh(""))
+            pluginChecks = Seq()
           ))
         )
       )

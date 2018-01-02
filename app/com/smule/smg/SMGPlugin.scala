@@ -14,12 +14,48 @@ trait SMGPluginAction {
 }
 
 trait SMGPlugin {
+  /**
+    * The unique plugin id
+    */
   val pluginId: String
+
+  /**
+    * The plugin interval - how often to call run(). 0 means to not call run() at all.
+    */
   val interval: Int
-  def objects: Seq[SMGObjectView]
-  def indexes: Seq[SMGConfIndex]
-  def run(): Unit
-  def reloadConf(): Unit
+
+  /**
+    * Any custom objectViews the plugin defines.
+    * @return - sequence of object views
+    */
+  def objects: Seq[SMGObjectView] = Seq()
+
+  /**
+    * Any relevant indexes the plugin defines.
+    * @return - sequence of indexes
+    */
+  def indexes: Seq[SMGConfIndex] = Seq()
+
+  /**
+    * Called periodically as specified by interval
+    */
+  def run(): Unit = {}
+
+  /**
+    * Called during config reload but before the configSvc.config has been updated (and it is an error to access it there)
+    * plugin can parse its own config there and build any objects or indexes
+    */
+  def reloadConf(): Unit = {}
+
+  /**
+    * Called on reload conf after the configSvc.config object has been populated
+    */
+  def onConfigReloaded(): Unit = {}
+
+  /**
+    * Called on system shutdown. Suitable for saving state etc.
+    */
+  def onShutdown(): Unit = {}
 
   /**
     * Plugins can define real (or synthetic) pf commands and send monitor messages for these
@@ -28,13 +64,20 @@ trait SMGPlugin {
     */
   def preFetches: Map[String, SMGPreFetchCmd] = Map()
 
+  /**
+    * Plugins can implement custom logic for checking numeric values extending
+    * the built-in alert-(warn,crit)-(gt,lt,eq,...) checks
+    * @return
+    */
+  def valueChecks: Map[String, SMGMonCheck] = Map()
+
   // XXX TODO need to rethink dependencies (who creates the plugins) to get rid of this
   // Curently these are set by SMGConfigService and the SMGrapher singletons on startup
-  private var remotesInst: SMGRemotesApi = null
+  private var remotesInst: SMGRemotesApi = _ //null
   def setRemotesApi(remotesApi: SMGRemotesApi): Unit = remotesInst = remotesApi
   def remotes: SMGRemotesApi = remotesInst
 
-  private var smgInst: GrapherApi = null
+  private var smgInst: GrapherApi = _ //null
   def setGrapherApi(grapherApi: GrapherApi): Unit = smgInst = grapherApi
   def smg: GrapherApi = smgInst
 
