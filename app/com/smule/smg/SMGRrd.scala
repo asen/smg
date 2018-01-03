@@ -446,6 +446,42 @@ object SMGRrd {
     inp.flatten
   }
 
+  def reCalcResolution(inp: List[SMGRrdRow], targetRes: Option[Int]): List[SMGRrdRow] = {
+    if (targetRes.isEmpty)
+      return inp
+    if (inp.isEmpty)
+      return inp
+    if (inp.tail.isEmpty)
+      return inp
+    val inpRes = math.abs(inp.tail.head.tss - inp.head.tss)
+    if (inpRes >= targetRes.get)
+      return inp
+    val inpPointsPerOutputPoint = (targetRes.get.toDouble / inpRes.toDouble).toInt
+    def nanRow(ts: Int) = SMGRrdRow(ts, inp.head.vals.map(_ => Double.NaN))
+    inp.grouped(inpPointsPerOutputPoint).map { chunk =>
+      val minPoints = inpPointsPerOutputPoint / 2
+      if (chunk.lengthCompare(minPoints) < 0){
+        nanRow(chunk.head.tss)
+      } else {
+        val sumArr = Array.fill(chunk.head.vals.size)(0.0)
+        val cntArr = Array.fill(chunk.head.vals.size)(0)
+        chunk.foreach { r =>
+          r.vals.zipWithIndex.foreach { t =>
+            if (!t._1.isNaN){
+              sumArr(t._2) += t._1
+              cntArr(t._2) += 1
+            }
+          }
+        }
+        SMGRrdRow(chunk.head.tss, chunk.head.vals.indices.map{ix =>
+          if (cntArr(ix) < minPoints)
+            Double.NaN
+          else
+            sumArr(ix) / cntArr(ix).toDouble
+        }.toList)
+      }
+    }.toList
+  }
 }
 
 
@@ -742,7 +778,6 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
     retbuf.toList
   }
 
-
   private def rrdGraphGroupCommand(outFn: String, period:String, stacked: Boolean, gopts: GraphOptions): String = {
     val colorMaker = new ColorMaker()
     val c = new mutable.StringBuilder()
@@ -801,7 +836,7 @@ class SMGRrdFetch(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
 
   def fetch(params: SMGRrdFetchParams): List[SMGRrdRow] = {
     val cmd = SMGCmd(fetchCommand(params.resolution, params.start, params.end))
-    for (ln <- cmd.run
+    val ret = for (ln <- cmd.run
          if ln != ""
          if "ds\\d".r.findFirstMatchIn(ln).isEmpty
          if (!params.filterNan) || "(?i)nan".r.findFirstMatchIn(ln).isEmpty
@@ -827,6 +862,7 @@ class SMGRrdFetch(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
         SMGRrdRow(tss, filteredArr.toList)
       }
     }
+    reCalcResolution(ret, params.resolution)
   }
 
   private def fetchCommand(resolution: Option[Int], start: Option[String], end: Option[String] = None): String = {
@@ -851,7 +887,8 @@ class SMGRrdFetchAgg(val rrdConf: SMGRrdConfig, val aggobj: SMGAggObjectView) {
     val objsData = for ( o <- aggobj.objs ) yield {
       new SMGRrdFetch(rrdConf, o).fetch(params)
     }
-    merge(aggobj.op, objsData)
+    val ret = merge(aggobj.op, objsData)
+    reCalcResolution(ret, params.resolution)
   }
 
   private def merge(op: String, inp: Seq[List[SMGRrdRow]]) : List[SMGRrdRow] = {

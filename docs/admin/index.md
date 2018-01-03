@@ -1062,15 +1062,39 @@ alert keywords are defined:
     alert-crit-lte: NUM  # critical alert if value is less than or equal to NUM
     alert-crit-lt: NUM   # critical alert if value is less than NUM
     alert-crit-eq: NUM   # critical alert if value is equal to NUM
-    alert-spike: ""      # anomaly alert - detecting unusual spikes or drops
+    alert-p-<pluginId>-<checkId>: # configure a plugin-implemented check for the value
+
+The built-in "mon" plugin implements the following two checks
+
+    alert-p-mon-anom: "" # anomaly alert - detecting unusual spikes or drops
                          #   it accepts a string with 3 values separated by ":"
                          #   the default value (when empty string is provided) is
                          #   "1.5:30m:30h" which means 1.5 (relative) change
-                         #   in the last 30 minutes period compared to the previous 
+                         #   in the last 30 minutes period compared to the previous
                          #   30h period.
+    alert-p-mon-pop: "..." # period over period value check - detecting if the current
+                         #   value has changed with certain thresholds over the same value
+                         #   some period ago. It accepts a string with 4 values separated
+                         #   by ":".
+                         #   The first value is a period and an optional resolution
+                         #   separated by "-". E.g. "24h-1M" means compare with value 24 hrs
+                         #   ago over a 1 minute average. If the -1M part is omitted the
+                         #   object interval will be used as resolution (that would be the
+                         #   highest available resolution in the RRD file).
+                         #   The second value is the comparison operator - one of lt(e),
+                         #   gt(e) or eq.
+                         #   The third and fourth values are the warning and critical
+                         #   thresholds of change.
+                         #   E.g. to define an warning alert if some value drops below 0.7
+                         #   from yesterday and a critical alert if the value drops below 0.5
+                         #   from yesterday, at a 5min-average resolution, one can use the
+                         #   following config string: "24h-5M:lt:0.7:0.5"
+                         #   Both warning and critical thresholds are optional, e.g. use
+                         #   something like "24h:lt:0.7" to set only a warning threshold and
+                         #   something like "24h:lt::0.5" to set only critical threshold.
 
 Check [here](../index.md#anomaly) for more details on how 
-alert-spike/anomaly detection works. 
+alert-p-mon-anom/anomaly detection works.
 
 In addition to alert-\* properties one can also define the following
 notify- settings, specifying a list of "recipients" ($notify-command 
@@ -1140,7 +1164,7 @@ alerts property. Examples:
      alert-warn-gt: 3
      alert-crit-gt: 8
    - label: scur 
-     alert-spike: ""
+     alert-p-mon-anom: ""
 </pre>
 
 The alerts property is an array of yaml objects each specifying a "label"
@@ -1156,21 +1180,21 @@ objects with more than 8 vars):
   # empty filter means match all
   alerts:
     - label: 0
-      alert-spike: ""
+      alert-p-mon-anom: ""
     - label: 1
-      alert-spike: ""
+      alert-p-mon-anom: ""
     - label: 2
-      alert-spike: ""
+      alert-p-mon-anom: ""
     - label: 3
-      alert-spike: ""
+      alert-p-mon-anom: ""
     - label: 4
-      alert-spike: ""
+      alert-p-mon-anom: ""
     - label: 5
-      alert-spike: ""
+      alert-p-mon-anom: ""
     - label: 6
-      alert-spike: ""
+      alert-p-mon-anom: ""
     - label: 7
-      alert-spike: ""
+      alert-p-mon-anom: ""
 </pre>
 
 <a name="running">

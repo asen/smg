@@ -621,6 +621,11 @@ in some way which makes sense)
 data specific to an object (e.g. the **jsgraph** plugin providing 
 "Zoom" and "Historam" actions)
 
+- Plugin can implement monitor checks (via valueChecks method) to extend the
+available by default alert-[warn|crit]-[gt[e]|lt[e]|eq] options. E.g. one can
+check for value anomalies etc. See the mon plugin for example.
+
+
 ##### Currently available plugins
 
 - jsgraph - this plugin provides a JavaScript graphing
@@ -639,6 +644,11 @@ as establishing the JMX connection can be slow (and thus - expensive).
 It would be much better to to use persistent connections and this is
 what the SMG JMX plugins provides. Documentation TBD
 
+- mon - the "mon" (SMGMonCheckPlugin) plugin currently implements two types
+of value checks - anomaly detection and period-over-period check. Plugin checks
+are configured using the special alert-p-<pluginId>-<checkId>: "<conf>" config
+attribute.
+
 <a name="monitoring" />
 
 #### Monitoring
@@ -654,8 +664,7 @@ the double-hit on the target servers.
 The original idea for SMG monitoring was to be implemented as plugins
 fetching the data from the rrd files and determining whether values
 are within thresholds. This also allows one to check data at arbitrary 
-(as available in the RRD files) resolution for desired periods (can be 
-useful for anomaly detection, e.g. what the spiker plugin does). 
+(as available in the RRD files) resolution for desired periods.
 
 Unfortunately there is one significant issue with that approach - 
 it is too heavy to apply on all objects (based on experience it can 
@@ -759,17 +768,17 @@ progress and subject to change).
 
 <a name="anomaly">
 
-##### Anomaly detection
+##### Anomaly detection (via the "mon" check plugin)
  
-The SMG "data feed" based anomaly detection works based on a "threshold
+The SMG Mon check plugin anomaly detection works based on a "threshold
 for difference" (default = 1.5) and two time periods - shorter (default
 30 minutes) and longer (default - 30 hours). Will use the default values
 in the examples below.
 
-First, for any value which has a "spike check" configuration ("alert-spike")
-enabled  SMG will start keeping in-memory stats about the most 
-recent values. The number of stats that will be kept depends on the
-object interval compared to the configured check periods - e.g. for
+First, for any value which has a "spike check" configuration
+("alert-p-mon-anom") enabled  SMG will start keeping in-memory stats
+about the most recent values. The number of stats that will be kept depends
+on the object interval compared to the configured check periods - e.g. for
 a graph updated every minute, 30 minutes would map to 30 data points
 and 30h to - 1800. SMG keeps the short period values (30 in the example)
 at full granularity. For the long period data instead of keeping all 

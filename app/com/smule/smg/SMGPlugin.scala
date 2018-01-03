@@ -66,7 +66,8 @@ trait SMGPlugin {
 
   /**
     * Called during config reload but before the configSvc.config has been updated (and it is an error to access it there)
-    * plugin can parse its own config there and build any objects or indexes
+    * plugin can parse its own config there and build any objects or indexes which will later also be available in
+    * configSvc.config
     */
   def reloadConf(): Unit = {}
 
