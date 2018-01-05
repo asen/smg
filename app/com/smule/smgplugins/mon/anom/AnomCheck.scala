@@ -181,4 +181,9 @@ class AnomCheck(val ckId: String, log: SMGLoggerApi) extends SMGMonCheck {
     val ostatsKey = objectVarStatsKey(ou, vix, checkConfStr)
     objectVarStats.getOrElseUpdate(ostatsKey, { new ValueMovingStats(ostatsKey, log) })
   }
+
+  override def inspectState(ou: SMGObjectUpdate, vix: Int, checkConf: String): String = {
+    val ostatsKey = objectVarStatsKey(ou, vix, checkConf)
+    objectVarStats.get(ostatsKey).map(_.serialize.toString).getOrElse("(undefined)")
+  }
 }

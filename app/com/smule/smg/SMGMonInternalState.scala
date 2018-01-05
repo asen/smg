@@ -251,6 +251,8 @@ trait SMGMonInternalState extends SMGMonState {
     }
   }
 
+  def inspect: String = serialize.toString
+
   override def getLocalMatchingIndexes: Seq[SMGIndex] = {
     val ovs = ouids.map { ouid => configSvc.config.viewObjectsById.get(ouid) }.filter(_.isDefined).map(_.get)
     val allIxes = configSvc.config.indexes
@@ -359,6 +361,17 @@ class SMGMonVarState(var objectUpdate: SMGObjectUpdate,
 
   override protected def getMaxHardErrorCount: Int = {
     configSvc.objectVarNotifyStrikes(objectUpdate, Some(vix))
+  }
+
+  override def inspect: String = {
+    val ret = ListBuffer[String](super.inspect)
+    val alertConfs = configSvc.objectValueAlertConfs(objectUpdate, vix)
+    alertConfs.foreach { ac =>
+      ac.pluginChecks.foreach { ckc =>
+        ret += s"${ckc.ckId}: " + ckc.check.inspectState(objectUpdate, vix, ckc.conf)
+      }
+    }
+    ret.mkString("\n")
   }
 
 }

@@ -126,6 +126,7 @@
   rrd_type: GAUGE
   vars:
     - label: val1
+      alert-p-mon-pop: "24h:lt:0.5:0.7"
 
 - localhost.time.counter:
   title: "Test time counter"
@@ -166,6 +167,7 @@
   vars:
     - label: num
       alert-p-mon-anom: "1.5:15m:2h:0"
+      alert-p-mon-pop: "24h:lt:0.7:0.5"
 
 
 - localhost.ex1.cdef:

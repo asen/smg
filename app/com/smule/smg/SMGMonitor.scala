@@ -535,7 +535,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
 
   def inspectStateTree(stateId: String): Option[String] = {
     allMonitorStateTreesById.get(stateId).map { mst =>
-      mst.allNodes.map(_.serialize.toString()).mkString("\n")
+      mst.allNodes.map(n => n.getClass.toString + ": " + n.inspect).mkString("\n")
     }
   }
 

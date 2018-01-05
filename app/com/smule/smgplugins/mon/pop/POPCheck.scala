@@ -109,4 +109,8 @@ class POPCheck(val ckId: String, log: SMGLoggerApi, configSvc: SMGConfigService)
     threshConfs.clear()
   }
 
+  override def inspectState(ou: SMGObjectUpdate, vix: Int, checkConf: String): String = {
+    checkValue(ou, vix, SMGRrd.tssNow, 0.0, checkConf).toString
+  }
+
 }
