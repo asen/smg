@@ -141,7 +141,7 @@ class AnomCheck(val ckId: String, log: SMGLoggerApi) extends SMGMonCheck {
     val config = configSvc.config
     objectVarStats.keys.toSeq.foreach { k =>
       val (ouId, vix, conf) = ouIdVixConfFromStatsKey(k)
-      val ouOpt = config.viewObjectsById.get(ouId).flatMap(_.refObj)
+      val ouOpt = config.updateObjectsById.get(ouId)
       if (ouOpt.isEmpty || ouOpt.get.vars.lengthCompare(vix) <= 0) {
         log.warn(s"AnomCheck.cleanupObsoleteStates: removing state for non-existing object ouId=$ouId, vix=$vix")
         objectVarStats.remove(k)
@@ -184,6 +184,6 @@ class AnomCheck(val ckId: String, log: SMGLoggerApi) extends SMGMonCheck {
 
   override def inspectState(ou: SMGObjectUpdate, vix: Int, checkConf: String): String = {
     val ostatsKey = objectVarStatsKey(ou, vix, checkConf)
-    objectVarStats.get(ostatsKey).map(_.serialize.toString).getOrElse("(undefined)")
+    "key=" + ostatsKey + ", val=" + objectVarStats.get(ostatsKey).map( _.serialize.toString).getOrElse("(undefined)")
   }
 }
