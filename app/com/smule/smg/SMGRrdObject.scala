@@ -52,7 +52,7 @@ case class SMGRrdObject(id: String,
     val ret = for (ln <- out.take(this.vars.size)) yield {
       ln.toDouble
     }
-    if (ret.size < this.vars.size) {
+    if (ret.lengthCompare(this.vars.size) < 0) {
       val errMsg = "Bad output from external command - less lines than expected (" + ret.size + "<" + this.vars.size + ")"
       log.error(errMsg)
       log.error(out)
