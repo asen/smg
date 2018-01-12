@@ -2,23 +2,20 @@ v 0.6+
 
 == Short term plan ==
 
-* support providing custom fetch consolidation function? (vs always using AVERAGE)
+* stable release
 
 == Documentation ==
 
-* document plugin alert configuration
 * document JMX plugin config
 * document event log and UI
 
 == Known Bugs ==
 
-* Changing the set of intervals requires restart
-
 * GROUP-ing stacked graphs seems messed up ?
 
-* Re-notify on unknowns seem broken? Double-check/write a test.
-
 == Random longer term possibilities ==
+
+* support providing custom fetch consolidation function? (vs always using AVERAGE) ?
 
 * slave mode - do not do RRD updates but forward to central update node ?
 
