@@ -10,6 +10,7 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
+import scala.util.Try
 
 /**
   * Helper class to deal with Yaml parsing
@@ -19,6 +20,10 @@ class SMGConfigParser(log: SMGLoggerApi) {
   // TODO
   val defaultInterval: Int = 60 // seconds
   val defaultTimeout: Int = 30  // seconds
+
+  private val defaultGraphWidth = 607
+  private val defaultGraphHeight = 152
+
 
   def validateOid(oid: String): Boolean = oid.matches("^[\\w\\._-]+$")
 
@@ -613,8 +618,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
       SMGRrdConfig(
         if (globalConf.contains("$rrd_tool")) globalConf("$rrd_tool") else rrdTool,
         socketOpt,
-        if (globalConf.contains("$rrd_graph_width")) globalConf("$rrd_graph_width").toInt else 539,
-        if (globalConf.contains("$rrd_graph_height")) globalConf("$rrd_graph_height").toInt else 135,
+        globalConf.get("$rrd_graph_width").flatMap(x => Try(x.toInt).toOption).getOrElse(defaultGraphWidth),
+        globalConf.get("$rrd_graph_height").flatMap(x => Try(x.toInt).toOption).getOrElse(defaultGraphHeight),
         globalConf.get("$rrd_graph_font")
       )
     }
