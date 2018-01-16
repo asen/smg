@@ -226,7 +226,7 @@ object SMGRrd {
 
   def rrdGraphCommandPx(rrdConf: SMGRrdConfig, title: String, outFn: String,
                         period: String, pl:Option[String], step: Option[Int],
-                        maxY: Option[Double], minY: Option[Double]): String = {
+                        maxY: Option[Double], minY: Option[Double], objMinY: Option[Double]): String = {
     val c = new mutable.StringBuilder("graph ").append(outFn).append(" --imgformat=PNG")
     if (rrdConf.rrdToolSocket.isDefined) {
       c.append(s" --daemon ${rrdConf.rrdToolSocket.get}")
@@ -240,9 +240,17 @@ object SMGRrd {
     c.append(" --width=").append(rrdConf.rrdGraphWidth)
     c.append(" --height=").append(rrdConf.rrdGraphHeight)
     //c.append(" --full-size-mode")
-    c.append(" --lower-limit ").append(numRrdFormat(minY.getOrElse(0.0), nanAsU = false))
-    if (maxY.isDefined) c.append(" --upper-limit ").append(numRrdFormat(maxY.get, nanAsU = false))
-    c.append(" --rigid ")
+    var rigid = false
+    val myMinY = if (minY.isDefined) minY else objMinY
+    if (myMinY.isDefined && (!myMinY.get.isNaN)) {
+      c.append(" --lower-limit ").append(numRrdFormat(myMinY.get, nanAsU = false))
+      rigid = true
+    }
+    if (maxY.isDefined) {
+      c.append(" --upper-limit ").append(numRrdFormat(maxY.get, nanAsU = false))
+      rigid = true
+    }
+    if (rigid) c.append(" --rigid ")
     if (step.isDefined) c.append("--step ").append(step.get).append(" ")
     c.toString
   }
@@ -508,7 +516,7 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
   }
 
   private def rrdGraphCommand(outFn: String, period:String, gopts: GraphOptions): String = {
-    val cmd = rrdGraphCommandPx(rrdConf, objv.id, outFn, period, gopts.pl, gopts.step, gopts.maxY, gopts.minY)
+    val cmd = rrdGraphCommandPx(rrdConf, objv.id, outFn, period, gopts.pl, gopts.step, gopts.maxY, gopts.minY, objv.graphMinY)
     val c = new mutable.StringBuilder(cmd)
     var first = true
     val lblMaker = new LabelMaker()
@@ -802,7 +810,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
 
   private def rrdGraphCommand(outFn: String, period:String, gopts: GraphOptions): String = {
     val cmdPx = rrdGraphCommandPx(rrdConf, aggObj.shortTitle, outFn, period,
-      gopts.pl, gopts.step, gopts.maxY, gopts.minY)
+      gopts.pl, gopts.step, gopts.maxY, gopts.minY, aggObj.graphMinY)
     cmdPx +
       (aggObj.op match {
       case "GROUP" => rrdGraphGroupCommand(outFn, period, stacked = false, gopts)

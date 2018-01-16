@@ -3,7 +3,7 @@
   px: "localhost."
 #  cols: 2
 #  rows: 1
-  parent: hosts
+#  parent: hosts
 #  agg_op: SUM
 #  rows: 50
 #  sx: ""
@@ -218,3 +218,17 @@
   rx: .jmx.smg
   remote: "*"
   agg_op: GROUP
+
+- localhost.ex3.neg:
+  title: "A cdef var graph for this host 1"
+  command: "smgscripts/echo4-neg.sh"
+  interval: 60
+  vars:
+    - label: v1
+      min: U
+    - label: v2
+      min: U
+    - label: v3
+      min: U
+    - label: v4
+      min: U

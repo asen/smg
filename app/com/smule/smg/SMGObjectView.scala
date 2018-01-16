@@ -1,5 +1,7 @@
 package com.smule.smg
 
+import scala.util.Try
+
 /**
   * Created by asen on 11/23/15.
   */
@@ -40,6 +42,15 @@ trait SMGObjectView extends SMGObjectBase {
   }
 
   override def searchVars: List[Map[String, String]] = filteredVars(true)
+
+  lazy val graphMinY: Option[Double] = {
+    val myMins = filteredVars(inclCdefVars = true).map(v => v.getOrElse("min", "0.0"))
+    if (myMins.exists { m => (m == "U") || m.startsWith("-") }) {
+      None
+    } else {
+      Some(myMins.map(m => Try(m.toDouble).toOption.getOrElse(0.0)).min)
+    }
+  }
 
   private val SHORT_TITLE_MAX_LEN = 70
 
