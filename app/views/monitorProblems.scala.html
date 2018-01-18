@@ -23,15 +23,13 @@
   <label class="autosubmit-lbl">Minimal Severity filter:</label>
   <select name="ms" onchange="mySubmitOnChange(this);" >
     @for( sid <- availStates) {
-    <option value='@sid' @if(sid == flt.minState.map(_.toString).getOrElse("E_ANOMALY")){ selected } >@sid</option>
+    <option value='@sid' @if(sid == flt.minState.map(_.toString).getOrElse("ANOMALY")){ selected } >@sid</option>
     }
   </select>
 
-  <label class="autosubmit-lbl" for="cbSoft">Display Soft errors</label>
+  <label class="autosubmit-lbl" for="cbSoft">Display soft errors</label>
   <input id="cbSoft" type="checkbox" name="soft" onchange="mySubmitOnChange(this);" @if(flt.includeSoft){ checked } />
-  <label class="autosubmit-lbl" for="cbAcked">Display Acknowledged errors</label>
-  <input id="cbAcked" type="checkbox" name="ackd" @if(flt.includeAcked){ checked } onchange="mySubmitOnChange(this);" />
-  <label class="autosubmit-lbl" for="cbSlncd">Display Silenced errors</label>
+  <label class="autosubmit-lbl" for="cbSlncd">Display silenced/acknowledged errors</label>
   <input id="cbSlncd" type="checkbox" name="slncd" @if(flt.includeSilenced){ checked } onchange="mySubmitOnChange(this);" />
 
   <input id="btn_GET" type="submit" value="Refresh">
@@ -43,7 +41,7 @@
       $(':input', this).each(function() {
          this.disabled = ((this.name != "remote") && !($(this).val())) ||
            ((this.name == "remote") && ($(this).val() == "*")) ||
-           ((this.name == "ms") && ($(this).val() == "E_ANOMALY")) ;
+           ((this.name == "ms") && ($(this).val() == "ANOMALY")) ;
       });
   };
 

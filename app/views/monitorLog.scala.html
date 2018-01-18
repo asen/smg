@@ -34,10 +34,7 @@
   <label class="autosubmit-lbl" for="cbSoft">Display soft errors</label>
     <input id="cbSoft" type="checkbox" name="soft" onchange="mySubmitOnChange(this);" @if(flt.inclSoft){ checked } />
 
-  <label class="autosubmit-lbl" for="cbAckd">Display acknowledged errors</label>
-    <input id="cbAckd" type="checkbox" name="ackd" onchange="mySubmitOnChange(this);" @if(flt.inclAcked){ checked } />
-
-  <label class="autosubmit-lbl" for="cbSlncd">Display silenced errors</label>
+  <label class="autosubmit-lbl" for="cbSlncd">Display silenced/acknowledged errors</label>
     <input id="cbSlncd" type="checkbox" name="slncd" onchange="mySubmitOnChange(this);" @if(flt.inclSilenced){ checked } />
 
   <br/>

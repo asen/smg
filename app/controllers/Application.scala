@@ -765,7 +765,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorProblems(remote: Seq[String],
                       ms: Option[String],
                       soft: Option[String],
-                      ackd: Option[String],
+                      //ackd: Option[String],
                       slncd: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     // get the list of remotes to display in the filter form drop down
     val availRemotes = availableRemotes(configSvc.config)
@@ -774,8 +774,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
     } else remote
     val minSev = ms.map{ s => SMGState.fromName(s) }.getOrElse(SMGState.ANOMALY)
     val inclSoft = soft.getOrElse("off") == "on"
-    val inclAck = ackd.getOrElse("off") == "on"
     val inclSlnc = slncd.getOrElse("off") == "on"
+    //val inclAck = ackd.getOrElse("off") == "on"
+    val inclAck = inclSlnc
     val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(minSev),
       includeSoft = inclSoft, includeAcked = inclAck, includeSilenced = inclSlnc)
     val availStates = (SMGState.values - SMGState.OK).toSeq.sorted.map(_.toString)
@@ -804,7 +805,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
   val DEFAULT_LOGS_LIMIT = 200
 
   def monitorLog(remote: Seq[String], p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String],
-                 ackd: Option[String], slncd: Option[String], rx: Option[String],
+                 //ackd: Option[String],
+                 slncd: Option[String], rx: Option[String],
                  rxx: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val availRemotes = availableRemotes(configSvc.config).map(_.id)
     val myRemotes = if (remote.isEmpty) {
@@ -814,8 +816,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val period = p.getOrElse(DEFAULT_LOGS_SINCE)
     val limit = l.getOrElse(DEFAULT_LOGS_LIMIT)
     val inclSoft = soft.getOrElse("off") == "on"
-    val includeAckd = ackd.getOrElse("off") == "on"
     val includeSlncd = slncd.getOrElse("off") == "on"
+    // val includeAckd = ackd.getOrElse("off") == "on"
+    val includeAckd = includeSlncd
     val flt = SMGMonitorLogFilter(
       periodStr = period,
       rmtIds = myRemotes,
