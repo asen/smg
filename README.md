@@ -16,6 +16,8 @@ it up.
 Check the docs/ dir (or Docs link in a running SMG instance) for more 
 information.
 
+Live demo: http://smg1.ace-tek.net/
+
 Docs on github: https://github.com/asen/smg/blob/master/docs/index.md
 
 Binary releases available here: https://github.com/asen/smg/releases
