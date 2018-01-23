@@ -18,6 +18,8 @@ information.
 
 Live demo: http://smg1.ace-tek.net/
 
+Live demo configs: http://smg1.ace-tek.net/etc/smg/
+
 Docs on github: https://github.com/asen/smg/blob/master/docs/index.md
 
 Binary releases available here: https://github.com/asen/smg/releases
