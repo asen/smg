@@ -98,8 +98,6 @@ class ValueMovingStats(val idStr: String, log: SMGLoggerApi) {
 
     val maxg = maxGap(maxStCnt, interval)
     if (tsDiff > maxg) {
-      if (lastUpdateTs != 0) // do not log the an initial reset()
-        log.info(s"ValueMovingStats.update [$idStr]: resetting stats due to tsDiff=$tsDiff, maxGap=$maxg")
       reset()
     }
     lastUpdateTs = ts
