@@ -28,8 +28,11 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
   val dataDelay: Int = 0
   val rrdInitSource: Option[String] = None
 
-  def numFmt(num: Double, vix: Int): String = {
-    val myNum = vars(vix).get("cdef").map(cdf => SMGRrd.computeCdef(cdf, num)).getOrElse(num)
+  def numFmt(num: Double, vix: Int, applyCdef: Boolean = true): String = {
+    val myNum = if (applyCdef)
+      vars(vix).get("cdef").map(cdf => SMGRrd.computeCdef(cdf, num)).getOrElse(num)
+    else
+      num
     SMGState.numFmt(myNum, vars(vix).get("mu"))
   }
 

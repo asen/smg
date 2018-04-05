@@ -98,5 +98,19 @@ class POPCheckSpec extends Specification {
         ret.desc shouldEqual "c=80 p=100 (1h:lt:0.7:0.5)"
       }
     }
+
+    "work with agg objects with cdef vars" in {
+      cs.synchronized {
+        val ou = cs.config.updateObjectsById("test.object.aggu")
+        val testTs = SMGRrd.tssNow
+        prepareObjectUpdate(cs, ou, testTs = testTs, numUpdates = 62, fillVal = 100.0, lastVal = 80.0)
+        val checkConf = "1h:lt:0.7:0.5"
+        val popck = new POPCheck("pop", SMGLogger, cs)
+        val ret = popck.checkValue(ou, 0, testTs, 80.0, checkConf)
+        println(ret)
+        ret.state shouldEqual SMGState.OK
+        ret.desc shouldEqual "c=160 p=200 (1h:lt:0.7:0.5)"
+      }
+    }
   }
 }

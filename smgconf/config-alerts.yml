@@ -3,6 +3,10 @@
   id: mail-asen
   command: "smgscripts/notif-dummy.sh asen@smule.com"
 
+- $notify-command:
+  id: mail-asen.lazarov
+  command: "smgscripts/notif-dummy.sh asen.lazarov@gmail.com"
+
 - $notify-global: mail-asen
 - $notify-crit: mail-asen
 - $notify-unkn: mail-asen
@@ -24,26 +28,27 @@
 #  rows: 50
 #  sx: ""
 #  rx: ""
+  notify-unkn: mail-asen.lazarov
   alerts:
    - label: val32
 #    label: 2
      alert-warn-gt: 3
-     notify-warn: mail-asen
+     notify-warn: mail-asen.lazarov
      alert-crit-gt: 8
-     notify-crit: mail-asen
+     notify-crit: mail-asen.lazarov
      notify-strikes: 2
 
 - ~all.alert.spikes:
 #  rxx: "(sysload)$"
   alerts:
     - label: 0
-      alert-spike: ""
+      alert-p-mon-anom: "1.5:30m:30"
     - label: 1
-      alert-spike: ""
+      alert-p-mon-anom: "1.5:30m:30"
     - label: 2
-      alert-spike: ""
+      alert-p-mon-anom: "1.5:30m:30"
     - label: 3
-      alert-spike: ""
+      alert-p-mon-anom: "1.5:30m:30"
     - label: 4
-      alert-spike: ""
+      alert-p-mon-anom: "1.5:30m:30"
 

@@ -70,7 +70,7 @@ class POPCheck(val ckId: String, log: SMGLoggerApi, configSvc: SMGConfigService)
     val curPrevVals = getCurPrevVals(ts, ou, vix, checkConfThresh.period, checkConfThresh.res)
     val newVal = curPrevVals._1
     val prevVal = curPrevVals._2
-    def numFmt = { (d: Double) => ou.numFmt(d, vix)}
+    def numFmt = { (d: Double) => ou.numFmt(d, vix, applyCdef = false)}
     val critDesc = checkConfThresh.checkAlert(newVal, prevVal, checkConfThresh.critThresh, numFmt)
     if (critDesc.isDefined){
       return SMGState(ts, SMGState.CRITICAL, critDesc.get)

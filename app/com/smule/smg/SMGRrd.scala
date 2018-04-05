@@ -852,7 +852,8 @@ class SMGRrdFetch(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
     ) yield {
       val arr0 = ln.trim.split(":",2).map(_.trim)
       val tss = arr0(0).toInt
-      val arr = arr0(1).split("\\s+").map(_.trim).map(n => if ("(?i)nan".r.findFirstMatchIn(n).nonEmpty) Double.NaN else n.toDouble)
+      val arr = arr0(1).split("\\s+").map(_.trim).map(n =>
+        if ("(?i)nan".r.findFirstMatchIn(n).nonEmpty) Double.NaN else n.toDouble)
       //process cdefs
       objv.vars.zipWithIndex.foreach { case (v, i) =>
         if (v.contains("cdef")) {
