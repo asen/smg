@@ -70,7 +70,7 @@
   </label>
   <input type="checkbox" id="inpStickySilence" onclick="stickySilenceChange()" />
   <span id="spanStickySilenceDesc" style="display: none">
-    <label for="inpStickySilenceDesc">Stickly silencing description:</label>
+    <label for="inpStickySilenceDesc">Stickly silencing description (optional):</label>
       <input type="text" id="inpStickySilenceDesc">
   </span>
   }
@@ -87,7 +87,6 @@
       var descElem = document.getElementById("inpStickySilenceDesc");
       if (stickyVal) {
         $("#spanStickySilenceDesc").show();
-        descElem.focus();
       } else {
         descElem.value = "";
         $("#spanStickySilenceDesc").hide();
@@ -134,11 +133,6 @@
       if (stickySElem) {
         stickyVal = stickySElem.checked;
         stickyDescVal = document.getElementById("inpStickySilenceDesc").value;
-      }
-      if (stickyVal && (stickyDescVal == "")){
-        alert("Please enter some description for the sticky silencing")
-        document.getElementById("inpStickySilenceDesc").focus();
-        return;
       }
       var sickyConfirmStr = stickyVal ? " and any matching ones defined in the future" : "";
       if (confirm("Silence all @total matching state trees@if(total > trees.size){ (including not displayed)}" + sickyConfirmStr +
