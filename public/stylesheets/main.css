@@ -53,6 +53,10 @@
     color : green;
 }
 
+.disabled-lbl {
+    color : gray;
+}
+
 .btn-submit {
     color : blue;
 }

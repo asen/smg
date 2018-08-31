@@ -179,9 +179,10 @@ class Api  @Inject() (actorSystem: ActorSystem,
     val disable95p = params.get("d95p").exists(_.head == "on")
     val maxY = params.get("maxy").map(_.head.toDouble)
     val minY = params.get("miny").map(_.head.toDouble)
+    val logY = params.get("logy").exists(_.head == "on")
     GraphOptions(step = step, pl = pl, xsort = None,
       disablePop = disablePop, disable95pRule = disable95p,
-      maxY = maxY, minY = minY)
+      maxY = maxY, minY = minY, logY = logY)
   }
 
   /**

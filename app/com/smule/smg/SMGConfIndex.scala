@@ -55,7 +55,8 @@ case class SMGConfIndex(id: String,
           disablePop = yamlMap.getOrDefault("dpp", "false").toString == "true",
           disable95pRule = yamlMap.getOrDefault("d95p", "false").toString == "true",
           maxY = if (yamlMap.contains("maxy")) Some(yamlMap("maxy").toString.toDouble) else None,
-          minY = if (yamlMap.contains("miny")) Some(yamlMap("miny").toString.toDouble) else None
+          minY = if (yamlMap.contains("miny")) Some(yamlMap("miny").toString.toDouble) else None,
+          logY = yamlMap.getOrDefault("logy", "false").toString == "true"
         )
       ),
       if (yamlMap.contains("cols")) Some(yamlMap("cols").asInstanceOf[Int]) else None,

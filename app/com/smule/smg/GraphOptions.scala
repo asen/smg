@@ -17,12 +17,13 @@ case class GraphOptions(
                          disablePop: Boolean,
                          disable95pRule: Boolean,
                          maxY: Option[Double],
-                         minY: Option[Double]
+                         minY: Option[Double],
+                         logY: Boolean
                        ) {
 
   def fnSuffix(period:String): String = {
     val goptsSx = (if (disablePop) "-dpp" else "") + (if (disable95pRule) "-d95p" else "") +
-      maxY.map(x => s"-mxy$x").getOrElse("") + minY.map(x => s"-mny$x").getOrElse("")
+      maxY.map(x => s"-mxy$x").getOrElse("") + minY.map(x => s"-mny$x").getOrElse("") + (if (logY) "-logy" else "")
 
     "-" + SMGRrd.safePeriod(period, m2sec = false) + pl.map("-pl" + SMGRrd.safePeriod(_, m2sec = false)).getOrElse("") +
       step.map("-" + _).getOrElse("") + goptsSx
@@ -38,7 +39,8 @@ object GraphOptions {
     disablePop = false,
     disable95pRule = false,
     maxY = None,
-    minY = None
+    minY = None,
+    logY = false
   )
 
   def withSome(
@@ -48,9 +50,10 @@ object GraphOptions {
                 disablePop: Boolean = false,
                 disable95pRule: Boolean = false,
                 maxY: Option[Double] = None,
-                minY: Option[Double] = None
+                minY: Option[Double] = None,
+                logY: Boolean = false
               ): GraphOptions = {
-    GraphOptions(step, pl, xsort, disablePop, disable95pRule, maxY, minY)
+    GraphOptions(step, pl, xsort, disablePop, disable95pRule, maxY, minY, logY)
   }
 
 }

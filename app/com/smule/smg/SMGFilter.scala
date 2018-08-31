@@ -137,7 +137,8 @@ object SMGFilter {
       disablePop = params.contains("dpp") && params("dpp").head == "on",
       disable95pRule = params.contains("dpp") && params("dpp").head == "on",
       maxY = params.get("maxy").map(_.head.toDouble),
-      minY = params.get("miny").map(_.head.toDouble)
+      minY = params.get("miny").map(_.head.toDouble),
+      logY = params.contains("logy") && params("logy").head == "on"
     )
     SMGFilter(
       params.get("px").map(_.head),

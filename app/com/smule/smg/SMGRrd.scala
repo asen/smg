@@ -226,7 +226,8 @@ object SMGRrd {
 
   def rrdGraphCommandPx(rrdConf: SMGRrdConfig, title: String, outFn: String,
                         period: String, pl:Option[String], step: Option[Int],
-                        maxY: Option[Double], minY: Option[Double], objMinY: Option[Double]): String = {
+                        maxY: Option[Double], minY: Option[Double],
+                        objMinY: Option[Double], logY: Boolean): String = {
     val c = new mutable.StringBuilder("graph ").append(outFn).append(" --imgformat=PNG")
     if (rrdConf.rrdToolSocket.isDefined) {
       c.append(s" --daemon ${rrdConf.rrdToolSocket.get}")
@@ -244,7 +245,10 @@ object SMGRrd {
     val myMinY = if (minY.isDefined) minY else objMinY
     if (myMinY.isDefined && (!myMinY.get.isNaN)) {
       c.append(" --lower-limit ").append(numRrdFormat(myMinY.get, nanAsU = false))
-      rigid = true
+      if (logY && myMinY.get > 0)
+        c.append(" --logarithmic")
+      else
+        rigid = true
     }
     if (maxY.isDefined) {
       c.append(" --upper-limit ").append(numRrdFormat(maxY.get, nanAsU = false))
@@ -516,7 +520,8 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
   }
 
   private def rrdGraphCommand(outFn: String, period:String, gopts: GraphOptions): String = {
-    val cmd = rrdGraphCommandPx(rrdConf, objv.id, outFn, period, gopts.pl, gopts.step, gopts.maxY, gopts.minY, objv.graphMinY)
+    val cmd = rrdGraphCommandPx(rrdConf, objv.id, outFn, period, gopts.pl, gopts.step, gopts.maxY,
+      gopts.minY, objv.graphMinY, gopts.logY)
     val c = new mutable.StringBuilder(cmd)
     var first = true
     val lblMaker = new LabelMaker()
@@ -810,7 +815,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
 
   private def rrdGraphCommand(outFn: String, period:String, gopts: GraphOptions): String = {
     val cmdPx = rrdGraphCommandPx(rrdConf, aggObj.shortTitle, outFn, period,
-      gopts.pl, gopts.step, gopts.maxY, gopts.minY, aggObj.graphMinY)
+      gopts.pl, gopts.step, gopts.maxY, gopts.minY, aggObj.graphMinY, gopts.logY)
     cmdPx +
       (aggObj.op match {
       case "GROUP" => rrdGraphGroupCommand(outFn, period, stacked = false, gopts)

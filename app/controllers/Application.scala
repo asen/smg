@@ -125,6 +125,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     d95p: String,
     maxy: Option[String],
     miny: Option[String],
+    logy: String,
     gb: Option[String]
   ) {
 
@@ -138,6 +139,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val myDisable95p = if (idx.isEmpty || (d95p == "on")) d95p == "on" else idx.get.flt.gopts.disable95pRule
       val myMaxY = if (idx.isEmpty || maxy.isDefined) optStr2OptDouble(maxy) else idx.get.flt.gopts.maxY
       val myMinY = if (idx.isEmpty || miny.isDefined) optStr2OptDouble(miny) else idx.get.flt.gopts.minY
+      val myLogY = if (idx.isEmpty || (logy == "on")) logy == "on" else idx.get.flt.gopts.logY
 
       val myAgg = if (idx.isEmpty || agg.isDefined)
         SMGRrd.validateAggParam(agg)
@@ -151,7 +153,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
         disablePop = myDisablePop,
         disable95pRule = myDisable95p,
         maxY = myMaxY,
-        minY = myMinY)
+        minY = myMinY,
+        logY = myLogY
+      )
 
       val myRemotes = if (remotes.isEmpty && idx.isDefined && idx.get.flt.remotes.nonEmpty)
         idx.get.flt.remotes
@@ -224,6 +228,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       d95p = m.getOrElse("d95p", Seq("")).head,
       maxy = m.get("maxy").map(_.head),
       miny = m.get("miny").map(_.head),
+      logy = m.getOrElse("logy", Seq("")).head,
       gb = m.get("gb").map(_.head)
     )
   }
@@ -423,11 +428,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @return
     */
   def show(oid:String, cols: Int, dpp: String, d95p: String,
-           maxy: Option[String], miny: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+           maxy: Option[String], miny: Option[String], logy: String): Action[AnyContent] = Action.async { implicit request =>
     val showMs = msEnabled(request)
     val gopts = GraphOptions(step = None, pl = None, xsort = None,
       disablePop = dpp == "on", disable95pRule = d95p == "on",
-      maxY = optStr2OptDouble(maxy), minY = optStr2OptDouble(miny))
+      maxY = optStr2OptDouble(maxy), minY = optStr2OptDouble(miny), logY = logy == "on")
     smg.getObjectView(oid) match {
       case Some(obj) => {
         val gfut = smg.getObjectDetailGraphs(obj, gopts)
@@ -454,8 +459,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @return
     */
   def showAgg(ids:String, op:String, gb: Option[String], title: Option[String], cols: Int, dpp: String, d95p: String,
-              maxy: Option[String], miny: Option[String]): Action[AnyContent] = Action.async { implicit request =>
-    showAggCommon(ids, op, gb, title, cols, dpp, d95p, maxy, miny, request)
+              maxy: Option[String], miny: Option[String], logy: String): Action[AnyContent] = Action.async { implicit request =>
+    showAggCommon(ids, op, gb, title, cols, dpp, d95p, maxy, miny, logy, request)
   }
 
   def showAggPost(): Action[AnyContent] = Action.async { implicit request =>
@@ -469,17 +474,18 @@ class Application  @Inject() (actorSystem: ActorSystem,
       params.get("d95p").map(_.head).getOrElse(""),
       params.get("maxy").map(_.head),
       params.get("miny").map(_.head),
+      params.get("logy").map(_.head).getOrElse(""),
       request)
   }
 
 
   def showAggCommon(ids:String, op:String, gb: Option[String], title: Option[String], cols: Int, dpp: String, d95p: String,
-              maxy: Option[String], miny: Option[String], request: Request[AnyContent] ): Future[Result] = {
+              maxy: Option[String], miny: Option[String], logy: String, request: Request[AnyContent] ): Future[Result] = {
     implicit val theRequest: Request[AnyContent] = request
     val showMs = msEnabled(request)
     val gopts = GraphOptions(step = None, pl = None, xsort = None,
       disablePop = dpp == "on", disable95pRule = d95p == "on",
-      maxY = optStr2OptDouble(maxy), minY = optStr2OptDouble(miny))
+      maxY = optStr2OptDouble(maxy), minY = optStr2OptDouble(miny), logY = logy == "on")
     val idLst = ids.split(',')
     val objList = idLst.filter( id => smg.getObjectView(id).nonEmpty ).map(id => smg.getObjectView(id).get)
     if (objList.isEmpty)

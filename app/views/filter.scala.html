@@ -94,10 +94,10 @@ matching all of the provided space separated case insensitive regular expression
       </div>
 
       <div class="form-group">
-        <label class="manualsubmit-lbl"
+        <label class="autosubmit-lbl"
             title="Reload the page using updated filters.">Apply filters</label>
         <input title="Reload the page using updated filters" id="smg-filter-submit"
-               class="form-control btn-submit-manual"
+               class="form-control btn-submit"
                type="submit" value="Apply">
       </div>
 
@@ -119,41 +119,38 @@ Changing this reloads the page.">Period since:</label>
       </div>
 
       <div class="form-group">
-        <label class="autosubmit-lbl" for="smg-filter-pl"
-               title="Optional period range (length) to cover in the graphs. Same formats as the Period since field are supported. Default is the entire range until current time.
-Changing this reloads the page.">Period len:</label>
+        <label class="manualsubmit-lbl" for="smg-filter-pl"
+               title="Optional period range (length) to cover in the graphs. Same formats as the Period since field are supported.
+Default is the entire range until current time.">Period len:</label>
         <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Remove option" onclick="clearElem('smg-filter-pl');" />
         <input class="form-control" type="text"
                id="smg-filter-pl"
-               size="9" name="pl" value="@gopts.pl"
-               onchange="mySubmitOnChange(this);">
+               size="9" name="pl" value="@gopts.pl">
       </div>
 
       <div class="form-group">
-        <label class="autosubmit-lbl" for="smg-filter-step"
-               title="Requested graphs step (resolution). Specified in seconds (as number), minutes (e.g. 5M), hours (e.g. 1h), etc. Check admin docs for supported formats.
-Changing this reloads the page.">Step:</label>
+        <label class="manualsubmit-lbl" for="smg-filter-step"
+               title="Requested graphs step (resolution). Specified in seconds (as number), minutes (e.g. 5M), hours (e.g. 1h), etc.
+Check admin docs for supported formats.">Step:</label>
         <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Remove option" onclick="clearElem('smg-filter-step');" />
         <input class="form-control" type="text" id="smg-filter-step"
-               size="9" name="step" value="@gopts.step" onchange="mySubmitOnChange(this);">
+               size="9" name="step" value="@gopts.step">
       </div>
 
       <div class="form-group">
-        <label class="autosubmit-lbl" for="smg-filter-maxy"
-               title="Requested graphs Y scale (max).
-Changing this reloads the page.">MaxY:</label>
+        <label class="manualsubmit-lbl" for="smg-filter-maxy"
+               title="Requested graphs Y scale (max).">MaxY:</label>
         <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Remove option" onclick="clearElem('smg-filter-maxy');" />
         <input class="form-control" type="text" id="smg-filter-maxy"
-               size="12" name="maxy" value="@gopts.maxY" onchange="mySubmitOnChange(this);">
+               size="12" name="maxy" value="@gopts.maxY">
       </div>
 
       <div class="form-group">
-        <label class="autosubmit-lbl" for="smg-filter-miny"
-               title="Requested graphs Y scale (min, 0 unless specified).
-Changing this reloads the page.">MinY:</label>
+        <label class="manualsubmit-lbl" for="smg-filter-miny"
+               title="Requested graphs Y scale (min, 0 unless specified).">MinY:</label>
         <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Remove option" onclick="clearElem('smg-filter-miny');" />
         <input class="form-control" type="text" id="smg-filter-miny"
-               size="12" name="miny" value="@gopts.minY" onchange="mySubmitOnChange(this);">
+               size="12" name="miny" value="@gopts.minY" onchange="enableDisableLogY(false);">
       </div>
 
       <div class="form-group">
@@ -175,14 +172,15 @@ Changing this reloads the page.">Rows:</label>
       </div>
 
       <div class="form-group form-group-cbs">
-        <label for="dpp_cb" class="autosubmit-lbl" title="Disable the dotted line(s) representing the previous period value(s).
-Changing this reloads the page.">Disable Period-Over-Period:</label>
-        <input type="checkbox" id="dpp_cb" name="dpp"
-               onchange="mySubmitOnChange(this);" @if(gopts.disablePop){ checked } />
-        <label for="d95p_cb" class="autosubmit-lbl" title="Disable the straight dotted line(s) representing the 95%-ile value(s).
-Changing this reloads the page.">Disable 95%-ile line:</label>
-        <input type="checkbox" id="d95p_cb" name="d95p"
-               onchange="mySubmitOnChange(this);" @if(gopts.disable95pRule){ checked } />
+        <label for="dpp_cb" class="manualsubmit-lbl"
+               title="Disable the dotted line(s) representing the previous period value(s)">Disable Period-Over-Period:</label>
+        <input type="checkbox" id="dpp_cb" name="dpp" @if(gopts.disablePop){ checked } /> |
+        <label for="d95p_cb" class="manualsubmit-lbl"
+               title="Disable the straight dotted line(s) representing the 95%-ile value(s).">Disable 95%-ile line:</label>
+        <input type="checkbox" id="d95p_cb" name="d95p" @if(gopts.disable95pRule){ checked } /> |
+        <label for="logy_cb" class="manualsubmit-lbl" id="logy_lbl"
+               title="Logarithmic Y scale (requires MinY > 0)">Logarithmic Y:</label>
+        <input type="checkbox" id="logy_cb" name="logy" @if(gopts.logY){ checked } />
       </div>
 
       <br/>
@@ -340,6 +338,27 @@ object id suffix is included">Group By:</label>
     }
     mySubmitOnChange(elem);
   }
+
+  function enableDisableLogY(initial){
+    var minyelem = document.getElementById('smg-filter-miny')
+    var cbelem = document.getElementById('logy_cb')
+    var lblelem = document.getElementById('logy_lbl')
+    if (minyelem && cbelem) {
+      var minyval = parseFloat(minyelem.value)
+      if (minyval > 0.0) {
+        cbelem.disabled = false;
+        lblelem.classList.remove("disabled-lbl");
+        lblelem.classList.add("manualsubmit-lbl");
+      } else {
+        cbelem.checked = false;
+        cbelem.disabled = true;
+        lblelem.classList.remove("manualsubmit-lbl");
+        lblelem.classList.add("disabled-lbl");
+      }
+    }
+  }
+
+  enableDisableLogY(true);
 
   @if(ix.isDefined){
     function mergeIndexFilterAsUser(elem) {

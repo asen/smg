@@ -84,7 +84,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "dpp").readNullable[String].map(xaggs => xaggs.getOrElse("") == "true") and
       (JsPath \ "d95p").readNullable[String].map(xaggs => xaggs.getOrElse("") == "true") and
       (JsPath \ "maxy").readNullable[Double] and
-      (JsPath \ "miny").readNullable[Double]
+      (JsPath \ "miny").readNullable[Double] and
+      (JsPath \ "logy").readNullable[String].map(xaggs => xaggs.getOrElse("") == "true")
     )(GraphOptions.apply _)
 
   implicit val smgFilterReads: Reads[SMGFilter] = (
@@ -316,6 +317,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     if (gopts.pl.isDefined) ret("pl") = Seq(gopts.pl.get)
     if (gopts.maxY.isDefined) ret("maxy") = Seq(gopts.maxY.get.toString)
     if (gopts.minY.isDefined) ret("miny") = Seq(gopts.minY.get.toString)
+    if (gopts.logY) ret("logy") = Seq("on")
     ret.toMap
   }
   /**
