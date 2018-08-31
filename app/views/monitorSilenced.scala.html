@@ -19,7 +19,7 @@
     <ul>
       @for(ss <- sss) {
       <li>
-        <h5>@ss.desc.getOrElse("(empty)") [ @ss.humanDesc ]
+        <h5>@ss.desc.getOrElse("(no description)") [ @ss.humanDesc ]
         <form method="post" style="display: inline-block">
           <input type="hidden" name="uid" value="@ss.uuid">
           <input type="hidden" name="curl" value="@Html(curUrl)">
