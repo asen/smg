@@ -144,7 +144,7 @@ class SMGCalcRrd(configSvc: SMGConfigService) {
 
     try {
       SMGRrd.runRrdGraphCommand(confSvc.config.rrdConf, out.toString)
-      (Some(SMGImage(firstObj, period, confSvc.config.urlPrefix + "/" + baseFn)), None)
+      (Some(SMGImage(firstObj, period, confSvc.config.urlPrefix + "/" + baseFn, gopts)), None)
     } catch {
       case _: Exception => (None, Some("An exception from rrdtool has occured. Command was: " + out.toString()))
     }

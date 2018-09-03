@@ -242,9 +242,9 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       (graphActor ? msg).mapTo[SMGraphActor.SMGraphReadyMessage].map { resp: SMGraphActor.SMGraphReadyMessage =>
         log.debug("SMGrapher.graphObject: received response: " + resp)
         if (resp.error)
-          SMGImage.errorImage(obj, period, None)
+          SMGImage.errorImage(obj, period, gopts, None)
         else
-          SMGImage(obj, period, config.urlPrefix + "/" + baseFn)
+          SMGImage(obj, period, config.urlPrefix + "/" + baseFn, gopts)
       }(messagingEc) // TODO or use graphCtx?
     }
   }
@@ -326,7 +326,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val msg = SMGraphActor.SMGraphAggMessage(configSvc, obj,period, gopts, new File(config.imgDir, baseFn).toString)
     (graphActor ? msg).mapTo[SMGraphActor.SMGraphReadyMessage].map { resp:SMGraphActor.SMGraphReadyMessage =>
       log.debug("SMGrapher.graphAggObject: received response: " + resp )
-      SMGAggImage(obj, period, if (resp.error) "/assets/images/error.png" else config.urlPrefix + "/" + baseFn)
+      SMGAggImage(obj, period, if (resp.error) "/assets/images/error.png" else config.urlPrefix + "/" + baseFn, gopts)
     }(messagingEc) // TODO or use graphCtx?
   }
 
@@ -357,7 +357,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     getXRemoteLocalCopies(aobj).flatMap{ myaobj =>
       Future.sequence(for (p <- periods) yield {
         if (myaobj.isEmpty)
-          Future { SMGImage.errorImage(aobj, p, None) }
+          Future { SMGImage.errorImage(aobj, p, gopts, None) }
         else
           graphLocalAggObject(myaobj.get, p, gopts)
       })

@@ -587,7 +587,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
       else
         ov.filteredVars(false)
 
-
       val vlst = if (ov.isAgg) {
         val aov = ov.asInstanceOf[SMGAggObjectView]
         if ((aov.op == "GROUP") || (aov.op == "STACK") ) {

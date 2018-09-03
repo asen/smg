@@ -121,13 +121,13 @@ trait SMGAggObjectView extends SMGObjectView {
 
   override def parentDashUrl: Option[String] = None
 
-  override def fetchUrl(period: String, step: Option[Int]): String = "/fetchAgg?s=" + period + "&op=" + op +
+  override def fetchUrl(period: String, gopts: GraphOptions): String = "/fetchAgg?s=" + period + "&op=" + op +
     "&ids=" + objs.map(_.id).mkString(",") +
     (if (groupBy != SMGAggGroupBy.defaultGroupBy) s"&gb=${groupBy.toString}" else "") +
-    "&r=" + step.map(_.toString).getOrElse("")
+    "&r=" + gopts.step.map(_.toString).getOrElse("") + "&e=" + gopts.pl.getOrElse("")
 
-  override val rrdFile = None
-  override val isAgg = true
+  override val rrdFile: Option[String] = None
+  override val isAgg: Boolean = true
 
   val isCrossRemoteAgg: Boolean = if (objs.isEmpty)
     false

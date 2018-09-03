@@ -100,11 +100,11 @@ Changing this reloads the page.">Disable 95%-ile line:</label>
         <div class="smgcell" style="max-width: @{cwidth}px;">
           <a name="@g.obj.id" ></a> <a name="@g.period" ></a> <a name="@g.obj.id-@g.period" ></a>
           <div class="smgraph">
-            <h5>Period: @g.period, @g.resolution(None)
+            <h5>Period: @g.period, @g.resolution
               @if(g.obj.stack) {
                 (stacked)
               }
-              [<a href="@{g.fetchUrl(None)}">csv</a>,<a href="@{g.fetchUrl(None)}&d=1">dl</a>]
+              [<a href="@{g.fetchUrl}">csv</a>,<a href="@{g.fetchUrl}&d=1">dl</a>]
               @for(pa <- cfSvc.plugins.flatMap(_.actions)){
               [<a href="@{pa.actionUrl(g.obj, g.period)}">@{pa.name}</a>]
               }

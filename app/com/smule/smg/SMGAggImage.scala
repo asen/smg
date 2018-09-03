@@ -10,4 +10,6 @@ package com.smule.smg
   * @param imageUrl - http url for the image
   * @param remoteId - optional remote id for the image. None if local
   */
-case class SMGAggImage (obj: SMGAggObjectView, period: String, imageUrl: String, remoteId: Option[String] = None) extends SMGImageView
+case class SMGAggImage (obj: SMGAggObjectView, period: String,
+                        imageUrl: String, gopts: GraphOptions,
+                        remoteId: Option[String] = None) extends SMGImageView

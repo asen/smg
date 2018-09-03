@@ -4,7 +4,9 @@ package com.smule.smg
   * Created by asen on 12/4/15.
   */
 
-
+/**
+  * Remote non-agg object
+  */
 case class SMGRemoteObject(
                             id: String,
                             interval: Int,
@@ -16,32 +18,12 @@ case class SMGRemoteObject(
                             rrdType: String
                           ) extends SMGObjectView {
 
-
-  /**
-    * The "show" url for this object
-    *
-    * @return - a string representing an url to display this object details
-    */
-  override def showUrl:String = "/show/" + id
-
-  override def fetchUrl(period: String, step: Option[Int]):String = "/fetch/" + id + "?s=" + period +
-    "&r=" + step.map(_.toString).getOrElse("")
-
   override val rrdFile: Option[String] = None
-  override val isAgg: Boolean = false
   override val refObj: Option[SMGObjectUpdate] = None
 }
 
 /**
   * local copy of a remote object (one with fetched .rrd file)
-  * @param id
-  * @param interval
-  * @param vars
-  * @param cdefVars
-  * @param graphVarsIndexes
-  * @param title
-  * @param stack
-  * @param rrdFile
   */
 case class SMGRemoteObjectCopy(
                             id: String,
@@ -65,17 +47,6 @@ case class SMGRemoteObjectCopy(
     Some(rrdFile),
     robj.rrdType
   )
-
-  /**
-    * The "show" url for this object
-    * @return - a string representing an url to display this object details
-    */
-  override def showUrl:String = "/show/" + id
-
-  override def fetchUrl(period: String, step: Option[Int]):String = "/fetch/" + id + "?s=" + period +
-    "&r=" + step.map(_.toString).getOrElse("")
-
-  override val isAgg: Boolean = false
 
   override val refObj: Option[SMGObjectUpdate] = None
 }

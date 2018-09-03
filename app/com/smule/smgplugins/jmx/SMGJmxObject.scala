@@ -21,14 +21,7 @@ case class SMGJmxObject(baseId: String,
                         notifyConf: Option[SMGMonNotifyConf]
                        ) extends SMGObjectUpdate with SMGObjectView {
 
-  override def showUrl:String = "/show/" + id
-
-  override def fetchUrl(period: String, step: Option[Int]): String = "/fetch/" + id + "?s=" + period +
-    "&r=" + step.map(_.toString).getOrElse("")
-
   override val rrdFile: Option[String] = Some(rrdDir + "/" + id + ".rrd")
-
-  override val isAgg: Boolean = false
 
   override val rraDef: Option[SMGRraDef] = None // TODO
   override val graphVarsIndexes: Seq[Int] = vars.indices

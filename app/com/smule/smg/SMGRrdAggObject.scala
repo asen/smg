@@ -22,20 +22,12 @@ case class SMGRrdAggObject(id: String,
                            notifyConf: Option[SMGMonNotifyConf]
                           ) extends SMGObjectView with SMGObjectUpdate {
 
-
-  override def showUrl:String = "/show/" + id
-
-  override def fetchUrl(period: String, step: Option[Int]): String = "/fetch/" + id + "?s=" + period +
-    "&r=" + step.map(_.toString).getOrElse("")
-
   def fetchValues(confSvc: SMGConfigService): List[Double] = {
     val sources = ous.map(ou => confSvc.getCachedValues(ou)).toList
     SMGRrd.mergeValues(aggOp, sources)
   }
 
   override val preFetch: Option[String] = None
-
-  override val isAgg = false
 
   override val graphVarsIndexes: List[Int] = vars.indices.toList
 

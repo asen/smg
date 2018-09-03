@@ -11,9 +11,10 @@ package com.smule.smg
   * @param imageUrl - image url
   * @param remoteId - optional remote id (None if local)
   */
-case class SMGImage(obj: SMGObjectView, period: String, imageUrl: String, remoteId: Option[String] = None) extends SMGImageView
+case class SMGImage(obj: SMGObjectView, period: String, imageUrl: String,
+                    gopts: GraphOptions, remoteId: Option[String] = None) extends SMGImageView
 
 object SMGImage {
-  def errorImage(ov: SMGObjectView, period: String, remoteId: Option[String]) =
-    SMGImage(ov, period, "/assets/images/error.png", remoteId)
+  def errorImage(ov: SMGObjectView, period: String, gopts: GraphOptions, remoteId: Option[String]) =
+    SMGImage(ov, period, "/assets/images/error.png", gopts, remoteId)
 }

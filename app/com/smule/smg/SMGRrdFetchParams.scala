@@ -3,11 +3,11 @@ package com.smule.smg
 /**
   * Created by asen on 12/9/15.
   */
-case class SMGRrdFetchParams(resolution: Option[Int], start: Option[String], end: Option[String], filterNan: Boolean) {
+case class SMGRrdFetchParams(resolution: Option[Int], period: Option[String], pl: Option[String], filterNan: Boolean) {
 
   private def paramsMap = {
     val filterNanOpt = if (filterNan) Some("true") else None
-    Map("r" -> resolution, "s" -> start, "e" -> end, "fnan" -> filterNanOpt)
+    Map("r" -> resolution, "s" -> period, "e" -> pl, "fnan" -> filterNanOpt)
   }
 
   def fetchPostMap: Map[String, Seq[String]] = {

@@ -129,6 +129,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "obj").read[SMGObjectView] and
         (JsPath \ "period").read[String] and
         (JsPath \ "imageUrl").read[String].map(url =>  remoteUrl(url)) and
+        (JsPath \ "gopts").readNullable[GraphOptions].map { opt => opt.getOrElse(GraphOptions.default) } and
         Reads(v => JsSuccess(Some(remote.id)))
       )(SMGImage.apply _)
   }
@@ -280,7 +281,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }.recover {
       case x => {
         log.ex(x, "remote graph error: " + remote.id)
-        lst.flatMap { ov => periods.map(p => SMGImage.errorImage(ov, p, Some(remote.id))) }
+        lst.flatMap { ov => periods.map(p => SMGImage.errorImage(ov, p, gopts, Some(remote.id))) }
       }
     }
   }
@@ -304,7 +305,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }.recover {
       case x => {
         log.ex(x, "remote graph agg error: " + remote.id)
-        periods.map(p => SMGImage.errorImage(aobj, p, Some(remote.id)))
+        periods.map(p => SMGImage.errorImage(aobj, p, gopts, Some(remote.id)))
       }
     }
   }

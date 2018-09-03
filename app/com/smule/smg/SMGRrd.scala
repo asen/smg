@@ -125,8 +125,8 @@ object SMGRrd {
     days + hours + minutes + seconds
   }
 
-  private def getAutoResolution(rrdInterval: Int, period: String): String = {
-    val ip = parseRrdPeriod(period)
+  private def getAutoResolution(rrdInterval: Int, period: String, pl: Option[String]): String = {
+    val ip = parseRrdPeriod(period) - pl.map(parseRrdPeriod).getOrElse(0)
     val s = if (ip <= 0){
       "Unk"
     } else {
@@ -146,10 +146,10 @@ object SMGRrd {
     s + " avg (guess)"
   }
 
-  def getDataResolution(rrdInterval: Int, period: String, step: Option[Int]): String = {
-    if (step.isDefined) {
-      intervalToStr(step.get) + " avg (requested)"
-    } else getAutoResolution(rrdInterval, period)
+  def getDataResolution(rrdInterval: Int, period: String, gopts: GraphOptions): String = {
+    if (gopts.step.isDefined) {
+      intervalToStr(gopts.step.get) + " avg (requested)"
+    } else getAutoResolution(rrdInterval, period, gopts.pl)
   }
 
   def tssNow: Int  = (System.currentTimeMillis() / 1000).toInt
@@ -290,8 +290,8 @@ object SMGRrd {
     " 'COMMENT:\\s' 'GPRINT:" + lastLabel + "lst:last data point from %Y-%m-%d %H\\:%M:strftime' "
   else ""
 
-  def resolutionRrdStr(interval: Int, period: String, step: Option[Int]): String = {
-    val resStr = getDataResolution(interval, period, step)
+  def resolutionRrdStr(interval: Int, period: String, gopts: GraphOptions): String = {
+    val resStr = getDataResolution(interval, period, gopts)
     s" 'COMMENT: step\\: $resStr\\n' "
   }
 
@@ -577,7 +577,7 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
       }
     }
     c.append(lastUpdated(lastLabel))
-    c.append(resolutionRrdStr(objv.interval, period, gopts.step))
+    c.append(resolutionRrdStr(objv.interval, period, gopts))
     c.toString
   }
 }
@@ -738,7 +738,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
       }
     }
     c.append(lastUpdated(lastLabel))
-    c.append(resolutionRrdStr(aggObj.interval, period, gopts.step))
+    c.append(resolutionRrdStr(aggObj.interval, period, gopts))
     c.toString()
   }
 
@@ -809,7 +809,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
       lastLabel = lbl
     }
     c.append(lastUpdated(lastLabel))
-    c.append(resolutionRrdStr(aggObj.interval, period, gopts.step))
+    c.append(resolutionRrdStr(aggObj.interval, period, gopts))
     c.toString
   }
 
@@ -848,7 +848,7 @@ class SMGRrdFetch(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
   private val rrdFname = objv.rrdFile.get
 
   def fetch(params: SMGRrdFetchParams): List[SMGRrdRow] = {
-    val cmd = SMGCmd(fetchCommand(params.resolution, params.start, params.end))
+    val cmd = SMGCmd(fetchCommand(params.resolution, params.period, params.pl))
     val ret = for (ln <- cmd.run
          if ln != ""
          if "ds\\d".r.findFirstMatchIn(ln).isEmpty
@@ -879,15 +879,15 @@ class SMGRrdFetch(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
     reCalcResolution(ret, params.resolution)
   }
 
-  private def fetchCommand(resolution: Option[Int], start: Option[String], end: Option[String] = None): String = {
+  private def fetchCommand(resolution: Option[Int], period: Option[String], pl: Option[String] = None): String = {
     val c = new mutable.StringBuilder(rrdConf.rrdTool).append(" fetch ")
     if (rrdConf.rrdToolSocket.isDefined) {
       c.append(s" --daemon ${rrdConf.rrdToolSocket.get}").append(" ")
     }
     c.append(rrdFname).append(" ").append(FETCH_CF)
     if (resolution.isDefined) c.append(" --resolution=").append(resolution.get)
-    if (start.isDefined) c.append(" --start=-").append(safePeriod(start.get))
-    if (end.isDefined) c.append(" --end=-").append(safePeriod(end.get))
+    if (period.isDefined) c.append(" --start=-").append(safePeriod(period.get))
+    if (pl.isDefined) c.append(" --end=start+").append(safePeriod(pl.get))
     c.toString
   }
 

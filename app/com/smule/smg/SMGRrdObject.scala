@@ -31,12 +31,6 @@ case class SMGRrdObject(id: String,
                         notifyConf: Option[SMGMonNotifyConf]
                        ) extends SMGObjectView with SMGObjectUpdate with SMGFetchCommand {
 
-
-  override def showUrl:String = "/show/" + id
-
-  override def fetchUrl(period: String, step:Option[Int]): String = "/fetch/" + id + "?s=" + period +
-    "&r=" + step.map(_.toString).getOrElse("")
-
   private val log = SMGLogger
 
   private val nanList: List[Double] = vars.map(v => Double.NaN)
@@ -60,8 +54,6 @@ case class SMGRrdObject(id: String,
     }
     ret
   }
-
-  override val isAgg = false
 
   override val graphVarsIndexes: List[Int] = vars.indices.toList
 

@@ -19,6 +19,8 @@ trait SMGImageView {
     */
   val period: String
 
+  val gopts: GraphOptions
+
   /**
     * URL for this image
     */
@@ -29,7 +31,7 @@ trait SMGImageView {
     */
   val remoteId: Option[String]
 
-  def fetchUrl(step: Option[Int]): String = obj.fetchUrl(period, step)
+  lazy val fetchUrl: String = obj.fetchUrl(period, gopts)
 
-  def resolution(step: Option[Int]): String = SMGRrd.getDataResolution(obj.interval, period, step)
+  lazy val resolution: String = SMGRrd.getDataResolution(obj.interval, period, gopts)
 }

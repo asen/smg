@@ -59,14 +59,14 @@ trait SMGObjectView extends SMGObjectBase {
     *
     * @return - shortened version of the title if above SHORT_TITLE_MAX_LEN or the title if shorter
     */
-  def shortTitle = if (title.length <= SHORT_TITLE_MAX_LEN) title else title.substring(0, SHORT_TITLE_MAX_LEN - 3) + "..."
+  def shortTitle: String = if (title.length <= SHORT_TITLE_MAX_LEN) title else title.substring(0, SHORT_TITLE_MAX_LEN - 3) + "..."
 
   /**
     * The "show" url for this object
     *
     * @return - a string representing an url to display this object details
     */
-  def showUrl:String
+  def showUrl: String = "/show/" + id
 
   def dashUrl: String = {
     val arr = SMGRemote.localId(id).split("\\.")
@@ -86,11 +86,13 @@ trait SMGObjectView extends SMGObjectBase {
     *
     * @return
     */
-  def fetchUrl(period: String, step: Option[Int]): String
+  def fetchUrl(period: String, gopts: GraphOptions): String = "/fetch/" + id + "?s=" + period +
+    "&r=" + gopts.step.map(_.toString).getOrElse("")  + "&e=" + gopts.pl.getOrElse("")
 
   val rrdFile: Option[String]
 
-  val isAgg: Boolean
+  // only agg graph objects have that true
+  val isAgg: Boolean = false
 
   val refObj: Option[SMGObjectUpdate]
 
