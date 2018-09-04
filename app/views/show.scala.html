@@ -30,9 +30,12 @@
     }
     var maxYVal = document.getElementById('maxy_inp').value;
     var minYVal = document.getElementById('miny_inp').value;
-
+    var logYVal = "";
+    if (document.getElementById('logy_cb').checked) {
+      logYVal = "on"
+    }
     var myUrl = baseUrl + "dpp=" + dppVal +
-        "&d95p=" + d95pVal + "&maxy=" + maxYVal + "&miny=" + minYVal;
+        "&d95p=" + d95pVal + "&maxy=" + maxYVal + "&miny=" + minYVal + "&logy=" + logYVal;
     window.location = myUrl;
   }
   </script>
@@ -65,6 +68,14 @@ Changing this reloads the page.">Disable Period-Over-Period:</label>
 Changing this reloads the page.">Disable 95%-ile line:</label>
         <input type="checkbox" id="d95p_cb"
                onchange="mySubmitOnChange(this);" @if(gopts.disable95pRule){ checked } />
+
+        @defining(if(gopts.minY.getOrElse(0.0) > 0) "autosubmit-lbl" else "disabled-lbl"){ logYCbClass =>
+        <label for="logy_cb" class="@logYCbClass" title="Logarithmic Y-scale (requires MinY > 0).
+Changing this reloads the page.">Logarithmic Y:</label>
+        }
+        <input type="checkbox" id="logy_cb"
+               onchange="mySubmitOnChange(this);" @if(gopts.logY){ checked } @if(gopts.minY.getOrElse(0.0) <= 0.0){ disabled } />
+
         [<a href="@{obj.dashUrl}">View on dashboard</a>]
         @if(obj.parentDashUrl.isDefined) {
         | [<a href="@{obj.parentDashUrl.get}">Parent dashboard</a>]
