@@ -31,6 +31,7 @@ trait SMGObjectBase {
     */
   def rrdType: String
 
+  val rraDef: Option[SMGRraDef]
 
   /**
     * All applicable for search vars definitions (object views can define subsets)

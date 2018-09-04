@@ -227,6 +227,20 @@ to download the actual rrd files locally. These rrd files are stored
 under the $rrd\_cache\_dir value. That dir must be writabe by the SMG 
 user.
 
+- **$rrd\_tool**: _rrdtool_ - the rrdtool command to use. Can specify
+full path if the version of rrdtool you want to use is not on
+the default PATH.
+
+<a name="rrd_socket" />
+
+- **$rrd\_socket**: - _(default is None)_. Otherwise one can specify
+a string value like unix:/path/to/socket.file. If specified it will
+be passed to the relevant rrdtool update, graph or fetch commands with the
+--daemon unix:/path/to/socket.file option. This in turn is
+intended for use with rrdcached (a rrdtool daemon used for doing
+updates more efficiently). rrdcached is highly recommended on more
+demanding setups.
+
 - **$rrd\_graph\_width**: _607_ - the graph width passed to rrdtool when 
 graphing
 
@@ -236,19 +250,22 @@ when graphing
 - **$rrd\_graph\_font**: _"DEFAULT:0:monospace"_ - the graph font string
 passed to rrdtool when graphing
 
-- **$rrd\_tool**: _rrdtool_ - the rrdtool command to use. Can specify
-full path if the version of rrdtool you want to use is not on 
-the default PATH.
+- **$rrd\_graph\_dppp**: _3_ _(advanced)_ - how many data points are
+represented in a singe "width" pixel. Used to estimate displayed graph
+resolution/step
 
-<a name="rrd_socket" />
+- **$rrd\_graph\_dppi**: _None_ _(advanced)_ - how many data points can
+be represented in a singe image. If this is set **$rrd\_graph\_dppp** is
+ignored. Used to estimate displayed graph resolution/step
 
-- **$rrd\_socket**: - _(default is None)_. Otherwise one can specify
-a string value like unix:/path/to/socket.file. If specified it will 
-be passed to the relevant rrdtool update, graph or fetch commands with the 
---daemon unix:/path/to/socket.file option. This in turn is
-intended for use with rrdcached (a rrdtool daemon used for doing
-updates more efficiently). rrdcached is highly recommended on more
-demanding setups.
+- **$rrd\_graph\_padding**: _83_ _(advanced)_ - the padding (in pixels)
+rrdtool adds to the configured **$rrd\_graph\_width** for the resulting
+image size. Used to estimate html cell widths.
+
+- **$rrd\_max\_args\_len**: _25000_ _(advanced)_ - The maximum length
+of a rrdtool command. If a resulting command exceeds that the rrdtool
+arguments will be passed via stdin instead of command-line args as it is
+by default.
 
 - **$monlog\_dir**: _"monlog"_ - the directory where the monitoring
 system saves logs with events in json format (one file per calendar date).

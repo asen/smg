@@ -15,7 +15,6 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
 
   val preFetch: Option[String]
   val rrdFile: Option[String]
-  val rraDef: Option[SMGRraDef]
 
   val pluginId: Option[String]
 

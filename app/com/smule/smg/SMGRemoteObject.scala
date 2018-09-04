@@ -15,7 +15,8 @@ case class SMGRemoteObject(
                             graphVarsIndexes: Seq[Int],
                             title: String,
                             stack: Boolean,
-                            rrdType: String
+                            rrdType: String,
+                            rraDef: Option[SMGRraDef]
                           ) extends SMGObjectView {
 
   override val rrdFile: Option[String] = None
@@ -34,7 +35,8 @@ case class SMGRemoteObjectCopy(
                             title: String,
                             stack: Boolean,
                             rrdFile: Option[String],
-                            rrdType: String
+                            rrdType: String,
+                            rraDef: Option[SMGRraDef]
                           ) extends SMGObjectView {
 
   def this(robj:SMGObjectView, rrdFile: String) = this(robj.id,
@@ -45,7 +47,8 @@ case class SMGRemoteObjectCopy(
     robj.title,
     robj.stack,
     Some(rrdFile),
-    robj.rrdType
+    robj.rrdType,
+    robj.rraDef
   )
 
   override val refObj: Option[SMGObjectUpdate] = None

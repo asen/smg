@@ -1,7 +1,7 @@
 package com.smule.smg
 
 /**
-  * A Graph object derived from an update obkect (like SmgRrdObject).
+  * A Graph object derived from an update object (like SmgRrdObject).
   */
 case class SMGraphObject(
                           id: String,
@@ -17,4 +17,6 @@ case class SMGraphObject(
                         ) extends SMGObjectView {
 
   override val graphVarsIndexes: Seq[Int] = if (gvIxes.isEmpty) refObj.map(_.vars.indices).getOrElse(vars.indices) else gvIxes
+
+  override val rraDef: Option[SMGRraDef] = refObj.flatMap(_.rraDef)
 }

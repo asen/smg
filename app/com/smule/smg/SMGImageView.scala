@@ -33,5 +33,6 @@ trait SMGImageView {
 
   lazy val fetchUrl: String = obj.fetchUrl(period, gopts)
 
-  lazy val resolution: String = SMGRrd.getDataResolution(obj.interval, period, gopts)
+  def resolution(rrdConfig: SMGRrdConfig): String =
+    SMGRrd.getDataResolution(obj.interval, period,gopts, obj.rraDef, rrdConfig.dataPointsPerImage)
 }

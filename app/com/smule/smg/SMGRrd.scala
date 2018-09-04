@@ -7,36 +7,6 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /**
-  * rrdtool configuration
-  *
-  * @param rrdTool - path to rrdtool executable
-  * @param rrdToolSocket - optional path to rrdtool socket file to be used for updates
-  */
-case class SMGRrdConfig(rrdTool: String ,
-                        rrdToolSocket: Option[String],
-                        rrdGraphWidth: Int,
-                        rrdGraphHeight: Int,
-                        rrdGraphFont: Option[String]) {
-  private val log = SMGLogger
-
-  def flushRrdCachedFile(rrdFile: String): Unit = {
-    if (rrdToolSocket.isDefined) {
-      log.debug(s"SMGRrdConfig.flushSocket: flushing $rrdFile via " + rrdToolSocket.get)
-      try {
-        SMGCmd(s"$rrdTool flushcached --daemon ${rrdToolSocket.get} $rrdFile", 120).run
-      } catch {
-        case t: Throwable => log.ex(t, "Unexpected exception while flushing socket")
-      }
-    }
-  }
-
-  val imageCellWidth: Int = rrdGraphWidth + 83 // rrdtool adds 81 + 2 right padding
-
-  //TODO make this configurable? 2621440 according to getconf ARG_MAX on linux and 262144 on Mac
-  val maxArgsLength: Int = 25000
-}
-
-/**
   * RRDTool wrappers helper functions and definitions
   */
 object SMGRrd {
@@ -125,31 +95,35 @@ object SMGRrd {
     days + hours + minutes + seconds
   }
 
-  private def getAutoResolution(rrdInterval: Int, period: String, pl: Option[String]): String = {
-    val ip = parseRrdPeriod(period) - pl.map(parseRrdPeriod).getOrElse(0)
-    val s = if (ip <= 0){
-      "Unk"
-    } else {
-      val retSecs = if (ip <= parseRrdPeriod("30h")) {
-        rrdInterval
-      } else if (ip < parseRrdPeriod("4d")) {
-        Math.max(parseRrdPeriod("300"), rrdInterval)
-      } else if (ip <= parseRrdPeriod("13d")) {
-        Math.max(parseRrdPeriod("30m"), rrdInterval)
-      } else if (ip <= parseRrdPeriod("31d")) {
-        Math.max(parseRrdPeriod("2h"), rrdInterval)
-      } else {
-        Math.max(parseRrdPeriod("1d"), rrdInterval)
-      }
-      intervalToStr(retSecs)
+  private def getAutoResolution(rrdInterval: Int, period: Int, pl: Option[String],
+                                rraDef: SMGRraDef, dataPointsPerImage: Int): String = {
+    val myPl = pl.map(parseRrdPeriod).getOrElse(0)
+    val timeSpan = if (myPl == 0) period else myPl
+    val matchingRra = rraDef.parsedDefs.find { ri =>  //
+      (period <= ri.maxPeriod(rrdInterval)) &&
+        (dataPointsPerImage * ri.step(rrdInterval) >= timeSpan)
     }
-    s + " avg (guess)"
+    val ret = if (matchingRra.isEmpty)
+      "Unknown"
+    else {
+      val ri = matchingRra.get
+      intervalToStr(ri.step(rrdInterval))
+    }
+    ret + " avg (estimated)"
   }
 
-  def getDataResolution(rrdInterval: Int, period: String, gopts: GraphOptions): String = {
+  def getDataResolution(rrdInterval: Int, period: String, gopts: GraphOptions,
+                        rraDef: Option[SMGRraDef], dataPointsPerImage: Int): String = {
+    val periodStart = parseRrdPeriod(period)
+    val myRraDef = rraDef.getOrElse(SMGRraDef.getDefaultRraDef(rrdInterval))
+    lazy val autoRes = getAutoResolution(rrdInterval, periodStart, gopts.pl, myRraDef, dataPointsPerImage)
     if (gopts.step.isDefined) {
-      intervalToStr(gopts.step.get) + " avg (requested)"
-    } else getAutoResolution(rrdInterval, period, gopts.pl)
+      val res = intervalToStr(gopts.step.get) + " avg (requested)"
+      val minStepAtStart = myRraDef.findMinStepAt(periodStart, rrdInterval).getOrElse(rrdInterval)
+      if (gopts.step.get < minStepAtStart) {
+        res + ", " + autoRes
+      } else res
+    } else autoRes
   }
 
   def tssNow: Int  = (System.currentTimeMillis() / 1000).toInt
@@ -199,31 +173,6 @@ object SMGRrd {
     }
   }
 
-  private def rrdMinutesSteps(v:Int, interval: Int):Int = (v * 60) / interval
-  private def rrdDaysRows(v:Int, steps: Int, interval: Int):Int = {
-    val mySteps = if (steps == 0) 1 else steps
-    ((3600 * 24) / (interval * mySteps)) * v
-  }
-
-  def getDefaultRraDef(interval: Int): SMGRraDef = {
-
-    val lst = ListBuffer[String]()
-
-    Seq("AVERAGE", "MAX").foreach{ cf =>
-      lst += s"RRA:$cf:0.5:1:" + rrdDaysRows(4,1,interval)
-      if (rrdMinutesSteps(5,interval) > 1) // only applcable on 1 min interval
-        lst += s"RRA:$cf:0.5:" + rrdMinutesSteps(5,interval) + ":" + rrdDaysRows(4, rrdMinutesSteps(5,interval),interval)    //5m:4d")
-      if (rrdMinutesSteps(30,interval) > 0)
-        lst += s"RRA:$cf:0.5:" + rrdMinutesSteps(30,interval) + ":" + rrdDaysRows(28, rrdMinutesSteps(30,interval),interval)    //30m:4w")
-      if (rrdMinutesSteps(120,interval) > 0)
-        lst += s"RRA:$cf:0.5:" + rrdMinutesSteps(120,interval) + ":" + rrdDaysRows(120, rrdMinutesSteps(120,interval),interval) //2h:4M")
-      if (rrdMinutesSteps(360,interval) > 0)
-        lst += s"RRA:$cf:0.5:" + rrdMinutesSteps(360,interval) + ":" + rrdDaysRows(1460, rrdMinutesSteps(360,interval),interval) //6h:4y")
-      lst += s"RRA:$cf:0.5:" + rrdMinutesSteps(1440,interval) + ":" + rrdDaysRows(1460, rrdMinutesSteps(1440,interval),interval) //24h:4y")
-    }
-    SMGRraDef("_default-" + interval, lst.toList)
-  }
-
   def rrdGraphCommandPx(rrdConf: SMGRrdConfig, title: String, outFn: String,
                         period: String, pl:Option[String], step: Option[Int],
                         maxY: Option[Double], minY: Option[Double],
@@ -254,8 +203,9 @@ object SMGRrd {
       c.append(" --upper-limit ").append(numRrdFormat(maxY.get, nanAsU = false))
       rigid = true
     }
-    if (rigid) c.append(" --rigid ")
-    if (step.isDefined) c.append("--step ").append(step.get).append(" ")
+    if (rigid) c.append(" --rigid")
+    if (step.isDefined) c.append(" --step ").append(step.get)
+    c.append(" ")
     c.toString
   }
 
@@ -290,8 +240,9 @@ object SMGRrd {
     " 'COMMENT:\\s' 'GPRINT:" + lastLabel + "lst:last data point from %Y-%m-%d %H\\:%M:strftime' "
   else ""
 
-  def resolutionRrdStr(interval: Int, period: String, gopts: GraphOptions): String = {
-    val resStr = getDataResolution(interval, period, gopts)
+  def resolutionRrdStr(interval: Int, period: String, gopts: GraphOptions,
+                       rraDef: Option[SMGRraDef], rrdConfig: SMGRrdConfig): String = {
+    val resStr = getDataResolution(interval, period, gopts, rraDef, rrdConfig.dataPointsPerImage)
     s" 'COMMENT: step\\: $resStr\\n' "
   }
 
@@ -577,7 +528,7 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
       }
     }
     c.append(lastUpdated(lastLabel))
-    c.append(resolutionRrdStr(objv.interval, period, gopts))
+    c.append(resolutionRrdStr(objv.interval, period, gopts, objv.rraDef, rrdConf))
     c.toString
   }
 }
@@ -738,7 +689,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
       }
     }
     c.append(lastUpdated(lastLabel))
-    c.append(resolutionRrdStr(aggObj.interval, period, gopts))
+    c.append(resolutionRrdStr(aggObj.interval, period, gopts, aggObj.rraDef, rrdConf))
     c.toString()
   }
 
@@ -809,7 +760,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
       lastLabel = lbl
     }
     c.append(lastUpdated(lastLabel))
-    c.append(resolutionRrdStr(aggObj.interval, period, gopts))
+    c.append(resolutionRrdStr(aggObj.interval, period, gopts, aggObj.rraDef, rrdConf))
     c.toString
   }
 
@@ -980,7 +931,7 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
       c.append(":").append((obju.interval * 2.5).toInt).append(":").append(v.getOrElse("min", "0"))
       c.append(":").append(v.getOrElse("max", "U"))
     }
-    val myRraDef = if (obju.rraDef.isDefined) obju.rraDef.get else SMGRrd.getDefaultRraDef(obju.interval)
+    val myRraDef = if (obju.rraDef.isDefined) obju.rraDef.get else SMGRraDef.getDefaultRraDef(obju.interval)
     c.append(" ").append(myRraDef.defs.mkString(" "))
     c.toString
   }

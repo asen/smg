@@ -46,6 +46,10 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
 
   // Object deserializers (reads) used by API client below
+  implicit val rraDefReads: Reads[SMGRraDef] = (
+    (JsPath \ "id").read[String] and
+      (JsPath \ "rras").read[Seq[String]]
+    )(SMGRraDef.apply _)
 
   val nonAggObjectBuilder = (JsPath \ "id").read[String].map(id => prefixedId(id)) and
     (JsPath \ "interval").read[Int] and
@@ -54,7 +58,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     (JsPath \ "graphVarsIndexes").readNullable[List[Int]].map(ol => ol.getOrElse(List())) and
     (JsPath \ "title").read[String].map(title => "(" + remote.id + ") " + title) and
     (JsPath \ "stack").read[Boolean] and
-    (JsPath \ "rrdType").readNullable[String].map(_.getOrElse("UNKNOWN"))
+    (JsPath \ "rrdType").readNullable[String].map(_.getOrElse("UNKNOWN")) and
+    (JsPath \ "rrad").readNullable[SMGRraDef]
 
   val nonAggObjectReads = nonAggObjectBuilder.apply(SMGRemoteObject.apply _)
 
@@ -787,6 +792,14 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   */
 object SMGRemoteClient {
 
+  implicit val writeRraDefWrites = new Writes[SMGRraDef] {
+    def writes(rra: SMGRraDef) = {
+      Json.obj(
+        "id" -> rra.rraId,
+        "rras" -> rra.defs
+      )
+    }
+  }
 
   // A bit of a hack to avoid code duplication
   def writeNonAggObject(obj: SMGObjectView) = Json.obj(
@@ -797,7 +810,8 @@ object SMGRemoteClient {
     "graphVarsIndexes" -> Json.toJson(obj.graphVarsIndexes),
     "title" -> obj.title,
     "stack" -> obj.stack,
-    "rrdType" -> obj.rrdType
+    "rrdType" -> obj.rrdType,
+    "rrad" -> obj.rraDef
   )
 
   def writeAggObject(obj: SMGAggObjectView) = {

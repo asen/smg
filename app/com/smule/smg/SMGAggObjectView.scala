@@ -128,6 +128,7 @@ trait SMGAggObjectView extends SMGObjectView {
 
   override val rrdFile: Option[String] = None
   override val isAgg: Boolean = true
+  override val rraDef: Option[SMGRraDef] = objs.maxBy(_.interval).rraDef
 
   val isCrossRemoteAgg: Boolean = if (objs.isEmpty)
     false

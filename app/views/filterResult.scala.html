@@ -94,7 +94,7 @@
             <!-- @g.obj -->
             <a name="@g.obj.id" ></a> <a name="@g.period"></a> <a name="@g.obj.id-@g.period"></a>
             <div class="smgraph">
-              <h4>@g.obj.title (@g.period, @g.resolution)
+              <h4>@g.obj.title (@g.period, @g.resolution(cfSvc.config.rrdConf))
                 @if(g.obj.stack) {
                   (stacked)
                 }

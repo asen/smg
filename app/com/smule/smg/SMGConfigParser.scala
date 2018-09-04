@@ -21,10 +21,6 @@ class SMGConfigParser(log: SMGLoggerApi) {
   val defaultInterval: Int = 60 // seconds
   val defaultTimeout: Int = 30  // seconds
 
-  private val defaultGraphWidth = 607
-  private val defaultGraphHeight = 152
-
-
   def validateOid(oid: String): Boolean = oid.matches("^[\\w\\._-]+$")
 
   def getListOfFiles(dir: String, matcher: PathMatcher):List[File] = {
@@ -618,9 +614,13 @@ class SMGConfigParser(log: SMGLoggerApi) {
       SMGRrdConfig(
         if (globalConf.contains("$rrd_tool")) globalConf("$rrd_tool") else rrdTool,
         socketOpt,
-        globalConf.get("$rrd_graph_width").flatMap(x => Try(x.toInt).toOption).getOrElse(defaultGraphWidth),
-        globalConf.get("$rrd_graph_height").flatMap(x => Try(x.toInt).toOption).getOrElse(defaultGraphHeight),
-        globalConf.get("$rrd_graph_font")
+        globalConf.get("$rrd_graph_width").flatMap(x => Try(x.toInt).toOption).getOrElse(SMGRrdConfig.defaultGraphWidth),
+        globalConf.get("$rrd_graph_height").flatMap(x => Try(x.toInt).toOption).getOrElse(SMGRrdConfig.defaultGraphHeight),
+        globalConf.get("$rrd_graph_font"),
+        globalConf.get("$rrd_graph_dppp").flatMap(x => Try(x.toInt).toOption).getOrElse(SMGRrdConfig.defaultDataPointsPerPixel),
+        globalConf.get("$rrd_graph_dppi").flatMap(x => Try(x.toInt).toOption),
+        globalConf.get("$rrd_graph_padding").flatMap(x => Try(x.toInt).toOption),
+        globalConf.get("$rrd_max_args_len").flatMap(x => Try(x.toInt).toOption)
       )
     }
 
