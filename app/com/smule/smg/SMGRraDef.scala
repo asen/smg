@@ -6,6 +6,14 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by asen on 12/13/15.
   */
+
+case class SMGRraInfo(cf: String, pdpPerRow: Int, rows: Int) {
+  def step(interval: Int): Int = interval * pdpPerRow
+  def maxPeriod(interval: Int): Int = step(interval) * rows
+  lazy val toS = s"$cf:$pdpPerRow:$rows"
+  lazy val sortTuple: (String, Int, Int) = (cf, pdpPerRow * rows, pdpPerRow)
+}
+
 case class SMGRraDef(rraId: String, defs: Seq[String]) {
 
   //  - "RRA:AVERAGE:0.5:1:5760"
@@ -17,25 +25,22 @@ case class SMGRraDef(rraId: String, defs: Seq[String]) {
 
   private val refCf = "AVERAGE" // TODO XXX using only the "AVERAGE" rras for now
 
-  case class RraInfo(cf: String, pdpPerRow: Int, rows: Int) {
-    def step(interval: Int): Int = interval * pdpPerRow
-    def maxPeriod(interval: Int): Int = step(interval) * rows
-  }
-
-  private def parseRraInfo(rra: String): RraInfo = {
+  private def parseRraInfo(rra: String): SMGRraInfo = {
     val arr = rra.split(":")
-    RraInfo(
+    SMGRraInfo(
       cf = arr.lift(1).getOrElse(refCf),
       pdpPerRow = arr.lift(3).map(_.toInt).getOrElse(1),
       rows = arr.lift(4).map(_.toInt).getOrElse(0)
     )
   }
 
-  lazy val parsedDefs: Seq[RraInfo] = defs.map(parseRraInfo).groupBy(_.cf).getOrElse(refCf, Seq()).
-    sortBy(ri => ri.pdpPerRow * ri.rows)
+  lazy val parsedDefsAll: List[SMGRraInfo] = defs.map(parseRraInfo).toList
+
+  lazy val parsedRefCfDefs: List[SMGRraInfo] = parsedDefsAll.groupBy(_.cf).getOrElse(refCf, List()).toList.
+    sortBy(ri => (ri.pdpPerRow * ri.rows, ri.pdpPerRow))
 
   def findMinStepAt(period: Int, interval: Int): Option[Int] = {
-    parsedDefs.find { ri =>
+    parsedRefCfDefs.find { ri =>
       period <= ri.maxPeriod(interval)
     }.map(_.pdpPerRow * interval)
   }

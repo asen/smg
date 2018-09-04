@@ -5,6 +5,7 @@ import play.api.libs.json.Json
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
+import scala.util.Try
 
 /**
   * Created by asen on 3/31/17.
@@ -41,7 +42,11 @@ class SMGRrdCheckPlugin (val pluginId: String,
     val errors = ListBuffer[String]()
     if (aopt.isDefined) {
       lastBgCheckTime = None // invalidate current results as far as display is concerned
-      if (aopt.get == "tune" && ou.isDefined) {
+      if (aopt.get == "rebuild" && ou.isDefined) {
+        if (!processRebuildRequest(ou.get)){
+          errors += s"Rebuild request failed: ${ou.get.id}, check logs for detail"
+        }
+      } else if (aopt.get == "tune" && ou.isDefined) {
         val vix = httpParams("vix").toInt
         val v = httpParams("v").toDouble
         if (!processTuneRequest(ou.get, vix, httpParams("nm"), v)) {
@@ -68,6 +73,10 @@ class SMGRrdCheckPlugin (val pluginId: String,
         smgconf.viewObjectsById(oid).refObj
       } else None
     }
+  }
+
+  private def processRebuildRequest(ou: SMGObjectUpdate): Boolean = {
+    SMGRrdCheckUtil.rebuildRrd(smgConfSvc, ou)
   }
 
   private def processTuneRequest(ou: SMGObjectUpdate, vix: Int, tuneWhat: String, newVal: Double): Boolean = {
@@ -103,6 +112,15 @@ class SMGRrdCheckPlugin (val pluginId: String,
       <div style="clear: left"></div>
   }
 
+  private def rebuildRrdForm(ou: SMGObjectUpdate) = {
+    <form style="float: left" method="POST">
+      {hiddenInput("oid", ou.id)}
+      {hiddenInput("a", "rebuild")}
+      <input type="Submit" value="Rebuild RRD"/>
+    </form>
+      <div style="clear: left"></div>
+  }
+
   private def varPropsLi(ou: SMGObjectUpdate, vix: Int, varInfo: SMGRrdVarInfo) = {
     val varDef = ou.vars(vix)
     <li>
@@ -113,9 +131,9 @@ class SMGRrdCheckPlugin (val pluginId: String,
       type:
       {goodBad(varInfo.rrdType, ou.rrdType)}<div style="clear: left"></div>
       <span style="float: left">min:
-        {goodBad(varInfo.min, varDef.getOrElse("min", "0.0").toDouble)}&nbsp;
+        {goodBad(varInfo.min, Try(varDef.getOrElse("min", "0.0").toDouble).getOrElse(Double.NaN))}&nbsp;
       </span>{tuneMinMaxForm(ou, vix, "min", "0.0")}<span style="float: left">max:
-      {goodBad(varInfo.max, varDef.getOrElse("max", "NaN").toDouble)}&nbsp;
+      {goodBad(varInfo.max, Try(varDef.getOrElse("max", "NaN").toDouble).getOrElse(Double.NaN))}&nbsp;
     </span>{tuneMinMaxForm(ou, vix, "max", "NaN")}
     </li>
   }
@@ -125,6 +143,8 @@ class SMGRrdCheckPlugin (val pluginId: String,
   private def rrdInfoDetailLink(info: SMGRrdCheckInfo) = {
     <p>{linkElem("?oid=" + info.ou.id, "Show Details")}</p><hr/>
   }
+
+  private def rrasToS(rras: Seq[SMGRraInfo]): String = rras.map(_.toS).mkString(",")
 
   private def rrdInfoItemHtml(info: SMGRrdCheckInfo) = {
     <div>
@@ -139,16 +159,20 @@ class SMGRrdCheckPlugin (val pluginId: String,
       <p>Num vars:
         {goodBad(info.vars.size, info.ou.vars.size)}
       </p>{if (info.vars.size != info.ou.vars.size) {
-      <p>
-        <font color="red">CRITICAL ERROR - rrd file incompatible with definition:
-          rrd vars={info.vars.size} conf vars={info.ou.vars.size}
-          (updates are likely failing)</font>
+        <p>
+          <font color="red">CRITICAL ERROR - rrd file incompatible with definition:
+            rrd vars={info.vars.size} conf vars={info.ou.vars.size}
+            (updates are likely failing)</font>
+        </p>
+      } else {
+        <ul>
+          {info.vars.zipWithIndex.map(t => varPropsLi(info.ou, t._2, t._1))}
+        </ul>
+      }}
+      <p>RRAs:
+        {goodBad(rrasToS(info.infoRras), rrasToS(info.ouRras))}
       </p>
-    } else {
-      <ul>
-        {info.vars.zipWithIndex.map(t => varPropsLi(info.ou, t._2, t._1))}
-      </ul>
-    }}
+      <p>{rebuildRrdForm(info.ou)}</p>
     </div>
   }
 
@@ -269,7 +293,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
     } else false
   }
 
-  private def bgFixIssues(info: SMGRrdCheckInfo): Unit = {
+  private def bgFixMinMaxIssues(info: SMGRrdCheckInfo): Unit = {
     if (info.vars.size != info.ou.vars.size){
       log.error(s"runBgFix - can not fix discrepancy in number of variables: ${info.ou.id}")
       return
@@ -291,6 +315,14 @@ class SMGRrdCheckPlugin (val pluginId: String,
     }
   }
 
+  private def bgRebuildRrd(info: SMGRrdCheckInfo): Unit = {
+    if (info.vars.size != info.ou.vars.size){
+      log.error(s"runBgFix - can not rebuild rrd with discrepancy in number of variables: ${info.ou.id}")
+      return
+    }
+    SMGRrdCheckUtil.rebuildRrd(smgConfSvc, info.ou)
+  }
+
   private def runBgFix(): Unit = {
     if (lastBgCheckResult.isEmpty) {
       log.info("runBgFix - no results to fix")
@@ -299,7 +331,10 @@ class SMGRrdCheckPlugin (val pluginId: String,
     log.info("runBgFix - START")
     lastBgCheckResult.foreach { info =>
       val freshInfo = SMGRrdCheckUtil.rrdInfo(smgConfSvc, info.ou)
-      if (!info.isOk) bgFixIssues(freshInfo)
+      if (!freshInfo.isOkRras)
+        bgRebuildRrd(freshInfo)
+      else if (!freshInfo.isOkIntervalMinMax)
+        bgFixMinMaxIssues(freshInfo)
     }
     lastBgCheckResult = List()
     lastBgCheckTime = None

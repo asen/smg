@@ -99,7 +99,7 @@ object SMGRrd {
                                 rraDef: SMGRraDef, dataPointsPerImage: Int): String = {
     val myPl = pl.map(parseRrdPeriod).getOrElse(0)
     val timeSpan = if (myPl == 0) period else myPl
-    val matchingRra = rraDef.parsedDefs.find { ri =>  //
+    val matchingRra = rraDef.parsedRefCfDefs.find { ri =>  //
       (period <= ri.maxPeriod(rrdInterval)) &&
         (dataPointsPerImage * ri.step(rrdInterval) >= timeSpan)
     }

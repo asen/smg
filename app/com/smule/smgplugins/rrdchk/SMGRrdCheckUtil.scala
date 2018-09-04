@@ -1,5 +1,8 @@
 package com.smule.smgplugins.rrdchk
 
+import java.io.File
+import java.nio.file.{Files, StandardCopyOption}
+
 import com.smule.smg._
 
 import scala.collection.mutable.ListBuffer
@@ -8,61 +11,6 @@ import scala.util.Try
 /**
   * Created by asen on 3/31/17.
   */
-
-case class SMGRrdVarInfo(
-                        index: Int,
-                        name: String,
-                        rrdType: String,
-                        max: Double,
-                        min: Double
-                        )
-
-case class SMGRrdCheckInfo(ou: SMGObjectUpdate, raw: List[String]) {
-
-  private val kvs = raw.map { ln =>
-    val arr = ln.split("\\s*=\\s*", 2)
-    if (arr.length == 2) {
-      (arr(0), arr(1))
-    } else {
-      (ln, "")
-    }
-  }.toMap
-
-  private def dsPrefix(ix: Int) = s"ds[${SMGRrdCheckUtil.dsName(ix)}]"
-
-  private def parseVars = {
-    val ret = ListBuffer[SMGRrdVarInfo]()
-    var ix = 0
-    var px = dsPrefix(ix)
-    while (kvs.contains(px + ".index")) {
-      ret += SMGRrdVarInfo(
-        index = kvs(px + ".index").toInt,
-        name = px,
-        rrdType = kvs.getOrElse(px + ".type", "ERROR").replaceAll("\"",""),
-        max = Try(kvs.getOrElse(px + ".max", "NaN").toDouble).getOrElse(Double.NaN),
-        min = Try(kvs.getOrElse(px + ".min", "NaN").toDouble).getOrElse(Double.NaN)
-      )
-      ix += 1
-      px = dsPrefix(ix)
-    }
-    ret.toList
-  }
-  val step: Int = kvs.getOrElse("step", "0").toInt
-  val vars: List[SMGRrdVarInfo] = parseVars
-
-  def isOk: Boolean = {
-    step == ou.interval &&
-    vars.size == ou.vars.size &&
-    vars.zip(ou.vars).forall { t =>
-      val vi = t._1
-      val v = t._2
-      vi.rrdType == ou.rrdType &&
-      vi.max.toString == v.getOrElse("max", "NaN").toDouble.toString &&
-      vi.min.toString == v.getOrElse("min", "0.0").toDouble.toString
-    }
-  }
-}
-
 object SMGRrdCheckUtil {
 
   def rrdInfo(smgConfSvc: SMGConfigService, ou:SMGObjectUpdate): SMGRrdCheckInfo = {
@@ -95,5 +43,39 @@ object SMGRrdCheckUtil {
         false
       }
     }
+  }
+
+  def rebuildRrd(smgConfSvc: SMGConfigService, ou:SMGObjectUpdate): Boolean = {
+    if(ou.rrdFile.isEmpty)
+      return false
+    val mysx = "._rrdchk-plugin_"
+    val newRrdFile = ou.rrdFile.get + mysx
+    val newFobj = new File(newRrdFile)
+    if (newFobj.exists()){
+      newFobj.delete()
+    }
+    val tempOu = SMGRrdObject(
+      id = ou.id + mysx,
+      command = SMGCmd("echo 0"),
+      vars = ou.vars,
+      title = ou.title,
+      rrdType = ou.rrdType,
+      interval = ou.interval,
+      dataDelay = ou.dataDelay,
+      stack = false,
+      preFetch = ou.preFetch,
+      rrdFile = Some(newRrdFile),
+      rraDef = ou.rraDef,
+      rrdInitSource = Some(ou.rrdFile.get),
+      notifyConf = None
+    )
+    val rrdU = new SMGRrdUpdate(tempOu, smgConfSvc)
+    rrdU.checkOrCreateRrd(None)
+    val oldFobjPath = new File(ou.rrdFile.get).toPath
+    val ret = Try(
+      Files.move(newFobj.toPath, oldFobjPath, StandardCopyOption.REPLACE_EXISTING) == oldFobjPath
+    ).getOrElse(false)
+    smgConfSvc.config.rrdConf.flushRrdCachedFile(ou.rrdFile.get)
+    ret
   }
 }
