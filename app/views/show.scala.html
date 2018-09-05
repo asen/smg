@@ -74,7 +74,9 @@ Changing this reloads the page.">Disable 95%-ile line:</label>
 Changing this reloads the page.">Logarithmic Y:</label>
         }
         <input type="checkbox" id="logy_cb"
-               onchange="mySubmitOnChange(this);" @if(gopts.logY){ checked } @if(gopts.minY.getOrElse(0.0) <= 0.0){ disabled } />
+               onchange="mySubmitOnChange(this);"
+               @if(gopts.logY && (gopts.minY.getOrElse(0.0) > 0.0)){ checked }
+               @if(gopts.minY.getOrElse(0.0) <= 0.0){ disabled } />
 
         [<a href="@{obj.dashUrl}">View on dashboard</a>]
         @if(obj.parentDashUrl.isDefined) {
