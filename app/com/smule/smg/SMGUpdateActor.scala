@@ -75,6 +75,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
               try {
                 log.debug(s"SMGUpdateActor: Running pre_fetch command: ${pf.id}: ${pf.command.str}")
                 try {
+                  var cmdTimeMs: Long = -1L
                   val t0 = System.currentTimeMillis()
                   try {
                     if (childSeqAborted)
@@ -83,12 +84,13 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                         "Consider adjusting timeouts" +
                           pf.parentId.map(s => s" and/or increasing child_conc on the parent: $s").getOrElse("") + ".")
                     pf.command.run
-                  } finally {
-                    val cmdTimeMs: Long = System.currentTimeMillis() - t0
+                    cmdTimeMs = System.currentTimeMillis() - t0
                     if (cmdTimeMs > (pf.command.timeoutSec.toLong * 1000) * 0.5){ // more than 50% of timeout time
                       log.warn(s"SMGUpdateActor: slow pre_fetch command: ${pf.id}: ${pf.command.str} " +
                         s"(took=${cmdTimeMs.toDouble / 1000.0}, timeout=${pf.command.timeoutSec})")
                     }
+                  } finally {
+                    if (cmdTimeMs < 0) cmdTimeMs = System.currentTimeMillis() - t0 // only if run threw
                     commandExecutionTimes(pf.id) = cmdTimeMs
                   }
                   //this is reached only on successfull pre-fetch
