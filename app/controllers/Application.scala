@@ -522,7 +522,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val obj = smg.getObjectView(oid)
     if (obj.isEmpty) Future { Ok("Object Id Not Found") }
     else {
-      val params = SMGRrdFetchParams(intres, s, e, filterNan = false)
+      val pl = if (e.getOrElse("") == "") None else e
+      val params = SMGRrdFetchParams(intres, s, pl, filterNan = false)
       smg.fetch(obj.get, params).map { ret =>
         fetchCommon(obj.get, d, ret)
       }
@@ -567,7 +568,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     else {
       val groupBy = SMGAggGroupBy.gbParamVal(gb)
       val aobj = SMGAggObjectView.build(objList, op, groupBy)
-      val params = SMGRrdFetchParams(intres, s, e, filterNan = false)
+      val pl = if (e.getOrElse("") == "") None else e
+      val params = SMGRrdFetchParams(intres, s, pl, filterNan = false)
       smg.fetchAgg(aobj, params).map { ret =>
         fetchCommon(aobj, d, ret)
       }

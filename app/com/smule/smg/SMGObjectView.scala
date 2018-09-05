@@ -82,12 +82,12 @@ trait SMGObjectView extends SMGObjectBase {
       (if (rmtId != SMGRemote.local.id) "&remote=" + java.net.URLEncoder.encode(rmtId, "UTF-8") else ""))
   }
 
-  /**
-    *
-    * @return
-    */
-  def fetchUrl(period: String, gopts: GraphOptions): String = "/fetch/" + id + "?s=" + period +
-    "&r=" + gopts.step.map(_.toString).getOrElse("")  + "&e=" + gopts.pl.getOrElse("")
+  def fetchUrl(period: String, gopts: GraphOptions): String = {
+    val sb = new StringBuilder("/fetch/" + id + "?s=" + period)
+    if (gopts.step.isDefined) sb.append("&r=" + gopts.step.get)
+    if (gopts.pl.isDefined) sb.append("&e=" + gopts.pl.get)
+    sb.toString()
+  }
 
   val rrdFile: Option[String]
 

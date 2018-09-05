@@ -5,9 +5,13 @@ package com.smule.smg
   */
 case class SMGRrdFetchParams(resolution: Option[Int], period: Option[String], pl: Option[String], filterNan: Boolean) {
 
-  private def paramsMap = {
+  private lazy val paramsMap: Map[String, Option[String]] = {
     val filterNanOpt = if (filterNan) Some("true") else None
-    Map("r" -> resolution, "s" -> period, "e" -> pl, "fnan" -> filterNanOpt)
+    var ret = Map[String, Option[String]]("s" -> period)
+    if (resolution.isDefined) ret ++= Map("r" -> resolution.map(_.toString))
+    if (pl.getOrElse("") != "") ret ++= Map("e" -> pl)
+    if (filterNanOpt.isDefined) ret ++= Map("fnan" -> filterNanOpt)
+    ret
   }
 
   def fetchPostMap: Map[String, Seq[String]] = {

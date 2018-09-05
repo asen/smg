@@ -124,7 +124,8 @@ trait SMGAggObjectView extends SMGObjectView {
   override def fetchUrl(period: String, gopts: GraphOptions): String = "/fetchAgg?s=" + period + "&op=" + op +
     "&ids=" + objs.map(_.id).mkString(",") +
     (if (groupBy != SMGAggGroupBy.defaultGroupBy) s"&gb=${groupBy.toString}" else "") +
-    "&r=" + gopts.step.map(_.toString).getOrElse("") + "&e=" + gopts.pl.getOrElse("")
+    (if (gopts.step.isDefined) s"&r=${gopts.step.get}" else "") +
+    (if (gopts.pl.isDefined) s"&e=${gopts.pl.get}" else "")
 
   override val rrdFile: Option[String] = None
   override val isAgg: Boolean = true

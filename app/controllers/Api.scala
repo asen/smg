@@ -74,7 +74,8 @@ class Api  @Inject() (actorSystem: ActorSystem,
       Ok("[]")
     }
     else {
-      val params = SMGRrdFetchParams(r, s, e, filterNan = fnan.getOrElse("false") == "true")
+      val pl = if (e.getOrElse("") == "") None else e
+      val params = SMGRrdFetchParams(r, s, pl, filterNan = fnan.getOrElse("false") == "true")
       smg.fetch(obj.get, params).map { ret =>
         val json = Json.toJson(ret)
         Ok(json)
