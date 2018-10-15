@@ -196,7 +196,7 @@ trait SMGMonState extends SMGTreeNode {
   def currentStateVal: SMGState.Value = recentStates.headOption.map(_.state).getOrElse(SMGState.SMGERR) // XXX empty recentStates is smg err
 
   private def urlPx = "/dash?remote=" + java.net.URLEncoder.encode(remote.id, "UTF-8") + "&"
-  private def dataUrlPx = "/api/monitor/svgData?remote=" + java.net.URLEncoder.encode(remote.id, "UTF-8") + "&"
+  private def dataUrlPx = "/monitor/svgDataJson?remote=" + java.net.URLEncoder.encode(remote.id, "UTF-8") + "&"
 
   private def myShowUrlFilter: Option[String] = if (aggShowUrlFilter.isDefined) {
     aggShowUrlFilter

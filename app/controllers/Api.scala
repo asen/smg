@@ -345,19 +345,6 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(hm))
   }
 
-  def monitorSvgData(): Action[AnyContent] = Action { implicit request =>
-    val params = request.queryString
-    val flt = SMGFilter.fromParams(params)
-    val ix = params.get("ix").map(_.head).flatMap { ixId =>
-      smg.getIndexById(ixId)
-    }
-    val hm = monitorApi.localHeatmap(flt, ix,
-      params.get("maxSize").map(_.head.toInt),
-      params.get("offset").map(_.head.toInt),
-      params.get("limit").map(_.head.toInt))
-    Ok(Json.toJson(hm))
-  }
-
   def monitorObjectViewsPost: Action[AnyContent] = Action.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val ids = params("ids").head

@@ -769,6 +769,26 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def monitorSvgDataJson(): Action[AnyContent] = Action.async { implicit request =>
+    import SMGRemoteClient._
+
+    val params = request.queryString
+    val flt = SMGFilter.fromParams(params)
+    val ix = params.get("ix").map(_.head).flatMap { ixId =>
+      smg.getIndexById(ixId)
+    }
+    monitorApi.heatmap(flt, ix,
+      params.get("maxSize").map(_.head.toInt),
+      params.get("offset").map(_.head.toInt),
+      params.get("limit").map(_.head.toInt)).map { seq =>
+      if (seq.isEmpty){
+        NotFound("{}")
+      } else
+        Ok(Json.toJson(seq.head._2))
+    }
+  }
+
+
   def monitorProblems(remote: Seq[String],
                       ms: Option[String],
                       soft: Option[String],

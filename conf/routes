@@ -62,7 +62,7 @@ GET     /json/cmdtokens       controllers.Application.jsonCmdTokens(q: String ?=
 
 # SVG response
 GET     /monitor/indexSvg     controllers.Application.monitorIndexSvg(ixid: String)
-GET     /api/monitor/svgData  controllers.Api.monitorSvgData()
+GET     /monitor/svgDataJson controllers.Application.monitorSvgDataJson()
 
 # plugin routes
 GET     /plugin/:pluginId  controllers.Application.pluginIndex(pluginId: String)
