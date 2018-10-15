@@ -26,14 +26,13 @@
   @if(mss.nonEmpty){
     @for((msvc, rowi) <- mss.grouped(objsPerRow).zipWithIndex){
       @for((ms,ix) <- msvc.zipWithIndex){
-        <a xlink:href= "@ms.showUrl" target="_parent" >
+        <a xlink:href= "@ms.showUrl" target="_parent" onmouseover="showSvgData('@{ms.dataUrl}', this)" >
+        <title></title>
         <rect fill="@{ms.severityColor}" width="@CELL_WIDTH" height="@CELL_HEIGHT"
               x="@{ix * CELL_SPACE}" y="@{rowi * ROW_SPACE}" >
-          <title>@ms.text@ms.hardStr</title>
         </rect>
         <text font-size="@{CELL_WIDTH}" fill="@ms.textColor"
               x="@{ix * CELL_SPACE + 2}" y="@{(rowi * ROW_SPACE) + CELL_HEIGHT - 1}">
-          <title>@ms.text@ms.hardStr</title>
           @ms.severityStr
         </text>
 

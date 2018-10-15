@@ -4,8 +4,14 @@
 
 <script language="JavaScript">
   function showMonStateActions_@{formUUID.replace("-","")}(){
-    document.getElementById('msidhm_@formUUID').innerHTML = '@monitorSvgRefIndex(ixid)';
-    document.getElementById('msidact_@formUUID').style.display = 'block';
+    var msidhmElem = document.getElementById('msidhm_@formUUID');
+    $.ajax("/monitor/indexSvg?ixid=@ixid", {
+        dataType: "text",
+        success: function(data) {
+          msidhmElem.innerHTML = data;
+          document.getElementById('msidact_@formUUID').style.display = 'block';
+        }
+      })
   }
 </script>
 

@@ -61,7 +61,8 @@ GET     /json/sxtokens        controllers.Application.jsonSxTokens(q: String ?= 
 GET     /json/cmdtokens       controllers.Application.jsonCmdTokens(q: String ?= "", remote: Option[String])
 
 # SVG response
-GET     /monitor/indexSvg    controllers.Application.monitorIndexSvg(ixid: String)
+GET     /monitor/indexSvg     controllers.Application.monitorIndexSvg(ixid: String)
+GET     /api/monitor/svgData  controllers.Api.monitorSvgData()
 
 # plugin routes
 GET     /plugin/:pluginId  controllers.Application.pluginIndex(pluginId: String)

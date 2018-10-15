@@ -24,15 +24,14 @@
         } else {
           mso.showUrl
       }) { hrefUrl =>
-      <a xlink:href= "@hrefUrl" target="_parent" >
+      <a xlink:href= "@hrefUrl" target="_parent" onmouseover="showSvgData('@{mso.dataUrl}', this)" >
+        <title></title>
         @for((ms,ixx) <- mso.recentStates.take(MAX_STATES).zipWithIndex){
         <rect data-ixx="@ixx" fill="@{ms.stateColor}" width="@CELL_WIDTH" height="@CELL_HEIGHT"
-              x="@{ix * CELL_SPACE}" y="@{(rowi * ROW_SPACE) + (ixx * CELL_HEIGHT)}" >
-          <title>@mso.text</title>
+              x="@{ix * CELL_SPACE}" y="@{(rowi * ROW_SPACE) + (ixx * CELL_HEIGHT)}">
         </rect>
         <text font-size="@{CELL_WIDTH - 1}" fill="@ms.textColor"
               x="@{ix * CELL_SPACE + 2}" y="@{(rowi * ROW_SPACE) + ((ixx + 1) * CELL_HEIGHT) - 1}">
-          <title>@mso.text</title>
           @ms.charRep
         </text>
         }
