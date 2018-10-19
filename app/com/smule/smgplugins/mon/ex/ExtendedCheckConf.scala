@@ -74,9 +74,10 @@ case class ExtendedCheckConf(confStr: String) {
 
     private def parseTimeOfDay(s: String): (Option[Int],Option[Int]) = {
       // 18_00
-      val arr = s.split("_")
-      val hour = Try(arr(0).toInt).toOption
-      val min = arr.lift(1).flatMap(m => Try(m.toInt).toOption)
+      val arr = s.split("_", 2)
+      val hour = if (arr.length == 2) Try(arr(0).toInt).toOption else None
+      val minIx = if (arr.length == 2) 1 else 0
+      val min = Try(arr(minIx).toInt).toOption
       (hour, min)
     }
 
@@ -85,7 +86,7 @@ case class ExtendedCheckConf(confStr: String) {
     }
 
     /* private */ val endHourMinute: Option[(Option[Int], Int)] = endStr.map(parseTimeOfDay).map { case (oh,om) =>
-      (oh, om.getOrElse(0))
+      (oh, om.getOrElse(60))
     }
 
     def isActiveAt(ts: Option[Int]): Boolean = {
@@ -97,15 +98,21 @@ case class ExtendedCheckConf(confStr: String) {
         (dayOfWeek.isDefined && dayOfWeek.get == ctsCal.get(Calendar.DAY_OF_WEEK)) ||
         (dayOfMonth.isDefined && dayOfMonth.get == ctsCal.get(Calendar.DAY_OF_MONTH))
       lazy val activeHourMinute = startHourMinute.isEmpty || endHourMinute.isEmpty || {
-        val sh = startHourMinute.get._1.getOrElse(0)
+        val shOpt = startHourMinute.get._1
         val sm = startHourMinute.get._2
-        val eh = endHourMinute.get._1.getOrElse(24)
+        val ehOpt = endHourMinute.get._1
         val em = endHourMinute.get._2
         val ctsMin = ctsCal.get(Calendar.MINUTE)
         val ctsHr = ctsCal.get(Calendar.HOUR)
-        val afterStart = (sh < ctsHr) || ((sh == ctsHr) && (sm <= ctsMin))
-        val beforeEnd =   (ctsHr < eh) || ((ctsHr == eh) && (ctsMin <= em))
-        afterStart && beforeEnd
+        if (shOpt.isEmpty && ehOpt.isEmpty) { // only care about minutes
+          (sm <= ctsMin) && (ctsMin <= em)
+        } else {
+          val sh = shOpt.getOrElse(0)
+          val eh = ehOpt.getOrElse(24)
+          val afterStart = (sh < ctsHr) || ((sh == ctsHr) && (sm <= ctsMin))
+          val beforeEnd = (ctsHr < eh) || ((ctsHr == eh) && (ctsMin <= em))
+          afterStart && beforeEnd
+        }
       }
       activeDay && activeHourMinute
     }

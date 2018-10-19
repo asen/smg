@@ -47,6 +47,26 @@ class ExCheckSpec extends Specification {
       ctc.checkCrit(-0.8) shouldEqual true
     }
 
+    "parse conf correctly - minutes in the hour only, multiple periods" in {
+      val confStr = "24h:lt-0.7:lt-0.5:00-15,45-59"
+      val ctc = ExtendedCheckConf(confStr)
+      ctc.fetchStep shouldEqual Some(86400)
+      ctc.warnCheck shouldEqual Some(("lt", 0.7))
+      ctc.critCheck shouldEqual Some(("lt", 0.5))
+      ctc.activeCheckPeriods.size shouldEqual 2
+      ctc.activeCheckPeriods.head.dayOfWeek shouldEqual None
+      ctc.activeCheckPeriods.head.dayOfMonth shouldEqual None
+      ctc.activeCheckPeriods.head.startHourMinute shouldEqual Some(None, 0)
+      ctc.activeCheckPeriods.head.endHourMinute shouldEqual Some(None, 15)
+      val cts1 = ds2ts("2018-10-19 03:20:00")
+      ctc.isActiveAt(Some(cts1)) shouldEqual false
+      val cts2 = ds2ts("2018-10-19 04:10:00")
+      ctc.isActiveAt(Some(cts2)) shouldEqual true
+      val cts3 = ds2ts("2018-10-19 04:50:00")
+      ctc.isActiveAt(Some(cts3)) shouldEqual true
+    }
+
+
     "parse conf correctly - time of day only" in {
       val confStr = "24h:lt-0.7:lt-0.5:04_00-6_00"
       val ctc = ExtendedCheckConf(confStr)
@@ -82,7 +102,6 @@ class ExCheckSpec extends Specification {
       val cts3 = ds2ts("2018-10-22 03:00:00") // Monday
       ctc.isActiveAt(Some(cts3)) shouldEqual false
     }
-
 
     "parse conf correctly - day of week" in {
       val confStr = "24h:lt-0.7:lt-0.5:04_00-6_00*mon"
