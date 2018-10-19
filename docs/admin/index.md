@@ -1081,7 +1081,7 @@ alert keywords are defined:
     alert-crit-eq: NUM   # critical alert if value is equal to NUM
     alert-p-<pluginId>-<checkId>: # configure a plugin-implemented check for the value
 
-The built-in "mon" plugin implements the following two checks
+The built-in "mon" plugin implements the following three checks
 
     alert-p-mon-anom: "" # anomaly alert - detecting unusual spikes or drops
                          #   it accepts a string with 3 values separated by ":"
@@ -1109,6 +1109,22 @@ The built-in "mon" plugin implements the following two checks
                          #   Both warning and critical thresholds are optional, e.g. use
                          #   something like "24h:lt:0.7" to set only a warning threshold and
                          #   something like "24h:lt::0.5" to set only critical threshold.
+    alert-p-mon-ex: "..." # "Extended" check, supporting some special use cases, mainly related
+                         #   to using different data resoulution than the update inteval (e.g.
+                         #   to check the hourly average of given value despite the value being
+                         #   updated every minute. Format is
+                         #   "<step>:<op>-<warn_thresh>:<op>-<crit_thresh>[:HH_MM-HH_MM[*<day>],...]"
+                         #   step is the time resolution at which we want the current value fetched
+                         #   op is one of gt, gte, eq, lte, lt
+                         #   warn_thresh and crit_thresh are the respective warning and critical
+                         #   threshold numbers.
+                         #   The final portion is optional and is a comma separated list of time
+                         #   period specifications. Time period is specified by setting time of day
+                         #   and/or day of week (first 3 letters from English weekdays) or month (number),
+                         #   separated via *. The time of day is defined as a start and end (separated
+                         #   by -) hour and minute (separated by _). The check can only trigger alerts
+                         #   when the current time is within the time of day (if specified) and day of
+                         #   week/month (if specified)
 
 Check [here](../index.md#anomaly) for more details on how 
 alert-p-mon-anom/anomaly detection works.

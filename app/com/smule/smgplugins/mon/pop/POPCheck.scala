@@ -1,6 +1,7 @@
 package com.smule.smgplugins.mon.pop
 
 import com.smule.smg._
+import com.smule.smgplugins.mon.common.MonCheckDefs
 
 import scala.collection.concurrent.TrieMap
 import scala.util.Try
@@ -13,14 +14,6 @@ case class POPCheckThreshConf(confStr: String) {
   //alert-p-mon-pop: "24h-5m:lt:0.7"
   //alert-p-mon-pop: "24h-1m:lt::0.5"
 
-  private val THRESH_OPS = Set(
-    "gte",
-    "gt",
-    "lte",
-    "lt",
-    "eq"
-  )
-
   private val arr = confStr.split(":")
   private val periodResArr = arr(0).split("-", 2)
 
@@ -28,7 +21,7 @@ case class POPCheckThreshConf(confStr: String) {
 
   val res: Option[Int] = if (periodResArr.isDefinedAt(1)) SMGRrd.parsePeriod(periodResArr(1)) else None
 
-  val op: String = arr.lift(1).filter(THRESH_OPS.contains).getOrElse("lt")
+  val op: String = arr.lift(1).filter(MonCheckDefs.COMPARISON_OPS.contains).getOrElse("lt")
 
   private val checkFn: (Double, Double, Double) => Boolean = {
     op match {

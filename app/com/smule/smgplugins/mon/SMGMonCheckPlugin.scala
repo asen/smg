@@ -2,6 +2,7 @@ package com.smule.smgplugins.mon
 
 import com.smule.smg._
 import com.smule.smgplugins.mon.anom.AnomCheck
+import com.smule.smgplugins.mon.ex.ExtendedCheck
 import com.smule.smgplugins.mon.pop.POPCheck
 
 class SMGMonCheckPlugin(val pluginId: String,
@@ -16,9 +17,12 @@ class SMGMonCheckPlugin(val pluginId: String,
 
   val popCheck = new POPCheck("pop", log, smgConfSvc)
 
+  val exCheck = new ExtendedCheck("ex", log, smgConfSvc)
+
   override def valueChecks: Map[String, SMGMonCheck] = Map(
     anomCheck.ckId -> anomCheck,
-    popCheck.ckId -> popCheck
+    popCheck.ckId -> popCheck,
+    exCheck.ckId -> exCheck
   )
 
   private var stateDir = "monstate"
@@ -32,6 +36,7 @@ class SMGMonCheckPlugin(val pluginId: String,
     }
     anomCheck.cleanupObsoleteStates(smgConfSvc, pluginId)
     popCheck.cleanupObsoleteStates(pluginId)
+    exCheck.cleanupObsoleteStates(pluginId)
   }
 
 
