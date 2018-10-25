@@ -355,10 +355,10 @@ object SMGRrd {
   }
 
   private def rpnNumbers(rpn: String, inp: List[List[Double]]) : List[Double] = {
-    inp.head.indices.toList.map { ix =>
+    inp.head.indices.map { ix =>
       val computeVars = inp.map(lst => lst.lift(ix).getOrElse(Double.NaN))
       computeRpnValue(rpn, computeVars)
-    }
+    }.toList
   }
 
   private def sumNumbers(inp: List[List[Double]], nanAs0: Boolean) : List[Double] = {

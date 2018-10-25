@@ -55,4 +55,14 @@ class SMGRrdSpec extends Specification  {
     }
 
   }
+
+  "SMGRrd.computeRpnValue" should {
+    "work" in {
+      // ($ds0 * 100) / ($ds0 + $ds1))
+      val rpn = "$ds0,100.0,*,$ds0,$ds1,+,/"
+      val vals = List(10.0, 190.0)
+      val computed = SMGRrd.computeRpnValue(rpn, vals)
+      computed shouldEqual 5.0
+    }
+  }
 }
