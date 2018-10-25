@@ -150,7 +150,7 @@
 
 - +localhost.time.counter.agg:
   title: localhost time counter agg
-  op: SUM
+  op: "RPN:$ds0,$ds1,+"
   ids:
     - localhost.time.counter
     - localhost.time.counter2

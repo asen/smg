@@ -348,7 +348,16 @@ object SMGRrd {
       case "AVG" => averageNumbers( nums )
       case "MAX" => maxNanNumbers( nums )
       case "MIN" => minNanNumbers( nums )
-      case s : String => throw new RuntimeException("Invalid op: " + s)
+      case s : String => if (s.startsWith("RPN:")){
+        rpnNumbers(s.split(":",2)(1), nums)
+      } else throw new RuntimeException("Invalid op: " + s)
+    }
+  }
+
+  private def rpnNumbers(rpn: String, inp: List[List[Double]]) : List[Double] = {
+    inp.head.indices.toList.map { ix =>
+      val computeVars = inp.map(lst => lst.lift(ix).getOrElse(Double.NaN))
+      computeRpnValue(rpn, computeVars)
     }
   }
 
@@ -363,8 +372,8 @@ object SMGRrd {
   }
 
   private def averageNumbers(inp: List[List[Double]]) : List[Double] = {
-    val ret = new Array[Double](inp.head.size)
-    val counts = new Array[Int](inp.head.size)
+    val ret: Array[Double] = Array.fill(inp.head.size) { 0.0 }
+    val counts: Array[Int] = Array.fill(inp.head.size) { 0 }
     inp.foreach { lst =>
       lst.zipWithIndex.foreach { t =>
         if ( !t._1.isNaN ) {

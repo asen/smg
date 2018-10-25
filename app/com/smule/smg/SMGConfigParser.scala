@@ -464,10 +464,14 @@ class SMGConfigParser(log: SMGLoggerApi) {
           case "SUM" => "SUM"
           case "MAX" => "MAX"
           case "MIN" => "MIN"
-          case x => {
-            processConfigError(confFile,
-              s"processAggObject: unsupported agg op for $oid: $x (assuming SUM)", isWarn = true)
-            "SUM"
+          case x: String => {
+            if (x.startsWith("RPN:"))
+              x
+            else {
+              processConfigError(confFile,
+                s"processAggObject: unsupported agg op for $oid: $x (assuming SUM)", isWarn = true)
+              "SUM"
+            }
           }
         }
         if (ymap.contains("ids")) {
