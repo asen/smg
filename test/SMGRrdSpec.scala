@@ -64,5 +64,27 @@ class SMGRrdSpec extends Specification  {
       val computed = SMGRrd.computeRpnValue(rpn, vals)
       computed shouldEqual 5.0
     }
+    "work with division by zero" in {
+      // ($ds0 * 100) / ($ds0 + $ds1))
+      val rpn =  "$ds0,100.0,*,$ds0,$ds1,+,/"
+      val vals = List(0.0, 0.0)
+      val computed = SMGRrd.computeRpnValue(rpn, vals)
+      computed.isNaN shouldEqual true
+    }
+    "work with division by zero and ADDNAN" in {
+      // ($ds0 * 100) / ($ds0 + $ds1))
+      val rpn =  "$ds0,100.0,*,$ds0,$ds1,+,/,0.0,ADDNAN"
+      val vals = List(0.0, 0.0)
+      val computed = SMGRrd.computeRpnValue(rpn, vals)
+      computed shouldEqual 0.0
+    }
+
+    "work with NANs" in {
+      // ($ds0 * 100) / ($ds0 + $ds1))
+      val rpn = "$ds0,100.0,*,$ds0,$ds1,+,/,0.0,ADDNAN"
+      val vals = List(Double.NaN, Double.NaN)
+      val computed = SMGRrd.computeRpnValue(rpn, vals)
+      computed shouldEqual 0.0
+    }
   }
 }

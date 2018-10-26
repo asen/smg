@@ -45,6 +45,6 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
     "preFetch" -> preFetch,
     "rrdFile" -> rrdFile,
     "rraDef" -> rraDef,
-    "cachedValues" -> cfSvc.getCachedValues(this)
+    "cachedValues" -> cfSvc.getCachedValues(this, true)
   ).map { case (k,v) => s"$k=$v"}.mkString(", ")
 }

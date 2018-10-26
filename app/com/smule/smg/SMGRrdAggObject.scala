@@ -23,7 +23,7 @@ case class SMGRrdAggObject(id: String,
                           ) extends SMGObjectView with SMGObjectUpdate {
 
   def fetchValues(confSvc: SMGConfigService): List[Double] = {
-    val sources = ous.map(ou => confSvc.getCachedValues(ou)).toList
+    val sources = ous.map(ou => confSvc.getCachedValues(ou, !this.isCounter)).toList
     SMGRrd.mergeValues(aggOp, sources)
   }
 

@@ -122,7 +122,7 @@ trait SMGConfigService {
     * @param ou - object update
     * @return - list of values (can be NaNs if no valid cache)
     */
-  def getCachedValues(ou: SMGObjectUpdate): List[Double]
+  def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): List[Double]
 
   /**
     * published here for plugins to use
@@ -409,8 +409,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     valuesCache.invalidateCache(ou)
   }
 
-  override def getCachedValues(ou: SMGObjectUpdate): List[Double] = {
-    valuesCache.getCachedValues(ou)
+  override def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): List[Double] = {
+    valuesCache.getCachedValues(ou, counterAsRate)
   }
 
   private def cleanupCachedValuesMap(newConf: SMGLocalConfig): Unit = {

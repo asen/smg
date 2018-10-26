@@ -47,7 +47,7 @@ class SMGValuesCache() {
     * @param ou - object update
     * @return - list of vals if (existing and valid) in cache, list of NaNs otherwise
     */
-  def getCachedValues(ou: SMGObjectUpdate): List[Double] = {
+  def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): List[Double] = {
     lazy val nanList: List[Double] = ou.vars.map(v => Double.NaN)
     val key = ckey(ou)
     val opt = myLastCache.get(key)
@@ -55,7 +55,8 @@ class SMGValuesCache() {
       if (ou.isCounter) {
         val prevOpt = myPrevCache.get(key)
         if (prevOpt.isDefined) {
-          // XXX this is only to deal with counter overflows and resets which we don't want to mess our aggregated stats
+          // XXX this is to deal with counter overflows and resets which we don't want to mess our aggregated stats
+          // but also needed when counter values are requested as rate
           val deltaTime = opt.get.tss - prevOpt.get.tss
           if (deltaTime > 0 && deltaTime < maxCacheAge(ou)) {
             val rates = opt.get.vals.zip(prevOpt.get.vals).map { case (cur, prev) => (cur - prev) / deltaTime }
@@ -63,9 +64,12 @@ class SMGValuesCache() {
               (!rate.isNaN) && (rate >= v.getOrElse("min", "0.0").toDouble) && v.get("max").forall(_.toDouble >= rate)
             }
             if (isGood)
-              opt.get.vals
+              if (counterAsRate)
+                rates
+              else
+                opt.get.vals
             else {
-              nanList
+              nanList // rates not good
             }
           } else {
             nanList // time delta outside range
