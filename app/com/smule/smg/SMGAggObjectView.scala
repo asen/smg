@@ -7,86 +7,6 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 /**
-  * A class encapsulating a "Group By" type - grouping a set of compatible graph objects.
-  * A group must have the same number of variables and the details included in the
-  * grouping can vary according to the groupBy value.
-  * @param groupBy - the enum value used when determinig what to group by
-  * @param tlMap - "object-level" map - can include rrd type, id suffix etc.
-  * @param vars - list - var maps. each map can be the full object var definition or a subset of it,
-  *             according to the groupBy value
-  */
-case class SMGAggGroupBy(groupBy: SMGAggGroupBy.Value, tlMap: Map[String,String], vars:List[Map[String,String]]){
-
-  def desc: String = {
-    val tlDesc = if (tlMap.isEmpty) "" else tlMap.map { case (k, s) => s"$k=$s" }.mkString(" ") + " "
-    val varsDesc = s"vars (${vars.size}): " + vars.zipWithIndex.map { case (v, ix) =>
-      if (v.isEmpty) {
-        "(*)"
-      } else "(" + v.map { case (k,s) =>
-        s"$k=$s"
-      }.mkString(" ") + ")"
-    }.mkString(", ")
-    s"Grouped ${SMGAggGroupBy.gbDesc(groupBy)}: " + tlDesc + varsDesc
-  }
-
-}
-
-object SMGAggGroupBy extends Enumeration {
-
-  val GB_VARS, GB_VARSSX, GB_LBLMU, GB_LBLMUSX, GB_NUMV, GB_NUMVSX = Value
-
-  def gbDesc(v: Value): String = v match {
-    case GB_VARS => "By same vars definitions (default)"
-    case GB_VARSSX => "By same vars defs and object id suffix"
-    case GB_LBLMU => "By same vars labels and units"
-    case GB_LBLMUSX => "By same vars labels and units and object id suffix"
-    case GB_NUMV => "By same number of vars"
-    case GB_NUMVSX => "By same number of vars and suffix"
-    case x => throw new RuntimeException(s"The impossible has happened: $x")
-  }
-
-  def gbVal(s: String): Option[Value] = Try(withName(s)).toOption
-
-  def gbParamVal(opts: Option[String]): Value = opts.flatMap(s => gbVal(s)).getOrElse(defaultGroupBy)
-
-  def defaultGroupBy: Value = GB_VARS
-
-  def objectGroupByVars(ov: SMGObjectView, gb: Value): SMGAggGroupBy = {
-
-    lazy val labelMuVars = ov.filteredVars(true).map { m =>
-      m.filter { case (k, v) =>
-        (k == "label") || (k == "mu")
-      }
-    }
-    lazy val bySxTlMap = Map("sx" -> ov.id.split('.').last)
-    lazy val emptyFilteredVars = ov.filteredVars(true).map { m => Map[String,String]() }
-
-    gb match {
-      case GB_VARS => SMGAggGroupBy(gb, Map(),ov.filteredVars(true))
-      case GB_VARSSX => SMGAggGroupBy(gb, bySxTlMap, ov.filteredVars(true))
-      case GB_LBLMU => SMGAggGroupBy(gb, Map(), labelMuVars)
-      case GB_LBLMUSX => SMGAggGroupBy(gb, bySxTlMap, labelMuVars)
-      case GB_NUMV => SMGAggGroupBy(gb, Map(), emptyFilteredVars)
-      case GB_NUMVSX => SMGAggGroupBy(gb, bySxTlMap, emptyFilteredVars)
-    }
-  }
-
-  def groupByVars(lst: Seq[SMGObjectView], gb: Value): Seq[(String, Seq[SMGObjectView])] = {
-    // group by vars trying to preserve ordering
-    val grouped = mutable.Map[SMGAggGroupBy,Seq[SMGObjectView]](lst.groupBy(ov => objectGroupByVars(ov,gb)).toSeq:_*)
-    val ret = ListBuffer[(String, Seq[SMGObjectView])]()
-    lst.foreach { ov =>
-      val gbv = objectGroupByVars(ov, gb)
-      val elem = grouped.remove(gbv)
-      if (elem.isDefined) {
-        ret += Tuple2(gbv.desc, elem.get)
-      }
-    }
-    ret.toList
-  }
-}
-
-/**
   * A SMG aggregate object view - representing a set of SMGObjects (rrd dbs) having compatible
   * variables (grouped according to groupBy rules) and subject to aggregation.
   *
@@ -149,25 +69,6 @@ trait SMGAggObjectView extends SMGObjectView {
 
   override def interval: Int = objs.map(_.interval).min
 }
-
-/**
-  * Use SMGLocalAggObjectView.build() to build from multiple compatible objects and
-  * with generated id, title and vars
-  *
-  */
-case class SMGLocalAggObjectView(id: String,
-                                 objs: Seq[SMGObjectView],
-                                 op: String,
-                                 groupBy: SMGAggGroupBy.Value,
-                                 vars : List[Map[String, String]],
-                                 cdefVars: List[Map[String, String]],
-                                 graphVarsIndexes: Seq[Int],
-                                 title: String ) extends SMGAggObjectView {
-  override val refObj: Option[SMGObjectUpdate] = None
-
-  override lazy val rrdType: String = objs.map(_.rrdType).distinct.mkString(",")
-}
-
 
 /**
   * Singleton defining helpers to build aggregate objects (SMGAggobject)
@@ -274,18 +175,18 @@ object SMGAggObjectView {
   }
 
   /**
-    * Build a SMGLocalAggObjectView from provided sequence of SMGObjects and aggregate operation.
+    * Build a SMGAggObjectViewLocal from provided sequence of SMGObjects and aggregate operation.
     * Objects must have identical vars
     *
     * @param objs - sequence of SMGObjects to build the aggregate from
     * @param op - aggregate operation
     * @param title - optional title. If None, a title will be generated from the object titles
-    * @return - the newly created SMGLocalAggObjectView
+    * @return - the newly created SMGAggObjectViewLocal
     */
-  def build(objs: Seq[SMGObjectView], op:String, groupBy: SMGAggGroupBy.Value, title: Option[String] = None): SMGLocalAggObjectView = {
+  def build(objs: Seq[SMGObjectView], op:String, groupBy: SMGAggGroupBy.Value, title: Option[String] = None): SMGAggObjectViewLocal = {
     val myTitle = if (title.isDefined) title.get else "(" + op + ", " + objs.size + " objects) " +
        buildTitle(objs.map(o => o.title))
-    SMGLocalAggObjectView(id = myGenId(objs, objs.head.vars, objs.head.cdefVars, objs.head.graphVarsIndexes, op),
+    SMGAggObjectViewLocal(id = myGenId(objs, objs.head.vars, objs.head.cdefVars, objs.head.graphVarsIndexes, op),
       objs = objs,
       op = op,
       groupBy = groupBy,

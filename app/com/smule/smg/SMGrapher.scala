@@ -236,7 +236,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val config = configSvc.config
     implicit val timeout: Timeout = 120000
     if (obj.isAgg) {
-      graphLocalAggObject(obj.asInstanceOf[SMGLocalAggObjectView], period, gopts)
+      graphLocalAggObject(obj.asInstanceOf[SMGAggObjectViewLocal], period, gopts)
     } else {
       val msg = SMGraphActor.SMGraphMessage(configSvc, obj, period, gopts, new File(config.imgDir, baseFn).toString)
       (graphActor ? msg).mapTo[SMGraphActor.SMGraphReadyMessage].map { resp: SMGraphActor.SMGraphReadyMessage =>
@@ -330,16 +330,16 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }(messagingEc) // TODO or use graphCtx?
   }
 
-  private def getXRemoteLocalCopies(aobj:SMGAggObjectView): Future[Option[SMGLocalAggObjectView]] = {
+  private def getXRemoteLocalCopies(aobj:SMGAggObjectView): Future[Option[SMGAggObjectViewLocal]] = {
     implicit val myEc = configSvc.executionContexts.rrdGraphCtx
     val futObjs = for (o <- aobj.objs)
       yield if (SMGRemote.isRemoteObj(o.id))
         remotes.downloadRrd(o)
       else
         Future { Some(o) }
-    Future.sequence(futObjs).map[Option[SMGLocalAggObjectView]] { objOpts =>
+    Future.sequence(futObjs).map[Option[SMGAggObjectViewLocal]] { objOpts =>
       if (!objOpts.exists(_.isEmpty)) {
-        Some(SMGLocalAggObjectView(aobj.id, objOpts.map(_.get),
+        Some(SMGAggObjectViewLocal(aobj.id, objOpts.map(_.get),
           aobj.op,
           aobj.groupBy,
           aobj.vars,
@@ -394,7 +394,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     */
   override def fetch(obj: SMGObjectView, params: SMGRrdFetchParams): Future[Seq[SMGRrdRow]] = {
     implicit val myEc = configSvc.executionContexts.rrdGraphCtx
-    if (obj.isAgg) return fetchAgg(obj.asInstanceOf[SMGLocalAggObjectView], params)
+    if (obj.isAgg) return fetchAgg(obj.asInstanceOf[SMGAggObjectViewLocal], params)
     if (SMGRemote.isRemoteObj(obj.id)) {
       remotes.fetchRows(obj.id, params)
     } else {
