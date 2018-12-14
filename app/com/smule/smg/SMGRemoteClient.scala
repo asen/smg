@@ -301,7 +301,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   def graphAgg(aobj: SMGAggObjectView, periods: Seq[String], gopts: GraphOptions): Future[Seq[SMGImageView]] = {
     val periodStr: String = periods.mkString(",")
     val oids: String = aobj.objs.map(o => toLocalId(o.id)).mkString(",")
-    val postMap = Map("ids" -> Seq(oids), "op" -> Seq(aobj.op),
+    val postMap = Map("ids" -> Seq(oids), "op" -> Seq(aobj.op), "gb" -> Seq(aobj.groupBy.toString),
       "title" -> Seq(aobj.title), "periods" -> Seq(periodStr)) ++ goptsMap(gopts)
     ws.url(remote.url + API_PREFIX + "agg").
       withRequestTimeout(graphTimeoutMs).post(postMap).map { resp =>
@@ -816,7 +816,7 @@ object SMGRemoteClient {
 
   def writeAggObject(obj: SMGAggObjectView) = {
     implicit val naow =  new Writes[SMGObjectView] {
-      def writes(obj: SMGObjectView) = {
+      override def writes(obj: SMGObjectView): JsObject = {
         writeNonAggObject(obj)
       }
     }
