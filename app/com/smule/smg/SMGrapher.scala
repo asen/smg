@@ -2,15 +2,15 @@ package com.smule.smg
 
 
 import java.io.File
-import javax.inject.{Inject, Singleton}
 
+import javax.inject.{Inject, Singleton}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
+import com.smule.smg.search.SMGSearchCache
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
-
 import monitor._
 
 

@@ -1,34 +1,11 @@
-package com.smule.smg
+package com.smule.smg.search
 
+import com.smule.smg._
 import javax.inject.{Inject, Singleton}
 
-import scala.collection.{SortedSet, mutable}
+import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent.Future
-
-
-/**
-  * Created by asen on 3/28/17.
-  */
-trait SMGSearchCache extends SMGConfigReloadListener {
-
-  def getAllIndexes: Seq[SMGIndex]
-
-  def search(q: String, maxResults: Int): Seq[SMGSearchResult]
-
-  def getRxTokens(flt: String, rmtId: String): Seq[String]
-
-  def getTrxTokens(flt: String, rmtId: String): Seq[String]
-
-  def getSxTokens(flt: String, rmtId: String): Seq[String]
-
-  def getPxTokens(flt: String, rmtId: String): Seq[String]
-
-  def getPfRxTokens(flt: String, rmtId: String): Seq[String]
-
-  def getMatchingIndexes(ovs: Seq[SMGObjectView]): Seq[SMGIndex]
-}
-
 
 @Singleton
 class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
@@ -50,16 +27,16 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
                                  tknsByRemote: Map[String, Array[Seq[String]]],
                                  wordsDict: Seq[String]
 
-  )
+                               )
 
   private var cache: SMGSearchCacheData = SMGSearchCacheData(
-      allIndexes = Seq(),
-      allViewObjects = Seq(),
-      pxesByRemote = Map(),
-      sxesByRemote = Map(),
-      tknsByRemote = Map(),
-      wordsDict = Seq()
-    )
+    allIndexes = Seq(),
+    allViewObjects = Seq(),
+    pxesByRemote = Map(),
+    sxesByRemote = Map(),
+    tknsByRemote = Map(),
+    wordsDict = Seq()
+  )
 
   private var cmdTknsByRemote: Map[String, Array[Seq[String]]] = Map()
 
@@ -126,7 +103,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
       remotesApi.monitorRunTree(rmt.id, None).map(m => (rmt.id, m))
     }
     Future.sequence(Seq(localFut) ++ remoteFuts).map { byRemoteSeq =>
-       byRemoteSeq.map( kv => (kv._1, getIdsFromRunTrees(kv._2))).toMap
+      byRemoteSeq.map( kv => (kv._1, getIdsFromRunTrees(kv._2))).toMap
     }
   }
 
@@ -321,8 +298,8 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
 
 
   private def getWordTokensForRemote(rmtId: String,
-                                    byRemote: Map[String, Seq[String]],
-                                    fltFn: (String) => Boolean): Seq[String] = {
+                                     byRemote: Map[String, Seq[String]],
+                                     fltFn: (String) => Boolean): Seq[String] = {
     val arr = byRemote.getOrElse(rmtId, Seq())
     arr.filter(fltFn).take(MAX_TOKENS_RESULTS)
   }
@@ -371,3 +348,5 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   }
 
 }
+
+

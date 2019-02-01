@@ -1,5 +1,7 @@
 package com.smule.smg
 
+import com.smule.smg.search.SMGSearchCache
+
 import scala.concurrent.Future
 
 /**
