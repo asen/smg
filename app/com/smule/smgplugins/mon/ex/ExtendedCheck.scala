@@ -1,6 +1,7 @@
 package com.smule.smgplugins.mon.ex
 
 import com.smule.smg._
+import com.smule.smg.monitor._
 
 import scala.collection.concurrent.TrieMap
 

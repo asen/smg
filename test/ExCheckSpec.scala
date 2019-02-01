@@ -2,6 +2,7 @@ import java.text.SimpleDateFormat
 import java.util.{Calendar, Date}
 
 import com.smule.smg._
+import com.smule.smg.monitor._
 import com.smule.smgplugins.mon.ex.{ExtendedCheck, ExtendedCheckConf}
 import helpers.TestConfigSvc
 import org.junit.runner.RunWith

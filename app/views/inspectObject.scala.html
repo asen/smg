@@ -1,10 +1,10 @@
 @import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGObjectView
-@import com.smule.smg.SMGMonObjAlertConf
-@import com.smule.smg.SMGMonNotifyConf
-@import com.smule.smg.SMGMonObjNotifyConf
-@import com.smule.smg.SMGMonNotifyCmd
-@import com.smule.smg.SMGMonNotifySeverity
+@import com.smule.smg.monitor.SMGMonObjAlertConf
+@import com.smule.smg.monitor.SMGMonNotifyConf
+@import com.smule.smg.monitor.SMGMonObjNotifyConf
+@import com.smule.smg.monitor.SMGMonNotifyCmd
+@import com.smule.smg.monitor.SMGMonNotifySeverity
 @import com.smule.smg.SMGPreFetchCmd
 @(cfSvc: SMGConfigService, ov:SMGObjectView, pfs: List[(SMGPreFetchCmd, String)], acs: Option[SMGMonObjAlertConf],
   ncUnk: Option[SMGMonNotifyConf], nc: Option[SMGMonObjNotifyConf],

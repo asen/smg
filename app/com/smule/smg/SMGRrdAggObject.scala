@@ -1,5 +1,7 @@
 package com.smule.smg
 
+import monitor.SMGMonNotifyConf
+
 /**
   * A RRD (update) object used to keep track of values produced by applying an aggregate op (SUM/AVG etc)
   * to the values fetched for multiple other update objects.

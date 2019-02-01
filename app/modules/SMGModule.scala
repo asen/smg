@@ -2,6 +2,7 @@ package modules
 
 import com.google.inject.AbstractModule
 import com.smule.smg._
+import com.smule.smg.monitor._
 import play.api.{Configuration, Environment}
 
 /**

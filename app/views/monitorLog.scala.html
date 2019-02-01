@@ -1,8 +1,8 @@
 @import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGRemote
-@import com.smule.smg.SMGMonitorLogMsg
-@import com.smule.smg.SMGMonitorLogFilter
-@import com.smule.smg.SMGState ; var prevHrTs = 0
+@import com.smule.smg.monitor.SMGMonitorLogMsg
+@import com.smule.smg.monitor.SMGMonitorLogFilter
+@import com.smule.smg.monitor.SMGState ; var prevHrTs = 0
 
 @(cfSvc: SMGConfigService, availRemotes:Seq[String], availStates:Seq[String],
   defPeriod:String, defLimit:Int, flt: SMGMonitorLogFilter, logMsgs: Seq[SMGMonitorLogMsg])(implicit flash: Flash)

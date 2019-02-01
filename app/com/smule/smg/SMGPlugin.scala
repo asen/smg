@@ -2,6 +2,8 @@ package com.smule.smg
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import monitor._
+
 /**
   * Created by asen on 12/3/15.
   *

@@ -3,6 +3,7 @@ package com.smule.smgplugins.mon.anom
 import java.io.{File, FileWriter}
 
 import com.smule.smg._
+import com.smule.smg.monitor._
 import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.concurrent.TrieMap

@@ -1,6 +1,7 @@
 package com.smule.smgplugins.jmx
 
 import com.smule.smg._
+import com.smule.smg.monitor.SMGMonNotifyConf
 
 /**
   * Created by asen on 5/16/16.

@@ -1,8 +1,11 @@
-package com.smule.smg
+package com.smule.smg.monitor
 
 /**
   * Plugins can extend SMG monitor check capabilities by providing (labelled) implementations of this trait.
   */
+
+import com.smule.smg._
+
 trait SMGMonCheck {
 
   /**
@@ -22,5 +25,3 @@ trait SMGMonCheck {
   def inspectState(ou: SMGObjectUpdate, vix: Int, checkConf: String): String =
     s"inspectState: (${ou.id}, $vix, $checkConf)"
 }
-
-case class SMGMonCheckConf(ckId: String, conf: String, check: SMGMonCheck)

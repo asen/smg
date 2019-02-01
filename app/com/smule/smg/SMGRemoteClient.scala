@@ -15,6 +15,8 @@ import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.Try
 
+import monitor._
+
 /**
   * Created by asen on 11/19/15.
   */

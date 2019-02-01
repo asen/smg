@@ -1,4 +1,5 @@
 import com.smule.smg._
+import com.smule.smg.monitor._
 import com.smule.smgplugins.mon.pop.{POPCheck, POPCheckThreshConf}
 import helpers.TestConfigSvc
 import org.junit.runner.RunWith

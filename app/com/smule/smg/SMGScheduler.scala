@@ -10,6 +10,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+import monitor._
 /**
   * Created by asen on 11/17/15.
   */

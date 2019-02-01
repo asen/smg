@@ -1,33 +1,8 @@
-package com.smule.smg
+package com.smule.smg.monitor
 
-import play.api.libs.json.{JsValue, Json}
+import com.smule.smg.{SMGLogger, SMGObjectUpdate}
 
 import scala.collection.mutable.ListBuffer
-
-/**
-  * Created by asen on 7/7/16.
-  */
-
-case class SMGMonAlertThresh(value: Double, op: String) {
-
-  def checkAlert(fetchedValue: Double, numFmt: (Double) => String):Option[String] = {
-    op match {
-      case "gte" => if (fetchedValue >= value) Some(s"${numFmt(fetchedValue)} >= ${numFmt(value)}") else None
-      case "gt"  => if (fetchedValue > value) Some(s"${numFmt(fetchedValue)} > ${numFmt(value)}") else None
-      case "lte" => if (fetchedValue <= value) Some(s"${numFmt(fetchedValue)} <= ${numFmt(value)}") else None
-      case "lt"  => if (fetchedValue < value) Some(s"${numFmt(fetchedValue)} < ${numFmt(value)}") else None
-      case "eq"  => if (fetchedValue == value) Some(s"${numFmt(fetchedValue)} == ${numFmt(value)}") else None
-      case badop: String => {
-        SMGLogger.warn("SMGMonAlertThresh: invalid op: " + badop)
-        None
-      }
-    }
-  }
-}
-
-object SMGMonAlertConfSource extends Enumeration {
-  val OBJ, INDEX, HINDEX = Value
-}
 
 case class SMGMonVarAlertConf(src: SMGMonAlertConfSource.Value,
                               srcId: String,
@@ -131,6 +106,3 @@ object SMGMonVarAlertConf {
   def isAlertKey(k: String): Boolean = k.startsWith("alert-")
 }
 
-case class SMGMonObjAlertConf(varConfs: Map[Int, Seq[SMGMonVarAlertConf]]) {
-  def varConf(ix: Int): Seq[SMGMonVarAlertConf] = varConfs.getOrElse(ix, Seq())
-}

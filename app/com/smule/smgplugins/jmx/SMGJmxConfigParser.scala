@@ -1,10 +1,9 @@
 package com.smule.smgplugins.jmx
 
-import java.io.File
-import java.nio.file.{FileSystems, PathMatcher}
 import java.util
 
 import com.smule.smg._
+import com.smule.smg.monitor._
 import org.yaml.snakeyaml.Yaml
 
 import scala.collection.mutable.ListBuffer

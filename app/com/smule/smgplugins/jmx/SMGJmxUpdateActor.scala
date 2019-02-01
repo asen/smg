@@ -4,6 +4,7 @@ package com.smule.smgplugins.jmx
 import akka.actor.Actor
 import play.libs.Akka
 import com.smule.smg._
+import com.smule.smg.monitor.SMGState
 
 import scala.concurrent.{ExecutionContext, Future}
 

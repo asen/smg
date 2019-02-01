@@ -7,6 +7,7 @@ import javax.inject.{Inject, Singleton}
 import akka.actor.ActorSystem
 import com.ning.http.client.providers.netty.response.NettyResponse
 import com.smule.smg._
+import com.smule.smg.monitor._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._

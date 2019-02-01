@@ -1,4 +1,4 @@
-package com.smule.smg
+package com.smule.smg.monitor
 
 import java.io.{File, FileWriter}
 import javax.inject.{Inject, Singleton}
@@ -11,6 +11,8 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.io.Source
+
+import com.smule.smg._
 
 /**
   * Created by asen on 11/12/16.

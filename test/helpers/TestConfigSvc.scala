@@ -2,6 +2,7 @@ package helpers
 
 import akka.actor.ActorSystem
 import com.smule.smg._
+import com.smule.smg.monitor._
 
 /**
   * Created by asen on 9/5/16.

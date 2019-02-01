@@ -1,4 +1,4 @@
-package com.smule.smg
+package com.smule.smg.monitor
 
 import java.util.{Date, UUID}
 

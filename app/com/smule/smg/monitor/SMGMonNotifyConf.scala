@@ -1,8 +1,6 @@
-package com.smule.smg
+package com.smule.smg.monitor
 
-/**
-  * Created by asen on 8/30/16.
-  */
+import com.smule.smg.{SMGLogger, SMGRrd}
 
 case class SMGMonNotifyConf(src: SMGMonAlertConfSource.Value,
                             srcId: String,
@@ -13,7 +11,7 @@ case class SMGMonNotifyConf(src: SMGMonAlertConfSource.Value,
                             notifyBackoff: Option[Int],
                             notifyDisable: Boolean,
                             notifyStrikes: Option[Int]
-                             ) {
+                           ) {
   def inspect: String = {
     s"SMGMonNotifyConf: src=$src, srcId=$srcId, crit=${crit.mkString(",")}, unkn=${unkn.mkString(",")}, " +
       s"warn=${warn.mkString(",")}, spike=${spike.mkString(",")}, notifyBackoff=$notifyBackoff, " +
@@ -60,16 +58,3 @@ object SMGMonNotifyConf {
   def isNotifyKey(k: String): Boolean = k.startsWith("notify-")
 }
 
-case class SMGMonObjNotifyConf(varConfs: Map[Int, Seq[SMGMonNotifyConf]]) {
-
-  def varConf(ix: Int): Seq[SMGMonNotifyConf] = varConfs.getOrElse(ix, Seq())
-
-  def getIsDisabledAndBackoff(ix: Option[Int]):(Boolean, Option[Int]) = {
-    val confs = if (ix.isDefined) varConf(ix.get) else varConfs.values.flatten
-    val isDisabled = confs.nonEmpty && confs.forall(_.notifyDisable) // TODO or use exists?
-    val backoffs = confs.map(_.notifyBackoff)
-    if (confs.nonEmpty)
-      (isDisabled, backoffs.max) // TODO? XXX longer backoff period overrides conflicting shorter backoff period
-    else (isDisabled, None)
-  }
-}

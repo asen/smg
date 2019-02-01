@@ -1,13 +1,13 @@
-package com.smule.smg
+package com.smule.smg.monitor
 
 import scala.concurrent.Future
+
+import com.smule.smg._
 
 
 /**
   * Created by asen on 7/6/16.
   */
-
-case class SMGMonitorStatesResponse(remote: SMGRemote, states: Seq[SMGMonState], isMuted: Boolean)
 
 trait SMGMonitorApi {
 

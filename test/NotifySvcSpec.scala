@@ -1,4 +1,5 @@
-import com.smule.smg.{SMGState, _}
+import com.smule.smg._
+import com.smule.smg.monitor._
 import helpers.TestConfigSvc
 import org.junit.runner.RunWith
 import org.mockito.Matchers._

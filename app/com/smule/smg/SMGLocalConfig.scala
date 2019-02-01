@@ -3,6 +3,8 @@ package com.smule.smg
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
+import monitor._
+
 /**
   * Created by asen on 11/15/15.
   */

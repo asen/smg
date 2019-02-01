@@ -1,4 +1,5 @@
 import com.smule.smg._
+import com.smule.smg.monitor._
 import helpers.{TestConfigSvc, TestUtil}
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification

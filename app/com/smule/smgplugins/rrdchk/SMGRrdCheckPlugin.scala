@@ -1,6 +1,7 @@
 package com.smule.smgplugins.rrdchk
 
 import com.smule.smg._
+import com.smule.smg.monitor._
 import play.api.libs.json.Json
 
 import scala.collection.mutable.ListBuffer

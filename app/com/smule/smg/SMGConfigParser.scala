@@ -12,6 +12,8 @@ import scala.collection.mutable.ListBuffer
 import scala.io.Source
 import scala.util.Try
 
+import monitor._
+
 /**
   * Helper class to deal with Yaml parsing
   */

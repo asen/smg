@@ -10,6 +10,8 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 
+import monitor._
+
 /**
   * Created by asen on 11/19/15.
   */

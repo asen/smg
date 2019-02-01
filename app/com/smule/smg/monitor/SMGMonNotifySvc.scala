@@ -1,10 +1,8 @@
-package com.smule.smg
+package com.smule.smg.monitor
 
 import java.util.Date
 import javax.inject.{Inject, Singleton}
 
-import play.api.Mode
-import play.api.Play
 import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.concurrent.TrieMap
@@ -12,70 +10,11 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 
+import com.smule.smg._
+
 /**
   * Created by asen on 8/31/16.
   */
-
-//case class SMGNotificationMsg(monState: SMGMonState, prevMonState: Option[SMGMonState],  rcpts: List[String])
-
-object SMGMonNotifySeverity extends Enumeration {
-  val RECOVERY, ACKNOWLEDGEMENT, ANOMALY, WARNING, UNKNOWN, CRITICAL, SMGERR, THROTTLED, UNTHROTTLED = Value
-
-  def fromStateValue(sv: SMGState.Value): SMGMonNotifySeverity.Value = {
-    sv match {
-      case SMGState.OK => this.RECOVERY
-      case SMGState.WARNING => this.WARNING
-      case SMGState.CRITICAL => this.CRITICAL
-      case SMGState.UNKNOWN => this.UNKNOWN
-      case SMGState.ANOMALY => this.ANOMALY
-      case _ => this.SMGERR
-//        ACKNOWLEDGEMENT, THROTTLED and UNTHROTTLED are special
-    }
-  }
-}
-
-case class SMGMonNotifyCmd(id:String, command: String, timeoutSec: Int) {
-
-  private def escapeSingleQuotes(str: String): String = {
-    str.replaceAll("'", "\\'")
-  }
-
-  def alert(severity: SMGMonNotifySeverity.Value, alertKey: String, subjStr: String, bodyStr: String): Unit = {
-    // TODO obsolete passing alert props via cmd line and use env instead
-    val cmdStr = s"$command '${severity.toString}' '${escapeSingleQuotes(alertKey)}'"
-    val myEnv = Map(
-      "SMG_ALERT_SEVERITY" -> severity.toString,
-      "SMG_ALERT_KEY" -> alertKey,
-      "SMG_ALERT_SUBJECT" -> subjStr,
-      "SMG_ALERT_BODY" -> bodyStr
-    )
-    SMGCmd.runCommand(cmdStr, timeoutSec, myEnv)
-  }
-}
-
-trait SMGMonNotifyApi {
-
-  def sendAlertMessages(monState: SMGMonState,  ncmds:  Seq[SMGMonNotifyCmd], isImprovement: Boolean): Future[Boolean]
-
-  def checkAndResendAlertMessages(monState: SMGMonState, backOffSeconds: Int): Future[Boolean]
-
-  def sendRecoveryMessages(monState: SMGMonState): Future[Boolean]
-
-  def sendAcknowledgementMessages(monState: SMGMonState): Boolean
-
-  def serializeState(): JsValue
-
-  def deserializeState(srcStr: String): Unit
-
-  def configReloaded(): Unit
-
-  def tick(): Unit
-
-  def muteAll(): Unit
-  def isMuted: Boolean
-  def unmuteAll(): Unit
-
-}
 
 @Singleton
 class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNotifyApi {

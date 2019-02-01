@@ -1,4 +1,4 @@
-package com.smule.smg
+package com.smule.smg.monitor
 
 case class SMGMonHeatmap(lst: List[SMGMonState], statesPerSquare: Int)
 

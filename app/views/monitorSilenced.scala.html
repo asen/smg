@@ -1,9 +1,9 @@
 @import com.smule.smg.SMGConfigService
 @import com.smule.smg.SMGRemote
-@import com.smule.smg.SMGMonState
-@import com.smule.smg.SMGState
-@import com.smule.smg.SMGMonFilter
-@import com.smule.smg.SMGMonStickySilence
+@import com.smule.smg.monitor.SMGMonState
+@import com.smule.smg.monitor.SMGState
+@import com.smule.smg.monitor.SMGMonFilter
+@import com.smule.smg.monitor.SMGMonStickySilence
 
 @(cfSvc: SMGConfigService, monitorStates: Seq[(SMGRemote, Seq[SMGMonState])],
   stickySilences: Seq[(SMGRemote, Seq[SMGMonStickySilence])], curUrl: String)(implicit flash: Flash)

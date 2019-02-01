@@ -1,4 +1,4 @@
-package com.smule.smg
+package com.smule.smg.monitor
 
 import java.net.URLEncoder
 
@@ -9,6 +9,8 @@ import play.api.libs.json._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
+
+import com.smule.smg._
 
 case class SMGMonFilter(rx: Option[String],
                         rxx: Option[String],

@@ -1,6 +1,7 @@
 import java.io.File
 
 import com.smule.smg._
+import com.smule.smg.monitor._
 import org.scalatest.mockito.MockitoSugar
 import play.api.inject.ApplicationLifecycle
 import play.api.test._

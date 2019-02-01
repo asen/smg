@@ -1,5 +1,7 @@
 package com.smule.smg
 
+import monitor.SMGMonNotifyConf
+
 /**
   * Created by asen on 11/29/15.
   */

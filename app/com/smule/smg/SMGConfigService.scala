@@ -14,6 +14,8 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.util.Try
 
+import monitor._
+
 /**
   * Created by asen on 11/15/15.
   */
