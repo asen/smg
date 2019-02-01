@@ -2,14 +2,14 @@ package com.smule.smg.monitor
 
 import com.smule.smg.{SMGConfigService, SMGPreFetchCmd}
 
-class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
-                    intervals: Seq[Int],
-                    val pluginId: Option[String],
-                    val configSvc: SMGConfigService,
-                    val monLog: SMGMonitorLogApi,
-                    val notifSvc: SMGMonNotifyApi)  extends SMGMonBaseFetchState {
-  override val id: String = pfCmd.id //SMGMonPfState.stateId(pfCmd, interval)
-  override def parentId: Option[String] = pfCmd.preFetch // SMGMonPfState.fetchParentStateId(pfCmd.preFetch, intervals.min, pluginId)
+class SMGMonInternalPfState(var pfCmd: SMGPreFetchCmd,
+                            intervals: Seq[Int],
+                            val pluginId: Option[String],
+                            val configSvc: SMGConfigService,
+                            val monLog: SMGMonitorLogApi,
+                            val notifSvc: SMGMonNotifyApi)  extends SMGMonInternalBaseFetchState {
+  override val id: String = pfCmd.id //SMGMonInternalPfState.stateId(pfCmd, interval)
+  override def parentId: Option[String] = pfCmd.preFetch // SMGMonInternalPfState.fetchParentStateId(pfCmd.preFetch, intervals.min, pluginId)
 
   private def myObjectUpdates = if (pluginId.isEmpty) {
     configSvc.config.getFetchCommandRrdObjects(pfCmd.id, intervals)
@@ -37,7 +37,7 @@ class SMGMonPfState(var pfCmd: SMGPreFetchCmd,
   }
 }
 
-object SMGMonPfState {
+object SMGMonInternalPfState {
   def stateId(pfCmd: SMGPreFetchCmd): String = stateId(pfCmd.id)
   def stateId(pfCmdId: String): String = pfCmdId
 }

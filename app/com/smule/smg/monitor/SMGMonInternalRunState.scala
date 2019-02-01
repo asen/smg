@@ -2,13 +2,13 @@ package com.smule.smg.monitor
 
 import com.smule.smg.SMGConfigService
 
-class SMGMonRunState(val interval: Int,
-                     val pluginId: Option[String],
-                     val configSvc: SMGConfigService,
-                     val monLog: SMGMonitorLogApi,
-                     val notifSvc: SMGMonNotifyApi) extends SMGMonInternalState {
+class SMGMonInternalRunState(val interval: Int,
+                             val pluginId: Option[String],
+                             val configSvc: SMGConfigService,
+                             val monLog: SMGMonitorLogApi,
+                             val notifSvc: SMGMonNotifyApi) extends SMGMonInternalState {
 
-  override val id: String = SMGMonRunState.stateId(interval, pluginId)
+  override val id: String = SMGMonInternalRunState.stateId(interval, pluginId)
 
   override def alertKey: String = id
 
@@ -38,7 +38,7 @@ class SMGMonRunState(val interval: Int,
   override protected def getMaxHardErrorCount = 2 // TODO read from config???
 }
 
-object SMGMonRunState {
+object SMGMonInternalRunState {
   def stateId(interval: Int, pluginId: Option[String]): String = "$interval_%04d".format(interval) +
     pluginId.map(s => s"-$s").getOrElse("")
 }

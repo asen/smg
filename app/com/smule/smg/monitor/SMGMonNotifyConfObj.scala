@@ -6,7 +6,7 @@ import com.smule.smg._
   * Created by asen on 8/30/16.
   */
 
-case class SMGMonObjNotifyConf(varConfs: Map[Int, Seq[SMGMonNotifyConf]]) {
+case class SMGMonNotifyConfObj(varConfs: Map[Int, Seq[SMGMonNotifyConf]]) {
 
   def varConf(ix: Int): Seq[SMGMonNotifyConf] = varConfs.getOrElse(ix, Seq())
 

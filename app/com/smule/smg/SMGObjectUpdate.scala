@@ -20,7 +20,7 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
 
   val pluginId: Option[String]
 
-  override def parentId: Option[String] =  preFetch //preFetch.map(pfid => SMGMonPfState.stateId(pfid, interval))
+  override def parentId: Option[String] =  preFetch //preFetch.map(pfid => SMGMonInternalPfState.stateId(pfid, interval))
 
   override def searchVars: List[Map[String, String]] = vars
 

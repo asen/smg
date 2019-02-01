@@ -2,7 +2,7 @@ package com.smule.smg.monitor
 
 import com.smule.smg.{SMGConfigService, SMGObjectUpdate}
 
-trait SMGMonBaseFetchState extends SMGMonInternalState {
+trait SMGMonInternalBaseFetchState extends SMGMonInternalState {
 
   def processError(ts: Int, exitCode :Int, errors: List[String], isInherited: Boolean): Unit = {
     val errorMsg = s"Fetch error: exit=$exitCode, OUTPUT: " + errors.mkString("\n")

@@ -4,15 +4,15 @@ import com.smule.smg.{SMGConfigService, SMGObjectUpdate}
 
 import scala.collection.mutable.ListBuffer
 
-class SMGMonVarState(var objectUpdate: SMGObjectUpdate,
-                     vix: Int,
-                     val configSvc: SMGConfigService,
-                     val monLog: SMGMonitorLogApi,
-                     val notifSvc: SMGMonNotifyApi) extends SMGMonInternalState {
+class SMGMonInternalVarState(var objectUpdate: SMGObjectUpdate,
+                             vix: Int,
+                             val configSvc: SMGConfigService,
+                             val monLog: SMGMonitorLogApi,
+                             val notifSvc: SMGMonNotifyApi) extends SMGMonInternalState {
 
   override def alertKey: String = id
 
-  override val id: String = SMGMonVarState.stateId(objectUpdate, vix)
+  override val id: String = SMGMonInternalVarState.stateId(objectUpdate, vix)
   override val parentId: Option[String] = Some(objectUpdate.id)
 
   override def pluginId: Option[String] = objectUpdate.pluginId
@@ -34,17 +34,17 @@ class SMGMonVarState(var objectUpdate: SMGObjectUpdate,
 
     val ret = if (tsDelta > (objectUpdate.interval * 3)) {
       if (myCounterPrevTs > 0) {
-        log.debug(s"SMGMonVarState.processCounterUpdate($id): Time delta is too big: $ts - $myCounterPrevTs = $tsDelta")
+        log.debug(s"SMGMonInternalVarState.processCounterUpdate($id): Time delta is too big: $ts - $myCounterPrevTs = $tsDelta")
       }
       None
     } else if (tsDelta <= 0) {
-      log.error(s"SMGMonVarState.processCounterUpdate($id): Non-positive time delta detected: $ts - $myCounterPrevTs = $tsDelta")
+      log.error(s"SMGMonInternalVarState.processCounterUpdate($id): Non-positive time delta detected: $ts - $myCounterPrevTs = $tsDelta")
       None
     } else {
       val maxr = objectUpdate.vars(vix).get("max").map(_.toDouble)
       val r = (rawVal - myCounterPrevValue) / tsDelta
       val tpl = if ((r < 0) || (maxr.isDefined && (maxr.get < r))){
-        log.debug(s"SMGMonVarState.processCounterUpdate($id): Counter overflow detected: " +
+        log.debug(s"SMGMonInternalVarState.processCounterUpdate($id): Counter overflow detected: " +
           s"p=$myCounterPrevValue/$myCounterPrevTs c=$rawVal/$ts r=$r maxr=$maxr")
         (Double.NaN, Some(s"ANOM: Counter overflow: p=${objectUpdate.numFmt(myCounterPrevValue, vix)} " +
           s"c=${objectUpdate.numFmt(rawVal, vix)} td=$tsDelta r=${objectUpdate.numFmt(r, vix)} " +
@@ -112,7 +112,7 @@ class SMGMonVarState(var objectUpdate: SMGObjectUpdate,
 
 }
 
-object SMGMonVarState {
+object SMGMonInternalVarState {
   def stateId(ou: SMGObjectUpdate, vix: Int) = s"${ou.id}:$vix"
 }
 

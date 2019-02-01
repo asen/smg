@@ -4,14 +4,14 @@ import com.smule.smg.{SMGLogger, SMGObjectUpdate}
 
 import scala.collection.mutable.ListBuffer
 
-case class SMGMonVarAlertConf(src: SMGMonAlertConfSource.Value,
+case class SMGMonAlertConfVar(src: SMGMonAlertConfSource.Value,
                               srcId: String,
                               crit: Option[SMGMonAlertThresh],
                               warn: Option[SMGMonAlertThresh],
                               pluginChecks: Seq[SMGMonCheckConf]
                              ) {
   def inspect: String = {
-    s"SMGMonVarAlertConf: src=$src, srcId=$srcId, crit=$crit, warn=$warn, " +
+    s"SMGMonAlertConfVar: src=$src, srcId=$srcId, crit=$crit, warn=$warn, " +
       s"pluginChecks=[${pluginChecks.map(pc => pc.ckId + ":" + pc.conf).mkString(", ")}]"
   }
 
@@ -57,7 +57,7 @@ case class SMGMonVarAlertConf(src: SMGMonAlertConfSource.Value,
   }
 }
 
-object SMGMonVarAlertConf {
+object SMGMonAlertConfVar {
 
   private val log = SMGLogger
 
@@ -83,7 +83,7 @@ object SMGMonVarAlertConf {
     if (ret.length < 3) "gte" else ret(2)
   }
 
-  def fromVarMap(src: SMGMonAlertConfSource.Value, srcId: String, vMap: Map[String, String], pluginChecks: Map[String,SMGMonCheck]): Option[SMGMonVarAlertConf] = {
+  def fromVarMap(src: SMGMonAlertConfSource.Value, srcId: String, vMap: Map[String, String], pluginChecks: Map[String,SMGMonCheck]): Option[SMGMonAlertConfVar] = {
     val pluginCheckKeys = pluginChecks.keySet.map {k => PLUGIN_ALERT_KEY_PX + k}
     val matchingKeys = vMap.keySet.intersect(BUILTIN_ALERT_KEYS ++ pluginCheckKeys)
     if (matchingKeys.isEmpty)
@@ -99,7 +99,7 @@ object SMGMonVarAlertConf {
         val ckId = k.substring(PLUGIN_ALERT_KEY_PX.length)
         SMGMonCheckConf(ckId, vMap(k), pluginChecks(ckId))
       }
-      Some(SMGMonVarAlertConf(src, srcId, alertCrit, alertWarn, alertPluginChecks))
+      Some(SMGMonAlertConfVar(src, srcId, alertCrit, alertWarn, alertPluginChecks))
     }
   }
 

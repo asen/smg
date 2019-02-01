@@ -2,15 +2,15 @@ package com.smule.smg.monitor
 
 import com.smule.smg.{SMGConfigService, SMGObjectUpdate}
 
-class SMGMonObjState(var objectUpdate: SMGObjectUpdate,
-                     val configSvc: SMGConfigService,
-                     val monLog: SMGMonitorLogApi,
-                     val notifSvc: SMGMonNotifyApi) extends SMGMonBaseFetchState {
-  override val id: String = SMGMonObjState.stateId(objectUpdate)
+class SMGMonInternalObjState(var objectUpdate: SMGObjectUpdate,
+                             val configSvc: SMGConfigService,
+                             val monLog: SMGMonitorLogApi,
+                             val notifSvc: SMGMonNotifyApi) extends SMGMonInternalBaseFetchState {
+  override val id: String = SMGMonInternalObjState.stateId(objectUpdate)
 
   override def alertKey: String = id
 
-  override def parentId: Option[String] = objectUpdate.preFetch.map(SMGMonPfState.stateId)
+  override def parentId: Option[String] = objectUpdate.preFetch.map(SMGMonInternalPfState.stateId)
 
   override def pluginId: Option[String] = objectUpdate.pluginId
 
@@ -32,6 +32,6 @@ class SMGMonObjState(var objectUpdate: SMGObjectUpdate,
 
 }
 
-object SMGMonObjState {
+object SMGMonInternalObjState {
   def stateId(ou: SMGObjectUpdate) = s"${ou.id}"
 }

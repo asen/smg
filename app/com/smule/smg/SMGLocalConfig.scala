@@ -38,9 +38,9 @@ case class SMGLocalConfig(
                            remoteMasters: Seq[SMGRemote],
                            pluginObjects: Map[String, Seq[SMGObjectView]],
                            pluginPreFetches: Map[String, Map[String, SMGPreFetchCmd]],
-                           objectAlertConfs: Map[String, SMGMonObjAlertConf],
+                           objectAlertConfs: Map[String, SMGMonAlertConfObj],
                            notifyCommands: Map[String,SMGMonNotifyCmd],
-                           objectNotifyConfs: Map[String, SMGMonObjNotifyConf],
+                           objectNotifyConfs: Map[String, SMGMonNotifyConfObj],
                            hiddenIndexes: Map[String, SMGConfIndex],
                            private val configErrors: List[String] // use allErrors at the bottom instead
                     ) extends SMGConfig {

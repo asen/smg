@@ -96,47 +96,47 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
-  private def getOrCreateVarState(ou: SMGObjectUpdate, vix: Int, update: Boolean = false): SMGMonVarState = {
-    val stateId = SMGMonVarState.stateId(ou, vix)
-    def createFn() = { new SMGMonVarState(ou, vix, configSvc, monLogApi, notifSvc) }
-    def updateFn(state: SMGMonVarState) = {
+  private def getOrCreateVarState(ou: SMGObjectUpdate, vix: Int, update: Boolean = false): SMGMonInternalVarState = {
+    val stateId = SMGMonInternalVarState.stateId(ou, vix)
+    def createFn() = { new SMGMonInternalVarState(ou, vix, configSvc, monLogApi, notifSvc) }
+    def updateFn(state: SMGMonInternalVarState) = {
       if (state.objectUpdate != ou) {
         // this is logged at object level
         //log.warn(s"Updating changed object var state with id ${ret.id}")
         state.objectUpdate = ou
       }
     }
-    getOrCreateState[SMGMonVarState](stateId, createFn, if (update) Some(updateFn) else None)
+    getOrCreateState[SMGMonInternalVarState](stateId, createFn, if (update) Some(updateFn) else None)
   }
 
-  private def getOrCreateObjState(ou: SMGObjectUpdate, update: Boolean = false): SMGMonObjState = {
-    val stateId = SMGMonObjState.stateId(ou)
-    def createFn() = { new SMGMonObjState(ou, configSvc, monLogApi, notifSvc) }
-    def updateFn(state: SMGMonObjState) = {
+  private def getOrCreateObjState(ou: SMGObjectUpdate, update: Boolean = false): SMGMonInternalObjState = {
+    val stateId = SMGMonInternalObjState.stateId(ou)
+    def createFn() = { new SMGMonInternalObjState(ou, configSvc, monLogApi, notifSvc) }
+    def updateFn(state: SMGMonInternalObjState) = {
       if (state.objectUpdate != ou) {
         log.warn(s"Updating changed object state with id ${state.id}")
         state.objectUpdate = ou
       }
     }
-    getOrCreateState[SMGMonObjState](stateId, createFn, if (update) Some(updateFn) else None)
+    getOrCreateState[SMGMonInternalObjState](stateId, createFn, if (update) Some(updateFn) else None)
   }
 
-  private def getOrCreatePfState(pf: SMGPreFetchCmd, intervals: Seq[Int], pluginId: Option[String], update: Boolean = false): SMGMonPfState = {
-    val stateId = SMGMonPfState.stateId(pf)
-    def createFn() = { new SMGMonPfState(pf, intervals, pluginId, configSvc, monLogApi, notifSvc) }
-    def updateFn(state: SMGMonPfState): Unit = {
+  private def getOrCreatePfState(pf: SMGPreFetchCmd, intervals: Seq[Int], pluginId: Option[String], update: Boolean = false): SMGMonInternalPfState = {
+    val stateId = SMGMonInternalPfState.stateId(pf)
+    def createFn() = { new SMGMonInternalPfState(pf, intervals, pluginId, configSvc, monLogApi, notifSvc) }
+    def updateFn(state: SMGMonInternalPfState): Unit = {
       if (state.pfCmd != pf) {
         log.warn(s"Updating changed object pre-fetch state with id ${state.id}")
         state.pfCmd = pf
       }
     }
-    getOrCreateState[SMGMonPfState](stateId, createFn, if (update) Some(updateFn) else None)
+    getOrCreateState[SMGMonInternalPfState](stateId, createFn, if (update) Some(updateFn) else None)
   }
 
-  private def getOrCreateRunState(interval: Int, pluginId: Option[String]): SMGMonRunState = {
-    val stateId = SMGMonRunState.stateId(interval, pluginId)
-    def createFn() = { new SMGMonRunState(interval, pluginId, configSvc, monLogApi, notifSvc) }
-    getOrCreateState[SMGMonRunState](stateId, createFn, None)
+  private def getOrCreateRunState(interval: Int, pluginId: Option[String]): SMGMonInternalRunState = {
+    val stateId = SMGMonInternalRunState.stateId(interval, pluginId)
+    def createFn() = { new SMGMonInternalRunState(interval, pluginId, configSvc, monLogApi, notifSvc) }
+    getOrCreateState[SMGMonInternalRunState](stateId, createFn, None)
   }
 
   private def cleanupAllMonitorStates(newTrees: Seq[SMGTree[SMGMonInternalState]]): Unit = {
@@ -144,7 +144,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val toDel = allMonitorStatesById.keySet -- allStateIds
     toDel.foreach { delId =>
       val deleted = allMonitorStatesById.remove(delId)
-      if (deleted.isDefined && deleted.get.isInstanceOf[SMGMonObjState]) {
+      if (deleted.isDefined && deleted.get.isInstanceOf[SMGMonInternalObjState]) {
         log.warn(s"Removing obsolete object state with id ${deleted.get.id}")
       }
     }
@@ -261,7 +261,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
 
   override def receiveRunMsg(msg: SMGDFRunMsg): Unit = {
     log.debug(s"SMGMonitor: receive: SMGDFRunMsg: ${msg.interval} isOverlap=${msg.isOverlap}")
-    val runState: SMGMonRunState = getOrCreateRunState(msg.interval, msg.pluginId)
+    val runState: SMGMonInternalRunState = getOrCreateRunState(msg.interval, msg.pluginId)
     if (msg.isOverlap) {
       runState.processOverlap(msg.ts)
     } else {
@@ -281,7 +281,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val ou = ov.refObj.get
     val gvIxes = if (ov.graphVarsIndexes.nonEmpty) ov.graphVarsIndexes else ou.vars.indices
     gvIxes.map { vix =>
-      val stid = SMGMonVarState.stateId(ou, vix)
+      val stid = SMGMonInternalVarState.stateId(ou, vix)
       allMonitorStatesById.get(stid)
     }.collect { case Some(x) => x }
   }
@@ -548,7 +548,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         None
       else {
         val ou = ov.refObj.get
-        val stateId = SMGMonObjState.stateId(ou)
+        val stateId = SMGMonInternalObjState.stateId(ou)
         inspectStateTree(stateId) match {
           case Some(x) => Some(x)
           case None => {
@@ -569,7 +569,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def inspectPf(pfId: String): Option[String] = {
-    val stateId = SMGMonPfState.stateId(pfId)
+    val stateId = SMGMonInternalPfState.stateId(pfId)
     allMonitorStatesById.get(pfId).map(_.serialize.toString())
   }
 

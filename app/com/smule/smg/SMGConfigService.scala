@@ -145,7 +145,7 @@ trait SMGConfigService {
   * @param vix
   * @return
   */
-  def objectValueAlertConfs(ou: SMGObjectUpdate, vix: Int): Seq[SMGMonVarAlertConf] = {
+  def objectValueAlertConfs(ou: SMGObjectUpdate, vix: Int): Seq[SMGMonAlertConfVar] = {
     val acs = config.objectAlertConfs
     if (acs.contains(ou.id))
       acs(ou.id).varConf(vix)

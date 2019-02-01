@@ -93,17 +93,17 @@ class TestConfigSvc() extends SMGConfigService {
       pluginObjects = Map(),
       pluginPreFetches = Map(),
       objectAlertConfs = Map(
-        "test.object.1" -> SMGMonObjAlertConf(
+        "test.object.1" -> SMGMonAlertConfObj(
           varConfs = Map(
             0 -> Seq(
-              SMGMonVarAlertConf(
+              SMGMonAlertConfVar(
                 SMGMonAlertConfSource.OBJ,
                 "test.object.1",
                 crit = Some(SMGMonAlertThresh(5.0, "gte")),
                 warn = Some(SMGMonAlertThresh(3.0, "gte")),
                 pluginChecks = Seq()
               ),
-              SMGMonVarAlertConf(
+              SMGMonAlertConfVar(
                 SMGMonAlertConfSource.OBJ,
                 "test.object.1",
                 crit = Some(SMGMonAlertThresh(0.0, "eq")),
@@ -113,9 +113,9 @@ class TestConfigSvc() extends SMGConfigService {
             )
           )
         ),
-        "test.pf.object.1" -> SMGMonObjAlertConf(
+        "test.pf.object.1" -> SMGMonAlertConfObj(
           varConfs = Map(
-            0 -> Seq(SMGMonVarAlertConf(
+            0 -> Seq(SMGMonAlertConfVar(
               SMGMonAlertConfSource.OBJ,
               "test.pf.object.1",
               crit = Some(SMGMonAlertThresh(5.0, "gte")),

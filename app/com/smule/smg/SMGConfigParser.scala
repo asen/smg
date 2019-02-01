@@ -115,13 +115,13 @@ class SMGConfigParser(log: SMGLoggerApi) {
     val allViewObjectsById  = mutable.Map[String,SMGObjectView]()
     val objectIds = mutable.Set[String]()
     val objectUpdateIds = mutable.Map[String, SMGObjectUpdate]()
-    val indexAlertConfs = ListBuffer[(SMGConfIndex, String, SMGMonVarAlertConf)]()
+    val indexAlertConfs = ListBuffer[(SMGConfIndex, String, SMGMonAlertConfVar)]()
     val indexNotifyConfs = ListBuffer[(SMGConfIndex, String, SMGMonNotifyConf)]()
     var indexConfs = ListBuffer[SMGConfIndex]()
     val indexIds = mutable.Set[String]()
     val indexMap = mutable.Map[String,ListBuffer[String]]()
     val hiddenIndexConfs = mutable.Map[String, SMGConfIndex]()
-    val objectAlertConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonVarAlertConf]]]()
+    val objectAlertConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonAlertConfVar]]]()
     val objectNotifyConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonNotifyConf]]]()
     var rrdDir = "smgrrd"
     val rrdTool = "rrdtool"
@@ -154,7 +154,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       configErrors += mymsg
     }
 
-    def addAlertConf(oid: String, ix: Int, ac: SMGMonVarAlertConf) = {
+    def addAlertConf(oid: String, ix: Int, ac: SMGMonAlertConfVar) = {
       if (!objectAlertConfMaps.contains(oid)) objectAlertConfMaps(oid) = mutable.Map()
       if (!objectAlertConfMaps(oid).contains(ix)) objectAlertConfMaps(oid)(ix) = ListBuffer()
       objectAlertConfMaps(oid)(ix) += ac
@@ -307,7 +307,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
             alertsLst.foreach { m =>
               val sm = m.map(t => (t._1, t._2.toString)).toMap
               val src = if (isHidden) SMGMonAlertConfSource.HINDEX else SMGMonAlertConfSource.INDEX
-              val ac = SMGMonVarAlertConf.fromVarMap(src, idx.id, sm, pluginChecks)
+              val ac = SMGMonAlertConfVar.fromVarMap(src, idx.id, sm, pluginChecks)
               if (ac.isDefined) indexAlertConfs += Tuple3(idx, sm.getOrElse("label","ds" + idx), ac.get)
               val nc = SMGMonNotifyConf.fromVarMap(src, idx.id, sm)
               if (nc.isDefined) indexNotifyConfs += Tuple3(idx, sm.getOrElse("label","ds" + idx), nc.get)
@@ -328,7 +328,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       myYmapVars.zipWithIndex.foreach { t =>
         val ix = t._2
         val m = t._1
-        val ac = SMGMonVarAlertConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m, pluginChecks)
+        val ac = SMGMonAlertConfVar.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m, pluginChecks)
         if (ac.isDefined) {
           addAlertConf(oid, ix, ac.get)
         }
@@ -344,7 +344,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       }
       // exclude alert- and notify- defs from the vars maps so it is not passed around remotes and does not mess up aggregation
       val ymapFilteredVars = myYmapVars.map { m =>
-        m.filter(t => !(SMGMonVarAlertConf.isAlertKey(t._1) || SMGMonNotifyConf.isNotifyKey(t._1)) )
+        m.filter(t => !(SMGMonAlertConfVar.isAlertKey(t._1) || SMGMonNotifyConf.isNotifyKey(t._1)) )
       }
       ymapFilteredVars
     }
@@ -726,13 +726,13 @@ class SMGConfigParser(log: SMGLoggerApi) {
     val objectAlertConfs = objectAlertConfMaps.map { t =>
       val oid = t._1
       val m = t._2.map(t => (t._1, t._2.toList)).toMap
-      (t._1, SMGMonObjAlertConf(m))
+      (t._1, SMGMonAlertConfObj(m))
     }
 
     val objectNotifyConfs = objectNotifyConfMaps.map { t =>
       val oid = t._1
       val m = t._2.map(t => (t._1, t._2.toList)).toMap
-      (t._1, SMGMonObjNotifyConf(m))
+      (t._1, SMGMonNotifyConfObj(m))
     }
 
     val allViewObjectsConf = allViewObjectIds.filter{ oid =>
