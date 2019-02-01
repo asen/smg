@@ -12,31 +12,6 @@ import play.api.libs.json.Json
   * Created by asen on 10/18/16.
   */
 
-abstract class SMGJsGraphPluginAction extends SMGPluginAction {
-  override def actionUrl(ov: SMGObjectView, period: String): String = {
-//    val myPeriod = if (actionId == "zoom") // TODO ? XXX a hack - double period for zoom ?
-//      SMGRrd.parsePeriod(period).map(pi => (2 * pi).toString).getOrElse(period)
-//    else period
-    "/plugin/" + pluginId + "?a=" + actionId +
-      "&o=" + java.net.URLEncoder.encode(ov.fetchUrl(period, GraphOptions.default), "UTF-8") // TODO support step?
-  }
-}
-
-case class SMGJsGraphZoomAction(pluginId: String) extends SMGJsGraphPluginAction {
-  override val actionId: String = "zoom"
-  override val name: String = "Zoom"
-}
-
-case class SMGJsGraphHistogramAction(pluginId: String) extends SMGJsGraphPluginAction {
-  override val actionId: String = "hist"
-  override val name: String = "Histogram"
-}
-
-case class SMGJsGraphDerive1Action(pluginId: String) extends SMGJsGraphPluginAction {
-  override val actionId: String = "deriv1"
-  override val name: String = "Deriv"
-}
-
 class SMGJsGraphPlugin(val pluginId: String,
                        val interval: Int,
                        val pluginConfFile: String,

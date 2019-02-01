@@ -14,16 +14,6 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 
 
-case class SMGCalcExprIndex(id: String,
-                            expr: String,
-                            title: Option[String],
-                            period: Option[String],
-                            step: Option[Int],
-                            maxy: Option[Double],
-                            miny: Option[Double],
-                            dpp: Boolean,
-                            d95p: Boolean
-                      )
 /**
   * Created by asen on 4/5/16.
   */

@@ -2,14 +2,13 @@ package com.smule.smgplugins.calc
 
 import java.io.File
 
-import com.smule.smg.rrd.SMGRrd.{ColorMaker, LabelMaker}
 import com.smule.smg._
 import com.smule.smg.config.SMGConfigService
-import com.smule.smg.core.SMGObjectView
 import com.smule.smg.grapher.{GraphOptions, SMGImage, SMGImageView}
 import com.smule.smg.plugin.SMGPluginLogger
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.SMGRrd
+import com.smule.smg.rrd.SMGRrd.ColorMaker
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -19,59 +18,6 @@ import scala.concurrent.{Await, Future}
 /**
   * Created by asen on 4/5/16.
   */
-
-trait ExprElem {
-  val elem: String
-  val kind: String
-
-  def toS = elem
-}
-
-case class SMGObjectViewElem(elem: String, ov: SMGObjectView, vix:Int) extends ExprElem {
-  val kind = "OV"
-
-  def graphVar = ov.filteredVars(false)(vix)
-
-  def graphVarRrdLbl = s"ds${vix}"  // TODO find the real index cause vix points to filteredVars
-}
-
-case class SMGOpElem(elem: String) extends ExprElem {
-  val kind = "OP"
-}
-
-case class SMGNumericElem(elem: String) extends ExprElem {
-  val kind = "NU"
-  val num = elem.toDouble
-}
-
-case class SMGErrElem(elem: String, err: String) extends ExprElem {
-  val kind = "ER"
-  override def toS = s"$err:$elem"
-}
-
-case class SMGRpnElem(elem: String) extends ExprElem {
-  val kind = "RP"
-}
-
-case class SMGCalcExpr(seq: Seq[ExprElem]) {
-
-  def toS = seq.map(_.toS).mkString(" ")
-
-  def outputFn(period:String, gopts: GraphOptions): String = {
-    exprId + gopts.fnSuffix(period) + ".png"
-  }
-
-  def hasErrors:Boolean = seq.exists(_.kind == "ER")
-
-  def exprId: String = {
-    val md = java.security.MessageDigest.getInstance("SHA-1")
-    md.update(toS.getBytes())
-    md.digest().map("%02x".format(_)).mkString
-  }
-
-  val firstObjectViewElem: Option[SMGObjectViewElem] = seq.find(_.kind == "OV").map(_.asInstanceOf[SMGObjectViewElem])
-
-}
 
 class SMGCalcRrd(configSvc: SMGConfigService) {
   val log = new SMGPluginLogger("calc")

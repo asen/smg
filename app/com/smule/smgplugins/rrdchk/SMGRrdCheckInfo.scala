@@ -4,17 +4,8 @@ import com.smule.smg.core.SMGObjectUpdate
 import com.smule.smg.plugin.SMGPluginLogger
 import com.smule.smg.rrd.{SMGRraDef, SMGRraInfo}
 
-import scala.collection.mutable
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
-
-case class SMGRrdVarInfo(
-                          index: Int,
-                          name: String,
-                          rrdType: String,
-                          max: Double,
-                          min: Double
-                        )
 
 case class SMGRrdCheckInfo(ou: SMGObjectUpdate, raw: List[String]) {
 
