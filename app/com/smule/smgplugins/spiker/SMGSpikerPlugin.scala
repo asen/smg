@@ -6,6 +6,12 @@ import java.util
 import java.util.Date
 
 import com.smule.smg._
+import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
+import com.smule.smg.core.SMGObjectView
+import com.smule.smg.remote._
+import com.smule.smg.grapher.SMGAggObjectView
+import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
+import com.smule.smg.rrd.{SMGRrdFetch, SMGRrdFetchAgg, SMGRrdFetchParams}
 import org.yaml.snakeyaml.Yaml
 import play.libs.Akka
 

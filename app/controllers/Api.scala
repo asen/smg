@@ -1,10 +1,15 @@
 package controllers
 
 import javax.inject.{Inject, Singleton}
-
 import akka.actor.ActorSystem
 import com.smule.smg._
+import com.smule.smg.config.SMGConfigService
+import com.smule.smg.core._
+import com.smule.smg.remote._
+import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView}
 import com.smule.smg.monitor._
+import com.smule.smg.remote.SMGRemotesApi
+import com.smule.smg.rrd.SMGRrdFetchParams
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._
@@ -28,7 +33,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
 
   val log = SMGLogger
 
-  import SMGRemoteClient._
+  import com.smule.smg.remote.SMGRemoteClient._
 
   /**
     * Reload local config (do not propagate to other remotes)

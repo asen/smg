@@ -1,5 +1,7 @@
 import com.smule.smg._
+import com.smule.smg.core.{SMGLogger, SMGObjectUpdate}
 import com.smule.smg.monitor._
+import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdate}
 import com.smule.smgplugins.mon.pop.{POPCheck, POPCheckThreshConf}
 import helpers.TestConfigSvc
 import org.junit.runner.RunWith

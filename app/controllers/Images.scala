@@ -1,9 +1,9 @@
 package controllers
 
 import java.io.File
-import javax.inject.Inject
 
-import com.smule.smg.SMGLogger
+import com.smule.smg.core.SMGLogger
+import javax.inject.Inject
 import play.Play
 import play.api.mvc.{Action, AnyContent, Controller}
 

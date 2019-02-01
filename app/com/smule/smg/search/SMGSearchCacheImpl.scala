@@ -1,6 +1,10 @@
 package com.smule.smg.search
 
 import com.smule.smg._
+import com.smule.smg.config.SMGConfigService
+import com.smule.smg.core.{SMGFetchCommandTree, SMGIndex, SMGLogger, SMGObjectView}
+import com.smule.smg.grapher.SMGAggObjectView
+import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import javax.inject.{Inject, Singleton}
 
 import scala.collection.mutable

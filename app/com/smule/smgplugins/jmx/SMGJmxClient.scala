@@ -1,6 +1,7 @@
 package com.smule.smgplugins.jmx
 
 import com.smule.smg._
+import com.smule.smg.plugin.SMGPluginLogger
 
 import scala.collection.concurrent.TrieMap
 

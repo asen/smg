@@ -1,6 +1,7 @@
 package com.smule.smgplugins.mon.anom
 
-import com.smule.smg.{SMGLogger, SMGLoggerApi, SMGRrd}
+import com.smule.smg.core.SMGLoggerApi
+import com.smule.smg.rrd.SMGRrd
 import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.mutable

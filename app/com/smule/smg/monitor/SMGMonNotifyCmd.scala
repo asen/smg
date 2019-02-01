@@ -1,6 +1,6 @@
 package com.smule.smg.monitor
 
-import com.smule.smg.SMGCmd
+import com.smule.smg.core.SMGCmd
 
 case class SMGMonNotifyCmd(id:String, command: String, timeoutSec: Int) {
 

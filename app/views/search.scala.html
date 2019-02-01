@@ -1,6 +1,6 @@
-@import com.smule.smg.SMGConfigService
-@import com.smule.smg.SMGSearchResult
-@import com.smule.smg.SMGRemote
+@import com.smule.smg.config.SMGConfigService
+@import com.smule.smg.search.SMGSearchResult
+@import com.smule.smg.remote.SMGRemote
 
 @(q: String, res: Seq[SMGSearchResult], hasMore: Boolean, lmt:Int, defaultLmt:Int,
   cfSvc: SMGConfigService)(implicit flash: Flash)

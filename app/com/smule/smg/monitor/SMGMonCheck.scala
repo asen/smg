@@ -5,6 +5,7 @@ package com.smule.smg.monitor
   */
 
 import com.smule.smg._
+import com.smule.smg.core.SMGObjectUpdate
 
 trait SMGMonCheck {
 

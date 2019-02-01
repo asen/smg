@@ -1,4 +1,4 @@
-@import com.smule.smg.SMGRemote
+@import com.smule.smg.remote.SMGRemote
 @(remoteId: String, isMuted: Boolean, curUrl: String)
 @action = {@if(isMuted){/monitor/unmute}else{/monitor/mute}}
 @submitVal = {@if(isMuted){ Unmute } else { Mute}}

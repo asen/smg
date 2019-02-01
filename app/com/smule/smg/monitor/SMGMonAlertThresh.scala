@@ -1,6 +1,6 @@
 package com.smule.smg.monitor
 
-import com.smule.smg.SMGLogger
+import com.smule.smg.core.SMGLogger
 
 case class SMGMonAlertThresh(value: Double, op: String) {
 

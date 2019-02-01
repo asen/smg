@@ -1,6 +1,8 @@
 package com.smule.smg.search
 
 import com.smule.smg._
+import com.smule.smg.config.SMGConfigReloadListener
+import com.smule.smg.core.{SMGIndex, SMGObjectView}
 
 
 /**

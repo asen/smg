@@ -1,8 +1,8 @@
-@import com.smule.smg.SMGIndex
-@import com.smule.smg.SMGFilter
-@import com.smule.smg.SMGRemote
-@import com.smule.smg.GraphOptions
-@import com.smule.smg.SMGAggGroupBy
+@import com.smule.smg.core.SMGIndex
+@import com.smule.smg.core.SMGFilter
+@import com.smule.smg.remote.SMGRemote
+@import com.smule.smg.grapher.GraphOptions
+@import com.smule.smg.core.SMGAggGroupBy
 
 @(ix: Option[SMGIndex], flt: SMGFilter, period: String, cols: Int, rows: Int,
         availRemotes: Seq[SMGRemote], aggOp: Option[String],

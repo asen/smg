@@ -3,7 +3,8 @@ package com.smule.smg.monitor
 import java.text.SimpleDateFormat
 import java.util.Date
 
-import com.smule.smg.{SMGLogger, SMGRemote, SMGRemoteClient}
+import com.smule.smg.core.SMGLogger
+import com.smule.smg.remote.{SMGRemote, SMGRemoteClient}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, JsValue, Json, Reads}
 

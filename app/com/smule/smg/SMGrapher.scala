@@ -7,6 +7,11 @@ import javax.inject.{Inject, Singleton}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
+import com.smule.smg.config.{SMGAutoIndex, SMGConfigService}
+import com.smule.smg.core._
+import com.smule.smg.grapher._
+import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
+import com.smule.smg.rrd.{SMGRrdFetch, SMGRrdFetchAgg, SMGRrdFetchParams, SMGRrdRow}
 import com.smule.smg.search.SMGSearchCache
 
 import scala.collection.concurrent.TrieMap
@@ -90,10 +95,10 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
 
     if (!SMGStagedRunCounter.resetInterval(interval, stages)) {
       log.error(s"SMGrapher.run(interval=$interval): Overlapping runs detected - aborting")
-      configSvc.sendRunMsg(SMGDFRunMsg(interval, List("Overlapping runs detected"), None))
+      configSvc.sendRunMsg(SMGDataFeedMsgRun(interval, List("Overlapping runs detected"), None))
       return
     } else {
-      configSvc.sendRunMsg(SMGDFRunMsg(interval, List(), None))
+      configSvc.sendRunMsg(SMGDataFeedMsgRun(interval, List(), None))
     }
     Future {
       commandTrees.foreach { fRoot =>
@@ -391,7 +396,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   /**
     *
     * @param obj
-    * @param params [[SMGRrdFetchParams]]
+    * @param params
     * @return
     */
   override def fetch(obj: SMGObjectView, params: SMGRrdFetchParams): Future[Seq[SMGRrdRow]] = {

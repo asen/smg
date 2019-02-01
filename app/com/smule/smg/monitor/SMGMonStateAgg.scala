@@ -1,6 +1,7 @@
 package com.smule.smg.monitor
 
-import com.smule.smg.{SMGIndex, SMGRemote}
+import com.smule.smg.core.SMGIndex
+import com.smule.smg.remote.SMGRemote
 
 
 // local agg (condensed) mon state

@@ -1,6 +1,6 @@
 package com.smule.smg.search
 
-import com.smule.smg.SMGIndex
+import com.smule.smg.core.SMGIndex
 
 /**
   * Created by asen on 9/3/16.

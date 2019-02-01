@@ -1,7 +1,10 @@
 import java.io.File
 
 import com.smule.smg._
+import com.smule.smg.core.{SMGDataFeedMsgObj, SMGDataFeedMsgPf}
 import com.smule.smg.monitor._
+import com.smule.smg.remote.SMGRemotesApi
+import com.smule.smg.rrd.SMGRrd
 import org.scalatest.mockito.MockitoSugar
 import play.api.inject.ApplicationLifecycle
 import play.api.test._
@@ -55,9 +58,9 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       // step 0, send some OK data
       val nonPfObj = cs.config.updateObjectsById("test.object.1")
 
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
 
       verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
       verify(monlog, times(0)).logMsg(any[SMGMonitorLogMsg]())
@@ -84,15 +87,15 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       // step 0, send some OK data
       val nonPfObj = cs.config.updateObjectsById("test.object.1")
 
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
 
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 240, nonPfObj, List(4.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 300, nonPfObj, List(6.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 360, nonPfObj, List(6.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 240, nonPfObj, List(4.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 300, nonPfObj, List(6.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 360, nonPfObj, List(6.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
 
       verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
       verify(monlog, times(3)).logMsg(any[SMGMonitorLogMsg]())
@@ -120,16 +123,16 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
       // step 0, send some OK data
       val nonPfObj = cs.config.updateObjectsById("test.object.1")
 
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
 
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 240, nonPfObj, List(4.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 300, nonPfObj, List(4.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 360, nonPfObj, List(4.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
-      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 480, nonPfObj, List(6.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 240, nonPfObj, List(4.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 300, nonPfObj, List(4.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 360, nonPfObj, List(4.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
+      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 480, nonPfObj, List(6.0, 1.0), 0, List()))
 
       verify(notifSvc, times(2)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]](), any[Boolean]())
       verify(monlog, times(4)).logMsg(any[SMGMonitorLogMsg]())
@@ -157,16 +160,16 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 //      // step 0, send some OK data
 //      val nonPfObj = cs.config.updateObjectsById("test.object.1")
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 240, nonPfObj, List(4.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 300, nonPfObj, List(4.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 360, nonPfObj, List(4.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 480, nonPfObj, List(1.5, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 240, nonPfObj, List(4.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 300, nonPfObj, List(4.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 360, nonPfObj, List(4.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 480, nonPfObj, List(1.5, 1.0), 0, List()))
 //
 //      verify(notifSvc, times(2)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
 //      verify(notifSvc, times(3)).sendRecoveryMessages(any[SMGMonState]()) // sent 2 times - for each var
@@ -195,17 +198,17 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 //      // step 0, send some OK data
 //      val nonPfObj = cs.config.updateObjectsById("test.object.1")
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
 //      mon.silenceLocalObject(nonPfObj.id, SMGMonSilenceAction(SMGMonSilenceAction.ACK, true, None))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 240, nonPfObj, List(4.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 300, nonPfObj, List(4.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 360, nonPfObj, List(4.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 480, nonPfObj, List(1.5, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 240, nonPfObj, List(4.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 300, nonPfObj, List(4.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 360, nonPfObj, List(4.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 480, nonPfObj, List(1.5, 1.0), 0, List()))
 //
 //      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
 //      verify(notifSvc, times(3)).sendRecoveryMessages(any[SMGMonState]()) // sent 2 times - for each var
@@ -234,17 +237,17 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 //      // step 0, send some OK data
 //      val nonPfObj = cs.config.updateObjectsById("test.object.1")
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
 //      mon.silenceLocalObject(nonPfObj.id, SMGMonSilenceAction(SMGMonSilenceAction.SILENCE, true, Some(startOfTest + 3600)))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 240, nonPfObj, List(4.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 300, nonPfObj, List(4.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 360, nonPfObj, List(4.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 480, nonPfObj, List(1.5, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 240, nonPfObj, List(4.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 300, nonPfObj, List(4.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 360, nonPfObj, List(4.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 420, nonPfObj, List(6.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 480, nonPfObj, List(1.5, 1.0), 0, List()))
 //
 //      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
 //      verify(notifSvc, times(3)).sendRecoveryMessages(any[SMGMonState]()) // sent 2 times - for each var
@@ -275,14 +278,14 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 //      // step 0, send some OK data
 //      val nonPfObj = cs.config.updateObjectsById("test.object.1")
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 180, nonPfObj, List(), 7, List("fetch error")))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 240, nonPfObj, List(), 7, List("fetch error")))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 300, nonPfObj, List(), 7, List("fetch error")))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 360, nonPfObj, List(), 7, List("fetch error")))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 180, nonPfObj, List(), 7, List("fetch error")))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 240, nonPfObj, List(), 7, List("fetch error")))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 300, nonPfObj, List(), 7, List("fetch error")))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 360, nonPfObj, List(), 7, List("fetch error")))
 //
 //
 //      verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
@@ -311,13 +314,13 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 //      // step 0, send some OK data
 //      val nonPfObj = cs.config.updateObjectsById("test.object.1")
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 180, nonPfObj, List(), 7, List("fetch error")))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 300, nonPfObj, List(), 7, List("fetch error")))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 360, nonPfObj, List(6.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 180, nonPfObj, List(), 7, List("fetch error")))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 300, nonPfObj, List(), 7, List("fetch error")))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 360, nonPfObj, List(6.0, 1.0), 0, List()))
 //
 //      verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
 //      verify(monlog, times(4)).logMsg(any[SMGMonitorLogMsg]()) // 3 errors + 1 recovery
@@ -346,13 +349,13 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 //      // step 0, send some OK data
 //      val nonPfObj = cs.config.updateObjectsById("test.object.1")
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, nonPfObj, List(1.0, 2.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 60, nonPfObj, List(2.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 120, nonPfObj, List(1.5, 2.5), 0, List()))
 //
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 240, nonPfObj, List(), 7, List("fetch error")))
-//      mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 300, nonPfObj, List(), 7, List("fetch error")))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 180, nonPfObj, List(6.0, 1.0), 0, List()))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 240, nonPfObj, List(), 7, List("fetch error")))
+//      mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 300, nonPfObj, List(), 7, List("fetch error")))
 //
 //      verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
 //      verify(monlog, times(3)).logMsg(any[SMGMonitorLogMsg]()) // 3 errors
@@ -388,19 +391,19 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 
       // step 0, send some OK data
 
-      mon.receivePfMsg(SMGDFPfMsg(startOfTest, pf.id, pfObj1.interval, pfObjs, 0, List(), None))
+      mon.receivePfMsg(SMGDataFeedMsgPf(startOfTest, pf.id, pfObj1.interval, pfObjs, 0, List(), None))
       pfObjs.foreach { pfo =>
-        mon.receiveObjMsg(SMGDFObjMsg(startOfTest, pfo, List(1.0, 2.0), 0, List()))
+        mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, pfo, List(1.0, 2.0), 0, List()))
       }
 
-      mon.receivePfMsg(SMGDFPfMsg(startOfTest + 60, pf.id, pfObj1.interval, pfObjs, 0, List(), None))
+      mon.receivePfMsg(SMGDataFeedMsgPf(startOfTest + 60, pf.id, pfObj1.interval, pfObjs, 0, List(), None))
       pfObjs.foreach { pfo =>
-        mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 60, pfo, List(2.0, 1.0), 0, List()))
+        mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 60, pfo, List(2.0, 1.0), 0, List()))
       }
 
-      mon.receivePfMsg(SMGDFPfMsg(startOfTest + 120, pf.id, pfObj1.interval, pfObjs, 0, List(), None))
+      mon.receivePfMsg(SMGDataFeedMsgPf(startOfTest + 120, pf.id, pfObj1.interval, pfObjs, 0, List(), None))
       pfObjs.foreach { pfo =>
-        mon.receiveObjMsg(SMGDFObjMsg(startOfTest + 120, pfo, List(1.0, 2.0), 0, List()))
+        mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest + 120, pfo, List(1.0, 2.0), 0, List()))
       }
 
       verify(monlog, times(0)).logMsg(any[SMGMonitorLogMsg]())
@@ -434,35 +437,35 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 
       // step 0, send some OK data
 
-      mon.receivePfMsg(SMGDFPfMsg(startOfTest, pf.id, 60, pfObjs, 0, List(), None))
+      mon.receivePfMsg(SMGDataFeedMsgPf(startOfTest, pf.id, 60, pfObjs, 0, List(), None))
       pfObjs.foreach { pfo =>
-        mon.receiveObjMsg(SMGDFObjMsg(startOfTest, pfo, List(1.0, 2.0), 0, List()))
+        mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, pfo, List(1.0, 2.0), 0, List()))
       }
 
       var curTs = startOfTest + 60
-      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 0, List(), None))
+      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, 60, pfObjs, 0, List(), None))
       pfObjs.foreach { pfo =>
-        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(2.0, 1.0), 0, List()))
+        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(2.0, 1.0), 0, List()))
       }
 
       curTs = startOfTest + 120
-      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 0, List(), None))
+      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, 60, pfObjs, 0, List(), None))
       pfObjs.foreach { pfo =>
-        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(1.0, 2.0), 0, List()))
+        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(1.0, 2.0), 0, List()))
       }
 
       // step 1 send error msgs
       curTs = startOfTest + 180
-      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
+      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
 
       curTs = startOfTest + 240
-      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
+      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
 
       curTs = startOfTest + 300
-      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
+      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
 
       curTs = startOfTest + 360
-      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
+      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, 60, pfObjs, 7, List("pf error"), None))
 
       verify(monlog, times(2)).logMsg(any[SMGMonitorLogMsg]())
 
@@ -502,28 +505,28 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 //
 //      // step 0, send some OK data
 //
-//      mon.receivePfMsg(SMGDFPfMsg(startOfTest, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(startOfTest, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(startOfTest, pfo, List(1.0, 2.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, pfo, List(1.0, 2.0), 0, List()))
 //      }
 //
 //      var curTs = startOfTest + 60
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(2.0, 1.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(2.0, 1.0), 0, List()))
 //      }
 //
 //      curTs = startOfTest + 120
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(1.0, 2.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(1.0, 2.0), 0, List()))
 //      }
 //
 //      // step 1 send error msgs
 //      curTs = startOfTest + 180
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 7, List("pf error")))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(), 7, List("pf error")))
 //      }
 //
 //      //ack the pf error
@@ -531,21 +534,21 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 //
 //
 //      curTs = startOfTest + 240
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 7, List("pf error")))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(), 7, List("pf error")))
 //      }
 //
 //      curTs = startOfTest + 300
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 7, List("pf error")))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(), 7, List("pf error")))
 //      }
 //
 //      curTs = startOfTest + 360
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 7, List("pf error")))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(), 7, List("pf error")))
 //      }
 //
 //      verify(notifSvc, times(0)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
@@ -579,52 +582,52 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 //
 //      // step 0, send some OK data
 //
-//      mon.receivePfMsg(SMGDFPfMsg(startOfTest, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(startOfTest, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(startOfTest, pfo, List(1.0, 2.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, pfo, List(1.0, 2.0), 0, List()))
 //      }
 //
 //      var curTs = startOfTest + 60
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(2.0, 1.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(2.0, 1.0), 0, List()))
 //      }
 //
 //      curTs = startOfTest + 120
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(1.0, 2.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(1.0, 2.0), 0, List()))
 //      }
 //
 //      // step 1 send error msgs
 //      curTs = startOfTest + 180
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 7, List("pf error")))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(), 7, List("pf error")))
 //      }
 //
 //      curTs = startOfTest + 240
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 7, List("pf error")))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(), 7, List("pf error")))
 //      }
 //
 //      curTs = startOfTest + 300
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 7, List("pf error")))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(), 7, List("pf error")))
 //      }
 //
 //      curTs = startOfTest + 360
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 7, List("pf error")))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(), 7, List("pf error")))
 //      }
 //
 //      curTs = startOfTest + 420
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(6.0, 1.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(6.0, 1.0), 0, List()))
 //      }
 //
 //      verify(notifSvc, times(2)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())
@@ -658,53 +661,53 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 //
 //      // step 0, send some OK data
 //
-//      mon.receivePfMsg(SMGDFPfMsg(startOfTest, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(startOfTest, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(startOfTest, pfo, List(1.0, 2.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(startOfTest, pfo, List(1.0, 2.0), 0, List()))
 //      }
 //
 //      var curTs = startOfTest + 60
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(2.0, 1.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(2.0, 1.0), 0, List()))
 //      }
 //
 //      curTs = startOfTest + 120
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(1.0, 2.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(1.0, 2.0), 0, List()))
 //      }
 //
 //      // step 1 send error msgs
 //      curTs = startOfTest + 180
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 7, List("pf error")))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(), 7, List("pf error")))
 //      }
 //
 //      curTs = startOfTest + 240
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(6.0, 1.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(6.0, 1.0), 0, List()))
 //      }
 //
 //
 //      curTs = startOfTest + 300
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 7, List("pf error")))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 7, List("pf error")))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(), 7, List("pf error")))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(), 7, List("pf error")))
 //      }
 //
 //      curTs = startOfTest + 360
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(6.0, 1.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(6.0, 1.0), 0, List()))
 //      }
 //
 //      curTs = startOfTest + 420
-//      mon.receivePfMsg(SMGDFPfMsg(curTs, pf.id, pfObjs, 0, List()))
+//      mon.receivePfMsg(SMGDataFeedMsgPf(curTs, pf.id, pfObjs, 0, List()))
 //      pfObjs.foreach { pfo =>
-//        mon.receiveObjMsg(SMGDFObjMsg(curTs, pfo, List(6.0, 1.0), 0, List()))
+//        mon.receiveObjMsg(SMGDataFeedMsgObj(curTs, pfo, List(6.0, 1.0), 0, List()))
 //      }
 //
 //      verify(notifSvc, times(1)).sendAlertMessages(any[SMGMonState](), any[Seq[SMGMonNotifyCmd]]())

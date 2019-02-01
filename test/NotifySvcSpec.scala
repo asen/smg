@@ -1,5 +1,6 @@
 import com.smule.smg._
 import com.smule.smg.monitor._
+import com.smule.smg.remote.SMGRemotesApi
 import helpers.TestConfigSvc
 import org.junit.runner.RunWith
 import org.mockito.Matchers._

@@ -1,6 +1,7 @@
 package com.smule.smg.monitor
 
-import com.smule.smg.{SMGConfigService, SMGPreFetchCmd}
+import com.smule.smg.config.SMGConfigService
+import com.smule.smg.core.SMGPreFetchCmd
 
 class SMGMonInternalPfState(var pfCmd: SMGPreFetchCmd,
                             intervals: Seq[Int],

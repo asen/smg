@@ -10,7 +10,8 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 
-import com.smule.smg._
+import com.smule.smg.core._
+import com.smule.smg.remote._
 
 case class SMGMonFilter(rx: Option[String],
                         rxx: Option[String],

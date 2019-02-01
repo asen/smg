@@ -1,7 +1,9 @@
 package com.smule.smgplugins.mon
 
 import com.smule.smg._
+import com.smule.smg.config.SMGConfigService
 import com.smule.smg.monitor._
+import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 import com.smule.smgplugins.mon.anom.AnomCheck
 import com.smule.smgplugins.mon.ex.ExtendedCheck
 import com.smule.smgplugins.mon.pop.POPCheck

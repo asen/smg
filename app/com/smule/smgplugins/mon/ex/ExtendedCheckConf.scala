@@ -3,7 +3,7 @@ package com.smule.smgplugins.mon.ex
 import java.time.Instant
 import java.util.{Calendar, Date}
 
-import com.smule.smg.SMGRrd
+import com.smule.smg.rrd.SMGRrd
 
 import scala.util.Try
 

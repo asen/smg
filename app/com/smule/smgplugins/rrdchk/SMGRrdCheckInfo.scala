@@ -1,6 +1,8 @@
 package com.smule.smgplugins.rrdchk
 
-import com.smule.smg.{SMGObjectUpdate, SMGPluginLogger, SMGRraDef, SMGRraInfo}
+import com.smule.smg.core.SMGObjectUpdate
+import com.smule.smg.plugin.SMGPluginLogger
+import com.smule.smg.rrd.{SMGRraDef, SMGRraInfo}
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}

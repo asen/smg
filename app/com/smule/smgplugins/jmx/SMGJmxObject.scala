@@ -1,7 +1,9 @@
 package com.smule.smgplugins.jmx
 
 import com.smule.smg._
+import com.smule.smg.core.{SMGObjectUpdate, SMGObjectView}
 import com.smule.smg.monitor.SMGMonNotifyConf
+import com.smule.smg.rrd.SMGRraDef
 
 /**
   * Created by asen on 5/16/16.

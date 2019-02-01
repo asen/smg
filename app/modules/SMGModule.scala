@@ -2,7 +2,10 @@ package modules
 
 import com.google.inject.AbstractModule
 import com.smule.smg._
+import com.smule.smg.config.{SMGConfigService, SMGConfigServiceImpl}
+import com.smule.smg.core.{ExecutionContexts, SMGExecutionContexts, SMGScheduler, SMGSchedulerApi}
 import com.smule.smg.monitor._
+import com.smule.smg.remote.{SMGRemotes, SMGRemotesApi}
 import com.smule.smg.search.{SMGSearchCache, SMGSearchCacheImpl}
 import play.api.{Configuration, Environment}
 

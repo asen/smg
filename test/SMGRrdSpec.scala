@@ -1,4 +1,5 @@
-import com.smule.smg.{GraphOptions, SMGRraDef, SMGRrd, SMGRrdConfig}
+import com.smule.smg.grapher.GraphOptions
+import com.smule.smg.rrd.{SMGRraDef, SMGRrd}
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner

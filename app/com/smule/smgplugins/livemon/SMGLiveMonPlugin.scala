@@ -1,6 +1,9 @@
 package com.smule.smgplugins.livemon
 
 import com.smule.smg._
+import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
+import com.smule.smg.core.SMGObjectView
+import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 import play.libs.Akka
 
 import scala.concurrent.ExecutionContext

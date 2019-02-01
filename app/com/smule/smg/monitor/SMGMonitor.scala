@@ -1,8 +1,8 @@
 package com.smule.smg.monitor
 
 import java.io.{File, FileWriter}
-import javax.inject.{Inject, Singleton}
 
+import javax.inject.{Inject, Singleton}
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsValue, Json}
 
@@ -11,8 +11,11 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.io.Source
-
 import com.smule.smg._
+import com.smule.smg.config.{SMGConfigReloadListener, SMGConfigService, SMGLocalConfig}
+import com.smule.smg.core._
+import com.smule.smg.grapher.SMGAggObjectView
+import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 
 /**
   * Created by asen on 11/12/16.
@@ -202,8 +205,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     notifSvc.configReloaded()
   }
 
-  override def receiveObjMsg(msg: SMGDFObjMsg): Unit = {
-    log.debug(s"SMGMonitor: receive: SMGDFObjMsg: ${msg.obj.id} (${msg.obj.interval}/${msg.obj.pluginId})")
+  override def receiveObjMsg(msg: SMGDataFeedMsgObj): Unit = {
+    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgObj: ${msg.obj.id} (${msg.obj.interval}/${msg.obj.pluginId})")
     val objState = getOrCreateObjState(msg.obj)
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       // process object error
@@ -224,8 +227,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
-  override def receivePfMsg(msg: SMGDFPfMsg): Unit = {
-    log.debug(s"SMGMonitor: receive: SMGDFPfMsg: ${msg.pfId} (${msg.interval}/${msg.pluginId})")
+  override def receivePfMsg(msg: SMGDataFeedMsgPf): Unit = {
+    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgPf: ${msg.pfId} (${msg.interval}/${msg.pluginId})")
     val pf = if (msg.pluginId.isEmpty)
       configSvc.config.preFetches.get(msg.pfId)
     else
@@ -259,8 +262,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
-  override def receiveRunMsg(msg: SMGDFRunMsg): Unit = {
-    log.debug(s"SMGMonitor: receive: SMGDFRunMsg: ${msg.interval} isOverlap=${msg.isOverlap}")
+  override def receiveRunMsg(msg: SMGDataFeedMsgRun): Unit = {
+    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgRun: ${msg.interval} isOverlap=${msg.isOverlap}")
     val runState: SMGMonInternalRunState = getOrCreateRunState(msg.interval, msg.pluginId)
     if (msg.isOverlap) {
       runState.processOverlap(msg.ts)

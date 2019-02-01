@@ -8,8 +8,11 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source
-
 import com.smule.smg._
+import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
+import com.smule.smg.core.{SMGDataFeedMsgRun, SMGObjectView, SMGPreFetchCmd, SMGRunStats}
+import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
+import com.smule.smg.rrd.SMGRrd
 
 /**
   * TODO
@@ -127,10 +130,10 @@ class SMGJmxPlugin (val pluginId: String,
           } else {
             log.error(s"SMGJmxPlugin.run: overlapping runs - aborting")
           }
-          smgConfSvc.sendRunMsg(SMGDFRunMsg(interval, List(s"JMX ($pluginId) - overlapping runs"), Some(pluginId)))
+          smgConfSvc.sendRunMsg(SMGDataFeedMsgRun(interval, List(s"JMX ($pluginId) - overlapping runs"), Some(pluginId)))
         } else {
           lastRunTss = SMGRrd.tssNow
-          smgConfSvc.sendRunMsg(SMGDFRunMsg(interval, List(), Some(pluginId)))
+          smgConfSvc.sendRunMsg(SMGDataFeedMsgRun(interval, List(), Some(pluginId)))
           val objectsToUpdate = jmxObjects.synchronized(jmxObjects)
           if (objectsToUpdate.isEmpty){
             log.info(s"SMGJmxPlugin.run: no objects defined")

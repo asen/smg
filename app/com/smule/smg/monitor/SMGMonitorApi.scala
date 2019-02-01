@@ -1,8 +1,9 @@
 package com.smule.smg.monitor
 
 import scala.concurrent.Future
-
 import com.smule.smg._
+import com.smule.smg.core.{SMGFilter, SMGIndex, SMGObjectView, SMGTree}
+import com.smule.smg.remote.SMGRemote
 
 
 /**

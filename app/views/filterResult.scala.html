@@ -1,14 +1,14 @@
-@import com.smule.smg.SMGImageView
-@import com.smule.smg.SMGAggObjectView
-@import com.smule.smg.SMGFilter
+@import com.smule.smg.grapher.SMGImageView
+@import com.smule.smg.grapher.SMGAggObjectView
+@import com.smule.smg.core.SMGFilter
 @import com.smule.smg.GrapherApi ; val predefPeriods = GrapherApi.detailPeriods
-@import com.smule.smg.SMGRemote
-@import com.smule.smg.SMGIndex
-@import com.smule.smg.SMGConfigService
-@import com.smule.smg.GraphOptions
+@import com.smule.smg.remote.SMGRemote
+@import com.smule.smg.core.SMGIndex
+@import com.smule.smg.config.SMGConfigService
+@import com.smule.smg.grapher.GraphOptions
 @import com.smule.smg.monitor.SMGMonState
 @import com.smule.smg.monitor.SMGMonStateAgg
-@import com.smule.smg.SMGLocalConfig
+@import com.smule.smg.config.SMGLocalConfig
 @import controllers.Application
 
 @(cfSvc: SMGConfigService, idx: Option[SMGIndex], parentIdx: Option[SMGIndex],

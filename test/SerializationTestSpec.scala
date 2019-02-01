@@ -1,5 +1,7 @@
 import com.smule.smg._
+import com.smule.smg.core.{SMGCmd, SMGFetchCommand, SMGFetchCommandTree}
 import com.smule.smg.monitor._
+import com.smule.smg.remote.{SMGRemote, SMGRemoteClient}
 import helpers.{TestConfigSvc, TestUtil}
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification

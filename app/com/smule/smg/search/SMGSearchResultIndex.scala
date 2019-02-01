@@ -1,6 +1,8 @@
 package com.smule.smg.search
 
 import com.smule.smg._
+import com.smule.smg.core.{SMGIndex, SMGObjectView}
+import com.smule.smg.remote.SMGRemote
 
 case class SMGSearchResultIndex(idx: SMGIndex, ovs: Seq[SMGObjectView]) extends SMGSearchResult {
   val typeStr = "Index"

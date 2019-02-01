@@ -1,6 +1,6 @@
 package helpers
 
-import com.smule.smg.ExecutionContexts
+import com.smule.smg.core.ExecutionContexts
 
 import scala.concurrent.ExecutionContext
 

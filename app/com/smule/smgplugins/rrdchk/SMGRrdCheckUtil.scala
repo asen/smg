@@ -4,6 +4,9 @@ import java.io.File
 import java.nio.file.{Files, StandardCopyOption}
 
 import com.smule.smg._
+import com.smule.smg.config.SMGConfigService
+import com.smule.smg.core._
+import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdate}
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try

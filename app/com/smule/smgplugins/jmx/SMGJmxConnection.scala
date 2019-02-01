@@ -1,10 +1,9 @@
 package com.smule.smgplugins.jmx
 
+import com.smule.smg.plugin.SMGPluginLogger
 import javax.management.{MBeanServerConnection, ObjectName}
 import javax.management.openmbean.CompositeData
 import javax.management.remote.{JMXConnector, JMXConnectorFactory, JMXServiceURL}
-
-import com.smule.smg.SMGPluginLogger
 
 import scala.util.Try
 import scala.collection.JavaConversions._

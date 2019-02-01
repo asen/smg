@@ -4,8 +4,8 @@ import java.io.{File, FileWriter}
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.inject.{Inject, Singleton}
 
+import javax.inject.{Inject, Singleton}
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -13,8 +13,11 @@ import play.api.libs.json._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source
-
 import com.smule.smg._
+import com.smule.smg.config.SMGConfigService
+import com.smule.smg.core.SMGLogger
+import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
+import com.smule.smg.rrd.SMGRrd
 
 /**
   * Created by asen on 7/15/16.

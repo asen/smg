@@ -1,9 +1,11 @@
 import com.smule.smg._
+import com.smule.smg.core.SMGLogger
 import com.smule.smgplugins.mon.anom.{AnomThreshConf, ValueMovingStats}
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
 import com.smule.smg.monitor._
+import com.smule.smg.rrd.SMGRrd
 
 import scala.math._
 

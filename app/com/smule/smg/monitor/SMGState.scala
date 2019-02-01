@@ -5,8 +5,8 @@ import java.util.Date
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Reads}
-
 import com.smule.smg._
+import com.smule.smg.rrd.SMGRrd
 
 object SMGState extends Enumeration {
 

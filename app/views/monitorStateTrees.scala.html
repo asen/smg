@@ -1,9 +1,9 @@
-@import com.smule.smg.SMGConfigService
+@import com.smule.smg.config.SMGConfigService
 @import com.smule.smg.monitor.SMGMonState
 @import com.smule.smg.monitor.SMGMonFilter
-@import com.smule.smg.SMGTree
+@import com.smule.smg.core.SMGTree
 @import com.smule.smg.monitor.SMGState
-@import com.smule.smg.SMGRemote
+@import com.smule.smg.remote.SMGRemote
 @(cfSvc: SMGConfigService, rmtIds: Seq[String], availRemotes: Seq[String], flt: SMGMonFilter,
   rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], total: Int,
   limit: Int, defLimit: Int, curUrl: String)(implicit flash: Flash)

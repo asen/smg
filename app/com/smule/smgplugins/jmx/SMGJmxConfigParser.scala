@@ -3,7 +3,10 @@ package com.smule.smgplugins.jmx
 import java.util
 
 import com.smule.smg._
+import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
+import com.smule.smg.core.{SMGCmd, SMGFilter, SMGPreFetchCmd}
 import com.smule.smg.monitor._
+import com.smule.smg.plugin.SMGPluginLogger
 import org.yaml.snakeyaml.Yaml
 
 import scala.collection.mutable.ListBuffer

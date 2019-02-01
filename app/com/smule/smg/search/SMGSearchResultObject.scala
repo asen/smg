@@ -1,6 +1,7 @@
 package com.smule.smg.search
 
-import com.smule.smg.{SMGIndex, SMGObjectView, SMGRemote}
+import com.smule.smg.core.{SMGIndex, SMGObjectView}
+import com.smule.smg.remote.SMGRemote
 
 case class SMGSearchResultObject(ov: SMGObjectView) extends SMGSearchResult {
   val typeStr = "Object"

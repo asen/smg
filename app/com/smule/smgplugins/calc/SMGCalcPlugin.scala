@@ -1,6 +1,11 @@
 package com.smule.smgplugins.calc
 
 import com.smule.smg._
+import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
+import com.smule.smg.core.SMGObjectView
+import com.smule.smg.grapher.{GraphOptions, SMGImageView}
+import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
+import com.smule.smg.rrd.SMGRrd
 import org.yaml.snakeyaml.Yaml
 
 import scala.io.Source

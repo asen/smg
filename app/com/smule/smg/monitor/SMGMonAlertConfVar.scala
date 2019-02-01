@@ -1,6 +1,6 @@
 package com.smule.smg.monitor
 
-import com.smule.smg.{SMGLogger, SMGObjectUpdate}
+import com.smule.smg.core.{SMGLogger, SMGObjectUpdate}
 
 import scala.collection.mutable.ListBuffer
 

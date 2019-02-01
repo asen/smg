@@ -1,7 +1,10 @@
 package com.smule.smgplugins.mon.ex
 
 import com.smule.smg._
+import com.smule.smg.config.SMGConfigService
+import com.smule.smg.core.{SMGLoggerApi, SMGObjectUpdate, SMGObjectView}
 import com.smule.smg.monitor._
+import com.smule.smg.rrd.{SMGRrd, SMGRrdFetch, SMGRrdFetchParams}
 
 import scala.collection.concurrent.TrieMap
 

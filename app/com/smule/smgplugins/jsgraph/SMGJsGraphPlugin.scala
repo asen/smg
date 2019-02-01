@@ -1,6 +1,10 @@
 package com.smule.smgplugins.jsgraph
 
 import com.smule.smg._
+import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
+import com.smule.smg.core.{SMGAggGroupBy, SMGObjectView}
+import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView}
+import com.smule.smg.plugin.{SMGPlugin, SMGPluginAction, SMGPluginLogger}
 import play.api.{Mode, Play}
 import play.api.libs.json.Json
 
@@ -93,7 +97,7 @@ class SMGJsGraphPlugin(val pluginId: String,
     else renderChart(actionId.get, objView.get, objFetchUrl.get)
   }
 
-  import SMGRemoteClient._  // needed to serialize the SMGObjectView to json
+  import com.smule.smg.remote.SMGRemoteClient._  // needed to serialize the SMGObjectView to json
 
   private def plotlyRef = if (Play.current.mode == Mode.Dev){
     <script src="https://cdn.plot.ly/plotly-1.18.0.min.js"></script>

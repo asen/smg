@@ -1,6 +1,7 @@
 import java.io.File
 
-import com.smule.smg.{SMGConfigParser, SMGLogger}
+import com.smule.smg.config.SMGConfigParser
+import com.smule.smg.core.SMGLogger
 import helpers.TestConfigSvc
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification

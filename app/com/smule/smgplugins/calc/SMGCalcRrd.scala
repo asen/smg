@@ -2,8 +2,14 @@ package com.smule.smgplugins.calc
 
 import java.io.File
 
-import com.smule.smg.SMGRrd.{ColorMaker, LabelMaker}
+import com.smule.smg.rrd.SMGRrd.{ColorMaker, LabelMaker}
 import com.smule.smg._
+import com.smule.smg.config.SMGConfigService
+import com.smule.smg.core.SMGObjectView
+import com.smule.smg.grapher.{GraphOptions, SMGImage, SMGImageView}
+import com.smule.smg.plugin.SMGPluginLogger
+import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
+import com.smule.smg.rrd.SMGRrd
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer

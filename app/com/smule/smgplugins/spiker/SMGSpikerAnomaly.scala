@@ -1,6 +1,6 @@
 package com.smule.smgplugins.spiker
 
-import com.smule.smg.SMGObjectView
+import com.smule.smg.core.SMGObjectView
 
 /**
   * Created by asen on 9/26/16.

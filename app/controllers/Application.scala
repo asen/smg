@@ -2,12 +2,17 @@ package controllers
 
 import java.io.InputStream
 import java.util.Date
-import javax.inject.{Inject, Singleton}
 
+import javax.inject.{Inject, Singleton}
 import akka.actor.ActorSystem
 import com.ning.http.client.providers.netty.response.NettyResponse
 import com.smule.smg._
+import com.smule.smg.config.{SMGConfigService, SMGLocalConfig}
+import com.smule.smg.core._
+import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView}
 import com.smule.smg.monitor._
+import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
+import com.smule.smg.rrd.{SMGRrd, SMGRrdFetchParams, SMGRrdRow}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
@@ -771,7 +776,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   def monitorSvgDataJson(): Action[AnyContent] = Action.async { implicit request =>
-    import SMGRemoteClient._
+    import com.smule.smg.remote.SMGRemoteClient._
 
     val params = request.queryString
     val flt = SMGFilter.fromParams(params)

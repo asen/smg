@@ -1,6 +1,7 @@
 package com.smule.smg.monitor
 
-import com.smule.smg.{SMGIndex, SMGLogger, SMGRemote}
+import com.smule.smg.core.{SMGIndex, SMGLogger}
+import com.smule.smg.remote.SMGRemote
 
 // "generic"/remote mon state
 case class SMGMonStateView(id: String,

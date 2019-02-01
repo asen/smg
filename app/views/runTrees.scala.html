@@ -1,7 +1,7 @@
-@import com.smule.smg.SMGConfigService
-@import com.smule.smg.SMGFetchCommandTree
+@import com.smule.smg.config.SMGConfigService
+@import com.smule.smg.core.SMGFetchCommandTree
 @import com.smule.smg.monitor.SMGMonState
-@import com.smule.smg.SMGRemote
+@import com.smule.smg.remote.SMGRemote
 @import java.net.URLEncoder
 @(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String],
   trees: Map[Int,Seq[SMGFetchCommandTree]], rootId: String, parentId: Option[String],
