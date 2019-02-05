@@ -9,7 +9,9 @@ package com.smule.smg.remote
   * @param id - unique remote id
   * @param url - HTTP URL where the remote is accessible
   */
-case class SMGRemote(id: String, url:String, slaveId: Option[String] = None)
+case class SMGRemote(id: String, url:String, slaveId: Option[String] = None) {
+  lazy val name: String = if (id == SMGRemote.local.id) SMGRemote.localName else id
+}
 
 /**
   * Singleton defining helpers for dealing with remotes and their ids.

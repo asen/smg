@@ -1,0 +1,28 @@
+
+.cdash-title {
+}
+
+.cdash-container {
+  display: flex;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+.cdash-item {
+  word-wrap: break-word;
+  overflow: auto;
+}
+
+.cdash-item-title {
+  text-align: center;
+  font-weight: bold;
+}
+
+.cdash-item-body {
+}
+
+.cdash-list {
+}
+
+.cdash-list-item {
+}

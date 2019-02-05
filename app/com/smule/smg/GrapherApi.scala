@@ -1,8 +1,8 @@
 package com.smule.smg
 
 import com.smule.smg.config.SMGAutoIndex
-import com.smule.smg.core.{SMGFilter, SMGIndex, SMGObjectView}
-import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView}
+import com.smule.smg.core.{SMGAggGroupBy, SMGFilter, SMGIndex, SMGObjectView}
+import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView, SMGImageViewsGroup}
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.{SMGRrdFetchParams, SMGRrdRow}
 import com.smule.smg.search.SMGSearchCache
@@ -91,7 +91,20 @@ trait GrapherApi {
     */
   def graphAggObject(aobj: SMGAggObjectView, periods: Seq[String], gopts: GraphOptions, xRemote: Boolean): Future[Seq[SMGImageView]]
 
-  /**
+  //TODO
+  def buildAggObjects(objsSlice: Seq[SMGObjectView], aggOp: String,
+                      groupBy: SMGAggGroupBy.Value): Seq[SMGAggObjectView]
+
+  //TODO
+  def graphAggObjects(aggObjs: Seq[SMGAggObjectView], period: String, gopts: GraphOptions,
+                      aggOp: String, xRemoteAgg: Boolean): Future[Seq[SMGImageView]]
+
+  //TODO
+  def groupAndGraphObjects(objsSlice: Seq[SMGObjectView], period: String, gopts: GraphOptions,
+                           aggOp: Option[String], xRemoteAgg: Boolean,
+                           groupBy: SMGAggGroupBy.Value): Future[Seq[SMGImageView]]
+
+    /**
     * Asynchronous call to graph a SMGObjectView for the set of
     * pre-defined default periods.
     * @param obj - SMGObjectView to graph
@@ -153,6 +166,24 @@ trait GrapherApi {
   def remotes: SMGRemotesApi
 
   def searchCache: SMGSearchCache
+
+
+  /**
+    * Sort a sequence of image views by first grouping them by vars and then within each group - sort
+    * by the descending average value (for the period) of the variable with index specified by sortBy
+    * @param lst - sequence to sort
+    * @param sortBy - 0-based index of the variable by which value to sort. Sort order is undefined if sortBy >= number of vars
+    * @param period - period for which to calculate averages for sorting
+    * @return - a sequence of SMGImageViewsGroup each representing a group of graphs with identical var definitions
+    *         where within each group the images are sorted as described.
+    */
+  def xsortImageViews(lst: Seq[SMGImageView], sortBy: Int,
+                      groupBy: SMGAggGroupBy.Value, period: String): Seq[SMGImageViewsGroup]
+
+
+  // TODO
+  def groupImageViewsGroupsByRemote(dglst: Seq[SMGImageViewsGroup], xRemoteAgg: Boolean): Seq[SMGImageViewsGroup]
+
 }
 
 /**

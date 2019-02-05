@@ -3,16 +3,16 @@ package controllers
 import java.io.InputStream
 import java.util.Date
 
-import javax.inject.{Inject, Singleton}
 import akka.actor.ActorSystem
 import com.ning.http.client.providers.netty.response.NettyResponse
 import com.smule.smg._
 import com.smule.smg.config.{SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._
-import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView}
+import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView, SMGImageViewsGroup}
 import com.smule.smg.monitor._
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.{SMGRrd, SMGRrdFetchParams, SMGRrdRow}
+import javax.inject.{Inject, Singleton}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
@@ -248,71 +248,28 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val myParams = req.queryString //.map(t => (t._1, t._2.head))
     dashParamsFromMap(myParams)
   }
-
-  /**
-    * A class wrapping a list of strings (each representing a "level" description) and a sequence of
-    * image views to display
-    * @param levels - list of strings
-    * @param lst - sequence of image views
-    */
-  case class DashboardGraphsGroup(levels: List[String], lst: Seq[SMGImageView])
-
-  /**
-    * Sort a sequence of image views by first grouping them by vars and then within each group - sort
-    * by the descending average value (for the period) of the variable with index specified by sortBy
-    * @param lst - sequence to sort
-    * @param sortBy - index of the variable by which value to sort. Sort order is undefined if sortBy >= number of vars
-    * @param period - period for which to calculate averages for sorting
-    * @return - a sequence of DashboardGraphsGroup each representing a group of graphs with identical var definitions
-    *         where within each group the images are sorted as described.
-    */
-  private def xsortImageViews(lst: Seq[SMGImageView], sortBy: Int, groupBy: SMGAggGroupBy.Value, period: String): Seq[DashboardGraphsGroup]  = {
-    val fparams = SMGRrdFetchParams(None, Some(period), None, filterNan = true )
-    val objLst = lst.map { iv => iv.obj }
-    val ov2iv = lst.groupBy(_.obj.id)
-    val fut = smg.fetchMany(objLst, fparams)
-    val fetchResults = Await.result(fut,  Duration(120, "seconds")).toMap
-    val byVars = SMGAggGroupBy.groupByVars(objLst, groupBy)
-    byVars.map { case (vdesc, vlst) =>
-      val vlstSorted = vlst.sortBy { ov =>
-        val rows = fetchResults.getOrElse(ov.id, Seq())
-        if (rows.isEmpty) {
-          0.0
-        } else {
-          // average the rows and sort by descending value
-          val numSeq = rows.filter(sortBy < _.vals.size).map(_.vals(sortBy))
-          if (numSeq.isEmpty)
-            0.0
-          else
-            - numSeq.foldLeft(0.0) {(x,y) => x + y} / numSeq.size
-        }
-      }
-      val sortedVdesc = if (sortBy < vlstSorted.head.filteredVars(true).size) {
-        s"Sorted by ${vlstSorted.head.filteredVars(true)(sortBy).getOrElse("label", s"ds$sortBy")}"
-      } else
-        "Not sorted"
-      (List(vdesc, sortedVdesc), vlstSorted)
-    }.map { case (descLst, slst) =>
-      DashboardGraphsGroup(descLst, slst.flatMap(ov => ov2iv.getOrElse(ov.id, Seq())))
-    }
-  }
-
-  /**
-    * group a list of DashboardGraphsGroups by remote
-    * @param dglst
-    * @return
-    */
-  private def groupByRemote(dglst: Seq[DashboardGraphsGroup]): Seq[DashboardGraphsGroup] = {
-    dglst.flatMap { dg =>
-      val lst = dg.lst
-      val byRemoteMap = lst.groupBy(img => img.remoteId.getOrElse(SMGRemote.local.id))
-      val byRemote = (List(SMGRemote.local.id) ++ remotes.configs.map(rc => rc.remote.id)).
-        filter(rid => byRemoteMap.contains(rid)).map(rid => (rid, byRemoteMap(rid))).map { t =>
-        (if (t._1 == SMGRemote.local.id) SMGRemote.localName else s"Remote: ${t._1}", t._2)
-      }
-      byRemote.map {t => DashboardGraphsGroup(t._1 :: dg.levels, t._2)}
-    }
-  }
+  
+//  /**
+//    * group a list of SMGImageViewsGroup by remote
+//    * @param dglst
+//    * @return
+//    */
+//  private def groupByRemote(dglst: Seq[SMGImageViewsGroup], xRemoteAgg: Boolean): Seq[SMGImageViewsGroup] = {
+//    if (xRemoteAgg) {
+//      // pre-pend a "Cross-remote" level to the dashboard groups
+//      dglst.map(dg => SMGImageViewsGroup("Cross-remote" :: dg.levels, dg.lst))
+//    } else {
+//      dglst.flatMap { dg =>
+//        val lst = dg.lst
+//        val byRemoteMap = lst.groupBy(img => img.remoteId.getOrElse(SMGRemote.local.id))
+//        val byRemote = (List(SMGRemote.local.id) ++ remotes.configs.map(rc => rc.remote.id)).
+//          filter(rid => byRemoteMap.contains(rid)).map(rid => (rid, byRemoteMap(rid))).map { t =>
+//          (if (t._1 == SMGRemote.local.id) SMGRemote.localName else s"Remote: ${t._1}", t._2)
+//        }
+//        byRemote.map { t => SMGImageViewsGroup(t._1 :: dg.levels, t._2) }
+//      }
+//    }
+//  }
 
   /**
     * Display dashboard page (filter and graphs)
@@ -371,30 +328,27 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val showXRmt = objsSlice.nonEmpty && objsSlice.tail.exists(ov => ov.remoteId != objsSlice.head.remoteId)
 
     // get two futures - one for the images we want and the other for the respective monitorStates
-    val (futImages, futMonitorStates) = if (objsSlice.isEmpty) {
-      ( Future { Seq() },
-        Future { Map() } )
-    } else if (dep.agg.nonEmpty) {
-      // group objects by "graph vars" (identical var defs, subject to aggregation) and produce an aggregate
-      // object and corresponding image for each group
-      val byGraphVars = SMGAggGroupBy.groupByVars(objsSlice, dep.groupBy)
-      val aggObjs = byGraphVars.map { case (vdesc, vseq) =>
-        SMGAggObjectView.build(vseq, dep.agg.get, dep.groupBy)
-      }
+
+    // group objects by "graph vars" (identical var defs, subject to aggregation) and produce an aggregate
+    // object and corresponding image for each group
+    lazy val aggObjs = dep.agg.map{ aggOp => smg.buildAggObjects(objsSlice, aggOp, dep.groupBy) }
+
+    // images future
+    val futImages = if (dep.agg.nonEmpty && objsSlice.nonEmpty) {
+      smg.graphAggObjects(aggObjs.get, dep.period, flt.gopts, dep.agg.get , dep.xRemoteAgg)
+    } else smg.graphObjects(objsSlice,  Seq(dep.period), flt.gopts)
+
+    // monitor states future
+    val monObjsSeq: Seq[SMGObjectView] = if (dep.agg.nonEmpty && objsSlice.nonEmpty) {
       // if we are not graphing cross-remote, every ag object defined from a cross-remote filter can
       // result in multiple images (one per remote) and we want the monitoring state per resulting image
-      val monObjsSeq = if (!dep.xRemoteAgg) {
-        aggObjs.flatMap { ago =>
+      if (!dep.xRemoteAgg) {
+        aggObjs.get.flatMap { ago =>
           ago.splitByRemoteId.values.toList
         }
-      } else aggObjs
-      val aggFutureSeqs = for (ao <- aggObjs) yield smg.graphAggObject(ao, Seq(dep.period), flt.gopts, dep.xRemoteAgg)
-      (Future.sequence(aggFutureSeqs).map { sofs => sofs.flatten },
-        if (showMs) monitorApi.objectViewStates(monObjsSeq) else Future { Map() } )
-    } else {
-      ( smg.graphObjects(objsSlice, Seq(dep.period), flt.gopts),
-        if (showMs) monitorApi.objectViewStates(objsSlice) else Future { Map() } )
-    }
+      } else aggObjs.get
+    } else objsSlice
+    val futMonitorStates = if (showMs) monitorApi.objectViewStates(monObjsSeq) else Future { Map() }
 
     // We need both the (future) images and monitor states resolved before responding
     Future.sequence(Seq(futImages, futMonitorStates)).map { mySeq =>
@@ -402,16 +356,12 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val monStatesByImgView = mySeq(1).asInstanceOf[Map[String,Seq[SMGMonState]]]
 
       val sortedGroups = if (dep.agg.isEmpty && (flt.gopts.xsort.getOrElse(0) > 0)){
-        xsortImageViews(lst, flt.gopts.xsort.get - 1, dep.groupBy, dep.period)
+        smg.xsortImageViews(lst, flt.gopts.xsort.get - 1, dep.groupBy, dep.period)
       } else {
-        List(DashboardGraphsGroup(List(), lst))
+        List(SMGImageViewsGroup(List(), lst))
       }
-      val result =  if (dep.xRemoteAgg) {
-        // pre-pend a "Cross-remote" level to the dashboard groups
-        sortedGroups.map(dg => DashboardGraphsGroup("Cross-remote" :: dg.levels, dg.lst))
-      } else {
-        groupByRemote(sortedGroups)
-      }
+      val result = smg.groupImageViewsGroupsByRemote(sortedGroups, dep.xRemoteAgg)
+      
       // XXX make sure we find agg objects op even if not specified in url params or index but e.g. coming from a plugin
       val myAggOp = if (dep.agg.isDefined) dep.agg else lst.find(_.obj.isAgg).map(_.obj.asInstanceOf[SMGAggObjectView].op)
       val errorsOpt = if (myErrors.isEmpty) None else Some(myErrors.mkString(", "))
@@ -759,18 +709,19 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   val DEFAULT_INDEX_HEATMAP_MAX_SIZE = 300
 
-  def monitorIndexSvg(ixid: String): Action[AnyContent] = Action.async {
+  def monitorIndexSvg(ixid: String, w: Option[String]): Action[AnyContent] = Action.async {
     val ixObj = smg.getIndexById(ixid)
     if (ixObj.isEmpty)
       Future {  Ok(views.html.monitorSvgNotFound()).as("image/svg+xml") }
     else if (ixObj.get.disableHeatmap || ixObj.get.flt.matchesAnyObjectIdAndText) {
       Future {  Ok(views.html.monitorSvgDisabled()).as("image/svg+xml") }
     } else {
+      val svgWidth = Try(w.map(_.toInt)).getOrElse(None)
       // XXX use index filter here directly vs supplying filter and index to getFilteredObjects
       monitorApi.heatmap(ixObj.get.flt, None, Some(DEFAULT_INDEX_HEATMAP_MAX_SIZE), None, None).map { hms =>
         val hmLst = hms.map(_._2)
         val combinedHm = SMGMonHeatmap.join(hmLst)
-        Ok(views.html.monitorSvgHeatmap(combinedHm)).as("image/svg+xml")
+        Ok(views.html.monitorSvgHeatmap(combinedHm, svgWidth)).as("image/svg+xml")
       }
     }
   }
@@ -834,8 +785,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
 
-  val DEFAULT_LOGS_SINCE = "24h"
-  val DEFAULT_LOGS_LIMIT = 200
+//  val DEFAULT_LOGS_SINCE = "24h"
+//  val DEFAULT_LOGS_LIMIT = 200
 
   def monitorLog(remote: Seq[String], p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String],
                  //ackd: Option[String],
@@ -846,8 +797,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
       Seq(SMGRemote.wildcard.id)
     } else remote
     val minSev = ms.map{ s => SMGState.fromName(s) }.getOrElse(SMGState.WARNING)
-    val period = p.getOrElse(DEFAULT_LOGS_SINCE)
-    val limit = l.getOrElse(DEFAULT_LOGS_LIMIT)
+    val period = p.getOrElse(SMGMonitorLogApi.DEFAULT_LOGS_SINCE)
+    val limit = l.getOrElse(SMGMonitorLogApi.DEFAULT_LOGS_LIMIT)
     val inclSoft = soft.getOrElse("off") == "on"
     val includeSlncd = slncd.getOrElse("off") == "on"
     // val includeAckd = ackd.getOrElse("off") == "on"
@@ -864,7 +815,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       rxx = rxx)
     monitorApi.monLogApi.getAll(flt).map { logs =>
       Ok(views.html.monitorLog(configSvc, availRemotes, SMGState.values.toList.map(_.toString),
-        DEFAULT_LOGS_SINCE, DEFAULT_LOGS_LIMIT, flt, logs))
+        SMGMonitorLogApi.DEFAULT_LOGS_SINCE, SMGMonitorLogApi.DEFAULT_LOGS_LIMIT, flt, logs))
     }
   }
 

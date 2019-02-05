@@ -1,0 +1,18 @@
+@import com.smule.smg.config.SMGConfigService
+
+@(cfSvc: SMGConfigService)(implicit flash: Flash)
+
+@main("SMG - Custom Dahsboards", cfSvc, 0) {
+
+@if(cfSvc.config.customDashboards.isEmpty){
+<h3>No custom dashboards defined. Check documentation for $cdash definitions</h3>
+} else {
+<ul>
+  @for(cdcf <- cfSvc.config.customDashboards){
+  <li><a href="/cdash/@{cdcf.id}">@{cdcf.titleStr}</a><br/>
+    @{cdcf.id}: @{cdcf.titleStr} : @cdcf</li>
+  }
+</ul>
+}
+
+}

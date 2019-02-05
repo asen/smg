@@ -1,0 +1,39 @@
+
+- $cdash:
+  id: noc
+  title: NOC
+  items:
+    - id: alerts
+      title: Active alerts
+      type: MonitorProblems
+      width: 350
+      height: 600
+    - id: alert-log
+      title: Alert Log
+      type: MonitorLog
+      width: 350
+      height: 600
+      limit: 50
+      ms: WARNING
+    - id: jmx.premote-graphs
+      type: IndexGraphs
+      title: jmx.premote Graphs
+      width: 700
+      height: 600
+      ix: jmx.premote
+      limit: 2
+    - id: index.states
+      title: Index States
+      type: IndexStates
+      width: 450
+      height: 500
+      imgWidth: 300
+      ixes:
+        - jmx.premote
+        - localhost
+    - id: localhost-9000
+      title: External web page
+      type: External
+      width: 800
+      height: 600
+      url: http://localhost:9000/

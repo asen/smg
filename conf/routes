@@ -60,8 +60,12 @@ GET     /json/pxtokens        controllers.Application.jsonPxTokens(q: String ?= 
 GET     /json/sxtokens        controllers.Application.jsonSxTokens(q: String ?= "", remote: Option[String])
 GET     /json/cmdtokens       controllers.Application.jsonCmdTokens(q: String ?= "", remote: Option[String])
 
+# Custom dashboards UI
+GET     /cdash          controllers.CDashboard.index()
+GET     /cdash/:cdid     controllers.CDashboard.cdash(cdid: String)
+
 # SVG response
-GET     /monitor/indexSvg     controllers.Application.monitorIndexSvg(ixid: String)
+GET     /monitor/indexSvg     controllers.Application.monitorIndexSvg(ixid: String, w: Option[String])
 GET     /monitor/svgDataJson controllers.Application.monitorSvgDataJson()
 
 # plugin routes

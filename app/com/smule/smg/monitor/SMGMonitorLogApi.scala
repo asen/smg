@@ -29,3 +29,8 @@ trait SMGMonitorLogApi {
   def tick():Unit
 
 }
+
+object SMGMonitorLogApi {
+  val DEFAULT_LOGS_SINCE = "24h"
+  val DEFAULT_LOGS_LIMIT = 200
+}

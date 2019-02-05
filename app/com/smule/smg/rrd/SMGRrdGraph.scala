@@ -5,7 +5,7 @@ import com.smule.smg.grapher.GraphOptions
 
 import scala.collection.mutable
 
-class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
+class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) extends SMGRrdGraphApi {
 
   import SMGRrd._
 

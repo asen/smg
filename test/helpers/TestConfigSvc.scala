@@ -133,6 +133,7 @@ class TestConfigSvc() extends SMGConfigService {
         SMGMonNotifyCmd("test-notify", "env >test-out/test.out ; echo >> test-out/test.out", 30)),
       objectNotifyConfs = Map(),
       hiddenIndexes = Map(),
+      customDashboards = Seq(),
       configErrors = List()
     )
   }

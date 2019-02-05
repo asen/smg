@@ -5,6 +5,7 @@ import java.nio.file.{FileSystems, PathMatcher}
 import java.util
 
 import com.smule.smg._
+import com.smule.smg.cdash.{CDashConfigItem, CDashItemType, CDashboardConfig}
 import com.smule.smg.core._
 import com.smule.smg.grapher.SMGraphObject
 import com.smule.smg.monitor._
@@ -138,6 +139,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     val remotes = ListBuffer[SMGRemote]()
     val remoteMasters = ListBuffer[SMGRemote]()
     val rraDefs = mutable.Map[String, SMGRraDef]()
+    val cDashboardConfigs = ListBuffer[CDashboardConfig]()
     val configErrors = ListBuffer[String]()
 
     val pluginChecks = plugins.flatMap(p => p.valueChecks.map { t => (p.pluginId + "-" + t._1, t._2)}).toMap
@@ -260,6 +262,45 @@ class SMGConfigParser(log: SMGLoggerApi) {
         }
       } else {
         processConfigError(confFile, "processRraDef: $rra_def yamlMap does not have id and rra: " + yamlMap.toString)
+      }
+    }
+
+    def parseCDashConfigItem(ymap: Map[String,Object], confFile: String): Option[CDashConfigItem] = {
+      try {
+        Some(
+          CDashConfigItem(
+            id = ymap("id").toString,
+            itemType = CDashItemType.withName(ymap("type").toString),
+            title = ymap.get("title").map(_.toString),
+            width = ymap.get("width").map(_.toString),
+            height = ymap.get("height").map(_.toString),
+            data = ymap
+          )
+        )
+      } catch {
+        case t: Throwable => {
+          processConfigError(confFile, s"parseCDashConfigItem: Exception parsing item ($ymap): " + t.toString)
+          None
+        }
+      }
+    }
+
+    def processCustomDashboard(t: (String,Object), confFile: String ): Unit = {
+      val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]]
+      if (yamlMap.contains("id") && yamlMap.contains("items")){
+        val cdashId = yamlMap("id").toString
+        val titleOpt = if(yamlMap.contains("title")) Some(yamlMap("title").toString) else None
+        val myItemsOpt = Try(yamlMap("items").asInstanceOf[java.util.List[Object]]).toOption
+        if (myItemsOpt.isDefined) {
+          val parsedItems = myItemsOpt.get.toList.flatMap { itm =>
+            parseCDashConfigItem(itm.asInstanceOf[java.util.Map[String, Object]].toMap, confFile)
+          }
+          cDashboardConfigs += CDashboardConfig(id = cdashId, title = titleOpt, items = parsedItems)
+        } else {
+          processConfigError(confFile, s"processCustomDashboard: $$cdash (id=$cdashId) yamlMap has invalid items: " + yamlMap.toString)
+        }
+      } else {
+        processConfigError(confFile, "processCustomDashboard: $cdash yamlMap does not have id and items: " + yamlMap.toString)
       }
     }
 
@@ -590,6 +631,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 processRemote(t, confFile)
               } else if (t._1 == "$rra_def"){
                 processRraDef(t, confFile)
+              } else if (t._1 == "$cdash"){
+                processCustomDashboard(t, confFile)
               } else if (t._1.startsWith("$")) { // a global def
                 processGlobal(t, confFile)
               } else if (t._1.startsWith("^")) { // an index def
@@ -761,6 +804,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       notifyCommands = notifyCommands.toMap,
       objectNotifyConfs = objectNotifyConfs.toMap,
       hiddenIndexes = hiddenIndexConfs.toMap,
+      customDashboards = cDashboardConfigs.toList,
       configErrors = configErrors.toList
     )
     ret

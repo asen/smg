@@ -1,5 +1,6 @@
 package com.smule.smg.config
 
+import com.smule.smg.cdash.CDashboardConfig
 import com.smule.smg.core._
 import com.smule.smg.monitor.{SMGMonAlertConfObj, SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifyConfObj}
 import com.smule.smg.remote.SMGRemote
@@ -41,6 +42,7 @@ case class SMGLocalConfig(
                            notifyCommands: Map[String,SMGMonNotifyCmd],
                            objectNotifyConfs: Map[String, SMGMonNotifyConfObj],
                            hiddenIndexes: Map[String, SMGConfIndex],
+                           customDashboards: Seq[CDashboardConfig],
                            private val configErrors: List[String] // use allErrors at the bottom instead
                     ) extends SMGConfig {
 

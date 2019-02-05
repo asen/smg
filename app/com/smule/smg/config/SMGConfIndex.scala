@@ -36,7 +36,7 @@ case class SMGConfIndex(id: String,
                        )  extends SMGIndex {
 
   /**
-    * A helper constructor to buold a SMGConfIndex from given yaml configuration
+    * A helper constructor to build a SMGConfIndex from given yaml configuration
     * @param id - object id
     * @param yamlMap - yaml Map to build the object from
     */

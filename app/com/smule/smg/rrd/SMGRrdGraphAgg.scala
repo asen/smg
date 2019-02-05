@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
   * @param rrdConf - rrdtool configuration
   * @param aggObj - aggregate object to work with
   */
-class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) {
+class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) extends SMGRrdGraphApi{
   import SMGRrd._
 
   /**

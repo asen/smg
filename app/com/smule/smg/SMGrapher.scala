@@ -15,8 +15,10 @@ import com.smule.smg.rrd.{SMGRrdFetch, SMGRrdFetchAgg, SMGRrdFetchParams, SMGRrd
 import com.smule.smg.search.SMGSearchCache
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.Future
+import scala.concurrent.{Await, ExecutionContext, Future}
 import monitor._
+
+import scala.concurrent.duration.Duration
 
 
 /**
@@ -330,7 +332,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val baseFn = getBasePngFn(obj.id, period, gopts)
     val config = configSvc.config
     implicit val timeout: Timeout = 120000
-    val msg = SMGraphActor.SMGraphAggMessage(configSvc, obj,period, gopts, new File(config.imgDir, baseFn).toString)
+    val msg = SMGraphActor.SMGraphMessage(configSvc, obj, period, gopts, new File(config.imgDir, baseFn).toString)
     (graphActor ? msg).mapTo[SMGraphActor.SMGraphReadyMessage].map { resp:SMGraphActor.SMGraphReadyMessage =>
       log.debug("SMGrapher.graphAggObject: received response: " + resp )
       SMGAggImage(obj, period, if (resp.error) "/assets/images/error.png" else config.urlPrefix + "/" + baseFn, gopts)
@@ -375,7 +377,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     * @inheritdoc
     */
   override def graphAggObject(aobj:SMGAggObjectView, periods: Seq[String], gopts: GraphOptions, xRemote: Boolean): Future[Seq[SMGImageView]] = {
-    implicit val myEc = configSvc.executionContexts.rrdGraphCtx
+    implicit val myEc: ExecutionContext = configSvc.executionContexts.rrdGraphCtx
     if (xRemote) {
       graphAggObjectXRemote(aobj, periods, gopts)
     } else {
@@ -390,6 +392,34 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       Future.sequence(Seq(localFuts) ++ remoteFuts).map { sofs =>
         sofs.flatten
       }
+    }
+  }
+
+  def buildAggObjects(objsSlice: Seq[SMGObjectView], aggOp: String,
+                      groupBy: SMGAggGroupBy.Value): Seq[SMGAggObjectView] = {
+    val byGraphVars = SMGAggGroupBy.groupByVars(objsSlice, groupBy)
+    byGraphVars.map { case (vdesc, vseq) =>
+      SMGAggObjectView.build(vseq, aggOp, groupBy)
+    }
+  }
+
+  def graphAggObjects(aggObjs: Seq[SMGAggObjectView], period: String, gopts: GraphOptions,
+                      aggOp: String, xRemoteAgg: Boolean): Future[Seq[SMGImageView]] = {
+    implicit val nyEc: ExecutionContext = messagingEc // TODO or use graphCtx?
+    val aggFutureSeqs = for (ao <- aggObjs) yield this.graphAggObject(ao, Seq(period), gopts, xRemoteAgg)
+    Future.sequence(aggFutureSeqs).map { sofs => sofs.flatten }
+  }
+
+  def groupAndGraphObjects(objsSlice: Seq[SMGObjectView], period: String, gopts: GraphOptions,
+                           aggOp: Option[String], xRemoteAgg: Boolean,
+                           groupBy: SMGAggGroupBy.Value): Future[Seq[SMGImageView]] = {
+    if (aggOp.nonEmpty) {
+      // group objects by "graph vars" (identical var defs, subject to aggregation) and produce an aggregate
+      // object and corresponding image for each group
+      val aggObjs = buildAggObjects(objsSlice, aggOp.get, groupBy)
+      graphAggObjects(aggObjs, period, gopts, aggOp.get, xRemoteAgg)
+    } else {
+      this.graphObjects(objsSlice, Seq(period), gopts)
     }
   }
 
@@ -464,5 +494,51 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     searchCache.getMatchingIndexes(ovs)
   }
 
+  def xsortImageViews(lst: Seq[SMGImageView], sortBy: Int, groupBy: SMGAggGroupBy.Value, period: String): Seq[SMGImageViewsGroup]  = {
+    val fparams = SMGRrdFetchParams(None, Some(period), None, filterNan = true)
+    val objLst = lst.map { iv => iv.obj }
+    val ov2iv = lst.groupBy(_.obj.id)
+    val fut = this.fetchMany(objLst, fparams)
+    val fetchResults = Await.result(fut, Duration(120, "seconds")).toMap
+    val byVars = SMGAggGroupBy.groupByVars(objLst, groupBy)
+    byVars.map { case (vdesc, vlst) =>
+      val vlstSorted = vlst.sortBy { ov =>
+        val rows = fetchResults.getOrElse(ov.id, Seq())
+        if (rows.isEmpty) {
+          0.0
+        } else {
+          // average the rows and sort by descending value
+          val numSeq = rows.filter(sortBy < _.vals.size).map(_.vals(sortBy))
+          if (numSeq.isEmpty)
+            0.0
+          else
+            -numSeq.foldLeft(0.0) { (x, y) => x + y } / numSeq.size
+        }
+      }
+      val sortedVdesc = if (sortBy < vlstSorted.head.filteredVars(true).size) {
+        s"Sorted by ${vlstSorted.head.filteredVars(true)(sortBy).getOrElse("label", s"ds$sortBy")}"
+      } else
+        "Not sorted"
+      (List(vdesc, sortedVdesc), vlstSorted)
+    }.map { case (descLst, slst) =>
+      SMGImageViewsGroup(descLst, slst.flatMap(ov => ov2iv.getOrElse(ov.id, Seq())))
+    }
+  }
 
+  def groupImageViewsGroupsByRemote(dglst: Seq[SMGImageViewsGroup], xRemoteAgg: Boolean): Seq[SMGImageViewsGroup] = {
+    if (xRemoteAgg) {
+      // pre-pend a "Cross-remote" level to the dashboard groups
+      dglst.map(dg => SMGImageViewsGroup("Cross-remote" :: dg.levels, dg.lst))
+    } else {
+      dglst.flatMap { dg =>
+        val lst = dg.lst
+        val byRemoteMap = lst.groupBy(img => img.remoteId.getOrElse(SMGRemote.local.id))
+        val byRemote = (List(SMGRemote.local.id) ++ remotes.configs.map(rc => rc.remote.id)).
+          filter(rid => byRemoteMap.contains(rid)).map(rid => (rid, byRemoteMap(rid))).map { t =>
+          (if (t._1 == SMGRemote.local.id) SMGRemote.localName else s"Remote: ${t._1}", t._2)
+        }
+        byRemote.map { t => SMGImageViewsGroup(t._1 :: dg.levels, t._2) }
+      }
+    }
+  }
 }

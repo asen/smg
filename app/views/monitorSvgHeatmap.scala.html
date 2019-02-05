@@ -1,6 +1,6 @@
 @import com.smule.smg.monitor.SMGMonHeatmap
-@(mh: SMGMonHeatmap)
-@SVG_WIDTH = @{ 600 }
+@(mh: SMGMonHeatmap, w: Option[Int] = None)
+@SVG_WIDTH = @{ w.getOrElse(600) }
 @CELL_HEIGHT = @{ 8 }
 @CELL_WIDTH = @{ 9 }
 @CELL_PADDING = @{ 1 }

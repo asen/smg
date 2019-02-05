@@ -9,10 +9,11 @@
 @import com.smule.smg.monitor.SMGMonState
 @import com.smule.smg.monitor.SMGMonStateAgg
 @import com.smule.smg.config.SMGLocalConfig
+@import com.smule.smg.grapher.SMGImageViewsGroup
 @import controllers.Application
 
 @(cfSvc: SMGConfigService, idx: Option[SMGIndex], parentIdx: Option[SMGIndex],
-  result: Seq[Application#DashboardGraphsGroup], flt: SMGFilter, dep: Application#DashboardExtraParams,
+  result: Seq[SMGImageViewsGroup], flt: SMGFilter, dep: Application#DashboardExtraParams,
   aggOp: Option[String], showXRemote: Boolean,
   maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int, availRemotes: Seq[SMGRemote],
   gopts: GraphOptions, showMs:Boolean, monData: Map[String, Seq[SMGMonState]],

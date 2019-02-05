@@ -1,6 +1,6 @@
 @import com.smule.smg.config.SMGConfigService
 @import com.smule.smg.plugin.SMGPlugin
-@(title: String, cfSvc: SMGConfigService, autoRefresh: Int = 300)(content: Html)(implicit flash: Flash)
+@(title: String, cfSvc: SMGConfigService, autoRefresh: Int = 300, cleanContent: Boolean = false)(content: Html)(implicit flash: Flash)
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -16,6 +16,7 @@
         <link rel="stylesheet" media="screen" href='@routes.Assets.versioned("components/jquery-ui/themes/base/jquery-ui.css")'>
         <link rel="stylesheet" media="screen" href='@routes.Assets.versioned("components/select2/css/select2.min.css")'>
         <link rel="stylesheet" media="screen" href='@routes.Assets.versioned("stylesheets/main.css")'>
+        <link rel="stylesheet" media="screen" href='@routes.Assets.versioned("stylesheets/cdash.css")'>
         <script src='@routes.Assets.versioned("components/jquery/dist/jquery.min.js ")' type="text/javascript"></script>
         <script src='@routes.Assets.versioned("components/jquery-ui/jquery-ui.min.js ")' type="text/javascript"></script>
         <script src='@routes.Assets.versioned("components/bootstrap/dist/js/bootstrap.min.js")' type="text/javascript"></script>
@@ -68,12 +69,15 @@
         <div align="center"><font color="red"><strong>@{flash.get("error").get}</strong></font></div>
         }
 
+        @if(cleanContent){
+@content
+        } else {
         <div class="container-fluid">
             <div class="row">
                 <div class="col-md-12">@content</div>
             </div>
         </div>
-
+        }
         <hr/>
         <p align="center"><small>&lt;&lt;&lt; <i>SMG Version @cfSvc.smgVersionStr (end of page)</i> &gt;&gt;&gt;</small></p>
     </body>

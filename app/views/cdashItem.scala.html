@@ -1,0 +1,18 @@
+@import com.smule.smg.config.SMGConfigService
+@import com.smule.smg.cdash.CDashItem
+@import com.smule.smg.cdash.CDashItemIndexGraphs
+@import com.smule.smg.cdash.CDashItemType
+
+@(cfSvc: SMGConfigService, itm: CDashItem)
+
+<div class="cdash-item"
+     @if(itm.conf.width.isDefined || itm.conf.height.isDefined){
+     style="@if(itm.conf.width.isDefined){width: @{itm.widthStr};max-width: @{itm.widthStr};}
+     @if(itm.conf.height.isDefined){height: @{itm.heightStr};max-height: @{itm.heightStr};}"
+     }
+     >
+  <div class="cdash-item-title">@itm.titleStr</div>
+  <div class="cdash-item-body">
+  @Html(itm.htmlContent)
+  </div>
+</div>

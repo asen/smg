@@ -2,6 +2,7 @@ package modules
 
 import com.google.inject.AbstractModule
 import com.smule.smg._
+import com.smule.smg.cdash.{CDashboardApi, CDashboardSvc}
 import com.smule.smg.config.{SMGConfigService, SMGConfigServiceImpl}
 import com.smule.smg.core.{ExecutionContexts, SMGExecutionContexts, SMGScheduler, SMGSchedulerApi}
 import com.smule.smg.monitor._
@@ -30,5 +31,6 @@ class SMGModule(environment: Environment, configuration: Configuration) extends 
     bind(classOf[SMGMonitorLogApi]).to(classOf[SMGMonitorLog])
     bind(classOf[SMGMonNotifyApi]).to(classOf[SMGMonNotifySvc])
     bind(classOf[SMGMonitorApi]).to(classOf[SMGMonitor])
+    bind(classOf[CDashboardApi]).to(classOf[CDashboardSvc])
   }
 }
