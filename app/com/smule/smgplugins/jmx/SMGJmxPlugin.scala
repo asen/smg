@@ -24,6 +24,8 @@ class SMGJmxPlugin (val pluginId: String,
                     val smgConfSvc: SMGConfigService
                    ) extends SMGPlugin {
 
+  override val showInMenu: Boolean = false
+
   override def objects: Seq[SMGObjectView] = jmxObjects.synchronized(jmxObjects)
 
   override val autoRefresh: Boolean = false

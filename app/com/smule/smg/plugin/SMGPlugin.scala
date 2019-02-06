@@ -49,6 +49,8 @@ trait SMGPlugin {
     */
   val interval: Int
 
+  val showInMenu: Boolean = true
+
   /**
     * Any custom objectViews the plugin defines.
     * @return - sequence of object views

@@ -1,0 +1,45 @@
+@import com.smule.smg.config.SMGConfigService
+
+@(cfSvc: SMGConfigService)
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        @for(cdash <- cfSvc.config.customDashboards){
+        <span class="icon-bar"></span>
+        }
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        @for(p <- cfSvc.plugins.filter(_.showInMenu)){
+        <span class="icon-bar"></span>
+        }
+      </button>
+      <a class="navbar-brand" href="/"><img src="@routes.Assets.versioned("images/smg-logo.png")" alt="SMG" /></a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        @for(cdash <- cfSvc.config.customDashboards){
+        <li><a href="/cdash/@{cdash.id}" title="Custom dashboard: @{cdash.title}">@{cdash.title}</a></li>
+        }
+        <li><a href="/s">Search</a></li>
+        <li><a href="/ci">Configured indexes</a></li>
+        <li><a href="/autoindex">Automatic index</a></li>
+        <li><a href="/dash?remote=*">All graphs</a></li>
+        <li><a href="/monitor">Monitor</a></li>
+        <li><a href="/assets/docs/index.html">Docs</a></li>
+        @for(p <- cfSvc.plugins.filter(_.showInMenu)){
+        <li><a href="/plugin/@{p.pluginId}">Plugin: @{p.pluginId}</a></li>
+        }
+      </ul>
+    </div> <!-- /.navbar-collapse -->
+  </div> <!-- /.container-fluid -->
+</nav>

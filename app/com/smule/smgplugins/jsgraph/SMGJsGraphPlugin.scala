@@ -18,6 +18,8 @@ class SMGJsGraphPlugin(val pluginId: String,
                        val smgConfSvc: SMGConfigService
                       ) extends SMGPlugin {
 
+  override val showInMenu: Boolean = false
+
   override def objects: Seq[SMGObjectView] = Seq()
 
   override def reloadConf(): Unit = {}

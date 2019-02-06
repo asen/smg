@@ -14,6 +14,8 @@ class SMGMonCheckPlugin(val pluginId: String,
                         val smgConfSvc: SMGConfigService
                        ) extends SMGPlugin {
 
+  override val showInMenu: Boolean = false
+
   val log = new SMGPluginLogger(pluginId)
 
   val anomCheck = new AnomCheck("anom", log)
