@@ -37,7 +37,7 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
         case CDashItemType.IndexStates => getIndexStates(itm)
         case CDashItemType.MonitorProblems => getMonitorProblems(itm)
         case CDashItemType.MonitorLog => getMonitorLogs(itm)
-        case CDashItemType.Plugin => errorItem(itm)
+        case CDashItemType.Plugin => getPlugin(itm)
         case CDashItemType.External => getExternal(itm)
       }
     }
@@ -79,7 +79,7 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
 
   private def getIndexStates(itm: CDashConfigItem): Future[CDashItem] = {
     val indexIds = itm.getDataStrSeq("ixes")
-    val imgWidth = itm.getDataStr("imgWidth").getOrElse("")
+    val imgWidth = itm.getDataStr("img_width").getOrElse("")
     val idxes = indexIds.flatMap(indexId => smg.getIndexById(indexId))
     Future { CDashItemIndexStates(itm, imgWidth, idxes) }
   }
@@ -145,6 +145,20 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
     val url = itm.getDataStr("url").getOrElse("ERROR")
     Future {
       CDashItemExternal(itm, url)
+    }
+  }
+
+  private def getPlugin(itm: CDashConfigItem): Future[CDashItem] = {
+    val pluginId = itm.getDataStr("plugin_id").getOrElse("")
+    val pluginOpt = configSvc.pluginsById.get(pluginId)
+    if (pluginOpt.isEmpty)
+      errorItem(itm, s"Invalid plugin id: $pluginId")
+    else {
+      val futOpt = pluginOpt.get.cdashItem(itm)
+      if (futOpt.isEmpty) {
+        errorItem(itm, s"Plugin $pluginId returned no data")
+      } else
+        futOpt.get
     }
   }
 }

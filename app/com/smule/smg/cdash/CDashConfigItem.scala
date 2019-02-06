@@ -17,5 +17,9 @@ case class CDashConfigItem(
     obj.asInstanceOf[java.util.List[Object]].toSeq.map(_.toString)
   }.getOrElse(Seq())
 
+  def getDataMap(k: String): Map[String, Object] = data.get(k).map{ obj =>
+    obj.asInstanceOf[java.util.Map[String,Object]].toMap
+  }.getOrElse(Map())
+
   def asErrorItem(msg: String = ""): CDashItemError = CDashItemError(this, msg = msg)
 }

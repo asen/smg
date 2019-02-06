@@ -1,6 +1,7 @@
 package com.smule.smgplugins.calc
 
 import com.smule.smg._
+import com.smule.smg.cdash.{CDashConfigItem, CDashItem, CDashItemError}
 import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
 import com.smule.smg.core.SMGObjectView
 import com.smule.smg.grapher.{GraphOptions, SMGImageView}
@@ -12,6 +13,7 @@ import scala.io.Source
 import scala.xml.Unparsed
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Future
 
 
 /**
@@ -193,5 +195,35 @@ class SMGCalcPlugin (val pluginId: String,
     <div>{Unparsed(listExpressionsHtmlContent)}</div>
   }.mkString
   // <div>{expOpt.map(_.toString).getOrElse("")}</div>
+
+  override def cdashItem(confItem: CDashConfigItem): Option[Future[CDashItem]] = {
+    val ixId = confItem.getDataStr("ix").getOrElse("")
+    val ixOpt = expressions.find(_.id == ixId)
+    if (ixOpt.isEmpty)
+      None
+    else {
+      val strExpr = ixOpt.get.expr
+      val strPeriod = ixOpt.get.period.getOrElse(GrapherApi.detailPeriods.head)
+      val titleOpt = ixOpt.get.title
+      val stepOpt = ixOpt.get.step
+      val myDisablePop = ixOpt.get.dpp
+      val myDisable95p = ixOpt.get.d95p
+      val maxYOpt = ixOpt.get.maxy
+      val gopts = GraphOptions.withSome(step = stepOpt, xsort = None,
+        disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = maxYOpt, minY = None) // TODO support minY
+      val exprObj = smgCalcRrd.parseExpr(smg, remotes, strExpr)
+      val fut = Future {
+        val (gOpt, errOpt) = smgCalcRrd.graph(smgConfSvc, exprObj, strPeriod, gopts, titleOpt)
+        if (gOpt.isEmpty){
+          CDashItemError(confItem, errOpt.getOrElse("Unknown error"))
+        } else {
+          CDashItemCalc(confItem, gOpt.get)
+        }
+      }(smgConfSvc.executionContexts.rrdGraphCtx)
+      Some(fut)
+    }
+
+  }
+
 
 }

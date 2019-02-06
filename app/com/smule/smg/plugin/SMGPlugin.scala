@@ -7,6 +7,9 @@ import com.smule.smg.core.{SMGObjectView, SMGPreFetchCmd}
 import com.smule.smg.monitor.SMGMonCheck
 import com.smule.smg.remote.SMGRemotesApi
 import com.smule.smg.GrapherApi
+import com.smule.smg.cdash.{CDashConfigItem, CDashItem}
+
+import scala.concurrent.Future
 
 /**
   * Created by asen on 12/3/15.
@@ -150,4 +153,9 @@ trait SMGPlugin {
     */
   def finished(): Unit = isRunning.set(false)
 
+
+  /**
+    * Extension point for implementing custom dashboad items in plugins
+    */
+  def cdashItem(confItem: CDashConfigItem): Option[Future[CDashItem]] = None
 }
