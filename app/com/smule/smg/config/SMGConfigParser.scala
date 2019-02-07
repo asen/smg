@@ -290,12 +290,13 @@ class SMGConfigParser(log: SMGLoggerApi) {
       if (yamlMap.contains("id") && yamlMap.contains("items")){
         val cdashId = yamlMap("id").toString
         val titleOpt = if(yamlMap.contains("title")) Some(yamlMap("title").toString) else None
+        val myRefresh = Try(yamlMap("refersh").asInstanceOf[Int]).getOrElse(300)
         val myItemsOpt = Try(yamlMap("items").asInstanceOf[java.util.List[Object]]).toOption
         if (myItemsOpt.isDefined) {
           val parsedItems = myItemsOpt.get.toList.flatMap { itm =>
             parseCDashConfigItem(itm.asInstanceOf[java.util.Map[String, Object]].toMap, confFile)
           }
-          cDashboardConfigs += CDashboardConfig(id = cdashId, title = titleOpt, items = parsedItems)
+          cDashboardConfigs += CDashboardConfig(id = cdashId, title = titleOpt, refresh = myRefresh, items = parsedItems)
         } else {
           processConfigError(confFile, s"processCustomDashboard: $$cdash (id=$cdashId) yamlMap has invalid items: " + yamlMap.toString)
         }

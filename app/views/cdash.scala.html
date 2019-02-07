@@ -3,7 +3,7 @@
 
 @(cfSvc: SMGConfigService, cdd: CDashboardData)(implicit flash: Flash)
 
-@main("Dash: " + cdd.conf.titleStr, cfSvc, cdd.conf.refreshInterval, true) {
+@main("Dash: " + cdd.conf.titleStr, cfSvc, cdd.conf.refresh, true) {
 
 <div class="cdash-title"><h3>@cdd.conf.titleStr</h3></div>
 
