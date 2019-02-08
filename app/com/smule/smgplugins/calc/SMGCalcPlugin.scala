@@ -217,7 +217,7 @@ class SMGCalcPlugin (val pluginId: String,
         if (gOpt.isEmpty){
           CDashItemError(confItem, errOpt.getOrElse("Unknown error"))
         } else {
-          CDashItemCalc(confItem, gOpt.get)
+          CDashItemCalc(confItem, ixId, gOpt.get)
         }
       }(smgConfSvc.executionContexts.rrdGraphCtx)
       Some(fut)

@@ -15,4 +15,6 @@ case class CDashItemIndexGraphs(
       {<a href={img.obj.dashUrl}><img src={img.imageUrl} alt={img.imageUrl} /></a>}.mkString
     }.mkString("\n")
   }
+
+  override def linkUrl: Option[String] = Some("/dash?"+ ix.asUrl)
 }

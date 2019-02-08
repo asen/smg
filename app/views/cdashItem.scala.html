@@ -11,7 +11,11 @@
      @if(itm.conf.height.isDefined){height: @{itm.heightStr};max-height: @{itm.heightStr};}"
      }
      >
-  <div class="cdash-item-title">@itm.titleStr</div>
+  <div class="cdash-item-title">
+    @if(itm.linkUrl.isDefined){ <a href="@{itm.linkUrl.get}"> }
+    @itm.titleStr
+    @if(itm.linkUrl.isDefined){ </a> }
+  </div>
   <div class="cdash-item-body">
   @Html(itm.htmlContent)
   </div>

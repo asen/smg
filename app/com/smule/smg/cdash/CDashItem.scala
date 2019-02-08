@@ -9,6 +9,7 @@ trait CDashItem {
   lazy val widthStr: String = conf.width.map(s => if (s.matches("^\\d+$")) s + "px" else s).getOrElse("")
   lazy val heightStr: String = conf.height.map(s => if (s.matches("^\\d+$")) s + "px" else s)getOrElse("")
 
+  def linkUrl: Option[String]
   def htmlContent: String
 //  = {
 //    <p>Not implemented: {this.toString}</p>

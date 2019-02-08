@@ -21,4 +21,6 @@ case class CDashItemMonitorProblems(conf: CDashConfigItem,
       </span>
     }.mkString
   })
+
+  override def linkUrl: Option[String] = Some("/monitor")
 }
