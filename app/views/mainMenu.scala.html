@@ -1,6 +1,6 @@
 @import com.smule.smg.config.SMGConfigService
 
-@(cfSvc: SMGConfigService)
+@(cfSvc: SMGConfigService, requestPath: Option[String])
 
 <nav class="navbar navbar-default">
   <div class="container-fluid">
@@ -28,7 +28,11 @@
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
         @for(cdash <- cfSvc.config.customDashboards){
-        <li><a href="/cdash/@{cdash.id}" title="Custom dashboard: @{cdash.title}">@{cdash.title}</a></li>
+        <li><a href="/cdash/@{cdash.id}" title="Custom dashboard: @{cdash.title}">
+          @if(requestPath.getOrElse("").startsWith("/cdash/" + cdash.id)){<b>}
+          @{cdash.title}
+          @if(requestPath.getOrElse("").startsWith("/cdash/" + cdash.id)){</b>}
+        </a></li>
         }
         <li><a href="/s">Search</a></li>
         <li><a href="/ci">Configured indexes</a></li>

@@ -22,7 +22,7 @@ class CDashboard @Inject() (actorSystem: ActorSystem,
     Ok(views.html.cdashList(configSvc))
   }
 
-  def cdash(cdid: String): Action[AnyContent] = Action.async { implicit request =>
+  def cdash(cdid: String): Action[AnyContent] = Action.async { implicit request: Request[AnyContent] =>
     cDashSvc.getDashboardData(cdid).map { cdOpt =>
       if (cdOpt.isEmpty)
         NotFound(s"Dashboard not found: $cdid")

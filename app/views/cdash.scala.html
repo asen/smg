@@ -1,10 +1,9 @@
 @import com.smule.smg.config.SMGConfigService
 @import com.smule.smg.cdash.CDashboardData
 
-@(cfSvc: SMGConfigService, cdd: CDashboardData)(implicit flash: Flash)
+@(cfSvc: SMGConfigService, cdd: CDashboardData)(implicit flash: Flash, request: Request[AnyContent])
 
-@main("Dash: " + cdd.conf.titleStr, cfSvc, cdd.conf.refresh, true) {
-
+@main("Dash: " + cdd.conf.titleStr, cfSvc, cdd.conf.refresh, true, Some(request.path)) {
 <div class="cdash-container">
 @for(itm <- cdd.data){
   @cdashItem(cfSvc, itm)
