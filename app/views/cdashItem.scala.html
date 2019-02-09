@@ -1,9 +1,22 @@
 @import com.smule.smg.config.SMGConfigService
 @import com.smule.smg.cdash.CDashItem
-@import com.smule.smg.cdash.CDashItemIndexGraphs
+@import com.smule.smg.cdash.CDashItemContainer
 @import com.smule.smg.cdash.CDashItemType
 
 @(cfSvc: SMGConfigService, itm: CDashItem)
+
+@if(itm.itemType == CDashItemType.Container){
+
+  @defining(itm.asInstanceOf[CDashItemContainer]){ citm =>
+  <div class="cdash-container" style="width: @{citm.widthStr}; max-width: @{citm.widthStr};
+                                    height: @{citm.heightStr};max-height: @{citm.heightStr};">
+    @for(itm <- citm.items){
+    @views.html.cdashItem(cfSvc, itm)
+    }
+  </div>
+  }
+
+} else {
 
 <div class="cdash-item"
      @if(itm.conf.width.isDefined || itm.conf.height.isDefined){
@@ -19,4 +32,7 @@
   <div class="cdash-item-body">
   @Html(itm.htmlContent)
   </div>
+
 </div>
+
+}

@@ -22,21 +22,26 @@
       height: 600
       ix: jmx.premote
       limit: 2
-    - id: index.states
-      title: Index States
-      type: IndexStates
-      width: 450
-      height: 500
-      img_width: 300
-      ixes:
-        - jmx.premote
-        - localhost
-    - id: calc-netext
-      type: Plugin
+    - id: group1
+      type: Container
       width: 700
-      height: 300
-      plugin_id: calc
-      ix: netext
+      height: 800
+      items:
+      - id: index.states
+        title: Index States
+        type: IndexStates
+        width: 450
+        height: 500
+        img_width: 300
+        ixes:
+          - jmx.premote
+          - localhost
+      - id: calc-netext
+        type: Plugin
+        width: 700
+        height: 300
+        plugin_id: calc
+        ix: netext
     - id: localhost-9000
       title: External web page
       type: External

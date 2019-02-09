@@ -2,13 +2,14 @@ package com.smule.smg.cdash
 
 import com.smule.smg.GrapherApi
 import com.smule.smg.config.SMGConfigService
-import com.smule.smg.core.{SMGAggGroupBy, SMGFilter}
+import com.smule.smg.core.{SMGAggGroupBy, SMGFilter, SMGLogger}
 import com.smule.smg.monitor._
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import javax.inject.{Inject, Singleton}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+import scala.collection.JavaConversions._
 
 @Singleton
 class CDashboardSvc @Inject()(configSvc: SMGConfigService,
@@ -17,6 +18,9 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
                               monitorApi: SMGMonitorApi,
                               monLogApi: SMGMonitorLogApi,
                               notifSvc: SMGMonNotifyApi) extends CDashboardApi {
+
+
+  private val log = SMGLogger
 
   implicit private val myEc: ExecutionContext = configSvc.executionContexts.rrdGraphCtx
 
@@ -30,16 +34,21 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
       dashboardDataFromConfig(cdashConfOpt.get).map(Some(_))
   }
 
+  private def itemDashboardData(itm: CDashConfigItem): Future[CDashItem] = {
+    itm.itemType match {
+      case CDashItemType.Container => containerItem(itm)
+      case CDashItemType.IndexGraphs => getIndexGraphs(itm)
+      case CDashItemType.IndexStates => getIndexStates(itm)
+      case CDashItemType.MonitorProblems => getMonitorProblems(itm)
+      case CDashItemType.MonitorLog => getMonitorLogs(itm)
+      case CDashItemType.Plugin => getPlugin(itm)
+      case CDashItemType.External => getExternal(itm)
+    }
+  }
+
   private def dashboardDataFromConfig(cf: CDashboardConfig): Future[CDashboardData] = {
     val futs = cf.items.map { itm =>
-      itm.itemType match {
-        case CDashItemType.IndexGraphs => getIndexGraphs(itm)
-        case CDashItemType.IndexStates => getIndexStates(itm)
-        case CDashItemType.MonitorProblems => getMonitorProblems(itm)
-        case CDashItemType.MonitorLog => getMonitorLogs(itm)
-        case CDashItemType.Plugin => getPlugin(itm)
-        case CDashItemType.External => getExternal(itm)
-      }
+      itemDashboardData(itm)
     }
     Future.sequence(futs).map { seq =>
       CDashboardData(cf, seq)
@@ -49,6 +58,30 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
   private def errorItem(itm: CDashConfigItem, msg: String = "") = Future {
     itm.asErrorItem(msg)
   }
+
+  private def containerItem(itm: CDashConfigItem) : Future[CDashItem] = {
+    val itemConfs = itm.getDataList("items").map { obj =>
+      try{
+        Some(CDashConfigItem.fromYamlMap(obj.asInstanceOf[java.util.Map[String,Object]].toMap))
+      } catch {
+        case t: Throwable => {
+          log.error(s"Error parsing container item: $itm", t)
+          None
+        }
+      }
+    }
+    val futs = itemConfs.map { iconfOpt =>
+      if (iconfOpt.isEmpty)
+        errorItem(itm, "Config error - check logs")
+      else {
+        itemDashboardData(iconfOpt.get)
+      }
+    }
+    Future.sequence(futs).map { data =>
+      CDashItemContainer(itm, data)
+    }
+  }
+
 
   private def getIndexGraphs(itm: CDashConfigItem): Future[CDashItem] = {
     val indexId = itm.getDataStr("ix").getOrElse("")

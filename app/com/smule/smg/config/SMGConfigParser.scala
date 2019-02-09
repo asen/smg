@@ -268,14 +268,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     def parseCDashConfigItem(ymap: Map[String,Object], confFile: String): Option[CDashConfigItem] = {
       try {
         Some(
-          CDashConfigItem(
-            id = ymap("id").toString,
-            itemType = CDashItemType.withName(ymap("type").toString),
-            title = ymap.get("title").map(_.toString),
-            width = ymap.get("width").map(_.toString),
-            height = ymap.get("height").map(_.toString),
-            data = ymap
-          )
+          CDashConfigItem.fromYamlMap(ymap)
         )
       } catch {
         case t: Throwable => {
