@@ -46,5 +46,6 @@
       title: External web page
       type: External
       width: 800
-      height: 600
+      height: 620
+      fheight: 600
       url: http://localhost:9000/
