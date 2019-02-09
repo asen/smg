@@ -5,8 +5,6 @@
 
 @main("Dash: " + cdd.conf.titleStr, cfSvc, cdd.conf.refresh, true) {
 
-<div class="cdash-title"><h3>@cdd.conf.titleStr</h3></div>
-
 <div class="cdash-container">
 @for(itm <- cdd.data){
   @cdashItem(cfSvc, itm)

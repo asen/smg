@@ -6,6 +6,8 @@
   display: flex;
   flex-wrap: wrap;
   overflow: hidden;
+  margin: 0px 0px 0px 0px;
+  padding: 0px 0px 0px 0px;
 }
 
 .cdash-item {
@@ -22,7 +24,9 @@
 }
 
 .cdash-list {
+  padding-left: 5px;
 }
 
 .cdash-list-item {
+  list-style-position: inside;
 }
