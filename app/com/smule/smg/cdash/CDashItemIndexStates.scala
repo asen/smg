@@ -9,7 +9,8 @@ case class CDashItemIndexStates(conf: CDashConfigItem, imgWidth: String, ixes: S
     <div>
       {
       ixes.map { ix =>
-        <div align="right"><a href={ix.asUrl}>{ ix.title }</a>: <img src={ s"/monitor/indexSvg?ixid=${ix.id}&w=$imgWidth" }></img></div>
+        <div align="right"><a href={ix.asDashUrl}>{ ix.title }</a>:
+          <a href={ix.asDashUrl}><img src={ s"/monitor/indexSvg?ixid=${ix.id}&w=$imgWidth" }></img></a></div>
       }
       }
     </div>

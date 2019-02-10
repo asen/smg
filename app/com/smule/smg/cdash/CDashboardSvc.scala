@@ -125,8 +125,8 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
     val limit = Try(itm.getDataStr("limit").get.toInt).getOrElse(1)
 
     val minSev = ms.map { s => SMGState.fromName(s) }.getOrElse(SMGState.ANOMALY)
-    val inclSoft = soft.getOrElse("off") == "on"
-    val inclSlnc = slncd.getOrElse("off") == "on"
+    val inclSoft = (soft.getOrElse("off") == "on") || (soft.getOrElse("false") == "true")
+    val inclSlnc = (slncd.getOrElse("off") == "on") || (slncd.getOrElse("false") == "true")
     //val inclAck = ackd.getOrElse("off") == "on"
     val inclAck = inclSlnc
     val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(minSev),
@@ -155,8 +155,8 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
       Seq(SMGRemote.wildcard.id)
     } else Seq(remote.get)
     val minSev = ms.map { s => SMGState.fromName(s) }.getOrElse(SMGState.WARNING)
-    val inclSoft = soft.getOrElse("off") == "on"
-    val includeSlncd = slncd.getOrElse("off") == "on"
+    val inclSoft = (soft.getOrElse("off") == "on") || (soft.getOrElse("false") == "true")
+    val includeSlncd = (slncd.getOrElse("off") == "on") || (slncd.getOrElse("false") == "true")
     // val includeAckd = ackd.getOrElse("off") == "on"
     val includeAckd = includeSlncd
     val flt = SMGMonitorLogFilter(

@@ -51,6 +51,8 @@ trait SMGIndex {
     */
   def asUrlForPeriod(aPeriod: String): String
 
+  def asDashUrl: String = "/dash?" + asUrl
+
   /**
     * all children indexes of this index - including ones specified via childIds and
     * ones specifying this id as parent

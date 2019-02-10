@@ -16,5 +16,5 @@ case class CDashItemIndexGraphs(
     }.mkString("\n")
   }
 
-  override def linkUrl: Option[String] = Some("/dash?"+ ix.asUrl)
+  override def linkUrl: Option[String] = Some(ix.asDashUrl)
 }
