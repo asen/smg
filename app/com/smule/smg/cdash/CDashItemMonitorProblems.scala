@@ -14,7 +14,7 @@ case class CDashItemMonitorProblems(conf: CDashConfigItem,
 
   override def htmlContent: String = htmlContentList(sortBySeverity, {ms: SMGMonState =>
     {
-      <span>
+      <span>[<b>{ms.remote.name}</b>]
       <span style={ s"background-color: ${ms.severityColor;}" }> {ms.currentStateVal}</span>
         <a href={ ms.showUrl}>{ms.text}</a>
         [ { if(ms.isHard) { <strong>HARD</strong> } else { "SOFT" } }]

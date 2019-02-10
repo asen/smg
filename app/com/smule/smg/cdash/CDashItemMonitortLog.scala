@@ -11,7 +11,7 @@ case class CDashItemMonitortLog(conf: CDashConfigItem,
   override def htmlContent: String = htmlContentList(logs, {ms: SMGMonitorLogMsg =>
     {
       <span>
-        [ { ms.remote.name }]
+        [<b>{ms.remote.name}</b>]
         [{ms.tsFmt}]: <span class={ s"ml-type-${ms.mltype}" }>{ms.mltype}</span>{if (ms.ouids.nonEmpty) {
         <a href="/dash?@{ms.objectsFilterWithRemote}">
           {ms.msIdFmt}
