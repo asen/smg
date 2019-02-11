@@ -11,6 +11,8 @@ v 0.6+
 
 == Known Bugs ==
 
+* merging index filter with backslash strips it
+
 * GROUP-ing stacked graphs seems messed up ?
 
 == Random longer term possibilities ==
