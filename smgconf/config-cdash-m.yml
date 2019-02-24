@@ -42,10 +42,10 @@
         height: 300
         plugin_id: calc
         ix: netext
-    - id: localhost-9000
-      title: External web page
-      type: External
-      width: 800
-      height: 620
-      fheight: 600
-      url: http://localhost:9000/
+#    - id: localhost-9000
+#      title: External web page
+#      type: External
+#      width: 800
+#      height: 620
+#      fheight: 600
+#      url: http://localhost:9000/

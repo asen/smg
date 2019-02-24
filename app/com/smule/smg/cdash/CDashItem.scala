@@ -15,14 +15,15 @@ trait CDashItem {
 //    <p>Not implemented: {this.toString}</p>
 //  }.mkString
 
-  protected def htmlContentList[T](seq: Seq[T], elemHtmlFn: (T) => String): String = {
+  protected def htmlContentList[T](seq: Seq[T], elemHtmlFn: (T) => String): String = if (seq.isEmpty){
+    <div align="center">(<i>No entries</i>)</div>
+  }.mkString else {
     <ul class="cdash-list">
       {
       seq.map { itm =>
         <li class="cdash-list-item">{ scala.xml.Unparsed(elemHtmlFn(itm)) }</li>
       }
       }
-
     </ul>
   }.mkString
 

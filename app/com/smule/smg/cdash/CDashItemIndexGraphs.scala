@@ -12,7 +12,10 @@ case class CDashItemIndexGraphs(
 
   override def htmlContent: String = {
     graphs.map { img =>
-      {<a href={img.obj.dashUrl}><img src={img.imageUrl} alt={img.imageUrl} /></a>}.mkString
+      {<div>
+        <a href={img.obj.showUrl}>{img.obj.title}</a><br/>
+        <a href={img.obj.dashUrl}><img src={img.imageUrl} alt={img.imageUrl} /></a>
+      </div>}.mkString
     }.mkString("\n")
   }
 
