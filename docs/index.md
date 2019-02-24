@@ -12,31 +12,12 @@
         1. [Installation from sources](#install-src)
 1. [UI orientation](#ui-orient)
 1. [Concepts overview](#concepts)
-    1. [RRD objects](#concepts-rrd-objects)
-    1. [Intervals, runs and scheduler](#concepts-intervals)
-    1. [pre\_fetch and run command trees](#concepts-pre_fetch)
-    1. [Period since and period length](#concepts-period)
-    1. [Filters](#concepts-filters)
-    1. [Indexes](#concepts-indexes)
-    1. [Graph options](#concepts-gopts)
-    1. [Aggregate functions](#concepts-aggregate-functions)
-    1. [View objects and calculated graphs](#concepts-view-objects)
-    1. [Remotes](#concepts-remotes)
-    1. [Plugins](#concepts-plugins)
-    1. [Monitoring](#concepts-monitoring)
-        1. [Anomaly detection](#concepts-anomaly)
-1. [Configuration reference](#config)
-    1. [Globals](#globals)
-    1. [RRD objects](#rrd-objects)
-    1. [Aggregate RRD objects](#rrd-agg-objects)
-    1. [View objects](#view-objects)
-    1. [Indexes](#indexes)
-    1. [Hidden Indexes](#hindexes)
-    1. [Monitoring configuration](#monitoring)
+    1. [Concepts TOC](#concepts-toc)
+1. [Configuration Reference](#config)
+    1. [Configuration Reference TOC](#config-toc)
 1. [Running and troubleshooting](#running)
     1. Frontend http server
     1. Tweaking SMG for performance
-
 1. [Developer documentation](dev/index.md)
 
 <a name="introduction" />
@@ -247,6 +228,25 @@ recent data (by default - 96h in SMG) into the minimal for SMG run interval
 (default -every minute) granularity (which corresponds to maximal resolution) 
 and older data gets averaged over longer period and kept like that 
 (at smaller resolution).
+
+<a name="concepts-toc" />
+
+#### Concepts - TOC
+
+1. [RRD objects](#concepts-rrd-objects)
+1. [Intervals, runs and scheduler](#concepts-intervals)
+1. [pre\_fetch and run command trees](#concepts-pre_fetch)
+1. [Period since and period length](#concepts-period)
+1. [Filters](#concepts-filters)
+1. [Indexes](#concepts-indexes)
+1. [Custom dahsboards](#concepts-cdash)
+1. [Graph options](#concepts-gopts)
+1. [Aggregate functions](#concepts-aggregate-functions)
+1. [View objects and calculated graphs](#concepts-view-objects)
+1. [Remotes](#concepts-remotes)
+1. [Plugins](#concepts-plugins)
+1. [Monitoring](#concepts-monitoring)
+    1. [Anomaly detection](#concepts-anomaly)
 
 <a name="concepts-rrd-objects" />
 
@@ -489,6 +489,15 @@ a parent) and also the a configurable number of levels after that
 global var). Check [the index config section](#indexes)
 for more details on indexes.
 
+<a name="concepts-cdash" />
+
+#### Custom dashboards
+
+The custom dashboard represents a single page which can combine the
+graphs outputs from multiple indexes on a single page. The layout of
+the page can defined using sizes in the configuration. In addition
+it can display monitor states and/or logs plus external items via
+iframe. Check the [$cdash](#cdash) config options for more details.
 
 <a name="concepts-gopts" />
 
@@ -957,6 +966,20 @@ Note that ordering matters in general - SMG will try to preserve the
 order of the graphs to be displayed to match the order in which the
 objects were defined.
 
+<a name="config-toc" />
+
+#### Configuration Reference - TOC
+
+1. [Globals](#globals)
+1. [RRD objects](#rrd-objects)
+1. [Aggregate RRD objects](#rrd-agg-objects)
+1. [View objects](#view-objects)
+1. [Indexes](#indexes)
+1. [Hidden Indexes](#hindexes)
+1. [Custom dashboards configuration](#cdash)
+1. [Monitoring configuration](#monitoring)
+
+
 <a name="globals" />
 
 ### Globals
@@ -1316,6 +1339,9 @@ Int.MaxValue which effectively disables throttling.
 
 - **$notify-strikes**: (default: _3_) - how many consecutive error states to
 be considered a hard error and in turn - trigger alert notifications.
+
+- **$cdash**: Defining a custom dashboard. Check for details
+[below](#cdash)
 
 <a name="rrd-objects" />
 
@@ -1838,6 +1864,101 @@ Currently hidden indexes are only useful in the context of monitoring -
 to define a group of objects for which in turn to define alert
 thresholds, but not necessarily clutter the main page with all
 of the groups.
+
+<a name="cdash" />
+
+### Custom dashboards configuration
+
+Custom dashboards are defined in the yaml configuration using the
+**$cdash** global variable.
+
+The $cdash keyword defines a yaml map which must have an unique **id**
+property, an optional **title** and a list of **items** of various
+types. All item types have some common set of properties - an unique
+**id**, an optional **title**, **width** and **height** properties.The
+other mandatory propert is the **type** which can be one of the
+following:
+
+- *IndexGraphs* - the graphs produced by some defined in smg index. This
+item type requires an **ix** property specifying the index id and also
+a **limit** of graphs (default is 1).
+
+- *IndexStates* - svg heatmaps representing index states. Indexes are
+specified using the **ixes** propery which is a list of index ids. The
+svg imgae width is specified via the **img\_width** property.
+
+- *MonitorProblems* - current problems as visible on the monitor page.
+Supports customising what is displayied using **ms** (minimul alert
+level) filter and also **soft** and **slncd** filter flags.
+
+- *MonitorLog* - recent monitor/log entries. Supports customising what
+is displayied using **ms** (minimul alert level) filter and also
+**soft** and **slncd** filter flags.
+
+- *Plugin* - plugins can implement custom dashboard items and using
+custom (plugin-specific) configuration.
+
+- *External* - and external web page displayed in an iframe. Requires
+an **url** parameter and a separate **fheight** (frame height)
+property from the standard **height**.
+
+- *Container* - this is a special type of item which is a container for
+other items specified as a list under the **items** property.
+
+Example:
+
+    - $cdash:
+      id: noc
+      title: NOC
+      items:
+        - id: alerts
+          title: Active alerts
+          type: MonitorProblems
+          width: 350
+          height: 600
+        - id: alert-log
+          title: Alert Log
+          type: MonitorLog
+          width: 350
+          height: 600
+          limit: 50
+          ms: WARNING
+        - id: jmx.premote-graphs
+          type: IndexGraphs
+          title: jmx.premote Graphs
+          width: 700
+          height: 600
+          ix: jmx.premote
+          limit: 2
+        - id: group1
+          type: Container
+          width: 700
+          height: 800
+          items:
+          - id: index.states
+            title: Index States
+            type: IndexStates
+            width: 450
+            height: 500
+            img_width: 300
+            ixes:
+              - jmx.premote
+              - localhost
+          - id: calc-netext
+            type: Plugin
+            width: 700
+            height: 300
+            plugin_id: calc
+            ix: some.id
+        - id: google
+          title: External web page
+          type: External
+          width: 800
+          height: 620
+          fheight: 600
+          url: https://google.com/
+
+
 
 <a name="monitoring" />
 
