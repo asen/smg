@@ -1885,14 +1885,14 @@ a **limit** of graphs (default is 1).
 
 - *IndexStates* - svg heatmaps representing index states. Indexes are
 specified using the **ixes** propery which is a list of index ids. The
-svg imgae width is specified via the **img\_width** property.
+svg image width is specified via the **img\_width** property.
 
 - *MonitorProblems* - current problems as visible on the monitor page.
-Supports customising what is displayied using **ms** (minimul alert
+Supports customizing what is displayed using **ms** (minimum alert
 level) filter and also **soft** and **slncd** filter flags.
 
-- *MonitorLog* - recent monitor/log entries. Supports customising what
-is displayied using **ms** (minimul alert level) filter and also
+- *MonitorLog* - recent monitor/log entries. Supports customizing what
+is displayed using **ms** (minimum alert level) filter and also
 **soft** and **slncd** filter flags.
 
 - *Plugin* - plugins can implement custom dashboard items and using
