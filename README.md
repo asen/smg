@@ -32,7 +32,7 @@ Binary releases available here: https://github.com/asen/smg/releases
     $ git checkout release # recommended, to get on a stable branch
     $ ./build-smg.sh
     ...
-    *** Done. Output in target/universal/smg-0.6.tgz
+    *** Done. Output in target/universal/smg-0.7.tgz
 ```
 
 ## Install and configure
@@ -46,14 +46,14 @@ Binary releases available here: https://github.com/asen/smg/releases
 * Unpack tgz
 
     ```
-       # tar -xzf smg-0.6.tgz
+       # tar -xzf smg-0.7.tgz
     ```
  
 * Create /etc/smg/config.yml (e.g. by copying the example config into 
 /etc/smg/config.yml and editing as needed):
 
     ```
-        # mkdir /etc/smg && cp smg-0.6/smgconf/config-example.yml /etc/smg/config.yml
+        # mkdir /etc/smg && cp smg-0.7/smgconf/config-example.yml /etc/smg/config.yml
         # vim /etc/smg/config.yml
     ```
   
