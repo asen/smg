@@ -1880,8 +1880,9 @@ other mandatory propert is the **type** which can be one of the
 following:
 
 - *IndexGraphs* - the graphs produced by some defined in smg index. This
-item type requires an **ix** property specifying the index id and also
-a **limit** of graphs (default is 1).
+item type requires an **ix** property specifying the index id. It also
+supports **offset** and **limit** properties in the list of graphs
+(default is to show all).
 
 - *IndexStates* - svg heatmaps representing index states. Indexes are
 specified using the **ixes** propery which is a list of index ids. The

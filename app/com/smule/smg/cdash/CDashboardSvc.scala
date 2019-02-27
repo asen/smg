@@ -85,7 +85,8 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
 
   private def getIndexGraphs(itm: CDashConfigItem): Future[CDashItem] = {
     val indexId = itm.getDataStr("ix").getOrElse("")
-    val limit = Try(itm.getDataStr("limit").get.toInt).getOrElse(1)
+    var offset = Try(itm.getDataStr("offset").get.toInt).getOrElse(0)
+    var limit = Try(itm.getDataStr("limit").map(_.toInt)).toOption.flatten
 
     val idxOpt = smg.getIndexById(indexId)
     if (idxOpt.isEmpty)
@@ -103,9 +104,15 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
       val futImages = if (idx.aggOp.nonEmpty && objsSlice.nonEmpty) {
         smg.graphAggObjects(aggObjs.get, myPeriod, idx.flt.gopts,
           idx.aggOp.get, idx.xRemoteAgg)
-      } else smg.graphObjects(objsSlice, Seq(myPeriod), idx.flt.gopts)
+      } else {
+        val ret = smg.graphObjects(objsSlice.slice(offset, offset + limit.getOrElse(objsSlice.size)),
+            Seq(myPeriod), idx.flt.gopts)
+        offset = 0
+        limit = None
+        ret
+      }
       futImages.map { imgs =>
-        CDashItemIndexGraphs(itm, idx, imgs.take(limit))
+        CDashItemIndexGraphs(itm, idx, imgs.slice(offset, offset + limit.getOrElse(imgs.size)))
       }
     }
   }
