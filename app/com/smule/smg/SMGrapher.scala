@@ -525,6 +525,15 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
   }
 
+  def groupImageViews(lst: Seq[SMGImageView], groupBy: SMGAggGroupBy.Value): Seq[SMGImageViewsGroup] = {
+    val objLst = lst.map { iv => iv.obj }
+    val byVars = SMGAggGroupBy.groupByVars(objLst, groupBy)
+    val ov2iv = lst.groupBy(_.obj.id)
+    byVars.map { case (vdesc, vlst) =>
+      SMGImageViewsGroup(List(vdesc), vlst.flatMap(ov => ov2iv.getOrElse(ov.id, Seq())))
+    }
+  }
+
   def groupImageViewsGroupsByRemote(dglst: Seq[SMGImageViewsGroup], xRemoteAgg: Boolean): Seq[SMGImageViewsGroup] = {
     if (xRemoteAgg) {
       // pre-pend a "Cross-remote" level to the dashboard groups

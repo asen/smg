@@ -355,8 +355,12 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val lst = mySeq.head.asInstanceOf[Seq[SMGImageView]]
       val monStatesByImgView = mySeq(1).asInstanceOf[Map[String,Seq[SMGMonState]]]
 
-      val sortedGroups = if (dep.agg.isEmpty && (flt.gopts.xsort.getOrElse(0) > 0)){
-        smg.xsortImageViews(lst, flt.gopts.xsort.get - 1, dep.groupBy, dep.period)
+      val sortedGroups = if (dep.agg.isEmpty && (flt.gopts.xsort.getOrElse(0) != 0)){
+        val mysb = flt.gopts.xsort.get
+        if (mysb < 0)
+          smg.groupImageViews(lst, dep.groupBy)
+        else
+          smg.xsortImageViews(lst, mysb - 1, dep.groupBy, dep.period)
       } else {
         List(SMGImageViewsGroup(List(), lst))
       }

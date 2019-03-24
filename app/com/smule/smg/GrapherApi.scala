@@ -181,6 +181,8 @@ trait GrapherApi {
                       groupBy: SMGAggGroupBy.Value, period: String): Seq[SMGImageViewsGroup]
 
 
+  def groupImageViews(lst: Seq[SMGImageView], groupBy: SMGAggGroupBy.Value): Seq[SMGImageViewsGroup]
+
   // TODO
   def groupImageViewsGroupsByRemote(dglst: Seq[SMGImageViewsGroup], xRemoteAgg: Boolean): Seq[SMGImageViewsGroup]
 
