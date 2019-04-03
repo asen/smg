@@ -1,6 +1,7 @@
 package controllers
 
 import java.io.InputStream
+import java.text.SimpleDateFormat
 import java.util.Date
 
 import akka.actor.ActorSystem
@@ -536,7 +537,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  private val FETCH_HUMAN_DATE_FORMAT = "yyyy-MM-dd HH:mm:SS"
+
   private def fetchCommon(ov: SMGObjectView, d: Boolean, ret: Seq[SMGRrdRow]): Result = {
+    val dateFormatter = new SimpleDateFormat(FETCH_HUMAN_DATE_FORMAT)
     val httpHdrs = mutable.Map[String,String]()
     val hdr = if (ret.isEmpty) "Object Data Not Found\n" else {
       if (d){
@@ -566,7 +570,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
     Ok(
       hdr + ret.map { row =>
-        (Seq(row.tss.toString, new Date(row.tss.toLong * 1000).toString) ++ row.vals.map(_.toString)).mkString(",")
+        (Seq(row.tss.toString, dateFormatter.format(new Date(row.tss.toLong * 1000))) ++ row.vals.map(_.toString)).mkString(",")
       }.mkString("\n")
     ).withHeaders(httpHdrs.toList:_*)
   }

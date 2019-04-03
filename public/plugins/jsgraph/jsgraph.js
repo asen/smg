@@ -178,12 +178,12 @@ $.get( gl_smgFetchUrl, function( data ) {
     $('#plContainer').html("")
     var lines = data.split("\n")
     gl_smgHeader = lines.splice(0,1)[0].split(",")
-    //unixts,date,val1,val2
-    gl_smgHeader.splice(1,1)
+    //unixts,date,val1,val2 - XXX using date instead of TS which is in server timezone
+    gl_smgHeader.splice(0,1)
     gl_smgRows = lines.map(function(ln, ix, arr ){
         var r = ln.split(",")
-        r.splice(1,1)
-        r[0] = parseInt(r[0]) * 1000
+        r.splice(0,1)
+        //r[0] = parseInt(r[0]) * 1000
         for (var i = 1, l = r.length ; i < l ; i++ ) {
             r[i] = parseFloat(r[i])
         }
