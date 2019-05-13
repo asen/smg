@@ -38,7 +38,7 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
                               system: ActorSystem, lifecycle: ApplicationLifecycle) extends SMGSchedulerApi {
   val log = SMGLogger
 
-  val MIN_INTERVAL = 15
+  val MIN_INTERVAL = 10
 
   val MAX_TICK_JITTER = 15
 
@@ -53,29 +53,46 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
 
 
   private def calcTickInterval(intervals: Seq[Int]): Int  = {
-    if (intervals.isEmpty){
-      log.error("SMGScheduler.start: Config contains no intervals - aborting. Please update config and call reload")
-      MIN_INTERVAL
-    } else {
-      val ret = intervals.tail.foldLeft[Int](intervals.head) { (prev: Int, cur: Int) => BigInt(cur).gcd(prev).toInt }
-      if (ret < MIN_INTERVAL) {
-        log.error("SMGScheduler.calcTickInterval: refusing to work with interval of less than " + MIN_INTERVAL + " seconds (" + ret + ") fall-back to 10 seconds")
+    try {
+      if (intervals.isEmpty) {
+        log.error("SMGScheduler.start: Config contains no intervals - aborting. Please update config and call reload")
         MIN_INTERVAL
-      } else if (ret % 2 == 0) {
-        // use half the interval for improved accuracy
-        ret / 2
       } else {
-        log.warn("SMGScheduler.calcTickInterval: calculated odd tick interval " + ret)
-        ret
+        val ret = intervals.tail.foldLeft[Int](intervals.head) { (prev: Int, cur: Int) => BigInt(cur).gcd(prev).toInt }
+        if (ret < MIN_INTERVAL) {
+          log.error("SMGScheduler.calcTickInterval: refusing to work with interval of less than " + MIN_INTERVAL + " seconds (" + ret + ") fall-back to 10 seconds")
+          MIN_INTERVAL
+        } else if (ret % 2 == 0) {
+          // use half the interval for improved accuracy
+          ret / 2
+        } else {
+          log.warn("SMGScheduler.calcTickInterval: calculated odd tick interval " + ret)
+          ret
+        }
       }
+    } catch {
+      case t: Throwable =>
+        log.ex(t, s"Unexpected exception from calcTickInterval($intervals)")
+        MIN_INTERVAL
     }
   }
 
   private def timeToNextTick(tickIntvl: Int) = {
-    (tickIntvl - SMGRrd.tssNow % tickIntvl).seconds
+    val timeToNext = tickIntvl - SMGRrd.tssNow % tickIntvl
+    val ret = if (timeToNext > 0) timeToNext else 1
+    ret.seconds
   }
 
   private def getSchedulerIntervals = configSvc.config.intervals.filter(_ > 0).toSeq.sorted
+
+  private def monitorTick(): Unit = {
+    try {
+      notifyApi.tick()
+      monitorApi.monLogApi.tick()
+    } catch {
+      case t: Throwable => log.ex(t, "Unexpected exception in monitorTick()")
+    }
+  }
 
   private def tick(): Unit = {
     // do this first
@@ -84,23 +101,25 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
       log.info("SMGScheduler.tick: (shutting down) " + tickTsSecs)
       return
     }
-    log.info("SMGScheduler.tick: " + tickTsSecs)
     val curIntervals = getSchedulerIntervals
     val curTickInterval = calcTickInterval(curIntervals)
-    for (i <- curIntervals) {
-      if (tickTsSecs % i < MAX_TICK_JITTER) { // allow it to be up to MAX_TICK_JITTER second(s) late
-        try {
-          smg.run(i)
-        } catch {
-          case t: Throwable => log.ex(t, "Unexpected exception from smg.run(" + i +")")
+    log.info(s"SMGScheduler.tick: $tickTsSecs: tickIntvl=$curTickInterval intvls=${curIntervals.mkString(",")}")
+    try {
+      for (i <- curIntervals) {
+        if (tickTsSecs % i < MAX_TICK_JITTER) { // allow it to be up to MAX_TICK_JITTER second(s) late or early
+          try {
+            smg.run(i)
+          } catch {
+            case t: Throwable => log.ex(t, "Unexpected exception from smg.run(" + i + ")")
+          }
         }
       }
+      Future { // run this async
+        monitorTick()
+      }(configSvc.executionContexts.monitorCtx)
+    } finally {
+      system.scheduler.scheduleOnce(timeToNextTick(curTickInterval))(tick())
     }
-    Future { // run these async
-      notifyApi.tick()
-      monitorApi.monLogApi.tick()
-    } (configSvc.executionContexts.monitorCtx)
-    system.scheduler.scheduleOnce(timeToNextTick(curTickInterval))(tick())
   }
 
   def start(): Unit = {
