@@ -11,7 +11,8 @@ import org.yaml.snakeyaml.Yaml
 
 import scala.io.Source
 import scala.xml.Unparsed
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 
@@ -32,7 +33,7 @@ class SMGCalcPlugin (val pluginId: String,
   private var expressions = List[SMGCalcExprIndex]()
 
   private def keyValFromMap(m: java.util.Map[String, Object]): (String, Object) = {
-    val firstKey = m.keys.collectFirst[String] { case x => x }.getOrElse("")
+    val firstKey = m.asScala.keys.head
     val retVal = m.remove(firstKey)
     if (retVal != null)
       (firstKey, retVal)
@@ -40,23 +41,24 @@ class SMGCalcPlugin (val pluginId: String,
       (firstKey, m)
   }
 
+
   override def reloadConf(): Unit = {
     try {
-      val confTxt = Source.fromFile(pluginConfFile).mkString
-      val yaml = new Yaml();
+      val confTxt = smgConfSvc.sourceFromFile(pluginConfFile)
+      val yaml = new Yaml()
       val newMap = yaml.load(confTxt).asInstanceOf[java.util.Map[String, Object]]
-      val tmp = newMap(pluginId).asInstanceOf[java.util.Map[String, Object]]
+      val tmp = newMap.get(pluginId).asInstanceOf[java.util.Map[String, Object]]
       if (tmp != null) {
         topLevelConfMap.synchronized {
-          topLevelConfMap = tmp.toMap
+          topLevelConfMap = tmp.asScala.toMap
           if (topLevelConfMap.contains("expressions")) {
             val expLb = ListBuffer[SMGCalcExprIndex]()
-            topLevelConfMap("expressions").asInstanceOf[java.util.ArrayList[Object]].foreach { obj =>
+            topLevelConfMap("expressions").asInstanceOf[java.util.ArrayList[Object]].asScala.foreach { obj =>
               val ymap = obj.asInstanceOf[java.util.Map[String, Object]]
               val (k, m) = keyValFromMap(ymap)
-              val omap = m.asInstanceOf[java.util.Map[String, Object]].toMap
+              val omap = m.asInstanceOf[java.util.Map[String, Object]].asScala
               expLb += SMGCalcExprIndex(k,
-                omap.getOrDefault("expr", "").asInstanceOf[String],
+                omap.getOrElse("expr", "").asInstanceOf[String],
                 omap.get("title").map(_.toString),
                 omap.get("period").map(_.toString),
                 omap.get("step").map(_.asInstanceOf[Int]),

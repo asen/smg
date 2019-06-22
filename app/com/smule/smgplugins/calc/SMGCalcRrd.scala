@@ -175,7 +175,7 @@ class SMGCalcRrd(configSvc: SMGConfigService) {
     }
     val forPlainRpn = seq.slice(innerParensLix + 1, innerParensRix)
     val rpnElem = SMGRpnElem(plainSeqToRpn("", forPlainRpn, ovLblPx, ovLblMap))
-    seq.remove(innerParensLix, forPlainRpn.size + 2)
+    seq.remove(Math.max(innerParensLix,0), Math.min(forPlainRpn.size + 2, seq.size))
     if (seq.isEmpty)
       rpnElem.toS
     else {

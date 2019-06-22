@@ -42,7 +42,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
           }
         }
         try {
-          SMGUpdateActor.processObjectUpdate(obj, configSvc, ts, fetchFn, log)
+          SMGUpdateActor.processObjectUpdate(obj, configSvc, ts, fetchFn _, log)
         } finally {
           if (updateCounters) {
             SMGStagedRunCounter.incIntervalCount(obj.interval)

@@ -102,14 +102,14 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   private def getOrCreateVarState(ou: SMGObjectUpdate, vix: Int, update: Boolean = false): SMGMonInternalVarState = {
     val stateId = SMGMonInternalVarState.stateId(ou, vix)
     def createFn() = { new SMGMonInternalVarState(ou, vix, configSvc, monLogApi, notifSvc) }
-    def updateFn(state: SMGMonInternalVarState) = {
+    def updateFn(state: SMGMonInternalVarState): Unit = {
       if (state.objectUpdate != ou) {
         // this is logged at object level
         //log.warn(s"Updating changed object var state with id ${ret.id}")
         state.objectUpdate = ou
       }
     }
-    getOrCreateState[SMGMonInternalVarState](stateId, createFn, if (update) Some(updateFn) else None)
+    getOrCreateState[SMGMonInternalVarState](stateId, createFn _, if (update) Some(updateFn) else None)
   }
 
   private def getOrCreateObjState(ou: SMGObjectUpdate, update: Boolean = false): SMGMonInternalObjState = {
@@ -121,7 +121,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         state.objectUpdate = ou
       }
     }
-    getOrCreateState[SMGMonInternalObjState](stateId, createFn, if (update) Some(updateFn) else None)
+    getOrCreateState[SMGMonInternalObjState](stateId, createFn _, if (update) Some(updateFn) else None)
   }
 
   private def getOrCreatePfState(pf: SMGPreFetchCmd, intervals: Seq[Int], pluginId: Option[String], update: Boolean = false): SMGMonInternalPfState = {
@@ -133,13 +133,13 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         state.pfCmd = pf
       }
     }
-    getOrCreateState[SMGMonInternalPfState](stateId, createFn, if (update) Some(updateFn) else None)
+    getOrCreateState[SMGMonInternalPfState](stateId, createFn _, if (update) Some(updateFn) else None)
   }
 
   private def getOrCreateRunState(interval: Int, pluginId: Option[String]): SMGMonInternalRunState = {
     val stateId = SMGMonInternalRunState.stateId(interval, pluginId)
     def createFn() = { new SMGMonInternalRunState(interval, pluginId, configSvc, monLogApi, notifSvc) }
-    getOrCreateState[SMGMonInternalRunState](stateId, createFn, None)
+    getOrCreateState[SMGMonInternalRunState](stateId, createFn _, None)
   }
 
   private def cleanupAllMonitorStates(newTrees: Seq[SMGTree[SMGMonInternalState]]): Unit = {
@@ -649,7 +649,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     log.info("SMGMonitor.loadStateFromDisk BEGIN")
     try {
       val metaD: Map[String,String] = if (new File(monStateMetaFname).exists()) {
-        val metaStr = Source.fromFile(monStateMetaFname).getLines().mkString
+        val metaStr = configSvc.sourceFromFile(monStateMetaFname)
         parseStateMetaData(metaStr)
       } else Map()
       var cnt = 0
@@ -659,17 +659,17 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         val monStateFname = s"$monStateBaseFname$suffix.json"
         if (new File(monStateFname).exists()) {
           log.info(s"SMGMonitor.loadStateFromDisk $monStateFname")
-          val stateStr = Source.fromFile(monStateFname).getLines().mkString
+          val stateStr = configSvc.sourceFromFile(monStateFname)
           cnt += deserializeObjectsState(stateStr)
         }
       }
       if (new File(notifyStatesFname).exists()) {
-        val stateStr = Source.fromFile(notifyStatesFname).getLines().mkString
+        val stateStr = configSvc.sourceFromFile(notifyStatesFname)
         notifSvc.deserializeState(stateStr)
       }
       if (new File(stickySilencesFname).exists()) {
         implicit val jsReads = SMGMonStickySilence.jsReads({s: String => s})
-        val jsStr = Source.fromFile(stickySilencesFname).getLines().mkString
+        val jsStr = configSvc.sourceFromFile(stickySilencesFname)
         Json.parse(jsStr).as[Seq[SMGMonStickySilence]].foreach { ss =>
           if (ss.silenceUntilTs > SMGState.tssNow)
             myStickySilences = ss :: myStickySilences
@@ -874,11 +874,11 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def mute(remoteId: String): Future[Boolean] = {
-    muteUnmuteCommon(remoteId, notifSvc.muteAll, remotes.monitorMute)
+    muteUnmuteCommon(remoteId, notifSvc.muteAll _, remotes.monitorMute)
   }
 
   override def unmute(remoteId: String): Future[Boolean] = {
-    muteUnmuteCommon(remoteId, notifSvc.unmuteAll, remotes.monitorUnmute)
+    muteUnmuteCommon(remoteId, notifSvc.unmuteAll _, remotes.monitorUnmute)
   }
 
 

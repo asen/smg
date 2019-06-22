@@ -1,5 +1,8 @@
 package com.smule.smg.config
 
+import java.util.concurrent.TimeUnit
+
+import akka.util.Timeout
 import com.smule.smg.cdash.CDashboardConfig
 import com.smule.smg.core._
 import com.smule.smg.monitor.{SMGMonAlertConfObj, SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifyConfObj}
@@ -7,6 +10,8 @@ import com.smule.smg.remote.SMGRemote
 import com.smule.smg.rrd.{SMGRrd, SMGRrdConfig}
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.stm.CommitBarrier.Timeout
 
 /**
   * An object representing the local SMG configuration as provided in yml file(s)
@@ -111,6 +116,8 @@ case class SMGLocalConfig(
 
   val proxyDisable: Boolean = globals.getOrElse("$proxy-disable","false") == "true"
   val proxyTimeout: Long = globals.getOrElse("$proxy-timeout","30000").toLong
+
+  val proxyTimeoutDuration: FiniteDuration = new Timeout(proxyTimeout, TimeUnit.MILLISECONDS).duration
 
   val indexTreeLevels: Int = globals.getOrElse("$index-tree-levels", "1").toInt
 

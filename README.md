@@ -2,7 +2,7 @@
 
 ## What is this
 
-Play [2.4/scala](https://www.playframework.com/) app using external 
+Play [2.x/scala](https://www.playframework.com/) app using external 
 scripts to fetch numbers from services and [rrdtool](http://oss.oetiker.ch/rrdtool/) 
 to maintain many time series databases and display graphs from them. 
 It can also do a lot more than that - like checking the fetched valules 
@@ -32,7 +32,7 @@ Binary releases available here: https://github.com/asen/smg/releases
     $ git checkout release # recommended, to get on a stable branch
     $ ./build-smg.sh
     ...
-    *** Done. Output in target/universal/smg-0.7.tgz
+    *** Done. Output in target/universal/smg-1.0.tgz
 ```
 
 ## Install and configure
@@ -91,7 +91,7 @@ root access).
 One can also copy that file under /etc/smg/app.conf and edit there, the 
 start-smg.sh script will use that if exists.
 
-* Point JAVA_HOME to a Java 8 installation and start SMG using the 
+* Point JAVA_HOME to a Java 11 installation and start SMG using the 
 start-smg.sh script:
 
     ```

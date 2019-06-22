@@ -2,6 +2,7 @@ package com.smule.smg
 
 
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 import javax.inject.{Inject, Singleton}
 import akka.actor.{ActorRef, ActorSystem, Props}
@@ -117,7 +118,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       cleanupCommandExecutionTimes() // TODO run this less often?
       log.info(logMsg)
     }
-    ret
+    ret _
   }
 
   private def runPlugins(interval: Int): Unit = {
@@ -243,7 +244,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   private def graphLocalObject(obj:SMGObjectView, period: String, gopts:GraphOptions): Future[SMGImageView] = {
     val baseFn = getBasePngFn(obj.id, period, gopts)
     val config = configSvc.config
-    implicit val timeout: Timeout = 120000
+    implicit val timeout: Timeout = new Timeout(120000L, TimeUnit.MILLISECONDS)
     if (obj.isAgg) {
       graphLocalAggObject(obj.asInstanceOf[SMGAggObjectViewLocal], period, gopts)
     } else {
@@ -331,7 +332,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   private def graphLocalAggObject(obj:SMGAggObjectView, period: String, gopts: GraphOptions): Future[SMGAggImage] = {
     val baseFn = getBasePngFn(obj.id, period, gopts)
     val config = configSvc.config
-    implicit val timeout: Timeout = 120000
+    implicit val timeout: Timeout = new Timeout(120000L, TimeUnit.MILLISECONDS)
     val msg = SMGraphActor.SMGraphMessage(configSvc, obj, period, gopts, new File(config.imgDir, baseFn).toString)
     (graphActor ? msg).mapTo[SMGraphActor.SMGraphReadyMessage].map { resp:SMGraphActor.SMGraphReadyMessage =>
       log.debug("SMGrapher.graphAggObject: received response: " + resp )

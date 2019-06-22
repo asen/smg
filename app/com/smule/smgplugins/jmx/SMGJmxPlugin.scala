@@ -4,7 +4,7 @@ import akka.actor.Props
 import org.yaml.snakeyaml.Yaml
 import play.libs.Akka
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source
@@ -57,11 +57,11 @@ class SMGJmxPlugin (val pluginId: String,
 
   override def reloadConf(): Unit = {
     try {
-      val confTxt = Source.fromFile(pluginConfFile).mkString
+      val confTxt = smgConfSvc.sourceFromFile(pluginConfFile)
       val yaml = new Yaml();
-      val newMap = yaml.load(confTxt).asInstanceOf[java.util.Map[String, Object]]
+      val newMap = yaml.load(confTxt).asInstanceOf[java.util.Map[String, Object]].asScala
       topLevelConfMap.synchronized {
-        topLevelConfMap = newMap(pluginId).asInstanceOf[java.util.Map[String, Object]].toMap
+        topLevelConfMap = newMap(pluginId).asInstanceOf[java.util.Map[String, Object]].asScala.toMap
       }
       var newIndexes = List[SMGConfIndex]()
       jmxObjects.synchronized{
@@ -111,11 +111,11 @@ class SMGJmxPlugin (val pluginId: String,
     log.info("SMGJmxPlugin.onRunComplete: finished")
   }
 
-  val myUpdateEc: ExecutionContext = Akka.system.dispatchers.lookup("akka-contexts.jmx-plugin")
+  val myUpdateEc: ExecutionContext = smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.jmx-plugin")
 
   private val updateActor =
     smgConfSvc.actorSystem.actorOf(Props(
-      new SMGJmxUpdateActor(smgConfSvc, this, confParser, jmxClient, runCounterName, onRunComplete)
+      new SMGJmxUpdateActor(smgConfSvc, this, confParser, jmxClient, runCounterName, onRunComplete _)
     ))
 
 

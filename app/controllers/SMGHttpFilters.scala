@@ -1,15 +1,12 @@
 package controllers
 
 import javax.inject.Inject
-
-import play.api.mvc.EssentialFilter
-import play.http.HttpFilters
-
+import play.api.http.{DefaultHttpFilters, EnabledFilters}
 /**
   * Created by asen on 11/16/15.
   */
 class SMGHttpFilters @Inject()(
-                          log: LoggingFilter
-                        ) extends HttpFilters {
-  override def filters(): Array[EssentialFilter] = Array(log)
-}
+                                defaultFilters: EnabledFilters,
+                                log: LoggingFilter
+                              ) extends DefaultHttpFilters(defaultFilters.filters :+ log: _*)
+

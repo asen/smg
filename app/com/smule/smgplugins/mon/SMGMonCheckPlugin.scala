@@ -18,7 +18,7 @@ class SMGMonCheckPlugin(val pluginId: String,
 
   val log = new SMGPluginLogger(pluginId)
 
-  val anomCheck = new AnomCheck("anom", log)
+  val anomCheck = new AnomCheck("anom", log, smgConfSvc)
 
   val popCheck = new POPCheck("pop", log, smgConfSvc)
 

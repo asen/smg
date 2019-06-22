@@ -9,7 +9,7 @@ import com.smule.smg.rrd.SMGRrd
 import com.smule.smg.GrapherApi
 import javax.inject.{Inject, Singleton}
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -36,7 +36,7 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
                               monitorApi: SMGMonitorApi,
                               notifyApi: SMGMonNotifyApi,
                               system: ActorSystem, lifecycle: ApplicationLifecycle) extends SMGSchedulerApi {
-  val log = SMGLogger
+  private val log = SMGLogger
 
   val MIN_INTERVAL = 10
 
@@ -97,7 +97,7 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
   private def tick(): Unit = {
     // do this first
     val tickTsSecs = SMGRrd.tssNow
-    if (isShuttingDown.get() || system.isTerminated) {
+    if (isShuttingDown.get()) { // TODO || system.isTerminated???
       log.info("SMGScheduler.tick: (shutting down) " + tickTsSecs)
       return
     }

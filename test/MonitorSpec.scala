@@ -10,7 +10,8 @@ import play.api.inject.ApplicationLifecycle
 import play.api.test._
 import play.api.libs.json.Json
 import org.mockito.Mockito._
-import org.mockito.Matchers._
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyLong
 import helpers._
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner

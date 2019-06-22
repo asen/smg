@@ -15,12 +15,12 @@ class ConfigSvcSpec extends Specification {
 
       val cs = new TestConfigSvc()
       val fct = cs.config.getFetchCommandsTrees(60)
-//      println(fct.map(_.node.id))
-      fct must have size 2
+      println(fct.map(_.node.id))
+      fct must have size 4
       fct(0).leafNodes must have size 1
-      fct(1).children must have size 3
-      fct(1).leafNodes must have size 3
-      fct.map(_.size).sum mustEqual 5
+      fct(3).children must have size 3
+      fct(3).leafNodes must have size 3
+      fct.map(_.size).sum mustEqual 7
     }
   }
 }

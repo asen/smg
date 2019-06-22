@@ -279,7 +279,20 @@ object SMGRrd {
     }
   }
 
-  private def evalRpn(rpn: mutable.Stack[String]): Double = {
+  private class MyStack[T](){
+    private var lst = List[T]()
+    def isEmpty: Boolean = lst.isEmpty
+    def pop(): T = {
+      val ret = lst.head
+      lst = lst.tail
+      ret
+    }
+    def push(itm: T): Unit = {
+     lst = itm :: lst
+    }
+  }
+
+  private def evalRpn(rpn: MyStack[String]): Double = {
     // TODO VERY limited RPN support
     if (rpn.isEmpty) return Double.NaN
     val cur = rpn.pop()
@@ -320,7 +333,7 @@ object SMGRrd {
     vals.indices.reverse.foreach { ix =>
       replacedRpnStr = replacedRpnStr.replaceAll("\\$ds" + ix, vals(ix).toString)
     }
-    val st = mutable.Stack[String]()
+    val st = new MyStack[String]()
     replacedRpnStr.split(",").foreach(st.push)
     evalRpn(st)
   }
@@ -328,7 +341,7 @@ object SMGRrd {
   def computeCdef(cdefStr: String, value: Double): Double = {
     //cdef: "$ds,8,*"
     val replacedRpnStr = cdefStr.replaceAll("\\$ds", value.toString)
-    val st = mutable.Stack[String]()
+    val st = new MyStack[String]()
     replacedRpnStr.split(",").foreach(st.push)
     evalRpn(st)
   }

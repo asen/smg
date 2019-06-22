@@ -6,4 +6,4 @@ export JAVA_OPTS="-Dcom.sun.management.jmxremote.port=9001 \
     -Dplay.server.netty.maxInitialLineLength=65535 \
     -Dplay.server.netty.maxHeaderSize=65535"
 
-exec ./activator run
+exec sbt run

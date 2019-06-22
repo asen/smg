@@ -26,6 +26,8 @@ class SMGJmxUpdateActor(
 
   private val log = jmxClient.log
 
+  private val myUpdateEc: ExecutionContext = smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.jmx-plugin")
+
   private def incrementCounter() : Unit = {
     if (SMGRunStats.incCustomCounter(runCounterName)) {
       onComplete()
@@ -61,7 +63,7 @@ class SMGJmxUpdateActor(
             }
 
             try {
-              SMGUpdateActor.processObjectUpdate(obj, smgConfSvc, None, fetchFn, log)
+              SMGUpdateActor.processObjectUpdate(obj, smgConfSvc, None, fetchFn _, log)
             } finally {
               incrementCounter()
             }
@@ -74,8 +76,6 @@ class SMGJmxUpdateActor(
 }
 
 object SMGJmxUpdateActor {
-  val myUpdateEc: ExecutionContext = Akka.system.dispatchers.lookup("akka-contexts.jmx-plugin")
-
 
   case class SMGJmxUpdateMessage(
                                   hostPort: String,

@@ -2,10 +2,11 @@ package com.smule.smg.core
 
 import java.util.concurrent.{ConcurrentHashMap, Executors}
 
+import akka.actor.ActorSystem
 import javax.inject.{Inject, Singleton}
 import play.libs.Akka
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.concurrent
 import scala.concurrent.ExecutionContext
 
@@ -13,22 +14,22 @@ import scala.concurrent.ExecutionContext
   * The various execution contexts used by SMG
   */
 @Singleton
-class SMGExecutionContexts @Inject() () extends ExecutionContexts {
+class SMGExecutionContexts @Inject() (actorSystem: ActorSystem) extends ExecutionContexts {
   /**
     * The default (Akka/Play) context used for Akka message communications
     */
-  val defaultCtx: ExecutionContext = play.api.libs.concurrent.Execution.Implicits.defaultContext
+  val defaultCtx: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   /**
     * Context used when executing external rrdtool commands to graph images
     */
-  val rrdGraphCtx: ExecutionContext = Akka.system.dispatchers.lookup("akka-contexts.rrd-graph")
+  val rrdGraphCtx: ExecutionContext = actorSystem.dispatchers.lookup("akka-contexts.rrd-graph")
 
-  val monitorCtx: ExecutionContext = Akka.system.dispatchers.lookup("akka-contexts.monitor")
+  val monitorCtx: ExecutionContext = actorSystem.dispatchers.lookup("akka-contexts.monitor")
 
   private val log = SMGLogger
 
-  private val ctxMap: concurrent.Map[Int,ExecutionContext] = new ConcurrentHashMap[Int, ExecutionContext]()
+  private val ctxMap: concurrent.Map[Int,ExecutionContext] = new ConcurrentHashMap[Int, ExecutionContext]().asScala
 
   private def createNewExecutionContext(maxThreads: Int): ExecutionContext = {
     val es = Executors.newFixedThreadPool(maxThreads)

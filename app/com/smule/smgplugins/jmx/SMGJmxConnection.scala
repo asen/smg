@@ -6,7 +6,7 @@ import javax.management.openmbean.CompositeData
 import javax.management.remote.{JMXConnector, JMXConnectorFactory, JMXServiceURL}
 
 import scala.util.Try
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 /**
   * Created by asen on 4/12/17.
@@ -75,7 +75,7 @@ class SMGJmxConnection(hostPort: String, log: SMGPluginLogger) {
     val attrs = connection.synchronized {
       connection.getAttributes(on, attrNames.map(_.split(":")(0)).toArray)
     }
-    val ret = attrs.asList.zip(attrNames).map { t =>
+    val ret = attrs.asList.asScala.zip(attrNames).map { t =>
       val at = t._1
       val an = t._2.split(":")
       if (an.size == 2) {

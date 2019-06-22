@@ -1,20 +1,18 @@
 package controllers
 
-import javax.inject.{Inject, Singleton}
 import akka.actor.ActorSystem
 import com.smule.smg._
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core._
-import com.smule.smg.remote._
 import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView}
 import com.smule.smg.monitor._
-import com.smule.smg.remote.SMGRemotesApi
+import com.smule.smg.remote.{SMGRemotesApi, _}
 import com.smule.smg.rrd.SMGRrdFetchParams
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
 import play.api.mvc._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Created by asen on 11/19/15.
@@ -28,7 +26,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
                       configSvc: SMGConfigService,
                       monitorApi: SMGMonitorApi,
                       notifyApi: SMGMonNotifyApi
-                     )  extends Controller {
+                     )(implicit ec: ExecutionContext)  extends InjectedController {
 
 
   val log = SMGLogger

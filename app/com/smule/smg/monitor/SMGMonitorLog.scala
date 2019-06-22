@@ -98,11 +98,16 @@ class SMGMonitorLog  @Inject() (configSvc: SMGConfigService, remotes: SMGRemotes
   private def loadLogFile(fn:String): List[SMGMonitorLogMsg] = {
     try {
       if (new File(fn).exists()) {
-        Source.fromFile(fn).getLines().map { ln =>
-          val ret = SMGMonitorLogMsg.parseLogLine(ln)
-          if (ret.isEmpty && (ln != "")) log.error(s"SMGMonitorLog.loadLogFile($fn): bad line: " + ln)
-          ret
-        }.filter(_.isDefined).map(_.get).toList
+        val src = Source.fromFile(fn)
+        try {
+          src.getLines().map { ln =>
+            val ret = SMGMonitorLogMsg.parseLogLine(ln)
+            if (ret.isEmpty && (ln != "")) log.error(s"SMGMonitorLog.loadLogFile($fn): bad line: " + ln)
+            ret
+          }.filter(_.isDefined).map(_.get).toList
+        } finally {
+          src.close()
+        }
       } else List()
     } catch {
       case t: Throwable => {

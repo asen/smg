@@ -18,7 +18,7 @@ class SMGLiveMonPlugin(val pluginId: String,
                         val smgConfSvc: SMGConfigService
                        ) extends SMGPlugin  {
 
-  private val myEc: ExecutionContext = Akka.system.dispatchers.lookup("akka-contexts.monitor-plugin")
+  private val myEc: ExecutionContext = smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.monitor-plugin")
 
   private val log = new SMGPluginLogger(pluginId)
 

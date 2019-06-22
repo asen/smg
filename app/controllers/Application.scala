@@ -1,11 +1,9 @@
 package controllers
 
-import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 
 import akka.actor.ActorSystem
-import com.ning.http.client.providers.netty.response.NettyResponse
 import com.smule.smg._
 import com.smule.smg.config.{SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._
@@ -14,16 +12,14 @@ import com.smule.smg.monitor._
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.{SMGRrd, SMGRrdFetchParams, SMGRrdRow}
 import javax.inject.{Inject, Singleton}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.iteratee.Enumerator
+import play.api.http.HttpEntity
 import play.api.libs.json._
 import play.api.libs.ws.WSClient
 import play.api.mvc.{Cookie, DiscardingCookie, _}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 @Singleton
@@ -33,7 +29,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
                               scheduler: SMGSchedulerApi,
                               remotes: SMGRemotesApi,
                               monitorApi: SMGMonitorApi,
-                              ws: WSClient)  extends Controller {
+                              ws: WSClient)(implicit ec: ExecutionContext)  extends InjectedController {
 
   val log = SMGLogger
 
@@ -1049,7 +1045,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   private var saveStatesIsRunning: Boolean = false
 
   def monitorSaveStates(): Action[AnyContent] = Action {
-    val shouldRun = (!actorSystem.isTerminated) && saveStatesSyncObject.synchronized {
+    val shouldRun = saveStatesSyncObject.synchronized { // (!actorSystem.isTerminated) && TODO play 2.6 migration
       if (saveStatesIsRunning) {
         false
       } else {
@@ -1080,19 +1076,30 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param path
     * @return
     */
-  def proxy(remote: String, path: String): Action[AnyContent] = Action.async {
+  def proxy(remote: String, path: String): Action[AnyContent] = Action.async { request =>
     val remoteHost = configSvc.config.remotes.find(_.id == remote).map(_.url)
     if (remoteHost.isEmpty) Future { NotFound(s"remote $remote not found") }
     else {
       val remoteUrl = remoteHost.get + "/" + path
-      ws.url(remoteUrl).withRequestTimeout(configSvc.config.proxyTimeout).get.map { wsresp =>
-        val asStream: InputStream = wsresp.underlying[NettyResponse].getResponseBodyAsStream
-        val hdrs = wsresp.allHeaders.map(t => (t._1, t._2.head)).toSeq
-        Ok.stream(Enumerator.fromStream(asStream)).withHeaders(hdrs:_*)
-      }.recover {
-        case x => {
-          log.ex(x, "proxy remote error: " + remoteUrl)
-          BadGateway(s"Proxy error: $remoteUrl")
+      ws.url(remoteUrl).withRequestTimeout(configSvc.config.proxyTimeoutDuration).
+        withMethod(request.method).stream().map { response =>
+        // Check that the response was successful
+        if (response.status == 200) {
+          // Get the content type
+          val contentType = response.headers
+            .get("Content-Type")
+            .flatMap(_.headOption)
+            .getOrElse("application/octet-stream")
+
+          // If there's a content length, send that, otherwise return the body chunked
+          response.headers.get("Content-Length") match {
+            case Some(Seq(length)) =>
+              Ok.sendEntity(HttpEntity.Streamed(response.bodyAsSource, Some(length.toLong), Some(contentType)))
+            case _ =>
+              Ok.chunked(response.bodyAsSource).as(contentType)
+          }
+        } else {
+          BadGateway
         }
       }
     }

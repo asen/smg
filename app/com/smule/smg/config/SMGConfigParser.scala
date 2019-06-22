@@ -14,7 +14,7 @@ import com.smule.smg.remote.SMGRemote
 import com.smule.smg.rrd.{SMGRraDef, SMGRrdConfig}
 import org.yaml.snakeyaml.Yaml
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
@@ -59,8 +59,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
     getListOfFiles(dir, matcher).map( (f: File) => f.getPath)
   }
 
-  def keyValFromMap(m: java.util.Map[String, Object]): (String,Object) = {
-    val firstKey = m.keys.collectFirst[String]{ case x => x }.getOrElse("")
+  def keyValFromMap(m: util.Map[String, Object]): (String,Object) = {
+    val firstKey = m.asScala.keys.head
     val retVal = m.remove(firstKey)
     if (retVal != null)
       (firstKey, retVal)
@@ -68,7 +68,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       (firstKey, m)
   }
 
-  def getRrdType(ymap: java.util.Map[String, Object], default: Option[String]): String = {
+  def getRrdType(ymap: mutable.Map[String, Object], default: Option[String]): String = {
     val realDefault = default.getOrElse("GAUGE")
     // XXX support for both rrdType (deprecated) and rrd_type syntax
     if (ymap.contains("rrd_type"))
@@ -77,12 +77,12 @@ class SMGConfigParser(log: SMGLoggerApi) {
   }
 
   private def yamlVarsToVars(yamlVars: Object): List[Map[String, String]] = {
-    yamlVars.asInstanceOf[util.ArrayList[util.Map[String, Object]]].toList.map(
-      (m: util.Map[String, Object]) => m.map { t => (t._1, t._2.toString) }.toMap
+    yamlVars.asInstanceOf[util.ArrayList[util.Map[String, Object]]].asScala.toList.map(
+      (m: util.Map[String, Object]) => m.asScala.map { t => (t._1, t._2.toString) }.toMap
     )
   }
 
-  def ymapVars(ymap: java.util.Map[String, Object]): List[Map[String, String]] = {
+  def ymapVars(ymap: mutable.Map[String, Object]): List[Map[String, String]] = {
     if (ymap.contains("vars")) {
       yamlVarsToVars(ymap("vars"))
     } else {
@@ -90,11 +90,20 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
   }
 
-  def ymapCdefVars(ymap: java.util.Map[String, Object]): List[Map[String, String]] = {
+  def ymapCdefVars(ymap: mutable.Map[String, Object]): List[Map[String, String]] = {
     if (ymap.contains("cdef_vars")) {
       yamlVarsToVars(ymap("cdef_vars"))
     } else {
       List()
+    }
+  }
+
+  def sourceFromFile(fn:String): String = {
+    val src = Source.fromFile(fn)
+    try {
+      src.mkString
+    } finally {
+      src.close()
     }
   }
 
@@ -105,7 +114,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
 
   case class ForwardObjectRef(oid: String,
                               confFile: String,
-                              ymap: java.util.Map[String, Object],
+                              ymap: mutable.Map[String, Object],
                               oType: ForwardObjectRef.Value
                              )
 
@@ -199,19 +208,19 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
 
     def processPrefetch(t: (String,Object), confFile: String ): Unit = {
-      val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]]
+      val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
       if (yamlMap.contains("id") && yamlMap.contains("command")) {
-        val id = yamlMap.get("id").toString
+        val id = yamlMap("id").toString
         if (!checkOid(id)) {
           processConfigError(confFile,
             s"processPrefetch: id already defined (ignoring): $id: " + yamlMap.toString)
         } else {
-          val cmd = SMGCmd(yamlMap.get("command").toString, yamlMap.getOrElse("timeout", 30).asInstanceOf[Int]) //  TODO get 30 from a val
+          val cmd = SMGCmd(yamlMap("command").toString, yamlMap.getOrElse("timeout", 30).asInstanceOf[Int]) //  TODO get 30 from a val
           val parentPfStr = yamlMap.getOrElse("pre_fetch", "").toString
           val parentPf = if (parentPfStr == "") None else Some(parentPfStr)
-          val ignoreTs = yamlMap.contains("ignorets") && (yamlMap.get("ignorets").toString != "false")
+          val ignoreTs = yamlMap.contains("ignorets") && (yamlMap("ignorets").toString != "false")
           val childConc = if (yamlMap.contains("child_conc"))
-            yamlMap.get("child_conc").asInstanceOf[Int]
+            yamlMap("child_conc").asInstanceOf[Int]
           else 1
 
           val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, id, yamlMap.toMap.map(kv => (kv._1, kv._2.toString)))
@@ -224,14 +233,14 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
 
     def processNotifyCommand(t: (String,Object), confFile: String ): Unit = {
-      val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]]
+      val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
       if (yamlMap.contains("id") && yamlMap.contains("command")) {
-        val id = yamlMap.get("id").toString
+        val id = yamlMap("id").toString
         if (notifyCommands.contains(id)) {
           processConfigError(confFile,
             s"processNotifyCommand: notify command id already defined (ignoring): $id: " + yamlMap.toString)
         } else {
-          notifyCommands(id) = SMGMonNotifyCmd(id, yamlMap.get("command").toString, yamlMap.getOrElse("timeout", 30).asInstanceOf[Int])
+          notifyCommands(id) = SMGMonNotifyCmd(id, yamlMap("command").toString, yamlMap.getOrElse("timeout", 30).asInstanceOf[Int])
         }
       } else {
         processConfigError(confFile, "processNotifyCommand: $notify-command yamlMap does not have command and id: " + yamlMap.toString)
@@ -239,25 +248,25 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
 
     def processRemote(t: (String,Object), confFile: String ): Unit = {
-      val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]]
+      val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
       if (yamlMap.contains("id") && yamlMap.contains("url")) {
         if (yamlMap.contains("slave_id")) {
-          remoteMasters += SMGRemote(yamlMap.get("id").toString, yamlMap.get("url").toString, Some(yamlMap.get("slave_id").toString))
+          remoteMasters += SMGRemote(yamlMap("id").toString, yamlMap("url").toString, Some(yamlMap("slave_id").toString))
         } else
-          remotes += SMGRemote(yamlMap.get("id").toString, yamlMap.get("url").toString)
+          remotes += SMGRemote(yamlMap("id").toString, yamlMap("url").toString)
       } else {
         processConfigError(confFile, "processRemote: $remote yamlMap does not have id and url: " + yamlMap.toString)
       }
     }
 
     def processRraDef(t: (String,Object), confFile: String ): Unit = {
-      val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]]
+      val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
       if (yamlMap.contains("id") && yamlMap.contains("rra")) {
-        val rid = yamlMap.get("id").toString
+        val rid = yamlMap("id").asInstanceOf[String]
         if (rraDefs.contains(rid)) {
           processConfigError(confFile, "processRraDef: duplicate $rra_def id: " + rid)
         } else {
-          rraDefs(rid) = SMGRraDef(rid, yamlMap.get("rra").asInstanceOf[util.ArrayList[String]].toList)
+          rraDefs(rid) = SMGRraDef(rid, yamlMap("rra").asInstanceOf[util.ArrayList[String]].asScala.toList)
           log.debug("SMGConfigServiceImpl.processRraDef: Added new rraDef: " + rraDefs(rid))
         }
       } else {
@@ -265,7 +274,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       }
     }
 
-    def parseCDashConfigItem(ymap: Map[String,Object], confFile: String): Option[CDashConfigItem] = {
+    def parseCDashConfigItem(ymap: mutable.Map[String,Object], confFile: String): Option[CDashConfigItem] = {
       try {
         Some(
           CDashConfigItem.fromYamlMap(ymap)
@@ -279,15 +288,15 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
 
     def processCustomDashboard(t: (String,Object), confFile: String ): Unit = {
-      val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]]
+      val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
       if (yamlMap.contains("id") && yamlMap.contains("items")){
         val cdashId = yamlMap("id").toString
         val titleOpt = if(yamlMap.contains("title")) Some(yamlMap("title").toString) else None
         val myRefresh = Try(yamlMap("refersh").asInstanceOf[Int]).getOrElse(300)
-        val myItemsOpt = Try(yamlMap("items").asInstanceOf[java.util.List[Object]]).toOption
+        val myItemsOpt = Try(yamlMap("items").asInstanceOf[java.util.List[Object]].asScala).toOption
         if (myItemsOpt.isDefined) {
           val parsedItems = myItemsOpt.get.toList.flatMap { itm =>
-            parseCDashConfigItem(itm.asInstanceOf[java.util.Map[String, Object]].toMap, confFile)
+            parseCDashConfigItem(itm.asInstanceOf[java.util.Map[String, Object]].asScala, confFile)
           }
           cDashboardConfigs += CDashboardConfig(id = cdashId, title = titleOpt, refresh = myRefresh, items = parsedItems)
         } else {
@@ -318,8 +327,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
         processConfigError(confFile, "processIndex: skipping duplicate index with id: " + t._1)
       } else {
         try {
-          val ymap = t._2.asInstanceOf[java.util.Map[String, Object]]
-          val idx = new SMGConfIndex(idxId, ymap)
+          val ymap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
+          val idx = new SMGConfIndex(idxId, ymap.toMap)
           indexIds += idxId
           if (isHidden) {
             if (hiddenIndexConfs.contains(idxId)) { // not really possibe
@@ -342,10 +351,10 @@ class SMGConfigParser(log: SMGLoggerApi) {
             }
           }
           // process alert/notify confs
-          if (ymap.containsKey("alerts")){
-            val alertsLst = ymap("alerts").asInstanceOf[java.util.ArrayList[java.util.Map[String, Object]]]
+          if (ymap.contains("alerts")){
+            val alertsLst = ymap("alerts").asInstanceOf[java.util.ArrayList[java.util.Map[String, Object]]].asScala
             alertsLst.foreach { m =>
-              val sm = m.map(t => (t._1, t._2.toString)).toMap
+              val sm = m.asScala.map(t => (t._1, t._2.toString)).toMap
               val src = if (isHidden) SMGMonAlertConfSource.HINDEX else SMGMonAlertConfSource.INDEX
               val ac = SMGMonAlertConfVar.fromVarMap(src, idx.id, sm, pluginChecks)
               if (ac.isDefined) indexAlertConfs += Tuple3(idx, sm.getOrElse("label","ds" + idx), ac.get)
@@ -362,7 +371,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     def checkOid(oid: String): Boolean = validateOid(oid) &&
       (!objectIds.contains(oid)) && (!preFetches.contains(oid))
 
-    def processObjectVarsAlertAndNotifyConfs(ymap: java.util.Map[String, Object], oid: String): List[Map[String,String]] = {
+    def processObjectVarsAlertAndNotifyConfs(ymap: mutable.Map[String, Object], oid: String): List[Map[String,String]] = {
       val myYmapVars = ymapVars(ymap)
       // parse alert confs
       myYmapVars.zipWithIndex.foreach { t =>
@@ -389,9 +398,9 @@ class SMGConfigParser(log: SMGLoggerApi) {
       ymapFilteredVars
     }
 
-    def getRraDef(confFile: String, oid: String, ymap: java.util.Map[String, Object]): Option[SMGRraDef] = {
+    def getRraDef(confFile: String, oid: String, ymap: mutable.Map[String, Object]): Option[SMGRraDef] = {
       if (ymap.contains("rra")) {
-        val rid = ymap.get("rra").toString
+        val rid = ymap("rra").toString
         if (rraDefs.contains(rid)) {
           rraDefs.get(rid)
         } else {
@@ -409,12 +418,12 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
 
     def createGraphObject(oid: String,
-                          ymap: java.util.Map[String, Object],
+                          ymap: mutable.Map[String, Object],
                           confFile: String,
                           pluginViewObjs: Map[String, SMGObjectView]
                          ): Unit = {
       try {
-        val refid = ymap.get("ref").toString
+        val refid = ymap("ref").toString
         val refObjOpt = lookupObjectView(refid, pluginViewObjs)
         if (refObjOpt.isEmpty || refObjOpt.get.refObj.isEmpty){
           processConfigError(confFile,
@@ -428,7 +437,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
             cdefVars = ymapCdefVars(ymap),
             title = ymap.getOrElse("title", refobj.title).toString,
             stack = ymap.getOrElse("stack", refobj.stack).asInstanceOf[Boolean],
-            gvIxes = ymap.getOrElse("gv", new util.ArrayList[Int]()).asInstanceOf[util.ArrayList[Int]].toList,
+            gvIxes = ymap.getOrElse("gv", new util.ArrayList[Int]()).asInstanceOf[util.ArrayList[Int]].asScala.toList,
             rrdFile = refobj.rrdFile,
             refObj = refobj.refObj,
             rrdType = refobj.rrdType)
@@ -446,7 +455,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
         processConfigError(confFile, "processObject: skipping object with invalid or duplicate id: " + oid)
       } else {
         try {
-          val ymap = t._2.asInstanceOf[java.util.Map[String, Object]]
+          val ymap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
           // check if we are defining a graph object vs rrd object (former instances reference the later)
           if (ymap.contains("ref")) {
             // a graph object - just record the id at the correct position and keep the ymap for later
@@ -471,10 +480,10 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 interval = ymap.getOrElse("interval", myDefaultInterval).asInstanceOf[Int],
                 dataDelay = ymap.getOrElse("dataDelay", 0).asInstanceOf[Int],
                 stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
-                preFetch = if (ymap.contains("pre_fetch")) Some(ymap.get("pre_fetch").toString) else None,
+                preFetch = if (ymap.contains("pre_fetch")) Some(ymap("pre_fetch").toString) else None,
                 rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
                 rraDef = rraDef,
-                rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap.get("rrd_init_source").toString) else None,
+                rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap("rrd_init_source").toString) else None,
                 notifyConf = notifyConf
               )
               objectIds += oid
@@ -494,12 +503,12 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
 
     def createAggObject(oid: String,
-                        ymap: java.util.Map[String, Object],
+                        ymap: mutable.Map[String, Object],
                         confFile: String,
                         pluginViewObjs: Map[String, SMGObjectView]
                        ): Unit = {
       try {
-        val confOp = ymap.getOrDefault("op", "SUM")
+        val confOp = ymap.getOrElse("op", "SUM")
         val op = confOp match {
           case "SUMN" => "SUMN"
           case "AVG" => "AVG"
@@ -517,7 +526,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
           }
         }
         if (ymap.contains("ids")) {
-          val ids = ymap("ids").asInstanceOf[util.ArrayList[String]].toList
+          val ids = ymap("ids").asInstanceOf[util.ArrayList[String]].asScala.toList
           val objOpts = ids.map { ovid =>
             val ret = lookupObjectView(ovid, pluginViewObjs).flatMap(_.refObj)
             if (ret.isEmpty) {
@@ -529,15 +538,15 @@ class SMGConfigParser(log: SMGLoggerApi) {
           if (objOpts.nonEmpty && objOpts.forall(_.isDefined)) {
             val objs = objOpts.map(_.get)
             val myRraDef = getRraDef(confFile, oid, ymap)
-            val myVars = if (ymap.containsKey("vars")) {
+            val myVars = if (ymap.contains("vars")) {
               processObjectVarsAlertAndNotifyConfs(ymap, oid)
             } else {
               // XXX no vars defined, use first object's ones but filter out the "max" value
               // which is likely wrong for the SUM object.
               objs.head.vars.map { v => v.filter { case (k, vv) => k != "max" } }
             }
-            val myDataDelay = if (ymap.containsKey("dataDelay")){
-              ymap.get("dataDelay").asInstanceOf[Int]
+            val myDataDelay = if (ymap.contains("dataDelay")){
+              ymap("dataDelay").asInstanceOf[Int]
             } else objs.head.dataDelay
             val myRrdType = getRrdType(ymap, Some(objs.head.rrdType))
             // sanity check the objects, all must have at least myVars.size vars
@@ -565,7 +574,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
                 rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
                 rraDef = myRraDef,
-                rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap.get("rrd_init_source").toString) else None,
+                rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap("rrd_init_source").toString) else None,
                 notifyConf = notifyConf
               )
               objectUpdateIds(oid) = rrdAggObj
@@ -589,7 +598,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       } else {
         try {
           // only record the id/position and yaml for later
-          val ymap = t._2.asInstanceOf[java.util.Map[String, Object]]
+          val ymap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
           objectIds += oid
           allViewObjectIds += oid
           forwardObjects += ForwardObjectRef(oid, confFile, ymap, ForwardObjectRef.AGG_OBJ)
@@ -604,11 +613,11 @@ class SMGConfigParser(log: SMGLoggerApi) {
       val t0 = System.currentTimeMillis()
       log.debug("SMGConfigServiceImpl.parseConf(" + confFile + "): Starting at " + t0)
       try {
-        val confTxt = Source.fromFile(confFile).mkString
+        val confTxt = sourceFromFile(confFile)
         val yaml = new Yaml()
         val yamlTopObject = yaml.load(confTxt)
         try {
-          yamlTopObject.asInstanceOf[java.util.List[Object]].foreach { yamlObj: Object =>
+          yamlTopObject.asInstanceOf[java.util.List[Object]].asScala.foreach { yamlObj: Object =>
             if (yamlObj == null) {
               processConfigError(confFile, "parseConf: Received null yamlObj")
               return

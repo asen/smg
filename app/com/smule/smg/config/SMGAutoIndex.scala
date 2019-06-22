@@ -19,46 +19,27 @@ case class SMGAutoIndex(id: String, children: Seq[SMGAutoIndex], remoteId: Optio
 
   // TODO make these configurable
 
-  /**
-    * @inheritdoc
-    */
-  override val cols = None
-  /**
-    * @inheritdoc
-    */
-  override val rows = None
-  /**
-    * @inheritdoc
-    */
-  override val title = id
+  override val cols: Option[Int] = None
 
-  /**
-    * @inheritdoc
-    */
-  override val flt = SMGFilter.fromPrefixWithRemote(SMGRemote.localId(id),
+  override val rows: Option[Int] = None
+
+  override val title: String = id
+
+  override val flt: SMGFilter = SMGFilter.fromPrefixWithRemote(SMGRemote.localId(id),
     if (remoteId.isEmpty) Seq(SMGRemote.local.id) else Seq(remoteId.get))
 
-  /**
-    * @inheritdoc
-    */
   override val childIds: Seq[String] = children.map(c => c.id)
 
-  /**
-    * @inheritdoc
-    */
-  override def asUrl = flt.asUrlForPage(0, cols, rows)
+  override def asUrl: String = flt.asUrlForPage(0, cols, rows)
 
-  /**
-    * @inheritdoc
-    */
-  override def asUrlForPeriod(aPeriod: String) = flt.asUrlForPage(0, cols, rows, Some(aPeriod))
+  override def asUrlForPeriod(aPeriod: String): String = flt.asUrlForPage(0, cols, rows, Some(aPeriod))
 
-  override val aggOp = None
+  override val aggOp: Option[String] = None
   override val xRemoteAgg = false
   override val aggGroupBy: Option[SMGAggGroupBy.Value] = None
 
-  override val period = None
-  override val desc = None
+  override val period: Option[String] = None
+  override val desc: Option[String] = None
 
   override val disableHeatmap: Boolean = false // TODO ???
 

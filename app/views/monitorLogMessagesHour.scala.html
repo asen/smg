@@ -1,0 +1,20 @@
+@import com.smule.smg.monitor.SMGMonitorLogMsg
+@import com.smule.smg.remote.SMGRemote
+
+@(hrts: Long, mls: Seq[SMGMonitorLogMsg], prevHrTs: Long)
+@if(prevHrTs - hrts > 3600){
+<li><b>---- ... @{ ((prevHrTs - hrts) / 3600) - 1 }h ... ----</b></li>
+}
+@for(ms <- mls) {
+<li>
+  [@{ if(ms.remote.id == SMGRemote.local.id) SMGRemote.localName else ms.remote.id }]
+  [@{ms.tsFmt}]: <span class="ml-type-@{ms.mltype}">@{ms.mltype}</span>
+  @if(ms.ouids.nonEmpty) {
+  <a href="/dash?@{ms.objectsFilterWithRemote}">@{ms.msIdFmt}</a>
+  } else { @{ms.msIdFmt} }
+  (n=@{ms.repeat}, @if(ms.isHard){ <strong>HARD</strong> } else { SOFT })
+  <span class="ml-msg">@{ms.msg}</span>
+</li>
+}
+<li><b>----[@{mls.head.tsFmt(mls.head.hourTs)}]----</b></li>
+

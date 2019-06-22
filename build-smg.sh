@@ -2,9 +2,7 @@
 
 set -e
 
-#./activator universal:packageZipTarball
-
-VERSION=0.8
+VERSION=1.0
 
 echo "*** Building docs"
 
@@ -39,7 +37,7 @@ cat $BNFILE
 
 rm -rf public/smg/*.png
 
-./activator clean compile stage
+sbt clean compile stage
 
 echo "*** Patching sbt shell wrapper for java 11 support"
 if which gsed >/dev/null 2>&1 ; then mysed=gsed ; else mysed=sed ; fi

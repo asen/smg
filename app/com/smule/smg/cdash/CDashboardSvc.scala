@@ -9,7 +9,7 @@ import javax.inject.{Inject, Singleton}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 @Singleton
 class CDashboardSvc @Inject()(configSvc: SMGConfigService,
@@ -62,7 +62,7 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
   private def containerItem(itm: CDashConfigItem) : Future[CDashItem] = {
     val itemConfs = itm.getDataList("items").map { obj =>
       try{
-        Some(CDashConfigItem.fromYamlMap(obj.asInstanceOf[java.util.Map[String,Object]].toMap))
+        Some(CDashConfigItem.fromYamlMap(obj.asInstanceOf[java.util.Map[String,Object]].asScala))
       } catch {
         case t: Throwable => {
           log.error(s"Error parsing container item: $itm", t)

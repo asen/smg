@@ -3,7 +3,7 @@ package com.smule.smg.config
 import com.smule.smg.core.{SMGAggGroupBy, SMGFilter, SMGIndex}
 import com.smule.smg.grapher.GraphOptions
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 /**
   * Created by asen on 11/15/15.
@@ -40,7 +40,7 @@ case class SMGConfIndex(id: String,
     * @param id - object id
     * @param yamlMap - yaml Map to build the object from
     */
-  def this(id: String, yamlMap: java.util.Map[String,Object]) {
+  def this(id: String, yamlMap: Map[String,Object]) {
     this(id,
       yamlMap.getOrElse("title", id).toString,
       SMGFilter(
@@ -55,25 +55,25 @@ case class SMGConfIndex(id: String,
           if (yamlMap.contains("step")) Some(yamlMap("step").asInstanceOf[Int]) else None,
           if (yamlMap.contains("pl")) Some(yamlMap("pl").toString) else None,
           if (yamlMap.contains("xsort")) Some(yamlMap("xsort").asInstanceOf[Int]) else None,
-          disablePop = yamlMap.getOrDefault("dpp", "false").toString == "true",
-          disable95pRule = yamlMap.getOrDefault("d95p", "false").toString == "true",
+          disablePop = yamlMap.getOrElse("dpp", "false").toString == "true",
+          disable95pRule = yamlMap.getOrElse("d95p", "false").toString == "true",
           maxY = if (yamlMap.contains("maxy")) Some(yamlMap("maxy").toString.toDouble) else None,
           minY = if (yamlMap.contains("miny")) Some(yamlMap("miny").toString.toDouble) else None,
-          logY = yamlMap.getOrDefault("logy", "false").toString == "true"
+          logY = yamlMap.getOrElse("logy", "false").toString == "true"
         )
       ),
       if (yamlMap.contains("cols")) Some(yamlMap("cols").asInstanceOf[Int]) else None,
       if (yamlMap.contains("rows")) Some(yamlMap("rows").asInstanceOf[Int]) else None,
       if (yamlMap.contains("agg_op")) Some(yamlMap("agg_op").toString) else None,
-      yamlMap.getOrDefault("xagg", "false").toString == "true",
+      yamlMap.getOrElse("xagg", "false").toString == "true",
       if (yamlMap.contains("gb")) SMGAggGroupBy.gbVal(yamlMap("gb").toString) else None,
       if (yamlMap.contains("period")) Some(yamlMap("period").toString) else None,
       if (yamlMap.contains("desc")) Some(yamlMap("desc").toString) else None,
       if (yamlMap.contains("parent"))
-        Some(yamlMap.get("parent").asInstanceOf[String]) else None,
+        Some(yamlMap("parent").asInstanceOf[String]) else None,
       if (yamlMap.contains("children"))
-        yamlMap.get("children").asInstanceOf[java.util.ArrayList[String]].toList else Seq[String](),
-      yamlMap.getOrDefault("dhmap", "false").toString == "true"
+        yamlMap("children").asInstanceOf[java.util.ArrayList[String]].asScala else Seq[String](),
+      yamlMap.getOrElse("dhmap", "false").toString == "true"
     )
   }
 
@@ -84,11 +84,11 @@ case class SMGConfIndex(id: String,
 
   private def baseUrl = "ix=" + id + colsUrl + rowsUrl
 
-  override def asUrl = baseUrl + periodUrl
+  override def asUrl: String = baseUrl + periodUrl
 
-  override def asUrlForPeriod(aPeriod: String) = baseUrl + "&period=" + aPeriod
+  override def asUrlForPeriod(aPeriod: String): String = baseUrl + "&period=" + aPeriod
 
-  var childObjs = Seq[SMGIndex]()
+  private var childObjs: Seq[SMGIndex] = Seq[SMGIndex]()
 
   override def children: Seq[SMGIndex] = childObjs
 }

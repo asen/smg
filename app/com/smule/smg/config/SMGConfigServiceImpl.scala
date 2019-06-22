@@ -4,16 +4,16 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor.{ActorSystem, DeadLetter, Props}
-import com.smule.smg._
 import com.smule.smg.core._
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginConfig}
 import com.smule.smg.rrd.SMGRrdUpdate
 import com.typesafe.config.ConfigFactory
 import javax.inject.{Inject, Singleton}
+import play.{Environment, Mode}
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 
@@ -26,15 +26,17 @@ import scala.concurrent.Future
 class SMGConfigServiceImpl @Inject() (configuration: Configuration,
                                       override val actorSystem: ActorSystem,
                                       override val executionContexts: ExecutionContexts,
+                                      environment: Environment,
                                       lifecycle: ApplicationLifecycle
                                      ) extends SMGConfigService {
 
-  /**
-    * @inheritdoc
-    */
-  override val useInternalScheduler: Boolean = configuration.getBoolean("smg.useInternalScheduler").getOrElse(true)
+  override val useInternalScheduler: Boolean = if (configuration.has("/opt/smule/dabuser/scripts/reload-conf.sh"))
+    configuration.get[Boolean]("smg.useInternalScheduler")
+  else true
 
-  private val callSystemGcOnReload: Boolean = configuration.getBoolean("smg.callSystemGcOnReload").getOrElse(true)
+  private val callSystemGcOnReload: Boolean = if (configuration.has("smg.callSystemGcOnReload"))
+    configuration.get[Boolean]("smg.callSystemGcOnReload")
+  else true
 
   override val smgVersionStr: String = {
     try {
@@ -51,14 +53,14 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     }
   }
 
-  if (configuration.getString("smg.timeoutCommand").isDefined){
-    val tmtCmd = configuration.getString("smg.timeoutCommand").get
+  if (configuration.has("smg.timeoutCommand")){
+    val tmtCmd = configuration.get[String]("smg.timeoutCommand")
     log.info("Overriding SMGCmd timeout command using " + tmtCmd)
     SMGCmd.setTimeoutCommand(tmtCmd)
   }
 
-  if (configuration.getStringList("smg.executorCommand").isDefined) {
-    val execSeq = configuration.getStringList("smg.executorCommand").get
+  if (configuration.has("smg.executorCommand")) {
+    val execSeq = configuration.get[Seq[String]]("smg.executorCommand")
     log.info("Overriding SMGCmd executor command using " + execSeq)
     SMGCmd.setExecutorCommand(execSeq)
   }
@@ -83,14 +85,14 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     }
   }
 
-  private val pluginsApplicationConf = configuration.getConfigList("smg.plugins") match {
-    case Some(conf) => conf.map(v => SMGPluginConfig(
-      v.getString("id").get,
-      v.getString("class").get,
-      v.getInt("interval").get,
-      v.getString("config").get)).toSeq
-    case None => Seq[SMGPluginConfig]()
-  }
+  private val pluginsApplicationConf = if (configuration.has("smg.plugins"))
+    configuration.underlying.getConfigList("smg.plugins").asScala.map(v => SMGPluginConfig(
+      v.getString("id"),
+      v.getString("class"),
+      v.getInt("interval"),
+      v.getString("config")))
+  else Seq[SMGPluginConfig]()
+
 
   private def createPlugins: Seq[SMGPlugin] = {
     pluginsApplicationConf.filter{ ac =>
@@ -117,7 +119,9 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   // Data feed listeners
   private val myDataFeedListeners = ListBuffer[SMGDataFeedListener]()
 
-  private val dataFeedEnabled: Boolean =  configuration.getBoolean("smg.dataFeedEnabled").getOrElse(true)
+  private val dataFeedEnabled: Boolean = if (configuration.has("smg.dataFeedEnabled"))
+    configuration.get[Boolean]("smg.dataFeedEnabled")
+  else true
 
   override def dataFeedListeners: List[SMGDataFeedListener] = {
     if (dataFeedEnabled) myDataFeedListeners.toList else List()
@@ -140,19 +144,14 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     myrlsnrs.foreach { lsnr =>
       try {
         lsnr.reload()
-      } catch {
-        case t: Throwable => {
+      } catch { case t: Throwable =>
           log.ex(t, s"ConfigService.notifyReloadListeners($ctx): exception in reload from lsnr=$lsnr")
-        }
       }
     }
     log.info(s"ConfigService.notifyReloadListeners($ctx) - notified ${myrlsnrs.size} listeners")
     callSystemGc(ctx)
   }
 
-  /**
-    * @inheritdoc
-    */
   override val plugins: Seq[SMGPlugin] = createPlugins
 
   override val pluginsById: Map[String, SMGPlugin] = plugins.groupBy(_.pluginId).map(t => (t._1, t._2.head))
@@ -182,15 +181,18 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   }
 
   private def initExecutionContexts(intervals: Set[Int]): Unit = {
-    val defaultThreadsPerInterval: Int = configuration.getInt("smg.defaultThreadsPerInterval").getOrElse(4)
-    val threadsPerIntervalMap: Map[Int, Int] = configuration.getConfig("smg.threadsPerIntervalMap") match {
-      case Some(conf) => (for (i <- intervals.toList; if conf.getInt("interval_" + i).isDefined) yield (i, conf.getInt("interval_" + i).get)).toMap
-      case None => Map[Int, Int]()
-    }
+    val defaultThreadsPerInterval: Int = if (configuration.has("smg.defaultThreadsPerInterval"))
+      configuration.get[Int]("smg.defaultThreadsPerInterval") else 4
+    val myConf = configuration.get[Configuration]("smg.threadsPerIntervalMap")
+    val threadsPerIntervalMap: Map[Int, Int] = (for (i <- intervals.toList; if myConf.has("interval_" + i))
+      yield (i, myConf.get[Int]("interval_" + i))).toMap
     executionContexts.initializeUpdateContexts(intervals.toSeq, threadsPerIntervalMap, defaultThreadsPerInterval)
   }
 
-  private val topLevelConfigFile: String = configuration.getString("smg.config").getOrElse("/etc/smg/config.yml")
+  private val topLevelConfigFile: String = if (configuration.has("smg.config"))
+    configuration.get[String]("smg.config")
+  else
+    "/etc/smg/config.yml"
 
   private val configParser = new SMGConfigParser(log)
 
@@ -257,5 +259,9 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   // register an Akka DeadLetter listener, to detect issues
   private val deadLetterListener = actorSystem.actorOf(Props(classOf[SMGDeadLetterActor]))
   actorSystem.eventStream.subscribe(deadLetterListener, classOf[DeadLetter])
+
+  override def sourceFromFile(fn: String): String = configParser.sourceFromFile(fn)
+
+  override def isDevMode: Boolean = environment.mode() == Mode.DEV
 }
 

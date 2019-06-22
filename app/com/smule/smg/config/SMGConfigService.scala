@@ -5,7 +5,9 @@ import com.smule.smg._
 import com.smule.smg.core._
 import com.smule.smg.monitor.{SMGMonAlertConfVar, SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifySeverity}
 import com.smule.smg.plugin.SMGPlugin
+import play.Mode
 
+import scala.io.Source
 import scala.util.Try
 
 /**
@@ -232,6 +234,9 @@ trait SMGConfigService {
     }.min
     Math.max(ret,1)
   }
+
+  def sourceFromFile(fn:String): String // implemented in parser
+  def isDevMode: Boolean
 
   val URL_TOO_LONG_MSG: String = "This page URL is not share-able because the resulting URL would be too long. " +
     "It will not auto-refresh either."

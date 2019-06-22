@@ -1,4 +1,3 @@
-import com.smule.smg._
 import com.smule.smg.core.{SMGCmd, SMGFetchCommand, SMGFetchCommandTree}
 import com.smule.smg.monitor._
 import com.smule.smg.remote.{SMGRemote, SMGRemoteClient}
@@ -6,10 +5,8 @@ import helpers.{TestConfigSvc, TestUtil}
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
-import play.api.libs.json.{JsPath, JsValue, Json, Reads}
-import play.api.libs.ws.WSClient
-
-import scala.io.Source
+import play.api.libs.json.{Json, Reads}
+import play.api.test.WsTestClient
 
 
 /**
@@ -52,25 +49,25 @@ class SerializationTestSpec extends Specification {
 
       val cs = new TestConfigSvc()
 
-      import play.api.libs.ws.ning._
+      //import play.api.libs.ws.ning._
 
-      val ws = NingWSClient()
+      WsTestClient.withClient { ws =>
+        val rmcli = new SMGRemoteClient(SMGRemote("blah", "localhost", None), ws, cs)
 
-      val rmcli = new SMGRemoteClient(SMGRemote("blah", "localhost", None), ws, cs)
+        implicit val smgCmdReads: Reads[SMGCmd] = rmcli.smgCmdReads
 
-      implicit val smgCmdReads: Reads[SMGCmd] = rmcli.smgCmdReads
+        implicit val smgFetchCommandReads: Reads[SMGFetchCommand] = rmcli.smgFetchCommandReads
 
-      implicit val smgFetchCommandReads: Reads[SMGFetchCommand] = rmcli.smgFetchCommandReads
+        implicit val smgFetchCommandTreeReads: Reads[SMGFetchCommandTree] = rmcli.smgFetchCommandTreeReads
 
-      implicit val smgFetchCommandTreeReads: Reads[SMGFetchCommandTree] = rmcli.smgFetchCommandTreeReads
+        val str = """{"60":[{"n":{"rro":"true","cmd":{"str":"df -k | grep ' /$' | awk '{print $3 * 1024, $4 * 1024}' | xargs -n 1 echo","tms":30},"id":"host.localhost.disk_usage"},"c":[]},{"n":{"rro":"true","cmd":{"str":"smgscripts/mac_localhost_sysload.sh","tms":30},"id":"host.localhost.sysload"},"c":[]}]}"""
+        //      println(str)
+        val jsval = Json.parse(str)
+        val deser = jsval.as[Map[String, Seq[SMGFetchCommandTree]]]
+        //      println(deser)
 
-      val str = """{"60":[{"n":{"rro":"true","cmd":{"str":"df -k | grep ' /$' | awk '{print $3 * 1024, $4 * 1024}' | xargs -n 1 echo","tms":30},"id":"host.localhost.disk_usage"},"c":[]},{"n":{"rro":"true","cmd":{"str":"smgscripts/mac_localhost_sysload.sh","tms":30},"id":"host.localhost.sysload"},"c":[]}]}"""
-//      println(str)
-      val jsval = Json.parse(str)
-      val deser = jsval.as[Map[String, Seq[SMGFetchCommandTree]]]
-//      println(deser)
-
-      deser.keys must have size 1
+        deser.keys must have size 1
+      }
     }
   }
 

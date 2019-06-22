@@ -76,7 +76,7 @@ class SMGJsGraphPlugin(val pluginId: String,
 
   import com.smule.smg.remote.SMGRemoteClient._  // needed to serialize the SMGObjectView to json
 
-  private def plotlyRef = if (Play.current.mode == Mode.Dev){
+  private def plotlyRef = if (smgConfSvc.isDevMode){
     <script src="https://cdn.plot.ly/plotly-1.18.0.min.js"></script>
   } else {
     <script src="/assets/plugins/jsgraph/pl/plotly-1.18.0.min.js"></script>

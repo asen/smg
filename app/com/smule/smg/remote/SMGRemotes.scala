@@ -9,7 +9,7 @@ import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView}
 import com.smule.smg.monitor._
 import com.smule.smg.rrd.{SMGRrdFetchParams, SMGRrdRow}
 import javax.inject.{Inject, Singleton}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.ws.WSClient
 
 import scala.collection.concurrent.TrieMap

@@ -8,6 +8,8 @@ import com.smule.smg.monitor._
 import com.smule.smg.plugin.SMGPlugin
 import com.smule.smg.rrd.SMGRrdConfig
 
+import scala.io.Source
+
 /**
   * Created by asen on 9/5/16.
   */
@@ -186,4 +188,8 @@ class TestConfigSvc() extends SMGConfigService {
   override val smgVersionStr: String = "test"
   override val defaultInterval: Int = 60
   override val defaultTimeout: Int = 30
+
+  override def sourceFromFile(fn: String): String = Source.fromFile(fn).mkString
+
+  override def isDevMode: Boolean = false
 }

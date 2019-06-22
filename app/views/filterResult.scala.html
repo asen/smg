@@ -1,7 +1,7 @@
 @import com.smule.smg.grapher.SMGImageView
 @import com.smule.smg.grapher.SMGAggObjectView
 @import com.smule.smg.core.SMGFilter
-@import com.smule.smg.GrapherApi ; val predefPeriods = GrapherApi.detailPeriods
+@import com.smule.smg.GrapherApi
 @import com.smule.smg.remote.SMGRemote
 @import com.smule.smg.core.SMGIndex
 @import com.smule.smg.config.SMGConfigService
@@ -36,7 +36,7 @@
       <h4>
         Parent: <a href="/dash?@parentIdx.get.asUrl">@parentIdx.get.title</a>
         @if(parentIdx.get.rows.isEmpty || parentIdx.get.rows.get > 0){
-          @for( p <- predefPeriods) {
+          @for( p <- GrapherApi.detailPeriods) {
           <a href="/dash?@parentIdx.get.asUrlForPeriod(p)">(@p)</a>
           }
         }
@@ -45,7 +45,7 @@
         }
       </h4>
     }
-    @indexItem(idx.get, predefPeriods, 1)
+    @indexItem(idx.get, GrapherApi.detailPeriods, 1)
     <hr>
   }
 

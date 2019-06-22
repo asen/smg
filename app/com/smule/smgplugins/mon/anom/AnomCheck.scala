@@ -10,7 +10,7 @@ import play.api.libs.json.{JsValue, Json}
 import scala.collection.concurrent.TrieMap
 import scala.io.Source
 
-class AnomCheck(val ckId: String, log: SMGLoggerApi) extends SMGMonCheck {
+class AnomCheck(val ckId: String, log: SMGLoggerApi, cfSvc: SMGConfigService) extends SMGMonCheck {
 
   private val objectVarStats = TrieMap[String, ValueMovingStats]()
   private val threshConfs = TrieMap[String, AnomThreshConf]()
@@ -93,7 +93,7 @@ class AnomCheck(val ckId: String, log: SMGLoggerApi) extends SMGMonCheck {
     log.info(s"AnomCheck.loadStateFromDisk($dir) BEGIN")
     try {
       val metaD: Map[String,String] = if (new File(monStateMetaFname(dir)).exists()) {
-        val metaStr = Source.fromFile(monStateMetaFname(dir)).getLines().mkString
+        val metaStr = cfSvc.sourceFromFile(monStateMetaFname(dir))
         Json.parse(metaStr).as[Map[String,String]]
       } else Map()
       var cnt = 0
@@ -103,7 +103,7 @@ class AnomCheck(val ckId: String, log: SMGLoggerApi) extends SMGMonCheck {
         val monStateFname = s"${monStateBaseFname(dir)}$suffix.json"
         if (new File(monStateFname).exists()) {
           log.info(s"SMGMonitor.loadStateFromDisk $monStateFname")
-          val stateStr = Source.fromFile(monStateFname).getLines().mkString
+          val stateStr = cfSvc.sourceFromFile(monStateFname)
           cnt += deserializeObjectVarStats(stateStr)
         }
       }

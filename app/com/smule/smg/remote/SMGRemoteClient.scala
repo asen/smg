@@ -3,20 +3,21 @@ package com.smule.smg.remote
 import java.io.File
 import java.net.URLEncoder
 import java.nio.file.{Files, StandardCopyOption}
+import java.util.concurrent.TimeUnit
 
-import com.smule.smg._
+import akka.util.Timeout
 import com.smule.smg.config.{SMGConfIndex, SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._
 import com.smule.smg.grapher._
 import com.smule.smg.monitor._
 import com.smule.smg.rrd.{SMGRraDef, SMGRrd, SMGRrdFetchParams, SMGRrdRow}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.ws.WSClient
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.postfixOps
 import scala.util.Try
@@ -46,9 +47,9 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
 
   // TODO configure these per remote
-  val shortTimeoutMs = 30000L
-  val graphTimeoutMs = 60000L
-  val configFetchTimeoutMs = 600000
+  private val shortTimeoutMs = Timeout(30000L, TimeUnit.MILLISECONDS).duration
+  private val graphTimeoutMs = Timeout(60000L, TimeUnit.MILLISECONDS).duration
+  private val configFetchTimeoutMs = Timeout(600000L, TimeUnit.MILLISECONDS).duration
 
 
   // Object deserializers (reads) used by API client below
@@ -428,7 +429,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     //new URL(url) #> new File(outFn) !!
     ws.url(url).withRequestTimeout(graphTimeoutMs).get().map { resp =>
       try {
-        Files.write(new File(outFn).toPath, resp.bodyAsBytes)
+        Files.write(new File(outFn).toPath, resp.body.getBytes("UTF-8"))
         true
       } catch {
         case x: Throwable => {
@@ -445,7 +446,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   }
 
   def pluginData(pluginId: String, httpParams: Map[String, String]): Future[String] = {
-    ws.url(remote.url + API_PREFIX + "plugin/" + pluginId).withQueryString(httpParams.toList:_*).
+    ws.url(remote.url + API_PREFIX + "plugin/" + pluginId).withQueryStringParameters(httpParams.toList:_*).
       get().map(_.body).recover{ case e: Exception => "" }
   }
 
@@ -501,7 +502,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       limit.map(v => s"&limit=$v").getOrElse("")
     ws.url(remote.url + API_PREFIX + "monitor/heatmap").
       withRequestTimeout(graphTimeoutMs).
-      withHeaders("Content-Type" -> "application/x-www-form-urlencoded").post(urlParams).map { resp =>
+      withHttpHeaders("Content-Type" -> "application/x-www-form-urlencoded").post(urlParams).map { resp =>
       Try {
         val jsval = Json.parse(resp.body)
         jsval.as[SMGMonHeatmap]

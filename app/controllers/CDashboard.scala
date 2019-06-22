@@ -14,7 +14,7 @@ class CDashboard @Inject() (actorSystem: ActorSystem,
                             configSvc: SMGConfigService,
                             smg: GrapherApi,
                             cDashSvc: CDashboardApi
-                           ) extends Controller  {
+                           ) extends InjectedController  {
 
   implicit private val myEc: ExecutionContext = configSvc.executionContexts.rrdGraphCtx
 

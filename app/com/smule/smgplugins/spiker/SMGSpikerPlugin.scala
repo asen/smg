@@ -5,20 +5,17 @@ import java.text.SimpleDateFormat
 import java.util
 import java.util.Date
 
-import com.smule.smg._
 import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
 import com.smule.smg.core.SMGObjectView
-import com.smule.smg.remote._
 import com.smule.smg.grapher.SMGAggObjectView
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
+import com.smule.smg.remote._
 import com.smule.smg.rrd.{SMGRrdFetch, SMGRrdFetchAgg, SMGRrdFetchParams}
 import org.yaml.snakeyaml.Yaml
-import play.libs.Akka
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.io.Source
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.{ExecutionContext, Future}
 
 
 /**
@@ -32,7 +29,7 @@ class SMGSpikerPlugin(val pluginId: String,
                      ) extends SMGPlugin {
 
 
-  private val myEc: ExecutionContext = Akka.system.dispatchers.lookup("akka-contexts.spiker-plugin")
+  private val myEc: ExecutionContext = smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.spiker-plugin")
 
   override def objects: Seq[SMGObjectView] = List()
   override def indexes: Seq[SMGConfIndex] = List()
@@ -54,12 +51,12 @@ class SMGSpikerPlugin(val pluginId: String,
 
   private def getRxs(key: String): List[String] = {
     confMap.getOrElse(key, new util.ArrayList[String]()).
-      asInstanceOf[java.util.ArrayList[String]].toList
+      asInstanceOf[java.util.ArrayList[String]].asScala.toList
   }
 
   private def getMatchConfigs(defaultParams: SpikeCheckParams): List[SpikeCheckConfig] = {
     confMap.getOrElse("match", new util.ArrayList[Object]()).
-      asInstanceOf[java.util.ArrayList[Object]].map {
+      asInstanceOf[java.util.ArrayList[Object]].asScala.map {
       case rx: String =>
         SpikeCheckConfig(rx, confResolution, confDataPeriod, defaultParams)
       case o =>
@@ -106,11 +103,11 @@ class SMGSpikerPlugin(val pluginId: String,
 
   override def reloadConf(): Unit = {
     try {
-      val confTxt = Source.fromFile(pluginConfFile).mkString
-      val yaml = new Yaml();
-      val newMap = yaml.load(confTxt).asInstanceOf[java.util.Map[String, Object]]
+      val confTxt = smgConfSvc.sourceFromFile(pluginConfFile)
+      val yaml = new Yaml()
+      val newMap = yaml.load(confTxt).asInstanceOf[java.util.Map[String, Object]].asScala
       confMap.synchronized {
-        confMap = newMap(pluginId).asInstanceOf[java.util.Map[String, Object]].toMap
+        confMap = newMap(pluginId).asInstanceOf[java.util.Map[String, Object]].asScala.toMap
       }
       ignoreRxs.synchronized {
         ignoreRxs = getRxs("ignore")
@@ -269,7 +266,7 @@ class SMGSpikerPlugin(val pluginId: String,
     val baseDir = historyBaseDir.get
     val baseUrl = historyBaseUrl.get
     val todaysFile = new File(baseDir + "/" + todayHtmlStatusFile)
-    val oldData = if (todaysFile.exists()) Source.fromFile(todaysFile).mkString else ""
+    val oldData = if (todaysFile.exists()) smgConfSvc.sourceFromFile(todaysFile.getPath) else ""
     val newData = "<h2>Report generatated at " + new Date().toString + "</h2>\n" + commonHtmlContent + "\n<hr/>\n" + oldData
     writeTextFile(todaysFile, newData)
   }
