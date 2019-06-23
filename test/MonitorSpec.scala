@@ -1,21 +1,17 @@
-import java.io.File
-
 import com.smule.smg._
 import com.smule.smg.core.{SMGDataFeedMsgObj, SMGDataFeedMsgPf}
 import com.smule.smg.monitor._
 import com.smule.smg.remote.SMGRemotesApi
 import com.smule.smg.rrd.SMGRrd
-import org.scalatest.mockito.MockitoSugar
-import play.api.inject.ApplicationLifecycle
-import play.api.test._
-import play.api.libs.json.Json
-import org.mockito.Mockito._
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.anyLong
 import helpers._
 import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito._
+import org.scalatestplus.mockito.MockitoSugar
 import org.specs2.runner.JUnitRunner
-import play.libs.Akka
+import play.api.inject.ApplicationLifecycle
+import play.api.libs.json.Json
+import play.api.test._
 
 import scala.io.Source
 

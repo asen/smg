@@ -1,19 +1,11 @@
 import com.smule.smg._
-import com.smule.smg.monitor._
 import com.smule.smg.remote.SMGRemotesApi
 import helpers.TestConfigSvc
 import org.junit.runner.RunWith
-import org.mockito.Matchers._
-import org.mockito.Mockito._
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.specs2.runner.JUnitRunner
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.Json
 import play.api.test.PlaySpecification
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 
 
 /**
