@@ -97,7 +97,7 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
   private def tick(): Unit = {
     // do this first
     val tickTsSecs = SMGRrd.tssNow
-    if (isShuttingDown.get()) { // TODO || system.isTerminated???
+    if (isShuttingDown.get()) {
       log.info("SMGScheduler.tick: (shutting down) " + tickTsSecs)
       return
     }
