@@ -607,23 +607,23 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     try {
       log.info("SMGMonitor.saveStateToDisk BEGIN")
       new File(monStateDir).mkdirs()
-      val statesLst = serializeAllMonitorStates
-      statesLst.zipWithIndex.foreach { t =>
-        val stateStr = t._1
-        val ix = t._2
-        val suffix = if (ix == 0) "" else s".$ix"
-        val monStateFname = s"$monStateBaseFname$suffix.json"
-        log.info(s"SMGMonitor.saveStateToDisk $monStateFname")
-        val fw = new FileWriter(monStateFname, false)
-        try {
-          fw.write(stateStr)
-        } finally fw.close()
-      }
-      val metaStr = Json.toJson(Map("stateFiles" -> statesLst.size.toString)).toString()
-      val fw1 = new FileWriter(monStateMetaFname, false)
-      try {
-        fw1.write(metaStr)
-      } finally fw1.close()
+//      val statesLst = serializeAllMonitorStates
+//      statesLst.zipWithIndex.foreach { t =>
+//        val stateStr = t._1
+//        val ix = t._2
+//        val suffix = if (ix == 0) "" else s".$ix"
+//        val monStateFname = s"$monStateBaseFname$suffix.json"
+//        log.info(s"SMGMonitor.saveStateToDisk $monStateFname")
+//        val fw = new FileWriter(monStateFname, false)
+//        try {
+//          fw.write(stateStr)
+//        } finally fw.close()
+//      }
+//      val metaStr = Json.toJson(Map("stateFiles" -> statesLst.size.toString)).toString()
+//      val fw1 = new FileWriter(monStateMetaFname, false)
+//      try {
+//        fw1.write(metaStr)
+//      } finally fw1.close()
       val notifyStatesStr = notifSvc.serializeState().toString()
       val fw3 = new FileWriter(notifyStatesFname, false)
       try {

@@ -36,7 +36,8 @@ class SMGMonCheckPlugin(val pluginId: String,
   override def onConfigReloaded(): Unit = {
     stateDir = smgConfSvc.config.monStateDir
     if (!stateLoaded){
-      anomCheck.loadStateFromDisk(stateDir)
+      // TODO need a different way to do this
+      // anomCheck.loadStateFromDisk(stateDir)
       stateLoaded = true
     }
     anomCheck.cleanupObsoleteStates(smgConfSvc, pluginId)
@@ -46,6 +47,7 @@ class SMGMonCheckPlugin(val pluginId: String,
 
 
   override def onShutdown(): Unit = {
-    anomCheck.saveStateToDisk(stateDir)
+    // TODO need a different way to do this
+    // anomCheck.saveStateToDisk(stateDir)
   }
 }
