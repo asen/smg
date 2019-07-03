@@ -86,7 +86,7 @@ class SMGCalcRrd(configSvc: SMGConfigService) {
 //    val myVar = firstObjElem.graphVar
     val cmdPx = SMGRrd.rrdGraphCommandPx(confSvc.config.rrdConf,
       title.getOrElse("Calculated graph"),
-      outFn, period, None, gopts.step, gopts.maxY, gopts.minY, firstObj.graphMinY, gopts.logY)
+      outFn, period, None, gopts.step, gopts.maxY, None, gopts.minY, firstObj.graphMinY, gopts.logY)
     val out = new StringBuilder(
       cmdPx
     )

@@ -27,8 +27,8 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) extends SM
   }
 
   private def rrdGraphCommand(outFn: String, period:String, gopts: GraphOptions): String = {
-    val cmd = rrdGraphCommandPx(rrdConf, objv.id, outFn, period, gopts.pl, gopts.step, gopts.maxY,
-      gopts.minY, objv.graphMinY, gopts.logY)
+    val cmd = rrdGraphCommandPx(rrdConf, objv.id, outFn, period, gopts.pl, gopts.step,
+      gopts.maxY, objv.graphMaxY, gopts.minY, objv.graphMinY, gopts.logY)
     val c = new mutable.StringBuilder(cmd)
     var first = true
     val lblMaker = new LabelMaker()

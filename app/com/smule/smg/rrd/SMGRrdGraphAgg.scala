@@ -237,9 +237,17 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
     c.toString
   }
 
+  private val addOps = Set("STACK", "SUM", "SUMN", "SUMNAN")
+
   private def rrdGraphCommand(outFn: String, period:String, gopts: GraphOptions): String = {
+    val objMaxY = aggObj.graphMaxY.map { my =>
+      if (addOps.contains(aggObj.op))
+        my * aggObj.objs.size
+      else
+        my
+    }
     val cmdPx = rrdGraphCommandPx(rrdConf, aggObj.shortTitle, outFn, period,
-      gopts.pl, gopts.step, gopts.maxY, gopts.minY, aggObj.graphMinY, gopts.logY)
+      gopts.pl, gopts.step, gopts.maxY, objMaxY, gopts.minY, aggObj.graphMinY, gopts.logY)
     cmdPx +
       (aggObj.op match {
         case "GROUP" => rrdGraphGroupCommand(outFn, period, stacked = false, gopts)

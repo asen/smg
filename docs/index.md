@@ -1369,6 +1369,7 @@ which could look like this:
     - label: sl1min                                     # the variable label.
       min: 0                                            # optional - min accepted rrd value, default 0
       max: 1000                                         # optional - max accepted rrd value, default U (unlimmited)
+      maxy: 1005                                        # optional - use this te set upper limit on the displayed graph (similar to maxy index option)
       mu: "lavg"                                        # optional - measurement units, default - empty string
       lt: "LINE1"                                       # optional - line type, default is LINE1
       alert-warn-gt: 8                                  # optional - monitoring thresholds, details below
@@ -1426,6 +1427,9 @@ key -> value must be present):
     counter overflows where the delta is usually resulting in a huge
     integer (if unsigned, otherwise - negative) value. If that value is
     above the max rrdtool will ignore it and record a NaN.
+
+    - **maxy**: (default _None_ - auto scaling) - set the upper limit
+    on the displayed graph.
 
     - **lt**: (line type, default is _LINE1_) - the line type to use
     when graphing. Check rrdtool documentation for supported line

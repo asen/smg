@@ -180,7 +180,7 @@ object SMGRrd {
 
   def rrdGraphCommandPx(rrdConf: SMGRrdConfig, title: String, outFn: String,
                         period: String, pl:Option[String], step: Option[Int],
-                        maxY: Option[Double], minY: Option[Double],
+                        maxY: Option[Double], objMaxY: Option[Double], minY: Option[Double],
                         objMinY: Option[Double], logY: Boolean): String = {
     val c = new mutable.StringBuilder("graph ").append(outFn).append(" --imgformat=PNG")
     if (rrdConf.rrdToolSocket.isDefined) {
@@ -204,8 +204,9 @@ object SMGRrd {
       else
         rigid = true
     }
-    if (maxY.isDefined) {
-      c.append(" --upper-limit ").append(numRrdFormat(maxY.get, nanAsU = false))
+    val myMaxY = if (maxY.isDefined) maxY else objMaxY
+    if (myMaxY.isDefined) {
+      c.append(" --upper-limit ").append(numRrdFormat(myMaxY.get, nanAsU = false))
       rigid = true
     }
     if (rigid) c.append(" --rigid")

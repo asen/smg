@@ -52,6 +52,19 @@ trait SMGObjectView extends SMGObjectBase {
     }
   }
 
+  lazy val graphMaxY: Option[Double] = {
+    val myMaxys = for (v <- filteredVars(inclCdefVars = true) ;
+                       if v.contains("maxy") ;
+                       d = Try(v("maxy").toDouble).toOption ;
+                       if d.isDefined)
+      yield d.get
+    if (myMaxys.isEmpty) {
+      None
+    } else {
+      Some(myMaxys.max)
+    }
+  }
+
   private val SHORT_TITLE_MAX_LEN = 70
 
   /**

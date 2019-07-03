@@ -137,6 +137,7 @@
   vars:
     - label: sec/sec
       max: 1.01
+      maxy: 1.05
 
 - localhost.time.counter2:
   title: "Test time counter2"
@@ -147,6 +148,7 @@
   vars:
     - label: sec/sec
       max: 1.01
+      maxy: 1.05
 
 - +localhost.time.counter.agg:
   title: localhost time counter agg
