@@ -429,7 +429,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     //new URL(url) #> new File(outFn) !!
     ws.url(url).withRequestTimeout(graphTimeoutMs).get().map { resp =>
       try {
-        Files.write(new File(outFn).toPath, resp.body.getBytes("UTF-8"))
+        Files.write(new File(outFn).toPath, resp.bodyAsBytes.toArray)
         true
       } catch {
         case x: Throwable => {
