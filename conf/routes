@@ -70,7 +70,6 @@ GET     /monitor/svgDataJson controllers.Application.monitorSvgDataJson()
 
 # plugin routes
 GET     /plugin/:pluginId  controllers.Application.pluginIndex(pluginId: String)
-+ nocsrf
 POST    /plugin/:pluginId  controllers.Application.pluginIndex(pluginId: String)
 
 # API (json response) calls
