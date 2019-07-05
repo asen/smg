@@ -190,7 +190,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
   implicit val smgMonAlertActiveReads: Reads[SMGMonAlertActive] = {
     (
-      (JsPath \ "ak").read[String] and
+      (JsPath \ "ak").read[String].map(id => prefixedId(id)) and
         (JsPath \ "cmds").read[List[String]] and
           (JsPath \ "ts").readNullable[Int]
       ) (SMGMonAlertActive.apply _)
@@ -242,7 +242,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "remote").readNullable[String].map(x => remote) and
       (JsPath \ "seq").read[Seq[SMGMonState]] and
       (JsPath \ "ismtd").readNullable[Boolean].map(x => x.getOrElse(false)) and
-        (JsPath \ "aa").readNullable[Map[String,SMGMonAlertActive]].map(o => o.getOrElse(Map()))
+        (JsPath \ "aa").readNullable[Map[String,SMGMonAlertActive]].
+          map(o => o.getOrElse(Map()).map(t => (prefixedId(t._1), t._2)))
       )(SMGMonitorStatesResponse.apply _)
   }
 
