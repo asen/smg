@@ -316,7 +316,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
       includeSilenced = slncd.getOrElse("off") == "on"
     )
     val states = monitorApi.localStates(flt, includeInherited = false)
-    Ok(Json.toJson(SMGMonitorStatesResponse(SMGRemote.local, states, isMuted = notifyApi.isMuted)))
+    Ok(Json.toJson(SMGMonitorStatesResponse(SMGRemote.local, states, isMuted = notifyApi.isMuted, notifyApi.getActiveAlerts)))
   }
 
   def monitorSilenced()  = Action {

@@ -245,28 +245,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val myParams = req.queryString //.map(t => (t._1, t._2.head))
     dashParamsFromMap(myParams)
   }
-  
-//  /**
-//    * group a list of SMGImageViewsGroup by remote
-//    * @param dglst
-//    * @return
-//    */
-//  private def groupByRemote(dglst: Seq[SMGImageViewsGroup], xRemoteAgg: Boolean): Seq[SMGImageViewsGroup] = {
-//    if (xRemoteAgg) {
-//      // pre-pend a "Cross-remote" level to the dashboard groups
-//      dglst.map(dg => SMGImageViewsGroup("Cross-remote" :: dg.levels, dg.lst))
-//    } else {
-//      dglst.flatMap { dg =>
-//        val lst = dg.lst
-//        val byRemoteMap = lst.groupBy(img => img.remoteId.getOrElse(SMGRemote.local.id))
-//        val byRemote = (List(SMGRemote.local.id) ++ remotes.configs.map(rc => rc.remote.id)).
-//          filter(rid => byRemoteMap.contains(rid)).map(rid => (rid, byRemoteMap(rid))).map { t =>
-//          (if (t._1 == SMGRemote.local.id) SMGRemote.localName else s"Remote: ${t._1}", t._2)
-//        }
-//        byRemote.map { t => SMGImageViewsGroup(t._1 :: dg.levels, t._2) }
-//      }
-//    }
-//  }
 
   /**
     * Display dashboard page (filter and graphs)

@@ -251,7 +251,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
       Future { false }
   }
 
-  def sendAcknowledgementMessages(monState: SMGMonState): Boolean = {
+  override def sendAcknowledgementMessages(monState: SMGMonState): Boolean = {
     val akey = monState.alertKey
     val cmds = activeAlerts.get(akey)
     if (cmds.isDefined) {
@@ -263,8 +263,11 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
     }
   }
 
+  override def getActiveAlerts: Map[String,SMGMonAlertActive] = activeAlerts.toMap.map { t =>
+    (t._1, SMGMonAlertActive(t._1, t._2.map(_.id), activeAlertsLastTs.get(t._1)))
+  }
 
-  def serializeState(): JsValue = {
+  override def serializeState(): JsValue = {
     Json.toJson(Map(
       "aa" -> Json.toJson(activeAlerts.toMap.map { t =>
         val ak = t._1
@@ -276,7 +279,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
     ))
   }
 
-  def deserializeState(srcStr: String): Unit = {
+  override def deserializeState(srcStr: String): Unit = {
     try {
       //activeAlerts.clear()
       val src = Json.parse(srcStr)
@@ -296,7 +299,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
     }
   }
 
-  def configReloaded(): Unit = {
+  override def configReloaded(): Unit = {
     // TODO too dangerous?
     def cleanupMap(m: mutable.Map[String,_]): Unit = {
       m.keys.toList.foreach { ac =>

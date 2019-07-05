@@ -292,7 +292,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
   override def monitorStates(remote: SMGRemote, flt: SMGMonFilter): Future[SMGMonitorStatesResponse] = {
     if (clientForId(remote.id).nonEmpty)
       clientForId(remote.id).get.monitorStates(flt)
-    else Future { SMGMonitorStatesResponse(remote, Seq(), isMuted = false) }
+    else Future { SMGMonitorStatesResponse(remote, Seq(), isMuted = false, Map()) }
 
   }
 

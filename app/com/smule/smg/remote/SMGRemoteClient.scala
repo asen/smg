@@ -188,6 +188,13 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
   implicit val smgMonitorLogMsgReads: Reads[SMGMonitorLogMsg] = SMGMonitorLogMsg.smgMonitorLogMsgReads(remote)
 
+  implicit val smgMonAlertActiveReads: Reads[SMGMonAlertActive] = {
+    (
+      (JsPath \ "ak").read[String] and
+        (JsPath \ "cmds").read[List[String]] and
+          (JsPath \ "ts").readNullable[Int]
+      ) (SMGMonAlertActive.apply _)
+  }
   // Runtree deserializers
 
   implicit val smgCmdReads: Reads[SMGCmd] = {
@@ -234,7 +241,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     (
       (JsPath \ "remote").readNullable[String].map(x => remote) and
       (JsPath \ "seq").read[Seq[SMGMonState]] and
-      (JsPath \ "ismtd").readNullable[Boolean].map(x => x.getOrElse(false))
+      (JsPath \ "ismtd").readNullable[Boolean].map(x => x.getOrElse(false)) and
+        (JsPath \ "aa").readNullable[Map[String,SMGMonAlertActive]].map(o => o.getOrElse(Map()))
       )(SMGMonitorStatesResponse.apply _)
   }
 
@@ -569,7 +577,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     val params = s"?" + flt.asUrlParams
     lazy val errRet = SMGMonitorStatesResponse( remote,
       Seq(SMGMonStateGlobal("Remote data unavailable", remote.id,
-      SMGState(SMGState.tssNow, SMGState.SMGERR, "data unavailable"))), isMuted = false)
+      SMGState(SMGState.tssNow, SMGState.SMGERR, "data unavailable"))),
+      isMuted = false, Map())
 
     ws.url(remote.url + API_PREFIX + "monitor/states" + params).
       withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
@@ -1037,13 +1046,21 @@ object SMGRemoteClient {
     )
   }
 
-  implicit val smgMonitorStatesRemoteResponseReads: Writes[SMGMonitorStatesResponse]  = new Writes[SMGMonitorStatesResponse] {
-    def writes(msr: SMGMonitorStatesResponse) = {
-     //  case class SMGMonHeatmap(lst: List[SMGMonState], statesPerSquare: Int)
+  implicit val smgMonAlertActiveWrites: Writes[SMGMonAlertActive] = new Writes[SMGMonAlertActive] {
+    def writes(a: SMGMonAlertActive) = Json.obj(
+      "ak" -> Json.toJson(a.alertKey),
+      "cmds" -> Json.toJson(a.cmdIds),
+      "ts" -> Json.toJson(a.lastTs)
+    )
+  }
+
+  implicit val smgMonitorStatesRemoteResponseWrites: Writes[SMGMonitorStatesResponse]  = new Writes[SMGMonitorStatesResponse] {
+    def writes(msr: SMGMonitorStatesResponse): JsObject = {
      Json.obj(
-       "remote" -> "",
-       "seq" -> msr.states,
-       "ismtd" -> msr.isMuted
+       "remote" -> Json.toJson(""),
+       "seq" -> Json.toJson(msr.states),
+       "ismtd" -> Json.toJson(msr.isMuted),
+       "aa" -> Json.toJson(msr.activeAlerts)
      )
     }
   }

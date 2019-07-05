@@ -341,10 +341,11 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
 
   override def states(remoteIds: Seq[String], flt: SMGMonFilter): Future[Seq[SMGMonitorStatesResponse]] = {
     implicit val ec = configSvc.executionContexts.rrdGraphCtx
-    val futs = ListBuffer[(Future[SMGMonitorStatesResponse])]()
+    val futs = ListBuffer[Future[SMGMonitorStatesResponse]]()
     if (remoteIds.isEmpty || remoteIds.contains(SMGRemote.wildcard.id)) {
       futs += Future {
-        SMGMonitorStatesResponse(SMGRemote.local, localStates(flt, includeInherited = false), isMuted = notifSvc.isMuted)
+        SMGMonitorStatesResponse(SMGRemote.local, localStates(flt, includeInherited = false),
+          isMuted = notifSvc.isMuted, notifSvc.getActiveAlerts)
       }
       configSvc.config.remotes.foreach { rmt =>
         futs += remotes.monitorStates(rmt, flt)
@@ -353,7 +354,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       remoteIds.foreach { rmtId =>
         if (rmtId == SMGRemote.local.id) {
           futs += Future {
-            SMGMonitorStatesResponse(SMGRemote.local, localStates(flt, includeInherited = false), isMuted = notifSvc.isMuted)
+            SMGMonitorStatesResponse(SMGRemote.local, localStates(flt, includeInherited = false),
+              isMuted = notifSvc.isMuted, notifSvc.getActiveAlerts)
           }
         } else {
           val rmtOpt = configSvc.config.remotes.find(_.id == rmtId)

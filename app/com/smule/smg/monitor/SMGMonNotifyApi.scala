@@ -14,6 +14,8 @@ trait SMGMonNotifyApi {
 
   def sendAcknowledgementMessages(monState: SMGMonState): Boolean
 
+  def getActiveAlerts: Map[String,SMGMonAlertActive]
+
   def serializeState(): JsValue
 
   def deserializeState(srcStr: String): Unit
