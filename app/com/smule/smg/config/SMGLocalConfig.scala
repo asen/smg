@@ -221,6 +221,25 @@ case class SMGLocalConfig(
     } else fetchCommandTrees
   }
 
+//  def getFetchCommandWithParents(leafId: String): Seq[SMGTreeNode] = {
+//    val leafCmd = updateObjectsById.get(leafId)
+//    if (leafCmd.isEmpty) return Seq()
+//    var ret = List[SMGTreeNode](leafCmd.get)
+//    if (leafCmd.get.parentId.isEmpty) return ret
+//    var cur = preFetches.get(leafCmd.get.parentId.get)
+//    while (cur.isDefined) {
+//      ret = cur.get :: ret
+//      cur = cur.get.parentId.flatMap(p => preFetches.get(p))
+//    }
+//    ret
+//  }
+
+  def getPreFetchCommandById(pfId: String): Option[SMGPreFetchCmd] = {
+    var ret = preFetches.get(pfId)
+    if (ret.isDefined) return ret
+    pluginPreFetches.values.find(_.contains(pfId)).map(_(pfId))
+  }
+
   /**
     * Get all rrd objects which depend (at some level) on the given cmdId. If interval is provided
     * only objects having the specified interval will be returned.

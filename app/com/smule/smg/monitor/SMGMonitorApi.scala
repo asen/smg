@@ -35,6 +35,10 @@ trait SMGMonitorApi {
     */
   def states(remoteIds: Seq[String], flt: SMGMonFilter): Future[Seq[SMGMonitorStatesResponse]]
 
+
+  def localStatesDetails(stateIds: Seq[String]): Map[String, SMGMonStateDetail]
+  def statesDetails(stateIds: Seq[String]): Future[Map[String, SMGMonStateDetail]]
+
   def mute(remoteId: String): Future[Boolean]
 
   def unmute(remoteId: String): Future[Boolean]

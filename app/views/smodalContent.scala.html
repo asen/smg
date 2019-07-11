@@ -1,0 +1,27 @@
+@import com.smule.smg.core.SMGTree
+@import com.smule.smg.monitor.SMGMonStateDetail
+@(seq: Seq[SMGTree[SMGMonStateDetail]])
+
+@if(seq.nonEmpty){
+<ul>
+  @for(obj <- seq){
+  <li>
+    @if(obj.node.state.recentStates.nonEmpty){
+    <font color="@{obj.node.state.recentStates.head.stateColor}">@{obj.node.state.recentStates.head.state}</font>
+    }
+    <strong>@{obj.node.state.text}</strong><br/>
+    Previous states: @for(s <- obj.node.state.recentStates.tail) {
+      @smgState(s) |
+    }
+    <br/>
+    @if(obj.children.nonEmpty){
+      @if(obj.node.fetchCommand.isDefined){
+        <i>timeout @{obj.node.fetchCommand.get.command.timeoutSec} @{obj.node.fetchCommand.get.command.str}</i><br/>
+      }
+      @views.html.smodalContent(obj.children)
+    }
+  </li>
+  }
+</ul>
+
+}

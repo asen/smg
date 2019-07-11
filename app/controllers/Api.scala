@@ -389,6 +389,12 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(m))
   }
 
+  def statesDetails() = Action { implicit request =>
+    val ids: Seq[String] = request.body.asJson.map(s => s.as[Seq[String]]).getOrElse(Seq())
+    val mm = monitorApi.localStatesDetails(ids)
+    Ok(Json.toJson(mm))
+  }
+
 
   def monitorSilenceAllTrees(rx: Option[String],
                              rxx: Option[String],

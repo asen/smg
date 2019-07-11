@@ -237,6 +237,12 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       ) (SMGTree[SMGMonState](_,_) )
   }
 
+  implicit lazy val smgMonStateDetailReads: Reads[SMGMonStateDetail] = (
+    (JsPath \ "ms").read[SMGMonState] and
+      (JsPath \ "fc").readNullable[SMGFetchCommand] and
+      (JsPath \ "p").readNullable[SMGMonStateDetail]
+    ) (SMGMonStateDetail.apply _)
+
   implicit val smgMonitorStatesRemoteResponseReads: Reads[SMGMonitorStatesResponse] = {
     (
       (JsPath \ "remote").readNullable[String].map(x => remote) and
@@ -802,6 +808,15 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
+  def statesDetails(ids: Seq[String]): Future[Map[String, SMGMonStateDetail]] = {
+    ws.url(remote.url + API_PREFIX + "monitor/statesd").
+      withRequestTimeout(shortTimeoutMs).post(Json.toJson(ids)).map { resp =>
+      resp.json.as[Map[String, SMGMonStateDetail]]
+    }.recover { case x =>
+      log.ex(x, "remote monitor/statesd error: " + remote.id)
+      Map()
+    }
+  }
 }
 
 /**
@@ -1064,6 +1079,23 @@ object SMGRemoteClient {
        "aa" -> Json.toJson(msr.activeAlerts)
      )
     }
+  }
+
+  implicit lazy val smgMonitorStateDetailWrites: Writes[SMGMonStateDetail]  = new Writes[SMGMonStateDetail] {
+    def writes(msd: SMGMonStateDetail): JsObject = {
+      Json.obj(
+        "ms" -> Json.toJson(msd.state),
+        "fc" -> Json.toJson(msd.fetchCommand),
+        "p" -> Json.toJson(msd.parent)
+      )
+    }
+  }
+
+  implicit lazy val smgMonStateDetailTreeWrites: Writes[SMGTree[SMGMonStateDetail]] = new Writes[SMGTree[SMGMonStateDetail]] {
+    def writes(t: SMGTree[SMGMonStateDetail]) = Json.obj(
+      "n" -> Json.toJson(t.node),
+      "c" -> Json.toJson(t.children)
+    )
   }
 
   implicit val smgMonFilterWrites = SMGMonFilter.jsWrites

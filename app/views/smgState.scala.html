@@ -1,0 +1,5 @@
+@import com.smule.smg.monitor.SMGState
+@(s: SMGState)
+<span>[@{s.timeStr}]
+  <font color="@{s.stateColor}">@{s.state}</font> @{s.desc}
+</span>

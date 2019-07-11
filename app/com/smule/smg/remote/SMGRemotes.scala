@@ -296,6 +296,11 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
 
   }
 
+  override def statesDetails(remoteId: String, stateIds: Seq[String]): Future[Map[String, SMGMonStateDetail]] = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.statesDetails(stateIds)
+    else Future { Map() }
+  }
 
   override def monitorSilenced(remoteId: String): Future[(Seq[SMGMonState], Seq[SMGMonStickySilence])] = {
     if (clientForId(remoteId).nonEmpty)

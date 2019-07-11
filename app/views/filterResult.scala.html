@@ -118,6 +118,7 @@
                 <div>
                   <div class="subtitle-div">
                     @monitorSvgObjects(monData(g.obj.id), None, false, Map())
+                    @filterResultSmodalShow(g.obj.title, monData(g.obj.id))
                   </div>
                   @if(aggOp.isEmpty && monData.contains(g.obj.id)){
                     @defining(SMGMonStateAgg.aggByParentId(monData(g.obj.id)).headOption.map(_._2)) { objStateOpt =>
@@ -151,6 +152,8 @@
         [ <a href="/dash?@myix.asUrl">@myix.title</a> ]
       }
     }
+
+    @filterResultSmodal()
   }
 
 }

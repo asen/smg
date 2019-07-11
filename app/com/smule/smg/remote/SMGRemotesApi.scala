@@ -152,6 +152,8 @@ trait SMGRemotesApi {
     */
   def monitorStates(remote: SMGRemote, flt: SMGMonFilter): Future[SMGMonitorStatesResponse]
 
+  def statesDetails(remoteId: String, stateIds: Seq[String]): Future[Map[String, SMGMonStateDetail]]
+
   /**
     * remote call to get all currently silenced states
     * @param remoteId

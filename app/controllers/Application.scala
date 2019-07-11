@@ -1083,9 +1083,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  val JSON_PERIODS_RESPONSE = Ok(Json.toJson(GrapherApi.detailPeriods))
+  private val JSON_PERIODS_RESPONSE: Result = Ok(Json.toJson(GrapherApi.detailPeriods))
 
-  def jsonPeriods() = Action {
+  def jsonPeriods(): Action[AnyContent] = Action {
     JSON_PERIODS_RESPONSE
   }
 
@@ -1102,34 +1102,43 @@ class Application  @Inject() (actorSystem: ActorSystem,
       cfSvc= configSvc))
   }
 
-  def jsonTrxTokens(q: String, remote: Option[String]) = Action {
+  def jsonTrxTokens(q: String, remote: Option[String]): Action[AnyContent] = Action {
     val rmtId = remote.getOrElse("")
     val tkns = smg.searchCache.getTrxTokens(q, rmtId)
     Ok(Json.toJson(tkns))
   }
 
-  def jsonRxTokens(q: String, remote: Option[String]) = Action {
+  def jsonRxTokens(q: String, remote: Option[String]): Action[AnyContent] = Action {
     val rmtId = remote.getOrElse("")
     val tkns = smg.searchCache.getRxTokens(q, rmtId)
     Ok(Json.toJson(tkns))
   }
 
-  def jsonSxTokens(q: String, remote: Option[String]) = Action {
+  def jsonSxTokens(q: String, remote: Option[String]): Action[AnyContent] = Action {
     val rmtId = remote.getOrElse("")
     val tkns = smg.searchCache.getSxTokens(q, rmtId)
     Ok(Json.toJson(tkns))
   }
 
-  def jsonPxTokens(q: String, remote: Option[String]) = Action {
+  def jsonPxTokens(q: String, remote: Option[String]): Action[AnyContent] = Action {
     val rmtId = remote.getOrElse("")
     val tkns = smg.searchCache.getPxTokens(q, rmtId)
     Ok(Json.toJson(tkns))
   }
 
-  def jsonCmdTokens(q: String, remote: Option[String]) = Action {
+  def jsonCmdTokens(q: String, remote: Option[String]): Action[AnyContent] = Action {
     val rmtId = remote.getOrElse("")
     val tkns = smg.searchCache.getPfRxTokens(q, rmtId)
     Ok(Json.toJson(tkns))
   }
 
+  def monStatesDetailsHtml() : Action[AnyContent] = Action.async { implicit request =>
+    import com.smule.smg.remote.SMGRemoteClient._
+
+    val ids: Seq[String] = request.body.asJson.map(s => s.as[Seq[String]]).getOrElse(Seq())
+    monitorApi.statesDetails(ids).map { mm =>
+      val resp = SMGMonStateDetail.merge(mm.values.toSeq)
+      Ok(views.html.smodalContent(resp))
+    }
+  }
 }

@@ -367,6 +367,50 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     Future.sequence(futs.toList)
   }
 
+  private def localStateDetail(sid: String): Option[SMGMonStateDetail] = {
+    var ret = List[SMGMonState]()
+    var cur = allMonitorStatesById.get(sid)
+    if (cur.isDefined) ret = cur.get :: ret
+    while (cur.isDefined && cur.get.parentId.isDefined){
+      cur = allMonitorStatesById.get(cur.get.parentId.get)
+      if (cur.isDefined) ret = cur.get :: ret
+    }
+    // now go through the list creating parents
+    var curObj: Option[SMGMonStateDetail] = None
+    ret.foreach { ms =>
+      val fc = if (ms.oid.isDefined) {
+        val ou = configSvc.config.updateObjectsById.get(ms.oid.get)
+        if (ou.isDefined && ou.get.isInstanceOf[SMGFetchCommand])
+          Some(ou.get.asInstanceOf[SMGFetchCommand])
+        else
+          None
+      } else if (ms.pfId.isDefined) {
+        configSvc.config.getPreFetchCommandById(ms.pfId.get)
+      } else None
+      curObj = Some(SMGMonStateDetail(ms, fc, curObj))
+    }
+    curObj
+  }
+
+  override def localStatesDetails(stateIds: Seq[String]): Map[String, SMGMonStateDetail] = {
+    val seq = for(sid <- stateIds ; opt = localStateDetail(sid) ; if opt.isDefined )
+      yield (sid, opt.get)
+    seq.toMap
+  }
+
+  override def statesDetails(stateIds: Seq[String]): Future[Map[String, SMGMonStateDetail]] = {
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
+    val byRemote = stateIds.groupBy(SMGRemote.remoteId)
+    val futs = byRemote.toSeq.map { case (remoteId, sids) =>
+      if (remoteId == SMGRemote.local.id)
+        Future { localStatesDetails(stateIds) }
+      else
+        remotes.statesDetails(remoteId, sids)
+    }
+    Future.sequence(futs).map { maps =>
+      maps.reduce({(m1,m2) => m1 ++ m2})
+    }
+  }
 
   override def localSilencedStates(): (Seq[SMGMonState], Seq[SMGMonStickySilence]) = {
     val states = localStatesMatching({ ms =>

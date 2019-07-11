@@ -1,0 +1,10 @@
+@import com.smule.smg.monitor.SMGMonState
+@import java.util.Base64
+
+@(title: String, states: Seq[SMGMonState])
+
+@defining(states.map(_.id).mkString("', '")){ stateIds =>
+@defining(Base64.getEncoder.encodeToString(title.getBytes("UTF-8"))){ safeTitle =>
+<span><button onclick="sModalShow('@Html(safeTitle)', ['@Html(stateIds)'])">Details</button></span>
+}
+}

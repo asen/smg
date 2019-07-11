@@ -30,6 +30,9 @@ GET     /monitor/heatmap     controllers.Application.monitorHeatmap
 GET     /monitor/log         controllers.Application.monitorLog(remote: Seq[String], p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String], slncd: Option[String], rx: Option[String], rxx: Option[String])
 GET     /monitor/runtree     controllers.Application.monitorRunTree(remote: Option[String], root: Option[String], lvls: Option[Int])
 
+# Used by JS
+POST    /monitor/details     controllers.Application.monStatesDetailsHtml()
+
 GET     /monitor/ack          controllers.Application.monitorAck(id: String, curl: String)
 GET     /monitor/unack        controllers.Application.monitorUnack(id: String, curl: String)
 GET     /monitor/slnc         controllers.Application.monitorSilence(id: String, slunt: String, curl: String)
@@ -104,6 +107,8 @@ GET     /api/monitor/slnc       controllers.Api.monitorSilence(id: String, slunt
 GET     /api/monitor/unslnc     controllers.Api.monitorUnsilence(id: String)
 POST    /api/monitor/ackList    controllers.Api.monitorAckList()
 POST    /api/monitor/slncList   controllers.Api.monitorSilenceList()
+
+POST    /api/monitor/statesd    controllers.Api.statesDetails()
 
 GET     /api/monitor/mute       controllers.Api.monitorMute()
 GET     /api/monitor/unmute     controllers.Api.monitorUnmute()
