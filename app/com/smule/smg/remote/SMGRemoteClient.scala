@@ -3,6 +3,7 @@ package com.smule.smg.remote
 import java.io.File
 import java.net.URLEncoder
 import java.nio.file.{Files, StandardCopyOption}
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
@@ -417,7 +418,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     * @return
     */
   def downloadRrd(oid: String, localFn: String): Future[Boolean] = {
-      val downloadFn = localFn + ".tmp-" + Thread.currentThread().getId
+      val downloadFn = localFn + ".tmp-" + UUID.randomUUID().toString
       downloadUrl(remote.url + API_PREFIX + "rrd/" + oid, downloadFn).map { ret =>
         try {
           if (ret) {
