@@ -41,6 +41,8 @@ nohup bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS \
     -Dplay.crypto.secret=fabe980f8f27865e11eeaf9e4ff4fc65 \
     -Dhttp.port=$HTTP_PORT $BIND_OPT \
     -Dakka.http.parsing.max-uri-length=2m \
+    -Dakka.http.parsing.max-header-value-length=2m \
+    -Dplay.server.akka.max-header-value-length=2m \
     -Dpidfile.path=run/play.pid \
     >logs/nohup.out 2>&1 &
 
