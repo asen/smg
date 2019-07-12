@@ -31,7 +31,7 @@ object SMGMonStateDetail {
     if (in.isEmpty)
       return Seq()
     val topLevel = in.groupBy(_.headOption.map(_.id))
-    topLevel.toSeq.flatMap { case (headid, seq) =>
+    topLevel.toSeq.sortBy(_._1).flatMap { case (headid, seq) =>
       if (headid.isEmpty)
         None
       else {
