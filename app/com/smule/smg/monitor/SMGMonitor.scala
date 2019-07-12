@@ -374,6 +374,11 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     while (cur.isDefined && cur.get.parentId.isDefined){
       cur = allMonitorStatesById.get(cur.get.parentId.get)
       if (cur.isDefined) ret = cur.get :: ret
+      if (cur.size > configSvc.config.MAX_RUNTREE_LEVELS + 1){
+        log.error(s"SMGMonitor.localStateDetail($sid): SMGMonStateDetail parents " +
+          s"exceeded ${configSvc.config.MAX_RUNTREE_LEVELS} levels: $ret")
+        cur = None
+      }
     }
     // now go through the list creating parents
     var curObj: Option[SMGMonStateDetail] = None

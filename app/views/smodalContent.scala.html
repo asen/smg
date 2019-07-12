@@ -7,16 +7,18 @@
   @for(obj <- seq){
   <li>
     @if(obj.node.state.recentStates.nonEmpty){
-    <font color="@{obj.node.state.recentStates.head.stateColor}">@{obj.node.state.recentStates.head.state}</font>
+    <font color="@{obj.node.state.recentStates.head.stateColor}">
+      <strong>@{obj.node.state.recentStates.head.state}</strong></font>
     }
-    <strong>@{obj.node.state.text}</strong><br/>
+    <strong>@{obj.node.state.text}</strong> @monStateActions(obj.node.state, None)<br/>
     Previous states: @for(s <- obj.node.state.recentStates.tail) {
       @smgState(s) |
     }
     <br/>
     @if(obj.children.nonEmpty){
       @if(obj.node.fetchCommand.isDefined){
-        <i>timeout @{obj.node.fetchCommand.get.command.timeoutSec} @{obj.node.fetchCommand.get.command.str}</i><br/>
+        <font color="blue"><i>timeout @{obj.node.fetchCommand.get.command.timeoutSec}
+          @{obj.node.fetchCommand.get.command.str}</i></font><br/>
       }
       @views.html.smodalContent(obj.children)
     }

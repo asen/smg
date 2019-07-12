@@ -241,7 +241,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   implicit lazy val smgMonStateDetailReads: Reads[SMGMonStateDetail] = (
     (JsPath \ "ms").read[SMGMonState] and
       (JsPath \ "fc").readNullable[SMGFetchCommand] and
-      (JsPath \ "p").readNullable[SMGMonStateDetail]
+      (JsPath \ "p").readNullable[JsValue].map { jsv => jsv.map(_.as[SMGMonStateDetail]) }
     ) (SMGMonStateDetail.apply _)
 
   implicit val smgMonitorStatesRemoteResponseReads: Reads[SMGMonitorStatesResponse] = {
@@ -811,7 +811,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
   def statesDetails(ids: Seq[String]): Future[Map[String, SMGMonStateDetail]] = {
     ws.url(remote.url + API_PREFIX + "monitor/statesd").
-      withRequestTimeout(shortTimeoutMs).post(Json.toJson(ids)).map { resp =>
+      withRequestTimeout(shortTimeoutMs).post(Json.toJson(ids.map(s => SMGRemote.localId(s)))).map { resp =>
       resp.json.as[Map[String, SMGMonStateDetail]]
     }.recover { case x =>
       log.ex(x, "remote monitor/statesd error: " + remote.id)
