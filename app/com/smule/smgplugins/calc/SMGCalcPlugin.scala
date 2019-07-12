@@ -15,6 +15,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
+import scala.util.Try
 
 
 /**
@@ -93,6 +94,7 @@ class SMGCalcPlugin (val pluginId: String,
     val ixOpt = if (httpParams.contains("ix")) expressions.find(_.id == httpParams("ix")) else None
 
     val strExpOpt = if (ixOpt.isDefined) Some(ixOpt.get.expr) else httpParams.get("expr")
+    // TODO make the httpParams override ix params
     val strPeriod = if (ixOpt.isDefined) ixOpt.get.period.getOrElse(GrapherApi.detailPeriods.head) else httpParams.getOrElse("period", GrapherApi.detailPeriods.head)
     val titleOpt = if (ixOpt.isDefined) ixOpt.get.title else httpParams.get("title")
     val stepOpt = if (ixOpt.isDefined) ixOpt.get.step
@@ -100,11 +102,14 @@ class SMGCalcPlugin (val pluginId: String,
         else None
     val myDisablePop = if (ixOpt.isDefined) ixOpt.get.dpp else httpParams.getOrElse("dpp", "off") == "on"
     val myDisable95p = if (ixOpt.isDefined) ixOpt.get.d95p else httpParams.getOrElse("d95p", "off") == "on"
-    val maxYOpt = if (ixOpt.isDefined) ixOpt.get.maxy
-        else if (httpParams.getOrElse("maxy", "") == "") None
-        else Some(httpParams("maxy").toDouble)
+    val maxYOpt = if (httpParams.getOrElse("maxy", "") != "") Try(httpParams("maxy").toDouble).toOption
+        else if (ixOpt.isDefined) ixOpt.get.maxy
+        else None
+    val minYOpt = if (httpParams.getOrElse("miny", "") != "") Try(httpParams("miny").toDouble).toOption
+        else if (ixOpt.isDefined) ixOpt.get.miny
+        else None
     val gopts = GraphOptions.withSome(step = stepOpt, xsort = None,
-      disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = maxYOpt, minY = None) // TODO support minY
+      disablePop = myDisablePop, disable95pRule = myDisable95p, maxY = maxYOpt, minY = minYOpt)
     val expOpt = if (strExpOpt.isDefined) {
       Some(smgCalcRrd.parseExpr(smg, remotes, strExpOpt.get))
     } else None
@@ -150,7 +155,20 @@ class SMGCalcPlugin (val pluginId: String,
   private def renderHtmlContent(expOpt: Option[SMGCalcExpr], errOpt: Option[String], gOpt: Option[SMGImageView],
                                 period: String, gopts: GraphOptions, httpParams: Map[String,String]): String = {
     <h3>Custom Calculated Graph (Beta)</h3>
-      <form method="GET">
+      <script language="javascript">
+        var gl_calc_maxUrlSize = {smgConfSvc.config.maxUrlSize};
+      </script>
+      <script language="javascript"><!-- <![CDATA[
+          function calcFormCheckSize(){
+            var txt = document.getElementById("calc_expr_textartea");
+            if (txt.value.length >= gl_calc_maxUrlSize){
+              //console.log("switching to POST");
+              var frm = document.getElementById("calc_expr_form");
+              frm.method = "POST"
+            }
+          }
+      // ]]> --></script>
+      <form id="calc_expr_form" method="GET">
         <p>
           <label for="calc_expr_textartea">Enter expression below.<br/>
             An expression consists of object ids (optionally) followed by [idx] (where idx is the 0-based var index,
@@ -173,6 +191,10 @@ class SMGCalcPlugin (val pluginId: String,
             <label class="manualsubmit-lbl" for="id_maxy">MaxY:</label>
               {scala.xml.Unparsed(textInput("maxy", gopts.maxY.map(_.toString).getOrElse(""), 14))}
           </div>
+          <div class="col-md-2" style="width: 15em;">
+            <label class="manualsubmit-lbl" for="id_miny">MinY:</label>
+            {scala.xml.Unparsed(textInput("miny", gopts.minY.map(_.toString).getOrElse(""), 14))}
+          </div>
           <div class="col-md-2" style="width: 17em;">
             <label class="manualsubmit-lbl" for="id_dpp">Disable Period-Over-Period:</label>
               {scala.xml.Unparsed(cbInput("dpp", gopts.disablePop))}
@@ -185,7 +207,7 @@ class SMGCalcPlugin (val pluginId: String,
         <hr/>
         <div class="row">
           <div class="col-md-2">
-            <input type="submit" value="Get Result" />
+            <input onclick="calcFormCheckSize();" type="submit" value="Get Result" />
           </div>
         </div>
       </form>
