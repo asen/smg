@@ -39,10 +39,6 @@ rm -rf public/smg/*.png
 
 sbt clean compile stage
 
-echo "*** Patching sbt shell wrapper for java 11 support"
-if which gsed >/dev/null 2>&1 ; then mysed=gsed ; else mysed=sed ; fi
-$mysed -i 's/\! "\$java_version" > "1.6"/"$java_version" == "1.6"/' target/universal/stage/bin/smg
-
 rm -rf target/universal/stage/{smgconf,smgscripts}
 
 cp -r smgconf smgscripts target/universal/stage/
