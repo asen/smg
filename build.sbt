@@ -18,8 +18,8 @@ dependencyOverrides += "org.scala-lang.modules" % "scala-java8-compat_2.11" % "0
 //dependencyOverrides += "org.scala-lang" % "scala-reflect" % "2.12.4" //(2.11.6, 2.12.4)
 //dependencyOverrides += "com.google.guava" % "guava" % "18.0" //(18.0, 16.0.1)
 //dependencyOverrides += "commons-logging" % "commons-logging" % "1.2" //(1.1.3, 1.2)
-//dependencyOverrides += "org.scala-lang.modules" % "scala-parser-combinators_2.12" % "1.0.4" //:(1.0.1, 1.0.4)
-//dependencyOverrides += "org.scala-lang.modules" % "scala-xml_2.12" % "1.0.5" //:(1.0.1, 1.0.5, 1.0.4)
+//dependencyOverrides += "org.scala-lang.modules" % "scala-parser-combinators_2.11" % "1.0.4" //:(1.0.1, 1.0.4)
+//dependencyOverrides += "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5" //:(1.0.1, 1.0.5, 1.0.4)
 
 libraryDependencies ++= Seq(
   guice,
