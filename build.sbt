@@ -6,12 +6,12 @@ version := "1.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.12.8"
+scalaVersion := "2.11.12"
 
 // fixing these to suppress the
 // There may be incompatibilities among your library dependencies; run 'evicted' to see detailed eviction warnings.
 dependencyOverrides += "com.google.guava" % "guava" % "27.1-jre"
-dependencyOverrides += "org.scala-lang.modules" % "scala-java8-compat_2.12" % "0.9.0"
+dependencyOverrides += "org.scala-lang.modules" % "scala-java8-compat_2.11" % "0.9.0"
 
 //dependencyOverrides += "org.scala-lang" % "scala-library" % "2.12.4"
 //dependencyOverrides += "org.apache.httpcomponents" % "httpclient" % "4.3.4" //(4.3.4, 4.4.1)
@@ -29,7 +29,7 @@ libraryDependencies ++= Seq(
   "org.yaml" % "snakeyaml" % "1.16",
   specs2 % Test,
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
-  "org.scalatestplus.play" % "scalatestplus-play_2.12" % "4.0.3" % "test"
+  "org.scalatestplus.play" % "scalatestplus-play_2.11" % "4.0.3" % "test"
 )
 //libraryDependencies += filters
 
