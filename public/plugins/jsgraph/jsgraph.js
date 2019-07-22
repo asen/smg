@@ -130,7 +130,7 @@ function derive1ChartData(hdr, rows, deltaT) {
   var plData = hdr.slice(1).map(function(hdr, ix){
     return {
       // the derive1 function reduces data points array length with 1 so skip one ts
-      x: jsgraph_unpack(rows, 0).slice(1).map(function(u){ return new Date(u) }),
+      x: jsgraph_unpack(rows, 0).slice(1),
       y: derive1(jsgraph_unpack(rows, ix+1), deltaT),
       mode: 'lines+markers',
       name: hdr + " (dY / " + deltaT + ")"
@@ -163,7 +163,9 @@ function displayChart(action, hdr, rows) {
       // calculate deltaT based on the first two timestamps.
       // luckily with rrdtool we always get them normalized (same between time series values)
       var twoTss = rows.slice(0,2)
-      var deltaT =  twoTss.length < 2 ? 1 : (twoTss[1][0] - twoTss[0][0]) / 1000
+      var dt0 = new Date(twoTss[0][0]).getTime()
+      var dt1 = new Date(twoTss[1][0]).getTime()
+      var deltaT =  twoTss.length < 2 ? 1 : (dt1 - dt0) / 1000
       plData = derive1ChartData(hdr, rows, deltaT);
       plotlyChart(plData, "1st derivative: dY / " + deltaT + " seconds");
     break;
@@ -178,7 +180,7 @@ $.get( gl_smgFetchUrl, function( data ) {
     $('#plContainer').html("")
     var lines = data.split("\n")
     gl_smgHeader = lines.splice(0,1)[0].split(",")
-    //unixts,date,val1,val2 - XXX using date instead of TS which is in server timezone
+    //unixts,date,val1,val2 - XXX using date string (which is in server timezone) instead of unixts
     gl_smgHeader.splice(0,1)
     gl_smgRows = lines.map(function(ln, ix, arr ){
         var r = ln.split(",")
