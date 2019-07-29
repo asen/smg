@@ -20,7 +20,8 @@ object SMGFileUtil {
   }
 
   def getFileContents(fle: File): String = {
-    Files.readString(fle.toPath)
+//    Files.readString(fle.toPath) // XXX not available in Java 8
+    Files.readAllBytes(fle.toPath).toString
   }
 
 }
