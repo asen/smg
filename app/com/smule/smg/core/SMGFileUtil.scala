@@ -8,11 +8,20 @@ import scala.collection.JavaConverters._
 object SMGFileUtil {
 
   def getFileLines(fn: String): Seq[String] = {
-    Files.readAllLines(new File(fn).toPath).asScala
+    getFileLines(new File(fn))
+  }
+
+  def getFileLines(fle: File): Seq[String] = {
+    Files.readAllLines(fle.toPath).asScala
   }
 
   def getFileContents(fn: String): String = {
-    Files.readString(new File(fn).toPath)
+    getFileContents(new File(fn))
   }
+
+  def getFileContents(fle: File): String = {
+    Files.readString(fle.toPath)
+  }
+
 }
 
