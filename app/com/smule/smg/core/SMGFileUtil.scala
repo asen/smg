@@ -1,6 +1,7 @@
 package com.smule.smg.core
 
 import java.io.File
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 import scala.collection.JavaConverters._
@@ -21,7 +22,7 @@ object SMGFileUtil {
 
   def getFileContents(fle: File): String = {
 //    Files.readString(fle.toPath) // XXX not available in Java 8
-    Files.readAllBytes(fle.toPath).toString
+    new String(Files.readAllBytes(fle.toPath), StandardCharsets.UTF_8)
   }
 
 }
