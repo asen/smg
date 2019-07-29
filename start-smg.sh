@@ -35,7 +35,8 @@ JMX_OPTS="$JMX_BIND_OPT -J-Dcom.sun.management.jmxremote.port=9001 \
     -J-Dcom.sun.management.jmxremote.ssl=false \
     -J-Dcom.sun.management.jmxremote.authenticate=false"
 
-GC_OPTS="-J-XX:+UseParallelGC"
+#GC_OPTS="-J-XX:+UseParallelGC"
+GC_OPTS=""
 
 nohup bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS \
     -Dplay.crypto.secret=fabe980f8f27865e11eeaf9e4ff4fc65 \
