@@ -8,7 +8,6 @@ import com.smule.smg.monitor._
 import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.concurrent.TrieMap
-import scala.io.Source
 
 class AnomCheck(val ckId: String, log: SMGLoggerApi, cfSvc: SMGConfigService) extends SMGMonCheck {
 

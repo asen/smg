@@ -9,13 +9,11 @@ import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 import com.smule.smg.rrd.SMGRrd
 import org.yaml.snakeyaml.Yaml
 
-import scala.io.Source
-import scala.xml.Unparsed
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.util.Try
+import scala.xml.Unparsed
 
 
 /**

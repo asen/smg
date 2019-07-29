@@ -10,7 +10,6 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
-import scala.io.Source
 import com.smule.smg._
 import com.smule.smg.config.{SMGConfigReloadListener, SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._

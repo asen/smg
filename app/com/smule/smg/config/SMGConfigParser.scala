@@ -4,8 +4,7 @@ import java.io.File
 import java.nio.file.{FileSystems, PathMatcher}
 import java.util
 
-import com.smule.smg._
-import com.smule.smg.cdash.{CDashConfigItem, CDashItemType, CDashboardConfig}
+import com.smule.smg.cdash.{CDashConfigItem, CDashboardConfig}
 import com.smule.smg.core._
 import com.smule.smg.grapher.SMGraphObject
 import com.smule.smg.monitor._
@@ -17,7 +16,6 @@ import org.yaml.snakeyaml.Yaml
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.io.Source
 import scala.util.Try
 
 /**
@@ -99,12 +97,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
   }
 
   def sourceFromFile(fn:String): String = {
-    val src = Source.fromFile(fn)
-    try {
-      src.mkString
-    } finally {
-      src.close()
-    }
+    SMGFileUtil.getFileContents(fn)
   }
 
   object ForwardObjectRef extends Enumeration {

@@ -1,13 +1,10 @@
 package com.smule.smg.config
 
 import akka.actor.ActorSystem
-import com.smule.smg._
 import com.smule.smg.core._
 import com.smule.smg.monitor.{SMGMonAlertConfVar, SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifySeverity}
 import com.smule.smg.plugin.SMGPlugin
-import play.Mode
 
-import scala.io.Source
 import scala.util.Try
 
 /**

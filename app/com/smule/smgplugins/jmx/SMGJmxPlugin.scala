@@ -1,18 +1,15 @@
 package com.smule.smgplugins.jmx
 
 import akka.actor.Props
-import org.yaml.snakeyaml.Yaml
-import play.libs.Akka
-
-import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
-import scala.io.Source
-import com.smule.smg._
 import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
 import com.smule.smg.core.{SMGDataFeedMsgRun, SMGObjectView, SMGPreFetchCmd, SMGRunStats}
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 import com.smule.smg.rrd.SMGRrd
+import org.yaml.snakeyaml.Yaml
+
+import scala.collection.JavaConverters._
+import scala.collection.mutable
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * TODO
