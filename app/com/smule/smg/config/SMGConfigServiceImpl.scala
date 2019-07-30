@@ -30,13 +30,11 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
                                       lifecycle: ApplicationLifecycle
                                      ) extends SMGConfigService {
 
-  override val useInternalScheduler: Boolean = if (configuration.has("/opt/smule/dabuser/scripts/reload-conf.sh"))
-    configuration.get[Boolean]("smg.useInternalScheduler")
-  else true
+  override val useInternalScheduler: Boolean =
+    configuration.getOptional[Boolean]("smg.useInternalScheduler").getOrElse(true)
 
-  private val callSystemGcOnReload: Boolean = if (configuration.has("smg.callSystemGcOnReload"))
-    configuration.get[Boolean]("smg.callSystemGcOnReload")
-  else true
+  private val callSystemGcOnReload: Boolean =
+    configuration.getOptional[Boolean]("smg.callSystemGcOnReload").getOrElse(true)
 
   override val smgVersionStr: String = {
     try {
