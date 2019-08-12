@@ -3,7 +3,7 @@ package com.smule.smg.core
 import akka.actor.{Actor, ActorRef, Props}
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core.SMGUpdateBatchActor.{SMGFlushBatchMsg, SMGUpdateBatchMsg}
-import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdate, SMGRrdUpdateData}
+import com.smule.smg.rrd.{SMGRrd, SMGRrdConfig, SMGRrdUpdate, SMGRrdUpdateData}
 
 import scala.collection.mutable.ListBuffer
 
@@ -13,14 +13,13 @@ class SMGUpdateBatchActor(configSvc: SMGConfigService) extends Actor{
   private val buf = ListBuffer[SMGUpdateBatchMsg]()
 
   private val flushCommandTimeout = 10 // seconds TODO; read from conf
-  private var rrdConf = configSvc.config.rrdConf //cached until next flush msg
+  private def rrdConf: SMGRrdConfig = configSvc.config.rrdConf
   private var processedCount = 0
 
   private def processUpdate(msg: SMGUpdateBatchMsg): Unit = {
     buf += msg
     if (buf.size >= rrdConf.rrdUpdateBatchSize) flush()
   }
-
 
   private def runFlushCommand(updateStr: String): (Boolean, List[String]) =
     try {
@@ -67,8 +66,8 @@ class SMGUpdateBatchActor(configSvc: SMGConfigService) extends Actor{
     case msg: SMGUpdateBatchMsg => processUpdate(msg)
     case SMGFlushBatchMsg(reason: String) => {
       flush(reason)
-      rrdConf = configSvc.config.rrdConf
-      log.info(s"SMGUpdateBatchActor: processed flush($reason) message ($processedCount updates since last flush message)")
+      if (rrdConf.useBatchedUpdates)
+        log.info(s"SMGUpdateBatchActor: processed flush($reason) message ($processedCount updates since last flush message)")
       processedCount = 0
     }
     case x => log.error(s"SMGUpdateBatchActor: unexpected message: $x")
