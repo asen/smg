@@ -10,6 +10,8 @@ import com.smule.smg.core.{SMGCmd, SMGLogger}
   */
 case class SMGRrdConfig(rrdTool: String ,
                         rrdToolSocket: Option[String],
+                        rrdSocatCommand: String,
+                        rrdUpdateBatchSize: Int,
                         rrdGraphWidth: Int,
                         rrdGraphHeight: Int,
                         rrdGraphFont: Option[String],
@@ -37,6 +39,8 @@ case class SMGRrdConfig(rrdTool: String ,
   val imageCellWidth: Int = rrdGraphWidth + rrdGraphWidthPadding.getOrElse(SMGRrdConfig.defaultRrdGraphWidthPadding)
 
   val maxArgsLength: Int = maxArgsLengthOpt.getOrElse(SMGRrdConfig.defaultMaxArgsLength)
+
+  val useBatchedUpdates: Boolean = rrdToolSocket.isDefined && (rrdUpdateBatchSize > 1)
 }
 
 object SMGRrdConfig {

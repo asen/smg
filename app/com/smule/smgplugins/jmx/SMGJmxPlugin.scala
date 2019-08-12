@@ -105,6 +105,7 @@ class SMGJmxPlugin (val pluginId: String,
   private def onRunComplete(): Unit = {
     cleanup()
     finished()
+    smgConfSvc.flushBatchUpdateActor("JMX.onRunComplete")
     log.info("SMGJmxPlugin.onRunComplete: finished")
   }
 

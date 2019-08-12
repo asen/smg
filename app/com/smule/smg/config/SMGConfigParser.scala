@@ -662,15 +662,17 @@ class SMGConfigParser(log: SMGLoggerApi) {
         } else "unix:" + sock
       }
       SMGRrdConfig(
-        if (globalConf.contains("$rrd_tool")) globalConf("$rrd_tool") else rrdTool,
-        socketOpt,
-        globalConf.get("$rrd_graph_width").flatMap(x => Try(x.toInt).toOption).getOrElse(SMGRrdConfig.defaultGraphWidth),
-        globalConf.get("$rrd_graph_height").flatMap(x => Try(x.toInt).toOption).getOrElse(SMGRrdConfig.defaultGraphHeight),
-        globalConf.get("$rrd_graph_font"),
-        globalConf.get("$rrd_graph_dppp").flatMap(x => Try(x.toInt).toOption).getOrElse(SMGRrdConfig.defaultDataPointsPerPixel),
-        globalConf.get("$rrd_graph_dppi").flatMap(x => Try(x.toInt).toOption),
-        globalConf.get("$rrd_graph_padding").flatMap(x => Try(x.toInt).toOption),
-        globalConf.get("$rrd_max_args_len").flatMap(x => Try(x.toInt).toOption)
+        rrdTool = if (globalConf.contains("$rrd_tool")) globalConf("$rrd_tool") else rrdTool,
+        rrdToolSocket = socketOpt,
+        rrdSocatCommand = globalConf.getOrElse("$rrd_socat_command", "socat"),
+        rrdUpdateBatchSize = globalConf.get("$rrd_update_batch_size").flatMap(x => Try(x.toInt).toOption).getOrElse(1),
+        rrdGraphWidth = globalConf.get("$rrd_graph_width").flatMap(x => Try(x.toInt).toOption).getOrElse(SMGRrdConfig.defaultGraphWidth),
+        rrdGraphHeight = globalConf.get("$rrd_graph_height").flatMap(x => Try(x.toInt).toOption).getOrElse(SMGRrdConfig.defaultGraphHeight),
+        rrdGraphFont = globalConf.get("$rrd_graph_font"),
+        dataPointsPerPixel = globalConf.get("$rrd_graph_dppp").flatMap(x => Try(x.toInt).toOption).getOrElse(SMGRrdConfig.defaultDataPointsPerPixel),
+        dataPointsPerImageOpt = globalConf.get("$rrd_graph_dppi").flatMap(x => Try(x.toInt).toOption),
+        rrdGraphWidthPadding = globalConf.get("$rrd_graph_padding").flatMap(x => Try(x.toInt).toOption),
+        maxArgsLengthOpt = globalConf.get("$rrd_max_args_len").flatMap(x => Try(x.toInt).toOption)
       )
     }
 

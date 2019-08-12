@@ -248,7 +248,10 @@ object SMGUpdateActor {
                        values: List[Double],
                        log: SMGLoggerApi): Unit = {
     try {
-      rrd.updateValues(values, ts)
+      if (smgConfSvc.config.rrdConf.useBatchedUpdates)
+        SMGUpdateBatchActor.sendUpdate(smgConfSvc.getBatchUpdateActor.get, rrd.obju, SMGRrdUpdateData(values, ts))
+      else
+        rrd.updateValues(values, ts)
       smgConfSvc.sendObjMsg(
         SMGDataFeedMsgObj(ts.getOrElse(SMGRrd.tssNow), rrd.obju, values, 0, List())
       )

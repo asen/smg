@@ -89,7 +89,12 @@ class TestConfigSvc() extends SMGConfigService {
           childIds= Seq[String](),
           disableHeatmap = false)
       ),
-      rrdConf = SMGRrdConfig("rrdtool", None, 607, 400, None, 3, None, None, None),
+      rrdConf = SMGRrdConfig(rrdTool = "rrdtool",
+        rrdToolSocket = None, rrdSocatCommand = "socat",
+        rrdUpdateBatchSize = 1, rrdGraphWidth = 607, rrdGraphHeight = 400,
+        rrdGraphFont = None, dataPointsPerPixel = 3, dataPointsPerImageOpt = None,
+        rrdGraphWidthPadding = None, maxArgsLengthOpt = None),
+
       imgDir = "test-out",
       urlPrefix = "",
       intervals = Set(60),

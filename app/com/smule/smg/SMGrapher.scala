@@ -4,7 +4,6 @@ package com.smule.smg
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-import javax.inject.{Inject, Singleton}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -14,12 +13,11 @@ import com.smule.smg.grapher._
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.{SMGRrdFetch, SMGRrdFetchAgg, SMGRrdFetchParams, SMGRrdRow}
 import com.smule.smg.search.SMGSearchCache
+import javax.inject.{Inject, Singleton}
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{Await, ExecutionContext, Future}
-import monitor._
-
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 
 /**
@@ -58,6 +56,8 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   }
 
   private val updateActor: ActorRef = actorSystem.actorOf(Props(new SMGUpdateActor(configSvc, myCommandExecutionTimes)))
+  private val batchUpdateActor = actorSystem.actorOf(SMGUpdateBatchActor.props(configSvc))
+  configSvc.setBatchUpdateActor(batchUpdateActor)
 
   private val messagingEc = configSvc.executionContexts.defaultCtx
 
@@ -116,6 +116,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   private def onRunCompleteFunc(logMsg: String): () => Unit = {
     def ret(): Unit = {
       cleanupCommandExecutionTimes() // TODO run this less often?
+      configSvc.flushBatchUpdateActor("onRunComplete")
       log.info(logMsg)
     }
     ret _

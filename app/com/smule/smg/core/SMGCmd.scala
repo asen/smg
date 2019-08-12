@@ -1,5 +1,8 @@
 package com.smule.smg.core
 
+import java.io.{BufferedReader, ByteArrayInputStream, InputStream, InputStreamReader, OutputStream}
+
+import scala.collection.mutable.ListBuffer
 import scala.sys.process._
 
 /**
@@ -14,14 +17,14 @@ case class SMGCmd(str: String, timeoutSec: Int = 30) {
 }
 
 object SMGCmd {
-  val log = SMGLogger
+  val log: SMGLogger.type = SMGLogger
 
-  val DEFAULT_TIMEOUT_COMMAND = "timeout"
+  val DEFAULT_TIMEOUT_COMMAND: String = "timeout"
 
-  val DEFAULT_EXECUTOR_COMMAND = Seq("bash", "-c")
+  val DEFAULT_EXECUTOR_COMMAND: Seq[String] = Seq("bash", "-c")
 
-  var timeoutCommand = DEFAULT_TIMEOUT_COMMAND
-  var executorCommand = DEFAULT_EXECUTOR_COMMAND
+  var timeoutCommand: String = DEFAULT_TIMEOUT_COMMAND
+  var executorCommand: Seq[String] = DEFAULT_EXECUTOR_COMMAND
 
   /**
     * To be called once during initialization, set the "timeout" command name (gtimeout on Mac with homebrew)
@@ -48,8 +51,8 @@ object SMGCmd {
     * @param timeoutSecs - time in seconds to wait for the command to finish before terminating
     * @return - a list of strings each representing a command output line
     */
-  def runCommand(cmd: String, timeoutSecs: Int, myEnv: Map[String,String] = Map()): List[String] = {
-    val (exit, out, err) = system(cmd, timeoutSecs, myEnv)
+  def runCommand(cmd: String, timeoutSecs: Int, myEnv: Map[String,String] = Map(), stdin: Option[String] = None): List[String] = {
+    val (exit, out, err) = system(cmd, timeoutSecs, myEnv, stdin)
     if (exit != 0) {
       log.error("Bad exit value from command (" + exit + "): " + cmd)
       out.foreach( (x) => log.error( "STDOUT: " + x) )
@@ -59,15 +62,69 @@ object SMGCmd {
     out
   }
 
-  private def system(cmd: String, timeout: Int, myEnv: Map[String,String]): (Int, List[String], List[String]) = {
+//  private def system(cmd: String, timeout: Int, myEnv: Map[String,String]): (Int, List[String], List[String]) = {
+//    val cmdSeq = Seq(timeoutCommand, timeout.toString) ++ executorCommand ++ Seq(cmd)
+//    log.debug("RUN_COMMAND: tms=" + timeout + " : " + cmdSeq)
+//    val qb = Process(cmdSeq, None, myEnv.toSeq:_*)
+//    var out = List[String]()
+//    var err = List[String]()
+//
+//    val exit = qb ! ProcessLogger((s) => out ::= s, (s) => err ::= s)
+//
+//    (exit, out.reverse, err.reverse)
+//  }
+
+  private def system(cmd: String, timeout: Int,
+                              myEnv: Map[String,String], stdin: Option[String]): (Int, List[String], List[String]) = {
     val cmdSeq = Seq(timeoutCommand, timeout.toString) ++ executorCommand ++ Seq(cmd)
     log.debug("RUN_COMMAND: tms=" + timeout + " : " + cmdSeq)
+
     val qb = Process(cmdSeq, None, myEnv.toSeq:_*)
-    var out = List[String]()
-    var err = List[String]()
 
-    val exit = qb ! ProcessLogger((s) => out ::= s, (s) => err ::= s)
+    var out = ListBuffer[String]()
+    var err = ListBuffer[String]()
 
-    (exit, out.reverse, err.reverse)
+    def readFromStream(in: InputStream, tgt: ListBuffer[String]): Unit = {
+        val reader = new BufferedReader(new InputStreamReader(in))
+        var line = reader.readLine
+        while (line != null) {
+          tgt += line
+          line = reader.readLine
+        }
+    }
+
+    def readProcessStdout(ins: InputStream) {
+      try {
+        readFromStream(ins, out)
+      } catch { case t: Throwable =>
+        log.error(s"SMGCmd.system: unexpected error in readProcessStdout: ${t.getMessage}", t)
+      }
+    }
+
+    def readProcesStderr(errs: InputStream) {
+      try {
+        readFromStream(errs, err)
+      } catch { case t: Throwable =>
+        log.error(s"SMGCmd.system: unexpected error in readProcesStderr: ${t.getMessage}", t)
+      }
+    }
+
+    def writeProcessStdin(out: OutputStream) {
+      if (stdin.isDefined) {
+        try {
+          out.write(stdin.get.getBytes)
+          out.flush()
+        } catch { case t: Throwable =>
+          log.error(s"SMGCmd.system: unexpected error in writeProcessStdin: ${t.getMessage}", t)
+        }
+      }
+      out.close()
+    }
+
+    val io = new ProcessIO(writeProcessStdin, readProcessStdout, readProcesStderr)
+
+    val exit = qb.run(io).exitValue()
+
+    (exit, out.toList, err.toList)
   }
 }

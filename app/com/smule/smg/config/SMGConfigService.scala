@@ -1,6 +1,6 @@
 package com.smule.smg.config
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import com.smule.smg.core._
 import com.smule.smg.monitor.{SMGMonAlertConfVar, SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifySeverity}
 import com.smule.smg.plugin.SMGPlugin
@@ -45,6 +45,14 @@ trait SMGConfigService {
   val plugins: Seq[SMGPlugin]
 
   val pluginsById: Map[String, SMGPlugin]
+
+  private var batchUpdateActorRef: Option[ActorRef] = None
+  def getBatchUpdateActor: Option[ActorRef] = batchUpdateActorRef
+  def setBatchUpdateActor(aref: ActorRef): Unit = batchUpdateActorRef = Some(aref)
+  def flushBatchUpdateActor(reason: String): Unit = if (batchUpdateActorRef.isDefined)
+    SMGUpdateBatchActor.sendFlush(batchUpdateActorRef.get, reason)
+  else
+    log.error("SMGConfigService.flushBatchUpdateActor called with empty batchUpdateActorRef")
 
   /**
   * register an object instance as "data feed listener", so that it gets notified on all monitor state events

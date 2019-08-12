@@ -1046,6 +1046,14 @@ intended for use with rrdcached (a rrdtool daemon used for doing
 updates more efficiently). rrdcached is highly recommended on more
 demanding setups.
 
+- **$rrd\_update\_batch\_size**: - _1_ - if set to more than 1 and $rrd\_socket
+is specified SMG will batch updates (with batch size of the value) and
+use socat and rrdcached protocol directly for even more efficient updates.
+
+- **$rrd\_socat\_command**: - _socat_ - the socat command to use when
+flushing batched writes. By default SMG will use socat and expect it to
+be in the executables PATH.
+
 - **$rrd\_graph\_width**: _607_ - the graph width passed to rrdtool when
 graphing
 

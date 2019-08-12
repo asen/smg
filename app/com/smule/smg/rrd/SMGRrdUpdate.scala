@@ -40,12 +40,7 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
     SMGCmd.runCommand(rrdUpdateBatchCommand(batch), defaultCommandTimeout)
   }
 
-  private def expandTs(ts: Option[Int]): String = if (ts.isEmpty && (obju.dataDelay == 0))
-    "N" // rrdtool default
-  else if (ts.isEmpty)
-    (SMGRrd.tssNow - obju.dataDelay).toString
-  else
-    (ts.get - obju.dataDelay).toString
+  private def expandTs(ts: Option[Int]): String = SMGRrdUpdate.expandTs(obju, ts)
 
   private def fileExists: Boolean = new File(rrdFname).exists()
 
@@ -108,4 +103,14 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
   }
 }
 
-
+object SMGRrdUpdate {
+  def expandTs(obju: SMGObjectUpdate, ts: Option[Int], nForNow: Boolean = true): String = if (ts.isEmpty && (obju.dataDelay == 0)) {
+    if (nForNow)
+      "N"  // rrdtool default
+    else
+      SMGRrd.tssNow.toString
+  } else if (ts.isEmpty)
+    (SMGRrd.tssNow - obju.dataDelay).toString
+  else
+    (ts.get - obju.dataDelay).toString
+}
