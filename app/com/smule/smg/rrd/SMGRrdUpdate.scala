@@ -30,14 +30,22 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
   }
 
   def updateValues(values: List[Double], ts: Option[Int]): Unit = {
-    val tss = if (ts.isEmpty && (obju.dataDelay == 0))
-      "N" // rrdtool default
-    else if (ts.isEmpty)
-      (SMGRrd.tssNow - obju.dataDelay).toString
-    else
-      (ts.get - obju.dataDelay).toString
+    val tss = expandTs(ts)
     SMGCmd.runCommand(rrdUpdateCommand(tss, values), defaultCommandTimeout)
   }
+
+  def updateValues(updateData: SMGRrdUpdateData): Unit = updateValues(updateData.values, updateData.ts)
+
+  def updateBatch(batch: Seq[SMGRrdUpdateData]): Unit = {
+    SMGCmd.runCommand(rrdUpdateBatchCommand(batch), defaultCommandTimeout)
+  }
+
+  private def expandTs(ts: Option[Int]): String = if (ts.isEmpty && (obju.dataDelay == 0))
+    "N" // rrdtool default
+  else if (ts.isEmpty)
+    (SMGRrd.tssNow - obju.dataDelay).toString
+  else
+    (ts.get - obju.dataDelay).toString
 
   private def fileExists: Boolean = new File(rrdFname).exists()
 
@@ -83,6 +91,19 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
     }
     c.append(rrdFname)
     c.append(" ").append(tss).append(":").append(vals.map{ x => numRrdFormat(x, nanAsU = true)}.mkString(":"))
+    c.toString
+  }
+
+  private def rrdUpdateBatchCommand(batch: Seq[SMGRrdUpdateData]): String = {
+    val c = new mutable.StringBuilder(rrdConf.rrdTool).append(" update ")
+    if (rrdConf.rrdToolSocket.nonEmpty) {
+      c.append("--daemon ").append(rrdConf.rrdToolSocket.get).append(" ")
+    }
+    c.append(rrdFname)
+    batch.foreach { udata =>
+      val tss = expandTs(udata.ts)
+      c.append(" ").append(tss).append(":").append(udata.values.map{ x => numRrdFormat(x, nanAsU = true)}.mkString(":"))
+    }
     c.toString
   }
 }

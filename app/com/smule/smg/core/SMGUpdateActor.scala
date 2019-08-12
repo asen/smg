@@ -3,7 +3,7 @@ package com.smule.smg.core
 import akka.actor.Actor
 import com.smule.smg._
 import com.smule.smg.config.SMGConfigService
-import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdate}
+import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdate, SMGRrdUpdateData}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Future}
@@ -263,6 +263,35 @@ object SMGUpdateActor {
       case t: Throwable => {
         smgConfSvc.invalidateCachedValues(rrd.obju)
         log.ex(t, s"SMGUpdateActor: Unexpected exception in update: [${rrd.obju.id}]: ${t.toString}")
+        smgConfSvc.sendObjMsg(
+          SMGDataFeedMsgObj(SMGRrd.tssNow, rrd.obju, List(), -1, List("unexpected_update_error", t.getMessage))
+        )
+      }
+    }
+  }
+
+  def processRrdBatchUpdate(rrd: SMGRrdUpdate,
+                            smgConfSvc: SMGConfigService,
+                            batch: Seq[SMGRrdUpdateData],
+                            log: SMGLoggerApi): Unit = {
+    try {
+      rrd.updateBatch(batch)
+      batch.foreach { ud =>
+        smgConfSvc.sendObjMsg(
+          SMGDataFeedMsgObj(ud.ts.getOrElse(SMGRrd.tssNow), rrd.obju, ud.values, 0, List())
+        )
+      }
+    } catch {
+      case cex: SMGCmdException => {
+        smgConfSvc.invalidateCachedValues(rrd.obju)
+        log.error(s"SMGUpdateActor: Exception in batch update: [${rrd.obju.id}]: ${cex.toString}")
+        smgConfSvc.sendObjMsg(
+          SMGDataFeedMsgObj(SMGRrd.tssNow, rrd.obju, List(), -1, List("update_error", cex.getMessage))
+        )
+      }
+      case t: Throwable => {
+        smgConfSvc.invalidateCachedValues(rrd.obju)
+        log.ex(t, s"SMGUpdateActor: Unexpected exception in batch update: [${rrd.obju.id}]: ${t.toString}")
         smgConfSvc.sendObjMsg(
           SMGDataFeedMsgObj(SMGRrd.tssNow, rrd.obju, List(), -1, List("unexpected_update_error", t.getMessage))
         )
