@@ -90,8 +90,9 @@ class TestConfigSvc() extends SMGConfigService {
           disableHeatmap = false)
       ),
       rrdConf = SMGRrdConfig(rrdTool = "rrdtool",
-        rrdToolSocket = None, rrdSocatCommand = "socat",
-        rrdUpdateBatchSize = 1, rrdGraphWidth = 607, rrdGraphHeight = 400,
+        rrdToolSocket = None, rrdcachedSocatCommand = "socat",
+        rrdcachedUpdateBatchSize = 1, rrdcachedFlushAllOnRun = true, rrdcachedFlushOnRead = false,
+        rrdGraphWidth = 607, rrdGraphHeight = 400,
         rrdGraphFont = None, dataPointsPerPixel = 3, dataPointsPerImageOpt = None,
         rrdGraphWidthPadding = None, maxArgsLengthOpt = None),
 

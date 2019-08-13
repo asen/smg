@@ -1,6 +1,6 @@
 package com.smule.smg.rrd
 
-import com.smule.smg.core.{SMGCmd, SMGObjectView}
+import com.smule.smg.core.{SMGCmd, SMGObjectView, SMGUpdateBatchActor}
 
 import scala.collection.mutable
 
@@ -18,6 +18,8 @@ class SMGRrdFetch(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
   private val rrdFname = objv.rrdFile.get
 
   def fetch(params: SMGRrdFetchParams): List[SMGRrdRow] = {
+    if (rrdConf.useBatchedUpdates && rrdConf.rrdcachedFlushOnRead)
+      SMGUpdateBatchActor.flushRrdFile(rrdConf, rrdFname)
     val cmd = SMGCmd(fetchCommand(params.resolution, params.period, params.pl))
     val ret = for (ln <- cmd.run
                    if ln != ""

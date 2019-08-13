@@ -7,6 +7,10 @@
 - $rrd_graph_font: "DEFAULT:0:monospace"
 #- $rrd_tool: rrdtool
 #- $rrd_socket: /path/to/socket.fn
+#- $rrdcached_update_batch_size: 1
+#- $rrdcached_socat_command: "socat"
+#- $rrdcached_flush_all_on_run: true
+#- $rrdcached_flush_on_read: false
 
 - $monlog_dir: "monlog"
 

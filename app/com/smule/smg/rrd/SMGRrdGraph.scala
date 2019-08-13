@@ -1,6 +1,6 @@
 package com.smule.smg.rrd
 
-import com.smule.smg.core.SMGObjectView
+import com.smule.smg.core.{SMGObjectView, SMGUpdateBatchActor}
 import com.smule.smg.grapher.GraphOptions
 
 import scala.collection.mutable
@@ -22,6 +22,8 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) extends SM
     * @param period - period to cover in the graph
     */
   def graph(outfn:String, period: String, gopts: GraphOptions): Unit = {
+    if (rrdConf.useBatchedUpdates && rrdConf.rrdcachedFlushOnRead)
+      SMGUpdateBatchActor.flushRrdFile(rrdConf, rrdFname)
     val cmd = rrdGraphCommand(outfn, period, gopts)
     runRrdGraphCommand(rrdConf, cmd)
   }

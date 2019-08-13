@@ -8,10 +8,12 @@ import com.smule.smg.core.{SMGCmd, SMGLogger}
   * @param rrdTool - path to rrdtool executable
   * @param rrdToolSocket - optional path to rrdtool socket file to be used for updates
   */
-case class SMGRrdConfig(rrdTool: String ,
+case class SMGRrdConfig(rrdTool: String,
                         rrdToolSocket: Option[String],
-                        rrdSocatCommand: String,
-                        rrdUpdateBatchSize: Int,
+                        rrdcachedSocatCommand: String,
+                        rrdcachedUpdateBatchSize: Int,
+                        rrdcachedFlushAllOnRun: Boolean,
+                        rrdcachedFlushOnRead: Boolean,
                         rrdGraphWidth: Int,
                         rrdGraphHeight: Int,
                         rrdGraphFont: Option[String],
@@ -40,7 +42,7 @@ case class SMGRrdConfig(rrdTool: String ,
 
   val maxArgsLength: Int = maxArgsLengthOpt.getOrElse(SMGRrdConfig.defaultMaxArgsLength)
 
-  val useBatchedUpdates: Boolean = rrdToolSocket.isDefined && (rrdUpdateBatchSize > 1)
+  val useBatchedUpdates: Boolean = rrdToolSocket.isDefined && (rrdcachedUpdateBatchSize > 1)
 }
 
 object SMGRrdConfig {

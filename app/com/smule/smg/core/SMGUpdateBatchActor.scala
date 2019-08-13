@@ -12,28 +12,22 @@ class SMGUpdateBatchActor(configSvc: SMGConfigService) extends Actor{
 
   private val buf = ListBuffer[SMGUpdateBatchMsg]()
 
-  private val flushCommandTimeout = 10 // seconds TODO; read from conf
   private def rrdConf: SMGRrdConfig = configSvc.config.rrdConf
   private var processedCount = 0
 
   private def processUpdate(msg: SMGUpdateBatchMsg): Unit = {
     buf += msg
-    if (buf.size >= rrdConf.rrdUpdateBatchSize) flush()
+    if (buf.size >= rrdConf.rrdcachedUpdateBatchSize) flushBuf()
   }
 
-  private def runFlushCommand(updateStr: String): (Boolean, List[String]) =
-    try {
-      val out = SMGCmd.runCommand(s"${rrdConf.rrdSocatCommand} - ${rrdConf.rrdToolSocket.get}",
-        flushCommandTimeout, Map(), Some(updateStr))
-      (true, out)
-    } catch {
-      case t: Throwable => (false, List())
-    }
-  private def flush(reason: String = "None"): Unit = {
+  private def runSocatCommand(inputStr: String): (Boolean, List[String]) =
+    SMGUpdateBatchActor.runSocatCommand(rrdConf, inputStr)
+
+  private def flushBuf(reason: String = "None"): Unit = {
     if (buf.isEmpty)
       return
     if (rrdConf.rrdToolSocket.isEmpty) {
-      log.error(s"SMGUpdateBatchActor.flush($reason): called with empty rrdConf.rrdToolSocket")
+      log.error(s"SMGUpdateBatchActor.flushBuf($reason): called with empty rrdConf.rrdToolSocket")
       return
     }
     // TODO make this below async?
@@ -45,29 +39,44 @@ class SMGUpdateBatchActor(configSvc: SMGConfigService) extends Actor{
     }
     updateLines += "."
     val updateStr = updateLines.mkString("\n") + "\n"
-    val (success, out) = runFlushCommand(updateStr)
+    val (success, out) = runSocatCommand(updateStr)
     if (out.contains("0 errors")) {
-      log.debug(s"SMGUpdateBatchActor.flush($reason): success: old processedCount=$processedCount buf.size=${buf.size}")
+      log.debug(s"SMGUpdateBatchActor.flushBuf($reason): success: old processedCount=$processedCount buf.size=${buf.size}")
     } else if (success && out.mkString("").strip() == ""){
       // TODO verify if this is a failure and needs retrying
-      log.warn(s"SMGUpdateBatchActor.flush($reason): empty output (exit=$success) old processedCount=$processedCount " +
+      log.warn(s"SMGUpdateBatchActor.flushBuf($reason): empty output (exit=$success) old processedCount=$processedCount " +
         s"buf.size=${buf.size} buf.head.ou.id=${buf.head.ou.id}")
     } else {
-      log.error(s"SMGUpdateBatchActor.flush($reason): " +
+      log.error(s"SMGUpdateBatchActor.flushBuf($reason): " +
         s"failed (exit=$success), here is the input:\n${updateStr}")
-      log.error(s"SMGUpdateBatchActor.flush($reason): " +
+      log.error(s"SMGUpdateBatchActor.flushBuf($reason): " +
         s"failed (exit=$success), here is the output:\n${out.mkString("\n")}")
     }
     processedCount += buf.size
     buf.clear()
   }
 
+  private def flushAll(reason: String): Unit = {
+    val (ret, out) = runSocatCommand("FLUSHALL\n")
+    if (!ret){
+      log.error(s"SMGUpdateBatchActor.flushAll($reason): " +
+        s"failed, output:\n${out.mkString("\n")}")
+    } else
+      log.debug(s"SMGUpdateBatchActor.flushAll($reason): " +
+        s"success, output:\n${out.mkString("\n")}")
+  }
+
   override def receive: Receive = {
     case msg: SMGUpdateBatchMsg => processUpdate(msg)
     case SMGFlushBatchMsg(reason: String) => {
-      flush(reason)
-      if (rrdConf.useBatchedUpdates)
-        log.info(s"SMGUpdateBatchActor: processed flush($reason) message ($processedCount updates since last flush message)")
+      flushBuf(reason)
+      if (rrdConf.useBatchedUpdates) {
+        val myFlushAll = rrdConf.rrdcachedFlushAllOnRun
+        if (myFlushAll)
+          flushAll(reason)
+        log.info(s"SMGUpdateBatchActor: processed flush($reason) message ($processedCount updates since last one) " +
+          s"flushAll=$myFlushAll")
+      }
       processedCount = 0
     }
     case x => log.error(s"SMGUpdateBatchActor: unexpected message: $x")
@@ -86,5 +95,27 @@ object SMGUpdateBatchActor {
 
   def sendFlush(aref: ActorRef, reason: String): Unit = {
     aref ! SMGFlushBatchMsg(reason)
+  }
+
+  def runSocatCommand(rrdConf: SMGRrdConfig, inputStr: String): (Boolean, List[String]) ={
+    val flushCommandTimeout = 10 // seconds TODO; read from conf
+    try {
+      val out = SMGCmd.runCommand(s"${rrdConf.rrdcachedSocatCommand} - ${rrdConf.rrdToolSocket.get}",
+        flushCommandTimeout, Map(), Some(inputStr))
+      (true, out)
+    } catch {
+      case t: Throwable => (false, List())
+    }
+  }
+
+  def flushRrdFile(rrdConf: SMGRrdConfig, fname: String): Unit = {
+    flushRrdFiles(rrdConf, Seq(fname))
+  }
+
+  def flushRrdFiles(rrdConf: SMGRrdConfig, fnames: Seq[String]): Unit = {
+    if (fnames.isEmpty)
+      return
+    val ins = fnames.map(s => s"FLUSH $s\n").mkString
+    runSocatCommand(rrdConf, ins)
   }
 }
