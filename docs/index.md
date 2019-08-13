@@ -1054,11 +1054,11 @@ and use socat and rrdcached protocol directly for even more efficient updates.
 flushing batched writes. By default SMG will use _socat_ and expect it to
 be in the executables PATH.
 
-- **$rrdcached\_flush\_all\_on\_run**: - _true_ - whether to send FLUSHALL to
+- **$rrdcached\_flush\_all\_on\_run**: - _false_ - whether to send FLUSHALL to
 rrdcached at the end of every run (only used when doing batched updates via
 rrdcached protocol)
 
-- **$rrdcached\_flush\_on\_read**: - _false_ - whether to send FLUSH _file_ to
+- **$rrdcached\_flush\_on\_read**: - _true_ - whether to send FLUSH _file_ to
 rrdcached before every read - fetch or graph (only used when doing batched
 updates via rrdcached protocol). Either this or $rrdcached\_flush\_all\_on\_run
 should be set to true in rrdcached batch update mode. Setting both to true can

@@ -666,7 +666,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
         rrdToolSocket = socketOpt,
         rrdcachedSocatCommand = globalConf.getOrElse("$rrdcached_socat_command", "socat"),
         rrdcachedUpdateBatchSize = globalConf.get("$rrdcached_update_batch_size").flatMap(x => Try(x.toInt).toOption).getOrElse(1),
-        rrdcachedFlushAllOnRun = globalConf.get("$rrdcached_flush_all_on_run").flatMap(x => Try(x.toBoolean).toOption).getOrElse(true),
+        rrdcachedFlushAllOnRun = globalConf.get("$rrdcached_flush_all_on_run").flatMap(x => Try(x.toBoolean).toOption).getOrElse(false),
         rrdcachedFlushOnRead = globalConf.get("$rrdcached_flush_on_read").flatMap(x => Try(x.toBoolean).toOption).getOrElse(true),
         rrdGraphWidth = globalConf.get("$rrd_graph_width").flatMap(x => Try(x.toInt).toOption).getOrElse(SMGRrdConfig.defaultGraphWidth),
         rrdGraphHeight = globalConf.get("$rrd_graph_height").flatMap(x => Try(x.toInt).toOption).getOrElse(SMGRrdConfig.defaultGraphHeight),
