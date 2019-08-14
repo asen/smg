@@ -1,0 +1,10 @@
+@import com.smule.smg.core.SMGIndex
+@(idxes: Seq[SMGIndex])
+@if(idxes.nonEmpty){
+  Index@if(idxes.tail.nonEmpty){es}: | @for(idx <- idxes){
+    @idx.title
+    @if(idx.desc.isDefined) {
+      (@idx.desc.get)
+    } |
+  }
+}

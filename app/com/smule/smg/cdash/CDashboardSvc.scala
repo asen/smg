@@ -93,7 +93,7 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
       errorItem(itm, s"Index not found: $indexId")
     else {
       val idx = idxOpt.get
-      val filteredObjects = smg.getFilteredObjects(SMGFilter.matchAll, Some(idx))
+      val filteredObjects = smg.getFilteredObjects(SMGFilter.matchAll, Seq(idx))
       val tlObjects = filteredObjects.size
       val indexLimit = idx.cols.getOrElse(configSvc.config.dashDefaultCols) *
         idx.rows.getOrElse(configSvc.config.dashDefaultRows)

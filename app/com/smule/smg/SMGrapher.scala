@@ -182,6 +182,12 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
   }
 
+  override def getRemoteIndexesByLocalId(id: String): Seq[SMGIndex] = {
+    val localId = SMGRemote.localId(id)
+    (Seq(configSvc.config) ++ remotes.configs).flatMap { cf =>
+      cf.indexesByLocalId.get(localId)
+    }
+  }
 
   private def pluginObjectViews: Seq[SMGObjectView] = {
     configSvc.plugins.flatMap(p => p.objects)
@@ -215,7 +221,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   /**
     * @inheritdoc
     */
-  override def getFilteredObjects(filter: SMGFilter, ix: Option[SMGIndex]): Seq[SMGObjectView]  = {
+  override def getFilteredObjects(filter: SMGFilter, ixes: Seq[SMGIndex]): Seq[SMGObjectView]  = {
     val toFilter = if (filter.remotes.isEmpty) {
       configSvc.config.viewObjects
     } else if (filter.remotes.contains(SMGRemote.wildcard.id)) {
@@ -231,8 +237,8 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       }
     }
     toFilter.filter { obj =>
-      if (ix.isDefined) {
-        ix.get.flt.matches(obj) && filter.matches(obj)
+      if (ixes.nonEmpty) {
+        ixes.exists(ix => ix.flt.matches(obj) && filter.matches(obj))
       } else
         filter.matches(obj)
     }

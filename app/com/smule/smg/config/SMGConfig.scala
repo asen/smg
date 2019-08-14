@@ -1,6 +1,7 @@
 package com.smule.smg.config
 
 import com.smule.smg.core.SMGObjectView
+import com.smule.smg.remote.SMGRemote
 
 /**
   * An interface representing SMG local or remote configuration objects
@@ -27,9 +28,10 @@ trait SMGConfig {
   val indexes: Seq[SMGConfIndex]
 
    /**
-    * Helper map to lookup indexes by id
+    * Helper maps to lookup indexes by id/local id
     */
   val indexesById: Map[String, SMGConfIndex] = indexes.groupBy(ix => ix.id).map( t => (t._1, t._2.head))
 
+  val indexesByLocalId: Map[String, SMGConfIndex] = indexes.groupBy(ix => SMGRemote.localId(ix.id)).map(t => (t._1, t._2.head))
 
 }

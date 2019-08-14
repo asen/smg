@@ -48,6 +48,13 @@ trait GrapherApi {
   def getIndexById(id: String): Option[SMGIndex]
 
   /**
+    * Get all configured indexes having the same local id across all remotes
+    * @param id
+    * @return
+    */
+  def getRemoteIndexesByLocalId(id: String): Seq[SMGIndex]
+
+  /**
     * Get a SMGObjectView from its object id
     * @param id - id to lookup
     * @return - Some SMGObjectView if found, None otherwise
@@ -60,7 +67,7 @@ trait GrapherApi {
     * @param filter - filter to use
     * @return - sequence of matching objects
     */
-  def getFilteredObjects(filter: SMGFilter, ix: Option[SMGIndex]): Seq[SMGObjectView]
+  def getFilteredObjects(filter: SMGFilter, ixes: Seq[SMGIndex]): Seq[SMGObjectView]
 
 
   /**

@@ -4,35 +4,41 @@
 @import com.smule.smg.grapher.GraphOptions
 @import com.smule.smg.core.SMGAggGroupBy
 
-@(ix: Option[SMGIndex], flt: SMGFilter, period: String, cols: Int, rows: Int,
+@(idxes: Seq[SMGIndex], flt: SMGFilter, period: String, cols: Int, rows: Int,
         availRemotes: Seq[SMGRemote], aggOp: Option[String],
         showXagg: Boolean, xagg: Boolean, groupBy: SMGAggGroupBy.Value,
         gopts: GraphOptions, maxUrlSize: Int, defaultPeriod: String, defaultCols: Int,
         defaultRows: Int, page: Int)
 
-
 <form id="smgFilterForm" method="GET" action="/dash" class="filter-form" xmlns="http://www.w3.org/1999/html">
 
   <div class="panel panel-primary">
-    <input type="hidden" id="smg-filter-ix" name="ix" value='@{ix.map(_.id).getOrElse("")}'>
-    @if(ix.isDefined){
+    <input type="hidden" id="smg-filter-ix" name="ix" value='@{idxes.map(_.id).mkString(",")}'>
+
+    @if(idxes.nonEmpty){
     <div class="panel-heading">
-      <h3 class="panel-title">Index: @ix.get.title (@ix.get.id)</h3>
+      <h3 class="panel-title">@indexTitles(idxes)</h3>
     </div>
     <div class="panel-body">
-      <h5 style="word-wrap: break-word;">Index Filter: @ix.get.flt.humanText</h5>
-      @if(ix.get.aggOp.isDefined) {
-        <h5>Index aggregate function: @ix.get.aggOp.get @if(ix.get.xRemoteAgg){(Cross-Remote)}</h5>
+      @if(idxes.tail.nonEmpty){
+        <h5 style="word-wrap: break-word;">Multiple indexes displayed, "Merge with user filter" not available</h5>
+      } else {
+        @defining(idxes.headOption){ ix =>
+        <h5 style="word-wrap: break-word;">Index Filter: @ix.get.flt.humanText</h5>
+        @if(ix.get.aggOp.isDefined) {
+          <h5>Index aggregate function: @ix.get.aggOp.get @if(ix.get.xRemoteAgg){(Cross-Remote)}</h5>
+        }
+        <div class="form-group">
+          <input title="Merge the index and user filters and reload the page" id="smg-filter-merge-idx"
+                 onclick='mergeIndexFilterAsUser(this);'
+                 class="form-control btn-submit-manual" type="button" value="Merge with user filter">
+        </div>
+        }
       }
       <div class="form-group">
         <input title="Clear index filter and reload the page" id="smg-filter-clear-idx"
                onclick='document.getElementById("smg-filter-ix").value= ""; mySubmitOnChange(this);'
                class="form-control btn-submit-manual" type="button" value="Remove index filter">
-      </div>
-      <div class="form-group">
-        <input title="Merge the index and user filters and reload the page" id="smg-filter-merge-idx"
-               onclick='mergeIndexFilterAsUser(this);'
-               class="form-control btn-submit-manual" type="button" value="Merge with user filter">
       </div>
     </div>
     }
@@ -186,7 +192,7 @@ Changing this reloads the page.">Rows:</label>
       <br/>
 
       <input type="hidden" id="smg-filter-xagg" name="xagg" value='@if(xagg){on} else {off}' />
-      @defining(if(aggOp.isEmpty && ix.isDefined && ix.get.aggOp.isDefined){ "Unapply" } else { aggOp.getOrElse("") } ){ myAggOp =>
+      @defining(if(aggOp.isEmpty && idxes.headOption.isDefined && idxes.head.aggOp.isDefined){ "Unapply" } else { aggOp.getOrElse("") } ){ myAggOp =>
       <input type="hidden" id="smg-filter-agg"
              name="agg"
              value='@myAggOp' />
@@ -272,6 +278,8 @@ By default aggregation/sorting happens per-remote instance">Cross-Remote:</label
 
 <!-- strip empty params from the form so that urls are less cluttered -->
 <script language="JavaScript">
+@defining(idxes.headOption){ ix =>
+
   function disableEmptyInputs() {
       var indexHasXAgg = @if(ix.isDefined && ix.get.xRemoteAgg) { true } else { false };
       var defaultGroupBy = "@{ix.flatMap(_.aggGroupBy).getOrElse(SMGAggGroupBy.defaultGroupBy)}";
@@ -370,7 +378,6 @@ By default aggregation/sorting happens per-remote instance">Cross-Remote:</label
   }
 
   enableDisableLogY(true);
-
   @if(ix.isDefined){
     function mergeIndexFilterAsUser(elem) {
       var myGetUserValue = function(name){
@@ -432,8 +439,5 @@ By default aggregation/sorting happens per-remote instance">Cross-Remote:</label
   smgAutocompleteSetup('smg-filter-pl',     '/json/periods');
   smgAutocompleteSetup('smg-filter-step',   '');
   smgAutocompleteSetup('smg-filter-maxy',   '');
+} @* end defining(idxes.headOption) *@
 </script>
-
-
-
-

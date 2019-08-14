@@ -48,10 +48,18 @@ case class SMGFilter(px: Option[String],
     s.split("\\s+").filter(s => s != "").map(rxs => ciRegex(Some(rxs)).get).toSeq
   }.getOrElse(Seq())
 
-  lazy val matchesAnyObjectIdAndText = px.isEmpty && sx.isEmpty && rx.isEmpty && rxx.isEmpty && trx.isEmpty
+  lazy val matchesAnyObjectIdAndText: Boolean = px.isEmpty && sx.isEmpty && rx.isEmpty && rxx.isEmpty && trx.isEmpty
 
   def matches(ob: SMGObjectBase) : Boolean = {
-    matchesId(ob.id) && matchesText(ob)
+    matchesRemotes(ob.id) && matchesId(ob.id) && matchesText(ob)
+  }
+
+  private def matchesRemotes(oid: String): Boolean = {
+    if ((remotes.contains(SMGRemote.wildcard.id)) || //wildcard remote matches anything
+      (remotes.isEmpty && SMGRemote.isLocalObj(oid))) //lack of remotes matches local objects
+      true
+    else
+      remotes.contains(SMGRemote.remoteId(oid))
   }
 
   private def matchesId(oid: String) = {

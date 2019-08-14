@@ -132,7 +132,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     gb: Option[String]
   ) {
 
-    def processParams(idx: Option[SMGIndex]): (SMGFilter, DashboardExtraParams) = {
+    def processParams(idxes: Seq[SMGIndex]): (SMGFilter, DashboardExtraParams) = {
+      val idx =  idxes.headOption //XXX use the first idx for graph opts
       // use index gopts if available, form is overriding index spec
       val myXSort = if (idx.isEmpty || xsort.isDefined) xsort.getOrElse(0) else idx.get.flt.gopts.xsort.getOrElse(0)
       val istep = if (step.getOrElse("") != "") SMGRrd.parseStep(step.get) else None
@@ -160,13 +161,19 @@ class Application  @Inject() (actorSystem: ActorSystem,
         logY = myLogY
       )
 
-      val myRemotes = if (remotes.isEmpty && idx.isDefined && idx.get.flt.remotes.nonEmpty)
-        idx.get.flt.remotes
+      val indexRemotes = idxes.flatMap{ ix =>
+        if (ix.flt.remotes.isEmpty){
+          Seq(SMGRemote.local.id)
+        } else
+          ix.flt.remotes
+      }
+      val myRemotes = (if (remotes.isEmpty && indexRemotes.nonEmpty)
+        indexRemotes
       else if (remotes.isEmpty) {
         Seq(SMGRemote.local.id)
       } else {
         remotes
-      }
+      }).distinct
 
       val flt = SMGFilter(px = px, //myPx,
         sx = sx, //mySx,
@@ -246,6 +253,25 @@ class Application  @Inject() (actorSystem: ActorSystem,
     dashParamsFromMap(myParams)
   }
 
+  private def dashExpandIndexes(dps: DashboardParams, myErrors: ListBuffer[String]): Seq[SMGIndex] = {
+    if (dps.ix.nonEmpty) {
+      // 1. expand multiple indexes specified with ,
+      // 2. further expand by name if remote is '*'
+      val expanded1 = dps.ix.get.split(",").flatMap { s =>
+        val idxOpt = smg.getIndexById(s)
+        if (idxOpt.isEmpty) {
+          myErrors += s"Index with id $s not found"
+        }
+        idxOpt
+      }
+      if (dps.remotes.contains(SMGRemote.wildcard.id)){
+        expanded1.flatMap { ix =>
+          smg.getRemoteIndexesByLocalId(ix.id)
+        }
+      } else expanded1
+    } else Seq()
+  }
+
   /**
     * Display dashboard page (filter and graphs)
     * @return
@@ -266,19 +292,14 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val showMs = msEnabled(request)
 
     // get index and parent index if ix id is supplied
-    val idx = if (dps.ix.nonEmpty) {
-      val idxOpt = smg.getIndexById(dps.ix.get)
-      if (idxOpt.isEmpty) {
-        myErrors += s"Index with id ${dps.ix.get} not found"
-      }
-      idxOpt
-    } else None
-    val parentIdx: Option[SMGIndex] = if (idx.isDefined && idx.get.parentId.isDefined) {
-      smg.getIndexById(idx.get.parentId.get)
+    val idxes: Seq[SMGIndex] = dashExpandIndexes(dps, myErrors)
+
+    val parentIdx: Option[SMGIndex] = if (idxes.size == 1 && idxes.head.parentId.isDefined) {
+      smg.getIndexById(idxes.head.parentId.get)
     } else None
 
     // get filter and extra params from the parsed http params
-    val (flt, dep) = dps.processParams(idx)
+    val (flt, dep) = dps.processParams(idxes)
 
     // get an immutable local config ref for the duration of this request
     val conf = configSvc.config
@@ -293,7 +314,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       Seq()
     } else {
       val offset = dep.pg * limit
-      val filteredObjects = smg.getFilteredObjects(flt, idx)
+      val filteredObjects = smg.getFilteredObjects(flt, idxes)
       tlObjects = filteredObjects.size
       maxPages = (tlObjects / limit) + (if ((tlObjects % limit) == 0) 0 else 1)
       filteredObjects.slice(offset, offset + limit)
@@ -346,7 +367,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val errorsOpt = if (myErrors.isEmpty) None else Some(myErrors.mkString(", "))
       val matchingIndexes = smg.objectsIndexes(objsSlice)
       Ok(
-        views.html.filterResult(configSvc, idx, parentIdx, result, flt, dep,
+        views.html.filterResult(configSvc, idxes, parentIdx, result, flt, dep,
           myAggOp, showXRmt,
           maxPages, lst.size, objsSlice.size, tlObjects, availRemotes,
           flt.gopts, showMs, monStatesByImgView, errorsOpt, matchingIndexes,
@@ -972,7 +993,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
     val idx = smg.getIndexById(ix)
     if (idx.isDefined) {
-      val objs = smg.getFilteredObjects(idx.get.flt, None)
+      val objs = smg.getFilteredObjects(idx.get.flt, Seq())
       monitorApi.silenceList(objs.map(_.id), untilTss).map { ret =>
         Redirect(curl).flashing( if (ret) {
           "success" -> s"Silenced all objects matching index: ${idx.get.title} (${idx.get.id})"
