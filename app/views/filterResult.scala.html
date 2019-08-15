@@ -16,7 +16,7 @@
   result: Seq[SMGImageViewsGroup], flt: SMGFilter, dep: Application#DashboardExtraParams,
   aggOp: Option[String], showXRemote: Boolean,
   maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int, availRemotes: Seq[SMGRemote],
-  gopts: GraphOptions, showMs:Boolean, monData: Map[String, Seq[SMGMonState]],
+  gopts: GraphOptions, showMs:Boolean, showIxes: Boolean, monData: Map[String, Seq[SMGMonState]],
   errorMsg: Option[String], matchingIndexes : Seq[SMGIndex],
   conf:SMGLocalConfig, isPost: Boolean)(implicit flash: Flash)
 
@@ -26,7 +26,7 @@
     <div align="center"><h4><font color="red">Error: @errorMsg.get</font></h4></div>
   }
 
-  @if(idxes.nonEmpty) {
+  @if(showIxes && idxes.nonEmpty) {
     <h3>@indexTitles(idxes)</h3>
     @if(parentIdx.isDefined) {
       <h4>
@@ -51,7 +51,7 @@
     @filter(idxes, flt, dep.period, dep.cols, dep.rows, availRemotes, aggOp,
             showXRemote, dep.xRemoteAgg, dep.groupBy, gopts, conf.maxUrlSize,
             GrapherApi.defaultPeriod, conf.dashDefaultCols,
-            conf.dashDefaultRows, dep.pg)
+            conf.dashDefaultRows, dep.pg, !showIxes)
 
     @if(aggOp.isEmpty){
     @displaySelectHeader()
@@ -143,7 +143,7 @@
 
     @filterPages(dep.pg, maxPg)
 
-    @if(matchingIndexes.nonEmpty){
+    @if(showIxes && matchingIndexes.nonEmpty){
       <hr/>
       Relevant indexes:
       @for(myix <- matchingIndexes) {

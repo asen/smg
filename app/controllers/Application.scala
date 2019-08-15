@@ -129,7 +129,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     maxy: Option[String],
     miny: Option[String],
     logy: String,
-    gb: Option[String]
+    gb: Option[String],
+    cleanView: Boolean
   ) {
 
     def processParams(idxes: Seq[SMGIndex]): (SMGFilter, DashboardExtraParams) = {
@@ -239,7 +240,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
       maxy = m.get("maxy").map(_.head),
       miny = m.get("miny").map(_.head),
       logy = m.getOrElse("logy", Seq("")).head,
-      gb = m.get("gb").map(_.head)
+      gb = m.get("gb").map(_.head),
+      cleanView = m.getOrElse("cleanView", Seq("off")).head == "on"
     )
   }
 
@@ -288,8 +290,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
     else
       dashGetParams(request)
 
-    // keep track if monitor state display is disabled. TODO - clanup/remove this (?)
-    val showMs = msEnabled(request)
+    // keep track if monitor state display is disabled.
+    val showIxes = !dps.cleanView
+    val showMs = showIxes && msEnabled(request)
 
     // get index and parent index if ix id is supplied
     val idxes: Seq[SMGIndex] = dashExpandIndexes(dps, myErrors)
@@ -370,7 +373,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
         views.html.filterResult(configSvc, idxes, parentIdx, result, flt, dep,
           myAggOp, showXRmt,
           maxPages, lst.size, objsSlice.size, tlObjects, availRemotes,
-          flt.gopts, showMs, monStatesByImgView, errorsOpt, matchingIndexes,
+          flt.gopts, showMs, showIxes, monStatesByImgView, errorsOpt, matchingIndexes,
           conf, request.method == "POST")
       )
     }

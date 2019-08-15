@@ -127,6 +127,12 @@ case class SMGFilter(px: Option[String],
       s" (remotes=${remotes.map{ r =>
         if (r == SMGRemote.local.id) SMGRemote.localName else r }.mkString(",")})"
     else "")
+
+
+  private val ellipsifyAt = 80
+  lazy val humanTextEllipsified: String = if (humanText.length > ellipsifyAt) {
+     humanText.take(ellipsifyAt - 3) + "..."
+  } else humanText
 }
 
 object SMGFilter {

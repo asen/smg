@@ -8,7 +8,7 @@
         availRemotes: Seq[SMGRemote], aggOp: Option[String],
         showXagg: Boolean, xagg: Boolean, groupBy: SMGAggGroupBy.Value,
         gopts: GraphOptions, maxUrlSize: Int, defaultPeriod: String, defaultCols: Int,
-        defaultRows: Int, page: Int)
+        defaultRows: Int, page: Int, cleanView: Boolean)
 
 <form id="smgFilterForm" method="GET" action="/dash" class="filter-form" xmlns="http://www.w3.org/1999/html">
 
@@ -24,7 +24,9 @@
         <h5 style="word-wrap: break-word;">Multiple indexes displayed, "Merge with user filter" not available</h5>
       } else {
         @defining(idxes.headOption){ ix =>
-        <h5 style="word-wrap: break-word;">Index Filter: @ix.get.flt.humanText</h5>
+        @defining(if (cleanView) ix.get.flt.humanTextEllipsified else ix.get.flt.humanText ){ fltTxt =>
+        <h5 style="word-wrap: break-word;">Index Filter: @fltTxt</h5>
+        } @* defining fltTxt *@
         @if(ix.get.aggOp.isDefined) {
           <h5>Index aggregate function: @ix.get.aggOp.get @if(ix.get.xRemoteAgg){(Cross-Remote)}</h5>
         }
@@ -33,7 +35,7 @@
                  onclick='mergeIndexFilterAsUser(this);'
                  class="form-control btn-submit-manual" type="button" value="Merge with user filter">
         </div>
-        }
+        } @* defining ix *@
       }
       <div class="form-group">
         <input title="Clear index filter and reload the page" id="smg-filter-clear-idx"
@@ -44,7 +46,9 @@
     }
 
     <div class="panel-heading">
-      <h3 class="panel-title">User Filter: @flt.humanText</h3>
+      @defining( if (cleanView) flt.humanTextEllipsified else flt.humanText ){ fltTxt =>
+      <h3 class="panel-title">User Filter: @fltTxt</h3>
+      } @* defining fltTxt *@
     </div>
     <div class="panel-body">
       @if(availRemotes.nonEmpty) {
@@ -186,7 +190,10 @@ Changing this reloads the page.">Rows:</label>
         <input type="checkbox" id="d95p_cb" name="d95p" @if(gopts.disable95pRule){ checked } /> |
         <label for="logy_cb" class="manualsubmit-lbl" id="logy_lbl"
                title="Logarithmic Y scale (requires MinY > 0)">Logarithmic Y:</label>
-        <input type="checkbox" id="logy_cb" name="logy" @if(gopts.logY){ checked } />
+        <input type="checkbox" id="logy_cb" name="logy" @if(gopts.logY){ checked } /> |
+        <label for="cleanView_cb" class="manualsubmit-lbl"
+               title="Hide indexes and monitor states from display">Clean view</label>
+        <input type="checkbox" id="cleanView_cb" name="cleanView" @if(cleanView){ checked } /> |
       </div>
 
       <br/>
