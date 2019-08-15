@@ -88,7 +88,7 @@ object SMGRrd {
     } else 0
   }
 
-  private def intervalToStr(int: Int): String = {
+  def intervalToStr(int: Int): String = {
     var rem = int
     val days = if (rem >= 86400) (rem / 86400).toString + "d" else ""
     rem = rem % 86400

@@ -1,0 +1,22 @@
+@import com.smule.smg.rrd.SMGRrd
+@(autoRefresh: Int)
+@if(autoRefresh > 0){
+<a href="#" title="Auto refresh is running with @SMGRrd.intervalToStr(autoRefresh) interval - click to pause"
+   id="smgAutoRefreshToggleElem" onclick="smgAutoRefreshToggleClick()"><b>Auto refresh (interval - @SMGRrd.intervalToStr(autoRefresh))</b></a>
+<script language="JavaScript">
+  function smgAutoRefreshToggleClick(){
+    var aElem = document.getElementById("smgAutoRefreshToggleElem")
+    if (smgIsAutoRefreshing()){
+      smgStopAutoRefresh();
+      aElem.innerHTML = "<b>Auto refresh (stopped)</b>"
+      aElem.title = "Auto refresh is stopped - click to resume with @SMGRrd.intervalToStr(autoRefresh) interval"
+    } else {
+      smgStartAutoRefresh(@autoRefresh);
+      aElem.innerHTML = "<b>Auto refresh (interval - @SMGRrd.intervalToStr(autoRefresh))</b>"
+      aElem.title = "Auto refresh is running with @SMGRrd.intervalToStr(autoRefresh) interval - click to pause"
+    }
+  }
+</script>
+} else {
+  <a href="#" class="disabled">Auto refresh (disabled)</a>
+}
