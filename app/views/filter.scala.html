@@ -3,12 +3,17 @@
 @import com.smule.smg.remote.SMGRemote
 @import com.smule.smg.grapher.GraphOptions
 @import com.smule.smg.core.SMGAggGroupBy
+@import com.smule.smg.config.SMGConfigService
 
-@(idxes: Seq[SMGIndex], flt: SMGFilter, period: String, cols: Int, rows: Int,
+@(cfSvc: SMGConfigService, idxes: Seq[SMGIndex], flt: SMGFilter, period: String, cols: Int, rows: Int,
         availRemotes: Seq[SMGRemote], aggOp: Option[String],
         showXagg: Boolean, xagg: Boolean, groupBy: SMGAggGroupBy.Value,
         gopts: GraphOptions, maxUrlSize: Int, defaultPeriod: String, defaultCols: Int,
         defaultRows: Int, page: Int, cleanView: Boolean)
+
+@defining(if(cleanView) "none" else "block"){ displayStyle =>
+<div id="smgFilterFormWrapperDiv" style="display: @displayStyle">
+}
 
 <form id="smgFilterForm" method="GET" action="/dash" class="filter-form" xmlns="http://www.w3.org/1999/html">
 
@@ -24,7 +29,7 @@
         <h5 style="word-wrap: break-word;">Multiple indexes displayed, "Merge with user filter" not available</h5>
       } else {
         @defining(idxes.headOption){ ix =>
-        @defining(if (cleanView) ix.get.flt.humanTextEllipsified else ix.get.flt.humanText ){ fltTxt =>
+        @defining(if (cleanView) cfSvc.ellipsify(ix.get.flt.humanText) else ix.get.flt.humanText ){ fltTxt =>
         <h5 style="word-wrap: break-word;">Index Filter: @fltTxt</h5>
         } @* defining fltTxt *@
         @if(ix.get.aggOp.isDefined) {
@@ -46,7 +51,7 @@
     }
 
     <div class="panel-heading">
-      @defining( if (cleanView) flt.humanTextEllipsified else flt.humanText ){ fltTxt =>
+      @defining( if (cleanView) cfSvc.ellipsify(flt.humanText) else flt.humanText ){ fltTxt =>
       <h3 class="panel-title">User Filter: @fltTxt</h3>
       } @* defining fltTxt *@
     </div>
@@ -283,6 +288,21 @@ By default aggregation/sorting happens per-remote instance">Cross-Remote:</label
   </div>
 </form>
 
+</div> @* div id="smgFilterFormWrapperDiv" *@
+
+@if(cleanView){
+<div id="smgFilterFormShowOnCleanView">
+  <h4>Clean view - filter not displayed
+    <button type="button" onclick="toggleFilterFormWrapperDiv();">Show filter</button></h4>
+  <hr/>
+</div>
+<script language="JavaScript">
+  function toggleFilterFormWrapperDiv(){
+    document.getElementById("smgFilterFormWrapperDiv").style.display = "block";
+    document.getElementById("smgFilterFormShowOnCleanView").style.display = "none";
+  }
+</script>
+}
 <!-- strip empty params from the form so that urls are less cluttered -->
 <script language="JavaScript">
 @defining(idxes.headOption){ ix =>

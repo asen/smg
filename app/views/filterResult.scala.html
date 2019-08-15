@@ -8,7 +8,6 @@
 @import com.smule.smg.grapher.GraphOptions
 @import com.smule.smg.monitor.SMGMonState
 @import com.smule.smg.monitor.SMGMonStateAgg
-@import com.smule.smg.config.SMGLocalConfig
 @import com.smule.smg.grapher.SMGImageViewsGroup
 @import controllers.Application
 
@@ -16,9 +15,9 @@
   result: Seq[SMGImageViewsGroup], flt: SMGFilter, dep: Application#DashboardExtraParams,
   aggOp: Option[String], showXRemote: Boolean,
   maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int, availRemotes: Seq[SMGRemote],
-  gopts: GraphOptions, showMs:Boolean, showIxes: Boolean, monData: Map[String, Seq[SMGMonState]],
+  gopts: GraphOptions, showMs:Boolean, cleanView: Boolean, monData: Map[String, Seq[SMGMonState]],
   errorMsg: Option[String], matchingIndexes : Seq[SMGIndex],
-  conf:SMGLocalConfig, isPost: Boolean)(implicit flash: Flash)
+  isPost: Boolean)(implicit flash: Flash)
 
 @main("SMG - " + (if (idxes.nonEmpty) idxes.map(_.title).mkString(",") else flt.humanText), cfSvc, if (isPost) 0 else 300) {
 
@@ -26,7 +25,7 @@
     <div align="center"><h4><font color="red">Error: @errorMsg.get</font></h4></div>
   }
 
-  @if(showIxes && idxes.nonEmpty) {
+  @if(!cleanView && idxes.nonEmpty) {
     <h3>@indexTitles(idxes)</h3>
     @if(parentIdx.isDefined) {
       <h4>
@@ -48,11 +47,12 @@
   }
 
   @if(dep.rows > 0) {
-    @filter(idxes, flt, dep.period, dep.cols, dep.rows, availRemotes, aggOp,
+    @defining(cfSvc.config){ conf =>
+    @filter(cfSvc, idxes, flt, dep.period, dep.cols, dep.rows, availRemotes, aggOp,
             showXRemote, dep.xRemoteAgg, dep.groupBy, gopts, conf.maxUrlSize,
             GrapherApi.defaultPeriod, conf.dashDefaultCols,
-            conf.dashDefaultRows, dep.pg, !showIxes)
-
+            conf.dashDefaultRows, dep.pg, cleanView)
+    }
     @if(aggOp.isEmpty){
     @displaySelectHeader()
     }
@@ -89,52 +89,11 @@
       <div class="smgraphcontainer">
         <div class="smgrow">
         @for( (g, ix) <- group.lst.zipWithIndex) {
-          <div class="smgcell" style="max-width: @{conf.rrdConf.imageCellWidth}px;">
-            <!-- @g.obj -->
-            <a name="@g.obj.id" ></a> <a name="@g.period"></a> <a name="@g.obj.id-@g.period"></a>
-            <div class="smgraph">
-              <h4>@g.obj.title (@g.period, @g.resolution(cfSvc.config.rrdConf))
-                @if(g.obj.stack) {
-                  (stacked)
-                }
-                @fetchLinks(cfSvc, g, gopts)
-              </h4>
-              @if(g.obj.isAgg){
-                <h5>@{g.obj.asInstanceOf[SMGAggObjectView].groupByKey.desc}</h5>
-              }
-              <div class="subtitle-div">
-                <div class="subtitle-div">
-                  @{g.obj.id} (@{g.obj.rrdType}) [<a href="#@g.obj.id" >#</a>]
-                  @for(pa <- cfSvc.plugins.flatMap(_.actions)){
-                  [<a href="@{pa.actionUrl(g.obj, dep.period)}">@{pa.name}</a>]
-                  }
-                </div>
-                @if(aggOp.isEmpty){
-                @displaySelectElem(g)
-                }
-                @if(showMs && monData.contains(g.obj.id)){
-                <div>
-                  <div class="subtitle-div">
-                    @monitorSvgObjects(monData(g.obj.id), None, false, Map())
-                    @filterResultSmodalShow(g.obj.title, monData(g.obj.id))
-                  </div>
-                  @if(aggOp.isEmpty && monData.contains(g.obj.id)){
-                    @defining(SMGMonStateAgg.aggByParentId(monData(g.obj.id)).headOption.map(_._2)) { objStateOpt =>
-                      @if(objStateOpt.isDefined){
-                      <div class="subtitle-div">
-                      @monStateActions(objStateOpt.get, None)
-                      </div>
-                      }
-                    }
-                  }
-                </div>
-                }
-              </div>
-              @filterImage(cfSvc, g)
-            </div>
-          </div>
+
+          @filterGraphCell(g, gopts, dep, aggOp, cfSvc, monData, showMs, cleanView)
+
           @if(((ix + 1) % dep.cols) == 0) {
-          </div><hr/><div class="smgrow">
+            </div><hr/><div class="smgrow">
           }
         }
         </div>
@@ -143,7 +102,7 @@
 
     @filterPages(dep.pg, maxPg)
 
-    @if(showIxes && matchingIndexes.nonEmpty){
+    @if(!cleanView && matchingIndexes.nonEmpty){
       <hr/>
       Relevant indexes:
       @for(myix <- matchingIndexes) {
@@ -152,6 +111,6 @@
     }
 
     @filterResultSmodal()
-  }
+  } @* if(dep.rows > 0) *@
 
 }

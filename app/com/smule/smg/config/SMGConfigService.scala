@@ -240,6 +240,11 @@ trait SMGConfigService {
     Math.max(ret,1)
   }
 
+  private val ellipsifyAt = 80
+  def ellipsify(s: String): String = if (s.length > ellipsifyAt) {
+    s.take(ellipsifyAt - 3) + "..."
+  } else s
+
   def sourceFromFile(fn:String): String // implemented in parser
   def isDevMode: Boolean
 

@@ -291,8 +291,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       dashGetParams(request)
 
     // keep track if monitor state display is disabled.
-    val showIxes = !dps.cleanView
-    val showMs = showIxes && msEnabled(request)
+    val showMs = !dps.cleanView && msEnabled(request)
 
     // get index and parent index if ix id is supplied
     val idxes: Seq[SMGIndex] = dashExpandIndexes(dps, myErrors)
@@ -373,8 +372,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
         views.html.filterResult(configSvc, idxes, parentIdx, result, flt, dep,
           myAggOp, showXRmt,
           maxPages, lst.size, objsSlice.size, tlObjects, availRemotes,
-          flt.gopts, showMs, showIxes, monStatesByImgView, errorsOpt, matchingIndexes,
-          conf, request.method == "POST")
+          flt.gopts, showMs, dps.cleanView, monStatesByImgView, errorsOpt, matchingIndexes,
+          request.method == "POST")
       )
     }
   }

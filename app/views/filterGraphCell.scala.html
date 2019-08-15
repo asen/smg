@@ -1,0 +1,55 @@
+@import com.smule.smg.grapher.SMGImageView
+@import com.smule.smg.grapher.SMGAggObjectView
+@import com.smule.smg.config.SMGConfigService
+@import com.smule.smg.monitor.SMGMonState
+@import com.smule.smg.monitor.SMGMonStateAgg
+@import com.smule.smg.grapher.GraphOptions
+@import controllers.Application
+
+@(g: SMGImageView, gopts: GraphOptions, dep: Application#DashboardExtraParams, aggOp: Option[String],
+  cfSvc: SMGConfigService, monData: Map[String, Seq[SMGMonState]], showMs: Boolean, cleanView: Boolean)
+
+<div class="smgcell" style="max-width: @{cfSvc.config.rrdConf.imageCellWidth}px;">
+  <a name="@g.obj.id" ></a> <a name="@g.period"></a> <a name="@g.obj.id-@g.period"></a>
+  <div class="smgraph">
+    <h4>@if(cleanView){ @cfSvc.ellipsify(g.obj.title) } else { @g.obj.title }
+      (@g.period, @g.resolution(cfSvc.config.rrdConf))
+      @if(g.obj.stack) {
+      (stacked)
+      }
+      @fetchLinks(cfSvc, g, gopts)
+    </h4>
+    @if(g.obj.isAgg){
+    <h5>@{g.obj.asInstanceOf[SMGAggObjectView].groupByKey.desc}</h5>
+    }
+    <div class="subtitle-div">
+      <div class="subtitle-div">
+        @{g.obj.id} (@{g.obj.rrdType}) [<a href="#@g.obj.id" >#</a>]
+        @for(pa <- cfSvc.plugins.flatMap(_.actions)){
+        [<a href="@{pa.actionUrl(g.obj, dep.period)}">@{pa.name}</a>]
+        }
+      </div>
+      @if(aggOp.isEmpty){
+      @displaySelectElem(g)
+      }
+      @if(showMs && monData.contains(g.obj.id)){
+      <div>
+        <div class="subtitle-div">
+          @monitorSvgObjects(monData(g.obj.id), None, false, Map())
+          @filterResultSmodalShow(g.obj.title, monData(g.obj.id))
+        </div>
+        @if(aggOp.isEmpty && monData.contains(g.obj.id)){
+        @defining(SMGMonStateAgg.aggByParentId(monData(g.obj.id)).headOption.map(_._2)) { objStateOpt =>
+        @if(objStateOpt.isDefined){
+        <div class="subtitle-div">
+          @monStateActions(objStateOpt.get, None)
+        </div>
+        }
+        }
+        }
+      </div>
+      }
+    </div>
+    @filterImage(cfSvc, g)
+  </div>
+</div>
