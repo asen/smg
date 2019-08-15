@@ -9,7 +9,7 @@ case class SMGSpikerAnomaly(obj: SMGObjectView, vix: Int, atype: String, info :S
 
   def toHtml: String = {
     val lbl = obj.filteredVars(false)(vix)("label")
-    s"<a href='${obj.showUrl}'>${obj.title}</a> (<a href='/dash?px=${obj.id}'>Dash</a>) $lbl ($vix) : $atype : $info" +
+    s"<a href='${obj.showUrl()}'>${obj.title}</a> (<a href='/dash?px=${obj.id}'>Dash</a>) $lbl ($vix) : $atype : $info" +
       (if (alert) " <font color='red'>ALERT</font>" else "")
   }
 

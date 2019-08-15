@@ -1,12 +1,14 @@
 @import com.smule.smg.grapher.SMGImageView
 @import com.smule.smg.config.SMGConfigService
 
-@(cfSvc: SMGConfigService, g: SMGImageView)
+@(cfSvc: SMGConfigService, g: SMGImageView, cleanView: Boolean)
 
-@if(g.obj.showUrl.size < cfSvc.config.maxUrlSize) {
-  <a href="@g.obj.showUrl"><img src="@g.imageUrl" alt="@g.imageUrl" /></a>
-} else {
-  @defining(g.obj.showUrl.split("\\?", 2)) { arr =>
-  <a style="cursor: pointer" onclick="smgPostString('@arr(0)','@{arr.lift(1).getOrElse("")}')"><img src="@g.imageUrl" alt="@g.imageUrl" /></a>,
+@defining(if (cleanView) g.obj.showUrl(Map("cleanView" -> "on")) else g.obj.showUrl()){ showUrl =>
+  @if(showUrl.size < cfSvc.config.maxUrlSize) {
+  <a href="@showUrl"><img src="@g.imageUrl" alt="@g.imageUrl" /></a>
+  } else {
+    @defining(showUrl.split("\\?", 2)) { arr =>
+    <a style="cursor: pointer" onclick="smgPostString('@arr(0)','@{arr.lift(1).getOrElse("")}')"><img src="@g.imageUrl" alt="@g.imageUrl" /></a>,
+    }
   }
 }

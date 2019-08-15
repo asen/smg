@@ -1,0 +1,10 @@
+@import com.smule.smg.config.SMGConfigService
+@(cfSvc: SMGConfigService, url: String, text: String, title: Option[String])
+@if(url.length < cfSvc.config.maxUrlSize) {
+  <a href="@url" @if(title.isDefined){ title="@{title.get}" }>@text</a>
+} else {
+  @defining(url.split("\\?", 2)) { arr =>
+  <a @if(title.isDefined){ title="@{title.get}" }
+     style="cursor: pointer" onclick="smgPostString('@arr(0)','@{arr.lift(1).getOrElse("")}')">@text</a>,
+  }
+}

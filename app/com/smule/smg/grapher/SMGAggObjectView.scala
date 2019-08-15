@@ -25,9 +25,9 @@ trait SMGAggObjectView extends SMGObjectView {
   /**
     * @inheritdoc
     */
-  override def showUrl: String = "/showAgg?op=" + op +
+  override def showUrl(addParams: Map[String, String] = Map()): String = "/showAgg?op=" + op +
     "&ids=" + objs.map(_.id).mkString(",") +
-    (if (groupBy != SMGAggGroupBy.defaultGroupBy) s"&gb=${groupBy.toString}" else "")
+    (if (groupBy != SMGAggGroupBy.defaultGroupBy) s"&gb=${groupBy.toString}" else "") + addParamsToStr(addParams, "&")
 
   override def dashUrl: String = {
     val rmtId = SMGRemote.remoteId(id)

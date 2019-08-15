@@ -74,12 +74,15 @@ trait SMGObjectView extends SMGObjectBase {
     */
   def shortTitle: String = if (title.length <= SHORT_TITLE_MAX_LEN) title else title.substring(0, SHORT_TITLE_MAX_LEN - 3) + "..."
 
+
+  protected def addParamsToStr(addParams: Map[String, String], prefix: String): String = if (addParams.isEmpty) ""
+    else prefix + addParams.toSeq.map(t => s"${t._1}=${java.net.URLEncoder.encode(t._2, "UTF-8")}").mkString("&")
   /**
     * The "show" url for this object
     *
     * @return - a string representing an url to display this object details
     */
-  def showUrl: String = "/show/" + id
+  def showUrl(addParams: Map[String, String] = Map()): String = "/show/" + id + addParamsToStr(addParams, "?")
 
   def dashUrl: String = {
     val arr = SMGRemote.localId(id).split("\\.")

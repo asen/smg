@@ -15,7 +15,7 @@
 
   <script>
   function mySubmitOnChange(elem) {
-    var baseUrl = '@Html(obj.showUrl)';
+    var baseUrl = '@Html(obj.showUrl())';
     if (baseUrl.indexOf('?') == -1) {
       baseUrl += '?';
     } else {
@@ -100,9 +100,9 @@ Changing this reloads the page.">Clean view</label>
         <input class="btn btn-default btn-submit" type="button"
                onclick="mySubmitOnChange(this)" value="Reload page"/>
 
-        [<a href="@{obj.dashUrl}">View on dashboard</a>]
+        [@longUrlLink(cfSvc, obj.dashUrl, "View on dashboard", None)]
         @if(obj.parentDashUrl.isDefined) {
-        | [<a href="@{obj.parentDashUrl.get}">Parent dashboard</a>]
+        | [@longUrlLink(cfSvc, obj.parentDashUrl.get, "Parent dashboard", None)]
         }
         @if(obj.inspectUrl.isDefined) {
         | [<a href="@{obj.inspectUrl.get}">Inspect</a>]
