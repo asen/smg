@@ -386,8 +386,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @return
     */
   def show(oid:String, cols: Int, dpp: String, d95p: String,
-           maxy: Option[String], miny: Option[String], logy: String): Action[AnyContent] = Action.async { implicit request =>
-    val showMs = msEnabled(request)
+           maxy: Option[String], miny: Option[String], cleanView: Option[String],
+           logy: String): Action[AnyContent] = Action.async { implicit request =>
+    val myCleanView = cleanView.getOrElse("off") == "on"
+    val showMs = (!myCleanView) && msEnabled(request)
     val gopts = GraphOptions(step = None, pl = None, xsort = None,
       disablePop = dpp == "on", disable95pRule = d95p == "on",
       maxY = optStr2OptDouble(maxy), minY = optStr2OptDouble(miny), logY = logy == "on")
@@ -400,7 +402,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
           val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonState]]].flatMap(_._2).toList
           val ixes = smg.objectIndexes(obj)
           Ok(views.html.show(configSvc, obj, lst, cols, configSvc.config.rrdConf.imageCellWidth,
-            gopts, showMs, ms, ixes, request.method == "POST"))
+            gopts, showMs, myCleanView, ms, ixes, request.method == "POST"))
         }
       }
       case None => Future { }.map { _ => NotFound("object id not found") }
@@ -417,8 +419,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @return
     */
   def showAgg(ids:String, op:String, gb: Option[String], title: Option[String], cols: Int, dpp: String, d95p: String,
-              maxy: Option[String], miny: Option[String], logy: String): Action[AnyContent] = Action.async { implicit request =>
-    showAggCommon(ids, op, gb, title, cols, dpp, d95p, maxy, miny, logy, request)
+              maxy: Option[String], miny: Option[String], cleanView: Option[String], logy: String): Action[AnyContent] = Action.async { implicit request =>
+    showAggCommon(ids, op, gb, title, cols, dpp, d95p, maxy, miny, logy, cleanView.getOrElse("off") == "on", request)
   }
 
   def showAggPost(): Action[AnyContent] = Action.async { implicit request =>
@@ -433,14 +435,16 @@ class Application  @Inject() (actorSystem: ActorSystem,
       params.get("maxy").map(_.head),
       params.get("miny").map(_.head),
       params.get("logy").map(_.head).getOrElse(""),
+      params.get("cleanView").map(_.head).getOrElse("off") == "on",
       request)
   }
 
 
   def showAggCommon(ids:String, op:String, gb: Option[String], title: Option[String], cols: Int, dpp: String, d95p: String,
-              maxy: Option[String], miny: Option[String], logy: String, request: Request[AnyContent] ): Future[Result] = {
+              maxy: Option[String], miny: Option[String], logy: String, cleanView: Boolean,
+                    request: Request[AnyContent] ): Future[Result] = {
     implicit val theRequest: Request[AnyContent] = request
-    val showMs = msEnabled(request)
+    val showMs = !cleanView && msEnabled(request)
     val gopts = GraphOptions(step = None, pl = None, xsort = None,
       disablePop = dpp == "on", disable95pRule = d95p == "on",
       maxY = optStr2OptDouble(maxy), minY = optStr2OptDouble(miny), logY = logy == "on")
@@ -459,7 +463,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
         val lst = t.head.asInstanceOf[Seq[SMGImageView]]
         val ms = t(1).asInstanceOf[Map[String,Seq[SMGMonState]]].flatMap(_._2).toList
         Ok(views.html.show(configSvc, aobj, lst, cols, configSvc.config.rrdConf.imageCellWidth,
-          gopts, showMs, ms, ixes, request.method == "POST"))
+          gopts, showMs, cleanView, ms, ixes, request.method == "POST"))
       }
     }
   }

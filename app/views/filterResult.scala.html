@@ -90,7 +90,7 @@
         <div class="smgrow">
         @for( (g, ix) <- group.lst.zipWithIndex) {
 
-          @filterGraphCell(g, gopts, dep, aggOp, cfSvc, monData, showMs, cleanView)
+          @filterResultGraphCell(g, gopts, dep, aggOp, cfSvc, monData, showMs, cleanView)
 
           @if(((ix + 1) % dep.cols) == 0) {
             </div><hr/><div class="smgrow">

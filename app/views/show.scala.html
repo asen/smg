@@ -8,13 +8,14 @@
 @import com.smule.smg.monitor.SMGMonStateAgg
 
 @(cfSvc: SMGConfigService, obj: SMGObjectView, lst: Seq[SMGImageView], cols: Int, cwidth: Int,
-  gopts: GraphOptions, showMs: Boolean, ms: Seq[SMGMonState], ixes: Seq[SMGIndex], isPost: Boolean)(implicit flash: Flash)
+  gopts: GraphOptions, showMs: Boolean, cleanView: Boolean, ms: Seq[SMGMonState], ixes: Seq[SMGIndex],
+  isPost: Boolean)(implicit flash: Flash)
 
   @main("SMG - " + obj.title, cfSvc, if (isPost) 0 else 300) {
 
   <script>
   function mySubmitOnChange(elem) {
-    var baseUrl = '@obj.showUrl';
+    var baseUrl = '@Html(obj.showUrl)';
     if (baseUrl.indexOf('?') == -1) {
       baseUrl += '?';
     } else {
@@ -34,9 +35,20 @@
     if (document.getElementById('logy_cb').checked) {
       logYVal = "on"
     }
+    var cleanViewVal = "";
+    if (document.getElementById('cleanView_cb').checked) {
+      cleanViewVal = "&cleanView=on"
+    }
     var myUrl = baseUrl + "dpp=" + dppVal +
-        "&d95p=" + d95pVal + "&maxy=" + maxYVal + "&miny=" + minYVal + "&logy=" + logYVal;
-    window.location = myUrl;
+        "&d95p=" + d95pVal + "&maxy=" + maxYVal + "&miny=" + minYVal + "&logy=" +
+        logYVal + cleanViewVal;
+    // switch to post if URL is too long
+    if (myUrl.length > @cfSvc.config.maxUrlSize){
+      var arr = myUrl.split('?', 2);
+      var data = arr.length > 1 ? arr[1] : ""
+      smgPostString(arr[0], data)
+    } else
+      window.location = myUrl;
   }
   </script>
   @if(isPost){
@@ -44,7 +56,8 @@
   }
   <div class="panel panel-primary">
     <div class="panel-heading">
-      <h2 class="panel-title">Display @if(obj.isAgg){Aggregate }Object: @obj.title (@obj.rrdType)</h2>
+      <h2 class="panel-title">Display @if(obj.isAgg){Aggregate }Object:
+        @if(cleanView){ @cfSvc.ellipsify(obj.title) } else { @obj.title } (@obj.rrdType)</h2>
     </div>
     <div class="panel-body">
       <div class="form-group">
@@ -78,6 +91,15 @@ Changing this reloads the page.">Logarithmic Y:</label>
                @if(gopts.logY && (gopts.minY.getOrElse(0.0) > 0.0)){ checked }
                @if(gopts.minY.getOrElse(0.0) <= 0.0){ disabled } />
 
+        <label for="cleanView_cb" class="autosubmit-lbl"
+               title="Hide monitor states from display.
+Changing this reloads the page.">Clean view</label>
+        <input type="checkbox" id="cleanView_cb"
+               onchange="mySubmitOnChange(this);" @if(cleanView){ checked } /> |
+
+        <input class="btn btn-default btn-submit" type="button"
+               onclick="mySubmitOnChange(this)" value="Reload page"/>
+
         [<a href="@{obj.dashUrl}">View on dashboard</a>]
         @if(obj.parentDashUrl.isDefined) {
         | [<a href="@{obj.parentDashUrl.get}">Parent dashboard</a>]
@@ -93,10 +115,10 @@ Changing this reloads the page.">Logarithmic Y:</label>
   <h5>@{obj.asInstanceOf[SMGAggObjectView].groupByKey.desc}</h5>
   }
 
-  @if(showMs) {
+  @if(!cleanView && showMs) {
   <div>
     <div class="subtitle-div">
-    @monitorSvgObjects(ms, Some(ms.size), false, Map())
+    @monitorSvgObjects(ms, Some(if (ms.size > 60) 60 else ms.size), false, Map())
     </div>
     @if(!obj.isAgg){
     <div class="subtitle-div">
@@ -106,7 +128,6 @@ Changing this reloads the page.">Logarithmic Y:</label>
   </div>
   }
 
-  <!-- @obj -->
   <div class="smgraphcontainer">
       <div class="smgrow">
         @for( (g, ix) <- lst.zipWithIndex) {
@@ -132,7 +153,7 @@ Changing this reloads the page.">Logarithmic Y:</label>
       </div>
   </div>
 
-  @if(ixes.nonEmpty){
+  @if(!cleanView && ixes.nonEmpty){
     <div>
       <h5>All matching configured indexes</h5>
       <ul>
