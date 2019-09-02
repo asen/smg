@@ -42,7 +42,7 @@ class SMGUpdateBatchActor(configSvc: SMGConfigService) extends Actor{
     val (success, out) = runSocatCommand(updateStr)
     if (out.contains("0 errors")) {
       log.debug(s"SMGUpdateBatchActor.flushBuf($reason): success: old processedCount=$processedCount buf.size=${buf.size}")
-    } else if (success && out.mkString("").strip() == ""){
+    } else if (success && out.mkString("").trim() == ""){
       // TODO verify if this is a failure and needs retrying
       log.warn(s"SMGUpdateBatchActor.flushBuf($reason): empty output (exit=$success) old processedCount=$processedCount " +
         s"buf.size=${buf.size} buf.head.ou.id=${buf.head.ou.id}")
