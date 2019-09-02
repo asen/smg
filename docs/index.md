@@ -28,10 +28,11 @@
 
 ### What is it
 
-Smule Grapher (SMG) is a Play 2.4/Scala app used to retrieve data 
+Smule Grapher (SMG) is a Play 2.x/Scala app used to retrieve data
 from arbitrary monitored services (generally - using external/bash 
-commands) and maintain many RRD databases with the retrieved data and 
-then plot and display time-series graphs (and more) from them.
+commands) and using rrdtool to maintain many RRD databases with the
+retrieved data and then plot and display time-series graphs
+(and more) from them.
 
 Some Features:
 
@@ -98,7 +99,7 @@ is optional (check the [$rrd\_socket global config option](#rrd_socket))
 it is highly recommended if you plan to do tens of thousands of
 updates every minute.
 
-- **Java 8** - SMG is written in Scala and needs a JVM (Java 8+) to
+- **Java 8+** - SMG is written in Scala and needs a JVM (Java 8+) to
 run. One must set the **JAVA_HOME** environment variable pointed to that
 before launching SMG.
 

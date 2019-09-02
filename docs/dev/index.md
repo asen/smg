@@ -7,7 +7,7 @@
 # Development setup 
 
 <ol>
-<li>Install JDK 8.</li>
+<li>Install JDK 8+</li>
 <li>Install rrdtool and coreutils (for gnu timeout command). E.g. with
 homebrew on Mac:
 <pre>
@@ -58,7 +58,7 @@ Just some notes on potential future content below
 
 - all singletons
 
-    
+    bind(classOf[ExecutionContexts]).to(classOf[SMGExecutionContexts])
     bind(classOf[SMGConfigService]).to(classOf[SMGConfigServiceImpl])
     bind(classOf[SMGRemotesApi]).to(classOf[SMGRemotes])
     bind(classOf[SMGSearchCache]).to(classOf[SMGSearchCacheImpl])
@@ -67,7 +67,7 @@ Just some notes on potential future content below
     bind(classOf[SMGMonitorLogApi]).to(classOf[SMGMonitorLog])
     bind(classOf[SMGMonNotifyApi]).to(classOf[SMGMonNotifySvc])
     bind(classOf[SMGMonitorApi]).to(classOf[SMGMonitor])
-
+    bind(classOf[CDashboardApi]).to(classOf[CDashboardSvc])
 
 ## Plugins
 - ...

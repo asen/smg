@@ -46,14 +46,14 @@ Binary releases available here: https://github.com/asen/smg/releases
 * Unpack tgz
 
     ```
-       # tar -xzf smg-0.7.tgz
+       # tar -xzf smg-1.0.tgz
     ```
  
 * Create /etc/smg/config.yml (e.g. by copying the example config into 
 /etc/smg/config.yml and editing as needed):
 
     ```
-        # mkdir /etc/smg && cp smg-0.7/smgconf/config-example.yml /etc/smg/config.yml
+        # mkdir /etc/smg && cp smg-1.0/smgconf/config-example.yml /etc/smg/config.yml
         # vim /etc/smg/config.yml
     ```
   
@@ -113,7 +113,7 @@ installed if different).
 
 ## Development setup (Mac)
 
-* Install JDK 8.
+* Install JDK 8+.
 
 * Install rrdtool and coreutils (for gtimeout) from brew:
 
