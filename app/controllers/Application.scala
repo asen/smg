@@ -89,7 +89,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
                                     agg: Option[String],
                                     xRemoteAgg: Boolean,
                                     groupBy: SMGAggGroupBy.Value
-                                  )
+                                  ){
+    var actualPg: Int = pg
+  }
 
   /**
     *
@@ -256,7 +258,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   private def dashExpandIndexes(dps: DashboardParams, myErrors: ListBuffer[String]): Seq[SMGIndex] = {
-    if (dps.ix.nonEmpty) {
+    val ret: Seq[SMGIndex] = if (dps.ix.nonEmpty) {
       // 1. expand multiple indexes specified with ,
       // 2. further expand by name if remote is '*'
       val expanded1 = dps.ix.get.split(",").flatMap { s =>
@@ -272,6 +274,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
         }
       } else expanded1
     } else Seq()
+    ret.distinct
   }
 
   /**
@@ -295,7 +298,6 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
     // get index and parent index if ix id is supplied
     val idxes: Seq[SMGIndex] = dashExpandIndexes(dps, myErrors)
-
     val parentIdx: Option[SMGIndex] = if (idxes.size == 1 && idxes.head.parentId.isDefined) {
       smg.getIndexById(idxes.head.parentId.get)
     } else None
@@ -315,10 +317,18 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val objsSlice = if (limit <= 0) {
       Seq()
     } else {
-      val offset = dep.pg * limit
       val filteredObjects = smg.getFilteredObjects(flt, idxes)
       tlObjects = filteredObjects.size
       maxPages = (tlObjects / limit) + (if ((tlObjects % limit) == 0) 0 else 1)
+      if (filteredObjects.isEmpty){
+        myErrors += "No objects match this filter"
+        if (dep.pg > 0)
+          dep.actualPg = 0
+      } else if (dep.pg >= maxPages) {
+        myErrors += "Invalid page number"
+        dep.actualPg = maxPages - 1
+      }
+      val offset = dep.actualPg * limit
       filteredObjects.slice(offset, offset + limit)
     }
 

@@ -76,7 +76,7 @@
       @monStateListActions(monData.values.toSeq.flatten)
     }
 
-    @filterPages(dep.pg, maxPg)
+    @filterPages(dep.actualPg, maxPg)
 
     @for(group <- result) {
       @if(group.levels.nonEmpty){
@@ -100,7 +100,7 @@
       </div>
     }
 
-    @filterPages(dep.pg, maxPg)
+    @filterPages(dep.actualPg, maxPg)
 
     @if(!cleanView && matchingIndexes.nonEmpty){
       <hr/>
