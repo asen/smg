@@ -46,7 +46,10 @@ function zoomChartData(hdr, rows) {
 
   var plData = hdr.slice(1).map(function(hdr, ix){
     return {
-      x: jsgraph_unpack(rows, 0).map(function(u){ return new Date(u) }),
+      x: jsgraph_unpack(rows, 0).map(function(u){
+        var dateWithT = u.replace(" ", "T") // fix for Safari
+        return new Date(dateWithT)
+        }),
       y: jsgraph_unpack(rows, ix+1),
       mode: 'lines+markers',
       name: hdr
