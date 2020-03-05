@@ -46,7 +46,7 @@ class SMGUpdateBatchActor(configSvc: SMGConfigService) extends Actor{
       // TODO verify if this is a failure and needs retrying
       log.warn(s"SMGUpdateBatchActor.flushBuf($reason): empty output (exit=$success) old processedCount=$processedCount " +
         s"buf.size=${buf.size} buf.head.ou.id=${buf.head.ou.id}")
-    } else {
+    } else if (!success) {
       log.error(s"SMGUpdateBatchActor.flushBuf($reason): " +
         s"failed (exit=$success), here is the input:\n${updateStr}")
       log.error(s"SMGUpdateBatchActor.flushBuf($reason): " +
@@ -84,6 +84,8 @@ class SMGUpdateBatchActor(configSvc: SMGConfigService) extends Actor{
 }
 
 object SMGUpdateBatchActor {
+  private val log = SMGLogger
+
   case class SMGUpdateBatchMsg(ou: SMGObjectUpdate, data: SMGRrdUpdateData)
   case class SMGFlushBatchMsg(reason: String)
 
@@ -104,7 +106,10 @@ object SMGUpdateBatchActor {
         flushCommandTimeout, Map(), Some(inputStr))
       (true, out)
     } catch {
-      case t: Throwable => (false, List())
+      case t: Throwable => {
+        log.ex(t, s"runSocatCommand error: ${t.getMessage}")
+        (false, List())
+      }
     }
   }
 
