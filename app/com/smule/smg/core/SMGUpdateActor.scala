@@ -20,6 +20,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
   import SMGUpdateActor._
 
   val log = SMGLogger
+  private val sendToSelfActor = context.actorOf(SendToSelfActor.props(self))
 
   def ecForInterval(interval: Int): ExecutionContext = configSvc.executionContexts.ctxForInterval(interval)
 
@@ -54,7 +55,6 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
     case SMGUpdateFetchMessage(interval:Int, rootCommands: Seq[SMGFetchCommandTree],
                                ts: Option[Int], childConc: Int, updateCounters: Boolean) => {
       val rootsSize = rootCommands.size
-      val savedSelf = self
       val chunkSize = (rootsSize / childConc) + (if (rootsSize % childConc == 0) 0 else 1)
       val parallelRoots = rootCommands.grouped(chunkSize)
       log.debug(s"SMGUpdateActor received SMGUpdateFetchMessage for $rootsSize commands, " +
@@ -67,7 +67,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
           var childSeqAborted = false
           fRoots.foreach { fRoot =>
             if (fRoot.node.isRrdObj) { // can happen for top-level rrd obj
-              savedSelf ! SMGUpdateObjectMessage(fRoot.node.asInstanceOf[SMGRrdObject], ts, updateCounters)
+              sendToSelfActor ! SMGUpdateObjectMessage(fRoot.node.asInstanceOf[SMGRrdObject], ts, updateCounters)
             } else { // not a rrd obj
               val pf = fRoot.node
               log.debug(s"SMGUpdateActor.SMGUpdateFetchMessage processing command for " +
@@ -103,13 +103,13 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                   if (childObjTrees.nonEmpty) {
                     val childObjSeq = childObjTrees.map(_.node.asInstanceOf[SMGRrdObject])
                     childObjSeq.foreach { rrdObj =>
-                      savedSelf ! SMGUpdateObjectMessage(rrdObj, updTs, updateCounters)
+                      sendToSelfActor ! SMGUpdateObjectMessage(rrdObj, updTs, updateCounters)
                     }
                     log.debug(s"SMGUpdateActor.runPrefetched($interval): Sent update messages for " +
                       s"[${pf.id}] object children (${childObjSeq.size})")
                   }
                   if (childPfTrees.nonEmpty) {
-                    savedSelf ! SMGUpdateFetchMessage(interval, childPfTrees, updTs, pf.childConc, updateCounters)
+                    sendToSelfActor ! SMGUpdateFetchMessage(interval, childPfTrees, updTs, pf.childConc, updateCounters)
                     log.debug(s"SMGUpdateActor.runPrefetched($interval): Sent update messages for " +
                       s"[${pf.id}] pre_fetch children (${childPfTrees.size})")
                   }
