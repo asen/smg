@@ -8,30 +8,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script type="text/javascript">
-      var gl_smgAutoRefreshTimer = null;
 
-      function smgStartAutoRefresh(intervalSecs){
-        if (intervalSecs <= 0) return;
-        if (gl_smgAutoRefreshTimer != null) return;
-        gl_smgAutoRefreshTimer = setTimeout(function() {
-          window.location = window.location;
-        }, intervalSecs * 1000);
-      }
-
-      function smgStopAutoRefresh() {
-        if (gl_smgAutoRefreshTimer == null) return;
-        clearTimeout(gl_smgAutoRefreshTimer);
-        gl_smgAutoRefreshTimer = null;
-      }
-
-      function smgIsAutoRefreshing() {
-        return gl_smgAutoRefreshTimer != null;
-      }
-    </script>
-    @if(cfSvc.config.defaultAutoRefreshEnabled && autoRefreshInterval > 0){
-    <script type="text/javascript">smgStartAutoRefresh(@autoRefreshInterval)</script>
-    }
     <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
     <link rel="stylesheet" media="screen" href='@routes.Assets.versioned("components/bootstrap/dist/css/bootstrap.min.css")'>
     <link rel="stylesheet" media="screen" href='@routes.Assets.versioned("components/jquery-ui/themes/base/jquery-ui.css")'>
