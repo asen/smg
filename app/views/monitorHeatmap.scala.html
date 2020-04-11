@@ -4,7 +4,7 @@
 
 @(cfSvc: SMGConfigService, monitorStates: Seq[(SMGRemote, SMGMonHeatmap)])(implicit flash: Flash)
 
-@main("SMG - Monitor heatmap", cfSvc) {
+@main("SMG - Monitor heatmap", cfSvc, cfSvc.config.autoRefreshInterval) {
 
 @monitorMenu("heatmap")
 

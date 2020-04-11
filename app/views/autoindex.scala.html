@@ -4,7 +4,7 @@
 
 @(topLevel: SMGAutoIndex, periods: Seq[String], expandLevels: Int, cfSvc: SMGConfigService)(implicit flash: Flash)
 
-@main("SMG - Auto Index " + topLevel.id, cfSvc) {
+@main("SMG - Auto Index " + topLevel.id, cfSvc, cfSvc.config.autoRefreshInterval) {
 
   <h4>Automatically discovered indexes</h4>
 

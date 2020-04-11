@@ -5,7 +5,7 @@
 @(selectedRemotes: Seq[String], availRemotes:Seq[String], lvls: Int, defaultLevels: Int,
  remotesData: Seq[(SMGRemote, Seq[SMGIndex])], periods: Seq[String], cfSvc: SMGConfigService)(implicit flash: Flash)
 
-@main("SMG - Index", cfSvc) {
+@main("SMG - Index", cfSvc, cfSvc.config.autoRefreshInterval) {
 
 <div>
   <form id="indexFilterForm" method="GET">

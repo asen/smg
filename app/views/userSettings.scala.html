@@ -1,7 +1,7 @@
 @import com.smule.smg.config.SMGConfigService
 @(cfSvc: SMGConfigService, msg: Option[String], showMs: Boolean)(implicit flash: Flash)
 
-@main("SMG - User settings", cfSvc) {
+@main("SMG - User settings", cfSvc, 0) {
 
 <h3>Available configuration</h3>
 <p><i>Note: these are stored as cookies in your browser</i></p>

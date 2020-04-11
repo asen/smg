@@ -1,19 +1,24 @@
 @import com.smule.smg.rrd.SMGRrd
-@(autoRefresh: Int)
-@if(autoRefresh > 0){
-<a href="#" title="Auto refresh is running with @SMGRrd.intervalToStr(autoRefresh) interval - click to pause"
-   id="smgAutoRefreshToggleElem" onclick="smgAutoRefreshToggleClick()"><b>Auto refresh (interval - @SMGRrd.intervalToStr(autoRefresh))</b></a>
+@(defaultAutoRefreshEnabled: Boolean, autoRefreshInterval: Int)
+@if(autoRefreshInterval > 0){
+@if(defaultAutoRefreshEnabled){
+<a href="#" title="Auto refresh is running with @SMGRrd.intervalToStr(autoRefreshInterval) interval - click to pause"
+   id="smgAutoRefreshToggleElem" onclick="smgAutoRefreshToggleClick()"><b>Auto refresh (interval - @SMGRrd.intervalToStr(autoRefreshInterval))</b></a>
+} else {
+<a href="#" title="Auto refresh is not started by default - click to start with @SMGRrd.intervalToStr(autoRefreshInterval) interval"
+   id="smgAutoRefreshToggleElem" onclick="smgAutoRefreshToggleClick()"><b>Auto refresh (not started)</b></a>
+}
 <script language="JavaScript">
   function smgAutoRefreshToggleClick(){
     var aElem = document.getElementById("smgAutoRefreshToggleElem")
     if (smgIsAutoRefreshing()){
       smgStopAutoRefresh();
       aElem.innerHTML = "<b>Auto refresh (stopped)</b>"
-      aElem.title = "Auto refresh is stopped - click to resume with @SMGRrd.intervalToStr(autoRefresh) interval"
+      aElem.title = "Auto refresh is stopped - click to resume with @SMGRrd.intervalToStr(autoRefreshInterval) interval"
     } else {
-      smgStartAutoRefresh(@autoRefresh);
-      aElem.innerHTML = "<b>Auto refresh (interval - @SMGRrd.intervalToStr(autoRefresh))</b>"
-      aElem.title = "Auto refresh is running with @SMGRrd.intervalToStr(autoRefresh) interval - click to pause"
+      smgStartAutoRefresh(@autoRefreshInterval);
+      aElem.innerHTML = "<b>Auto refresh (interval - @SMGRrd.intervalToStr(autoRefreshInterval))</b>"
+      aElem.title = "Auto refresh is running with @SMGRrd.intervalToStr(autoRefreshInterval) interval - click to pause"
     }
   }
 </script>

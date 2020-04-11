@@ -7,7 +7,7 @@
 @(cfSvc: SMGConfigService, availRemotes:Seq[String], availStates:Seq[String],
   defPeriod:String, defLimit:Int, flt: SMGMonitorLogFilter, logMsgs: Seq[SMGMonitorLogMsg])(implicit flash: Flash)
 
-@main("SMG - Monitor event log", cfSvc) {
+@main("SMG - Monitor event log", cfSvc, cfSvc.config.autoRefreshInterval) {
 
 @monitorMenu("log")
 

@@ -1,6 +1,6 @@
 @import com.smule.smg.config.SMGConfigService
 
-@(cfSvc: SMGConfigService, requestPath: Option[String], autoRefresh: Int)
+@(cfSvc: SMGConfigService, requestPath: Option[String], autoRefreshInterval: Int)
 
 <nav class="navbar navbar-default">
   <div class="container-fluid">
@@ -44,7 +44,7 @@
         @for(p <- cfSvc.plugins.filter(_.showInMenu)){
         <li><a href="/plugin/@{p.pluginId}">Plugin: @{p.pluginId}</a></li>
         }
-        <li>@mainAutoRefreshToggle(autoRefresh)</li>
+        <li>@mainAutoRefreshToggle(cfSvc.config.defaultAutoRefreshEnabled, autoRefreshInterval)</li>
       </ul>
     </div> <!-- /.navbar-collapse -->
   </div> <!-- /.container-fluid -->

@@ -19,7 +19,7 @@
   errorMsg: Option[String], matchingIndexes : Seq[SMGIndex],
   isPost: Boolean)(implicit flash: Flash)
 
-@main("SMG - " + (if (idxes.nonEmpty) idxes.map(_.title).mkString(",") else flt.humanText), cfSvc, if (isPost) 0 else 300) {
+@main("SMG - " + (if (idxes.nonEmpty) idxes.map(_.title).mkString(",") else flt.humanText), cfSvc, if (isPost) 0 else cfSvc.config.autoRefreshInterval) {
 
   @if(errorMsg.isDefined){
     <div align="center"><h4><font color="red">Error: @errorMsg.get</font></h4></div>

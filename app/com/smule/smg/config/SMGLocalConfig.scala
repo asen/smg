@@ -126,6 +126,9 @@ case class SMGLocalConfig(
 
   val searchCacheMaxLevels: Int = globals.getOrElse("$search-max-levels", "10").toInt
 
+  val defaultAutoRefreshEnabled: Boolean = globals.getOrElse("$default-auto-refresh", "true") == "true"
+  val autoRefreshInterval: Int = globals.getOrElse("$auto-refresh-interval", "300").toInt
+
   // This needs to be set to around 2000 for IE support, and can be raised to 32k if one does not care about android
   // if the dash/filter form URL is estimated to exceed this size, a POST will be used instead of GET
   // Only draw back is that the resulting URLs will not be shareable

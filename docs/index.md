@@ -999,6 +999,12 @@ the dashboard by default. This together with the number of "columns"
 determines the "page size" - how many graphs will be displayed on each
 graphs page.
 
+- **$auto-refresh-interval**: _300_ - page auto refresh interval (if enabled by
+default or via the UI). Set to 0 to completely disable auto-refresh.
+
+- **$default-auto-refresh**: _true_ - whether by default dashboard pages will
+reload automatically. This can be toggled on per page basis in the UI.
+
 - **$rrd\_dir**: _"smgrrd"_ - directory where to store your rrd files.
 You probably want to change this on any production installation
 (for more demanding setups, may want to put that dir on an SSD drive).
