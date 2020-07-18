@@ -19,7 +19,7 @@ object SMGRrdCheckUtil {
   def rrdInfo(smgConfSvc: SMGConfigService, ou:SMGObjectUpdate): SMGRrdCheckInfo = {
     val cmd = SMGCmd(s"${smgConfSvc.config.rrdConf.rrdTool} info ${ou.rrdFile.get}")
     val raw = try {
-      cmd.run
+      cmd.run()
     } catch {
       case c: SMGCmdException => {
         List("ERROR: rrdtool info $rrdFile failed", "--------STDOUT--------", c.stdout, "--------STDERR--------",c.stderr)
@@ -38,7 +38,7 @@ object SMGRrdCheckUtil {
     val tuneVal = SMGRrd.numRrdFormat(newVal, nanAsU = true)
     val cmd = SMGCmd(s"${smgConfSvc.config.rrdConf.rrdTool} tune $rrdFile $tuneOpt ${dsName(vix)}:$tuneVal")
     try {
-      cmd.run
+      cmd.run()
       true
     } catch {
       case t: Throwable => {

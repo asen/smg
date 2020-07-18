@@ -13,7 +13,7 @@ case class SMGCmd(str: String, timeoutSec: Int = 30) {
     * Execute this command and collect standard output
     * @return - a list of strings each representing a command output line
     */
-  def run: List[String] = SMGCmd.run(this)
+  def run(stdin: Option[String] = None): List[String] = SMGCmd.run(this, stdin)
 }
 
 object SMGCmd {
@@ -43,7 +43,8 @@ object SMGCmd {
     * @param c - SMGCmd object representing the comand
     * @return - a list of strings each representing a command output line
     */
-  def run(c:SMGCmd, myEnv: Map[String,String] = Map()): List[String] = runCommand(c.str, c.timeoutSec, myEnv)
+  def run(c:SMGCmd, stdin: Option[String], myEnv: Map[String,String] = Map()): List[String] =
+    runCommand(c.str, c.timeoutSec, myEnv, stdin)
 
   /**
     * Execute a system command (string) using a provided timeout and collect its standard output
@@ -61,18 +62,6 @@ object SMGCmd {
     }
     out
   }
-
-//  private def system(cmd: String, timeout: Int, myEnv: Map[String,String]): (Int, List[String], List[String]) = {
-//    val cmdSeq = Seq(timeoutCommand, timeout.toString) ++ executorCommand ++ Seq(cmd)
-//    log.debug("RUN_COMMAND: tms=" + timeout + " : " + cmdSeq)
-//    val qb = Process(cmdSeq, None, myEnv.toSeq:_*)
-//    var out = List[String]()
-//    var err = List[String]()
-//
-//    val exit = qb ! ProcessLogger((s) => out ::= s, (s) => err ::= s)
-//
-//    (exit, out.reverse, err.reverse)
-//  }
 
   private def system(cmd: String, timeout: Int,
                               myEnv: Map[String,String], stdin: Option[String]): (Int, List[String], List[String]) = {

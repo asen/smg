@@ -30,7 +30,7 @@ case class SMGRrdConfig(rrdTool: String,
     if (rrdToolSocket.isDefined) {
       log.debug(s"SMGRrdConfig.flushSocket: flushing $rrdFile via " + rrdToolSocket.get)
       try {
-        SMGCmd(s"$rrdTool flushcached --daemon ${rrdToolSocket.get} $rrdFile", 120).run
+        SMGCmd(s"$rrdTool flushcached --daemon ${rrdToolSocket.get} $rrdFile", 120).run()
       } catch {
         case t: Throwable => log.ex(t, "Unexpected exception while flushing socket")
       }

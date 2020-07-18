@@ -21,7 +21,7 @@ class SMGRrdFetch(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
     if (rrdConf.useBatchedUpdates && rrdConf.rrdcachedFlushOnRead)
       SMGUpdateBatchActor.flushRrdFile(rrdConf, rrdFname)
     val cmd = SMGCmd(fetchCommand(params.resolution, params.period, params.pl))
-    val ret = for (ln <- cmd.run
+    val ret = for (ln <- cmd.run()
                    if ln != ""
                    if "ds\\d".r.findFirstMatchIn(ln).isEmpty
                    if (!params.filterNan) || "(?i)nan".r.findFirstMatchIn(ln).isEmpty

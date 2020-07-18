@@ -19,4 +19,5 @@ trait SMGFetchCommand extends SMGTreeNode {
   // these are only meaningful in local/non-rrd obj context, which overrides them
   val ignoreTs = false
   val childConc: Int = 1
+  val passData: Boolean = false
 }

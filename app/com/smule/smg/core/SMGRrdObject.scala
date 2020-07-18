@@ -41,8 +41,8 @@ case class SMGRrdObject(id: String,
   private var myCacheTs: Int = SMGRrd.tssNow
   private var myCachedValues = nanList
 
-  def fetchValues: List[Double] = {
-    val out = this.command.run
+  def fetchValues(parentData: Option[ParentCommandData]): List[Double] = {
+    val out = this.command.run(parentData.map(_.asStr))
     val ret = for (ln <- out.take(this.vars.size)) yield {
       ln.toDouble
     }

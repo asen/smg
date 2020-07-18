@@ -215,10 +215,11 @@ class SMGConfigParser(log: SMGLoggerApi) {
           val childConc = if (yamlMap.contains("child_conc"))
             yamlMap("child_conc").asInstanceOf[Int]
           else 1
+          val passData = yamlMap.contains("pass_data") && (yamlMap("pass_data").toString == "true")
 
           val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, id, yamlMap.toMap.map(kv => (kv._1, kv._2.toString)))
           checkFetchCommandNotifyConf(id, notifyConf, confFile)
-          preFetches(id) = SMGPreFetchCmd(id, cmd, parentPf, ignoreTs, Math.max(1, childConc), notifyConf)
+          preFetches(id) = SMGPreFetchCmd(id, cmd, parentPf, ignoreTs, Math.max(1, childConc), notifyConf, passData)
         }
       } else {
         processConfigError(confFile, "processPrefetch: $pre_fetch yamlMap does not have command and id: " + yamlMap.toString)

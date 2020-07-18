@@ -15,11 +15,11 @@ import scala.io.Source
   */
 class TestConfigSvc() extends SMGConfigService {
 
-  def cleanTestOut: Unit = {
-    SMGCmd("rm -f test-out/*").run
+  def cleanTestOut(): Unit = {
+    SMGCmd("rm -f test-out/*").run()
   }
 
-  def rrdObject(oid: String, numVars: Int, pfId: Option[String]) = SMGRrdObject(id = oid,
+  def rrdObject(oid: String, numVars: Int, pfId: Option[String]): SMGRrdObject = SMGRrdObject(id = oid,
     command = SMGCmd((1 to numVars).map(i => s"echo $i").mkString(" && ")),
     vars =  (1 to numVars).map(i => Map("label" -> s"var$i")).toList,
     title = s"$oid Title",
@@ -99,7 +99,9 @@ class TestConfigSvc() extends SMGConfigService {
       imgDir = "test-out",
       urlPrefix = "",
       intervals = Set(60),
-      preFetches = Map("test.prefetch" -> SMGPreFetchCmd("test.prefetch", SMGCmd("echo 0"), None, ignoreTs = false, 1, None)),
+      preFetches = Map("test.prefetch" ->
+        SMGPreFetchCmd("test.prefetch", SMGCmd("echo 0"), None,
+          ignoreTs = false, 1, None, passData = false)),
       remotes = Seq(),
       remoteMasters = Seq(),
       pluginObjects = Map(),

@@ -17,142 +17,161 @@ import scala.concurrent.{ExecutionContext, Future}
   * An actor responsible for doing rrd fetches/updates.
   */
 class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap[String, Long]) extends Actor {
+
   import SMGUpdateActor._
 
-  val log = SMGLogger
+  private val log = SMGLogger
   private val sendToSelfActor = context.actorOf(SendToSelfActor.props(self))
 
-  def ecForInterval(interval: Int): ExecutionContext = configSvc.executionContexts.ctxForInterval(interval)
+  private def ecForInterval(interval: Int): ExecutionContext = configSvc.executionContexts.ctxForInterval(interval)
 
-  override def receive: Receive = {
 
-    case SMGUpdateObjectMessage(obj: SMGObjectUpdate,
-                                ts: Option[Int], updateCounters: Boolean) => {
-      log.debug(s"SMGUpdateActor received SMGUpdateObjectMessage for ${obj.id}")
-      Future {
-        def fetchFn() = {
-          val t0 = System.currentTimeMillis()
-          try {
-            obj match {
-              case rrdObj: SMGRrdObject => rrdObj.fetchValues
-              case aggObj: SMGRrdAggObject => aggObj.fetchValues(configSvc)
-              case x => throw new SMGFetchException(s"SMGERR: Invalid object update type: ${x.getClass}")
-            }
-          } finally {
-            commandExecutionTimes(obj.id) = System.currentTimeMillis() - t0
-          }
-        }
+  private def processSMGUpdateObjectMessage(obj: SMGObjectUpdate,
+                                            ts: Option[Int], updateCounters: Boolean,
+                                            parentData: Option[ParentCommandData]): Unit = {
+    log.debug(s"SMGUpdateActor received SMGUpdateObjectMessage for ${obj.id}")
+    Future {
+      def fetchFn() = {
+        val t0 = System.currentTimeMillis()
         try {
-          SMGUpdateActor.processObjectUpdate(obj, configSvc, ts, fetchFn _, log)
-        } finally {
-          if (updateCounters) {
-            SMGStagedRunCounter.incIntervalCount(obj.interval)
+          obj match {
+            case rrdObj: SMGRrdObject => rrdObj.fetchValues(parentData)
+            case aggObj: SMGRrdAggObject => aggObj.fetchValues(configSvc)
+            case x => throw new SMGFetchException(s"SMGERR: Invalid object update type: ${x.getClass}")
           }
+        } finally {
+          commandExecutionTimes(obj.id) = System.currentTimeMillis() - t0
         }
-      }(ecForInterval(obj.interval))
-    }
+      }
 
-    case SMGUpdateFetchMessage(interval:Int, rootCommands: Seq[SMGFetchCommandTree],
-                               ts: Option[Int], childConc: Int, updateCounters: Boolean) => {
-      val rootsSize = rootCommands.size
-      val chunkSize = (rootsSize / childConc) + (if (rootsSize % childConc == 0) 0 else 1)
-      val parallelRoots = rootCommands.grouped(chunkSize)
-      log.debug(s"SMGUpdateActor received SMGUpdateFetchMessage for $rootsSize commands, " +
-        s"processing with $childConc concurrency and $chunkSize chunk size")
-      parallelRoots.foreach { fRoots =>
-        Future {
-          val t0 = SMGRrd.tssNow
-          var slowWarnLogged = false
-          var slowErrLogged = false
-          var childSeqAborted = false
-          fRoots.foreach { fRoot =>
-            if (fRoot.node.isRrdObj) { // can happen for top-level rrd obj
-              sendToSelfActor ! SMGUpdateObjectMessage(fRoot.node.asInstanceOf[SMGRrdObject], ts, updateCounters)
-            } else { // not a rrd obj
-              val pf = fRoot.node
-              log.debug(s"SMGUpdateActor.SMGUpdateFetchMessage processing command for " +
-                s"pre_fetch ${pf.id}, ${fRoot.size} child commands")
-              val leafObjs = fRoot.leafNodes.map { c => c.asInstanceOf[SMGRrdObject] }
+      try {
+        SMGUpdateActor.processObjectUpdate(obj, configSvc, ts, fetchFn _, log)
+      } finally {
+        if (updateCounters) {
+          SMGStagedRunCounter.incIntervalCount(obj.interval)
+        }
+      }
+    }(ecForInterval(obj.interval))
+  }
+
+  private def processSMGUpdateFetchMessage(interval: Int, rootCommands: Seq[SMGFetchCommandTree],
+                                           ts: Option[Int], childConc: Int,
+                                           updateCounters: Boolean,
+                                           parentData: Option[ParentCommandData]): Unit = {
+    val rootsSize = rootCommands.size
+    val chunkSize = (rootsSize / childConc) + (if (rootsSize % childConc == 0) 0 else 1)
+    val parallelRoots = rootCommands.grouped(chunkSize)
+    log.debug(s"SMGUpdateActor received SMGUpdateFetchMessage for $rootsSize commands, " +
+      s"processing with $childConc concurrency and $chunkSize chunk size")
+    parallelRoots.foreach { fRoots =>
+      Future {
+        val t0 = SMGRrd.tssNow
+        var slowWarnLogged = false
+        var slowErrLogged = false
+        var childSeqAborted = false
+        fRoots.foreach { fRoot =>
+          if (fRoot.node.isRrdObj) { // can happen for top-level rrd obj
+            sendToSelfActor ! SMGUpdateObjectMessage(fRoot.node.asInstanceOf[SMGRrdObject], ts, updateCounters, parentData)
+          } else { // not a rrd obj
+            val pf = fRoot.node
+            log.debug(s"SMGUpdateActor.SMGUpdateFetchMessage processing command for " +
+              s"pre_fetch ${pf.id}, ${fRoot.size} child commands")
+            val leafObjs = fRoot.leafNodes.map { c => c.asInstanceOf[SMGRrdObject] }
+            var myData: Option[ParentCommandData] = None
+            try {
+              log.debug(s"SMGUpdateActor: Running pre_fetch command: ${pf.id}: ${pf.command.str}")
               try {
-                log.debug(s"SMGUpdateActor: Running pre_fetch command: ${pf.id}: ${pf.command.str}")
+                var cmdTimeMs: Long = -1L
+                val t0 = System.currentTimeMillis()
                 try {
-                  var cmdTimeMs: Long = -1L
-                  val t0 = System.currentTimeMillis()
-                  try {
-                    if (childSeqAborted)
-                      throw SMGCmdException(pf.command.str, pf.command.timeoutSec, -1,
-                        "Aborted due to too slow pre-fetch commands sequence.",
-                        "Consider adjusting timeouts" +
-                          pf.parentId.map(s => s" and/or increasing child_conc on the parent: $s").getOrElse("") + ".")
-                    pf.command.run
-                    cmdTimeMs = System.currentTimeMillis() - t0
-                    if (cmdTimeMs > (pf.command.timeoutSec.toLong * 1000) * 0.5){ // more than 50% of timeout time
-                      log.warn(s"SMGUpdateActor: slow pre_fetch command: ${pf.id}: ${pf.command.str} " +
-                        s"(took=${cmdTimeMs.toDouble / 1000.0}, timeout=${pf.command.timeoutSec})")
-                    }
-                  } finally {
-                    if (cmdTimeMs < 0) cmdTimeMs = System.currentTimeMillis() - t0 // only if run threw
-                    commandExecutionTimes(pf.id) = cmdTimeMs
+                  if (childSeqAborted)
+                    throw SMGCmdException(pf.command.str, pf.command.timeoutSec, -1,
+                      "Aborted due to too slow pre-fetch commands sequence.",
+                      "Consider adjusting timeouts" +
+                        pf.parentId.map(s => s" and/or increasing child_conc on the parent: $s").getOrElse("") + ".")
+                  val out = pf.command.run(parentData.map(_.asStr))
+                  if (pf.passData)
+                    myData = Some(ParentCommandData(out))
+                  cmdTimeMs = System.currentTimeMillis() - t0
+                  if (cmdTimeMs > (pf.command.timeoutSec.toLong * 1000) * 0.5) { // more than 50% of timeout time
+                    log.warn(s"SMGUpdateActor: slow pre_fetch command: ${pf.id}: ${pf.command.str} " +
+                      s"(took=${cmdTimeMs.toDouble / 1000.0}, timeout=${pf.command.timeoutSec})")
                   }
-                  //this is reached only on successfull pre-fetch
-                  configSvc.sendPfMsg(SMGDataFeedMsgPf(SMGRrd.tssNow, pf.id, interval, leafObjs, 0, List(), None))
-                  if (updateCounters)
-                    SMGStagedRunCounter.incIntervalCount(interval)
-                  val updTs = if (pf.ignoreTs) None else Some(SMGRrd.tssNow)
-                  val (childObjTrees, childPfTrees) = fRoot.children.partition(_.node.isRrdObj)
-                  if (childObjTrees.nonEmpty) {
-                    val childObjSeq = childObjTrees.map(_.node.asInstanceOf[SMGRrdObject])
-                    childObjSeq.foreach { rrdObj =>
-                      sendToSelfActor ! SMGUpdateObjectMessage(rrdObj, updTs, updateCounters)
-                    }
-                    log.debug(s"SMGUpdateActor.runPrefetched($interval): Sent update messages for " +
-                      s"[${pf.id}] object children (${childObjSeq.size})")
+                } finally {
+                  if (cmdTimeMs < 0) cmdTimeMs = System.currentTimeMillis() - t0 // only if run threw
+                  commandExecutionTimes(pf.id) = cmdTimeMs
+                }
+                //this is reached only on successfull pre-fetch
+                configSvc.sendPfMsg(SMGDataFeedMsgPf(SMGRrd.tssNow, pf.id, interval, leafObjs, 0, List(), None))
+                if (updateCounters)
+                  SMGStagedRunCounter.incIntervalCount(interval)
+                val updTs = if (pf.ignoreTs) None else Some(SMGRrd.tssNow)
+                val (childObjTrees, childPfTrees) = fRoot.children.partition(_.node.isRrdObj)
+                if (childObjTrees.nonEmpty) {
+                  val childObjSeq = childObjTrees.map(_.node.asInstanceOf[SMGRrdObject])
+                  childObjSeq.foreach { rrdObj =>
+                    sendToSelfActor ! SMGUpdateObjectMessage(rrdObj, updTs, updateCounters, myData)
                   }
-                  if (childPfTrees.nonEmpty) {
-                    sendToSelfActor ! SMGUpdateFetchMessage(interval, childPfTrees, updTs, pf.childConc, updateCounters)
-                    log.debug(s"SMGUpdateActor.runPrefetched($interval): Sent update messages for " +
-                      s"[${pf.id}] pre_fetch children (${childPfTrees.size})")
-                  }
-                } catch {
-                  case ex: SMGCmdException => {
-                    log.error(s"SMGUpdateActor: Failed pre_fetch command [${pf.id}]: ${ex.getMessage}")
-                    val errTs = SMGRrd.tssNow
-                    val errLst = List(pf.command.str + s" (${pf.command.timeoutSec})", ex.stdout, ex.stderr)
-                    configSvc.sendPfMsg(SMGDataFeedMsgPf(errTs, pf.id, interval, leafObjs, ex.exitCode, errLst, None))
-                    if (updateCounters) {
-                      fRoot.allNodes.foreach { cmd =>
-                        SMGStagedRunCounter.incIntervalCount(interval)
-                        if (cmd.isRrdObj) {
-                          configSvc.invalidateCachedValues(cmd.asInstanceOf[SMGObjectUpdate])
-                        }
+                  log.debug(s"SMGUpdateActor.runPrefetched($interval): Sent update messages for " +
+                    s"[${pf.id}] object children (${childObjSeq.size})")
+                }
+                if (childPfTrees.nonEmpty) {
+                  sendToSelfActor ! SMGUpdateFetchMessage(interval, childPfTrees, updTs, pf.childConc,
+                    updateCounters, myData)
+                  log.debug(s"SMGUpdateActor.runPrefetched($interval): Sent update messages for " +
+                    s"[${pf.id}] pre_fetch children (${childPfTrees.size})")
+                }
+              } catch {
+                case ex: SMGCmdException => {
+                  log.error(s"SMGUpdateActor: Failed pre_fetch command [${pf.id}]: ${ex.getMessage}")
+                  val errTs = SMGRrd.tssNow
+                  val errLst = List(pf.command.str + s" (${pf.command.timeoutSec})", ex.stdout, ex.stderr)
+                  configSvc.sendPfMsg(SMGDataFeedMsgPf(errTs, pf.id, interval, leafObjs, ex.exitCode, errLst, None))
+                  if (updateCounters) {
+                    fRoot.allNodes.foreach { cmd =>
+                      SMGStagedRunCounter.incIntervalCount(interval)
+                      if (cmd.isRrdObj) {
+                        configSvc.invalidateCachedValues(cmd.asInstanceOf[SMGObjectUpdate])
                       }
                     }
                   }
                 }
-              } catch {
-                case ex: Throwable => {
-                  log.ex(ex, "SMGUpdateActor: Unexpected exception in pre_fetch: [" + pf.id + "]: " + ex.toString)
-                }
               }
-            }  // not a rrd obj
-
-            val deltaT = SMGRrd.tssNow - t0
-            lazy val tooSlowMsg = s"SMGUpdateActor: pre_fetch child sequence is taking more than $deltaT seconds. " +
-              s"Current node=${fRoot.node.id}, childConc=$childConc"
-            if (!slowErrLogged) {
-              if (deltaT >= (interval * 3) / 4) {
-                log.error(tooSlowMsg + " (aborting subsequent commands)")
-                childSeqAborted = true
-                slowErrLogged = true
-              } else if ((deltaT >= interval / 4) && (!slowWarnLogged)) {
-                log.warn(tooSlowMsg)
-                slowWarnLogged = true
+            } catch {
+              case ex: Throwable => {
+                log.ex(ex, "SMGUpdateActor: Unexpected exception in pre_fetch: [" + pf.id + "]: " + ex.toString)
               }
             }
-          } // fRoots.forEach
-        }(ecForInterval(interval))
-      }
+          } // not a rrd obj
+
+          val deltaT = SMGRrd.tssNow - t0
+          lazy val tooSlowMsg = s"SMGUpdateActor: pre_fetch child sequence is taking more than $deltaT seconds. " +
+            s"Current node=${fRoot.node.id}, childConc=$childConc"
+          if (!slowErrLogged) {
+            if (deltaT >= (interval * 3) / 4) {
+              log.error(tooSlowMsg + " (aborting subsequent commands)")
+              childSeqAborted = true
+              slowErrLogged = true
+            } else if ((deltaT >= interval / 4) && (!slowWarnLogged)) {
+              log.warn(tooSlowMsg)
+              slowWarnLogged = true
+            }
+          }
+        } // fRoots.forEach
+      }(ecForInterval(interval))
     }
+  }
+
+
+  override def receive: Receive = {
+
+    case SMGUpdateObjectMessage(obj: SMGObjectUpdate,
+    ts: Option[Int], updateCounters: Boolean, parentData: Option[ParentCommandData]) =>
+      processSMGUpdateObjectMessage(obj, ts, updateCounters, parentData)
+
+    case SMGUpdateFetchMessage(interval: Int, rootCommands: Seq[SMGFetchCommandTree],
+    ts: Option[Int], childConc: Int, updateCounters: Boolean, parentData: Option[ParentCommandData]) =>
+      processSMGUpdateFetchMessage(interval, rootCommands, ts, childConc, updateCounters, parentData)
   }
 }
 
@@ -164,7 +183,8 @@ object SMGUpdateActor {
   case class SMGUpdateObjectMessage(
                                      obj: SMGObjectUpdate,
                                      ts: Option[Int],
-                                     updateCounters: Boolean
+                                     updateCounters: Boolean,
+                                     parentData: Option[ParentCommandData]
                                    )
 
   case class SMGUpdateFetchMessage(
@@ -172,7 +192,8 @@ object SMGUpdateActor {
                                     rootCommands:Seq[SMGFetchCommandTree],
                                     ts: Option[Int],
                                     childConc: Int,
-                                    updateCounters: Boolean
+                                    updateCounters: Boolean,
+                                    parentData: Option[ParentCommandData]
                                   )
 
   /**
