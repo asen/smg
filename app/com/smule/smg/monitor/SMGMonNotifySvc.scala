@@ -115,7 +115,7 @@ class SMGMonNotifySvc @Inject() (configSvc: SMGConfigService) extends SMGMonNoti
     }
     val msgBody = s"$msgSubj: \n\n No more alert notifications will be sent " +
       s"until ${new Date(1000L * throttledUntil).toString}.\n\n" +
-      s"Check ${configSvc.config.notifyBaseUrl}/monitor#${configSvc.config.notifyRemoteId.getOrElse("")}\n\n"
+      s"Check ${configSvc.config.notifyBaseUrl}/monitor#rt_${configSvc.config.notifyRemoteId.getOrElse("")}\n\n"
     val allCmds = (configSvc.globalNotifyCmds(SMGMonNotifySeverity.SMGERR) ++
       activeAlerts.values.flatten.toSeq ++ addNcmds).distinct
     val futs = allCmds.map { ncmd =>
