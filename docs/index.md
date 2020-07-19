@@ -972,6 +972,7 @@ objects were defined.
 #### Configuration Reference - TOC
 
 1. [Globals](#globals)
+    1. [Pre-fetch](#pre_fetch)
 1. [RRD objects](#rrd-objects)
 1. [Aggregate RRD objects](#rrd-agg-objects)
 1. [View objects](#view-objects)
@@ -1139,7 +1140,12 @@ one does not care about Android and IE.
 - **$pre\_fetch**: pre\_fetch is special and it is not a simple name ->
 value pair. A $pre\_fetch defines an unique **id** and a **command** to
 execute, together with an optional **timeout** for the command
-(30 seconds by default) and an optional "parent" pre\_fetch id. In addition
+(30 seconds by default) and an optional "parent" pre\_fetch id. If
+a **pass\_data** property is defined and is set to true the stdout of the
+command will be passed to all child commands as stdin. By default
+SMG will use the timestamp of the top-level pre-fetch for RRD updates. One
+can set the **ignorets** property to ignore the timstamp of the pre-fetch
+and use the first child timestamp which doesn't have that property. In addition
 pre\_fetch can have a **child\_conc** property (default 1 if not specified)
 which determines how many threads can execute this pre-fetch child pre-fetches
 (but not object commands which are always parallelized). Pre fetch also
@@ -1155,12 +1161,14 @@ definitions, one referencing the other as a parent:
       command: "ping -c 1 host1 >/dev/null"
       notify-unkn: mail-asen, notif-pd
       child_conc: 2
+      ignorets: true
       timeout: 5
 
     - $pre_fetch:
       id: host.host1.snmp.vals
       command: "snmp_get.sh o1 laLoad.1 laLoad.2 ssCpuRawUser.0 ssCpuRawNice.0 ..."
       pre_fetch: host.host1.up
+      pass_data: true
       timeout: 30
 
 </pre>
