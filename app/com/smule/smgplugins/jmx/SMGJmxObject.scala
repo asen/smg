@@ -12,6 +12,7 @@ import com.smule.smg.rrd.SMGRraDef
 
 case class SMGJmxObject(baseId: String,
                         id: String,
+                        parentIds: Seq[String],
                         pfId: String,
                         title: String,
                         hostPort: String,
@@ -25,7 +26,6 @@ case class SMGJmxObject(baseId: String,
                        ) extends SMGObjectUpdate with SMGObjectView {
 
   override val rrdFile: Option[String] = Some(rrdDir + "/" + id + ".rrd")
-
   override val rraDef: Option[SMGRraDef] = None // TODO
   override val graphVarsIndexes: Seq[Int] = vars.indices
   override val cdefVars: List[Map[String, String]] = List()  // TODO

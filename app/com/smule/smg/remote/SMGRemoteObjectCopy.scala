@@ -8,6 +8,7 @@ import com.smule.smg.rrd.SMGRraDef
   */
 case class SMGRemoteObjectCopy(
                                 id: String,
+                                parentIds: Seq[String],
                                 interval: Int,
                                 vars: List[Map[String, String]],
                                 cdefVars: List[Map[String, String]],
@@ -20,6 +21,7 @@ case class SMGRemoteObjectCopy(
                               ) extends SMGObjectView {
 
   def this(robj:SMGObjectView, rrdFile: String) = this(robj.id,
+    robj.parentIds,
     robj.interval,
     robj.vars,
     robj.cdefVars,

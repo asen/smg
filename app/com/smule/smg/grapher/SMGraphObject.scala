@@ -21,5 +21,7 @@ case class SMGraphObject(
 
   override val graphVarsIndexes: Seq[Int] = if (gvIxes.isEmpty) refObj.map(_.vars.indices).getOrElse(vars.indices) else gvIxes
 
+  override val parentIds: Seq[String] = refObj.map(_.parentIds).getOrElse(Seq())
+
   override val rraDef: Option[SMGRraDef] = refObj.flatMap(_.rraDef)
 }

@@ -32,6 +32,7 @@ case class SMGRrdAggObject(id: String,
   }
 
   override val preFetch: Option[String] = None
+  override val parentIds: Seq[String] = Seq() // TODO - or all ous parents?
 
   override val graphVarsIndexes: List[Int] = vars.indices.toList
 

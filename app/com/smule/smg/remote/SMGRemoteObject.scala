@@ -13,6 +13,7 @@ import com.smule.smg.rrd.SMGRraDef
   */
 case class SMGRemoteObject(
                             id: String,
+                            parentIds: Seq[String],
                             interval: Int,
                             vars: List[Map[String, String]],
                             cdefVars: List[Map[String, String]],

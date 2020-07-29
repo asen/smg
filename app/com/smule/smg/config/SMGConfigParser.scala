@@ -465,8 +465,18 @@ class SMGConfigParser(log: SMGLoggerApi) {
               val myDefaultTimeout = globalConf.getOrElse("$default-timeout", defaultTimeout.toString).toInt
               val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, ymap.toMap.map(kv => (kv._1, kv._2.toString)))
               checkFetchCommandNotifyConf(oid, notifyConf, confFile)
+              //find all parents. avoid infinite loop caused by circular dependencies due to bad conf
+              var depth = 0
+              val parentIds = ListBuffer[String]()
+              var preFetch = if (ymap.contains("pre_fetch")) Some(ymap("pre_fetch").toString) else None
+              while (preFetch.isDefined && depth < 100){
+                parentIds += preFetch.get
+                preFetch = preFetches.get(preFetch.get).map(_.id)
+                depth += 1
+              }
               val obj = SMGRrdObject(
                 id = oid,
+                parentIds = parentIds.toList,
                 command = SMGCmd(ymap("command").toString, ymap.getOrElse("timeout", myDefaultTimeout).asInstanceOf[Int]),
                 vars = ymapFilteredVars,
                 title = ymap.getOrElse("title", oid).toString,
@@ -474,7 +484,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 interval = ymap.getOrElse("interval", myDefaultInterval).asInstanceOf[Int],
                 dataDelay = ymap.getOrElse("dataDelay", 0).asInstanceOf[Int],
                 stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
-                preFetch = if (ymap.contains("pre_fetch")) Some(ymap("pre_fetch").toString) else None,
+                preFetch = parentIds.headOption,
                 rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
                 rraDef = rraDef,
                 rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap("rrd_init_source").toString) else None,

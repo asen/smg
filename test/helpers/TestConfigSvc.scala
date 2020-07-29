@@ -20,6 +20,7 @@ class TestConfigSvc() extends SMGConfigService {
   }
 
   def rrdObject(oid: String, numVars: Int, pfId: Option[String]): SMGRrdObject = SMGRrdObject(id = oid,
+    parentIds = Seq(),
     command = SMGCmd((1 to numVars).map(i => s"echo $i").mkString(" && ")),
     vars =  (1 to numVars).map(i => Map("label" -> s"var$i")).toList,
     title = s"$oid Title",

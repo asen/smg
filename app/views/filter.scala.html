@@ -107,6 +107,14 @@ matching all of the provided space separated case insensitive regular expression
                id="smg-filter-rxx"
                name="rxx" value='@flt.rxx' >
       </div>
+      <div class="form-group">
+        <label class="manualsubmit-lbl" for="smg-filter-prx"
+               title="Display only objects which have parent/pre-fetch ids matching the specified case insensitive regular expression">Parent regex filter:</label>
+        <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button" title="Clear filter" onclick="clearElem('smg-filter-prx');" />
+        <input type="text" class="form-control"
+               id="smg-filter-prx"
+               name="prx" value='@flt.prx' >
+      </div>
 
       <div class="form-group">
         <label class="autosubmit-lbl"
@@ -415,7 +423,8 @@ By default aggregation/sorting happens per-remote instance">Cross-Remote:</label
         "px": "@ix.get.flt.px",
         "sx": "@ix.get.flt.sx",
         "rx": "@ix.get.flt.rx",
-        "rxx": "@ix.get.flt.rxx"
+        "rxx": "@ix.get.flt.rxx",
+        "prx": "@ix.get.flt.prx"
         };
       var conflicts = [];
       for(var nm in toMerge){
@@ -462,6 +471,7 @@ By default aggregation/sorting happens per-remote instance">Cross-Remote:</label
   smgAutocompleteSetup('smg-filter-sx',     '/json/sxtokens');
   smgAutocompleteSetup('smg-filter-rx',     '/json/rxtokens');
   smgAutocompleteSetup('smg-filter-rxx',    '/json/rxtokens');
+  smgAutocompleteSetup('smg-filter-prx',    '/json/cmdtokens');
   smgAutocompleteSetup('smg-filter-period', '/json/periods');
   smgAutocompleteSetup('smg-filter-pl',     '/json/periods');
   smgAutocompleteSetup('smg-filter-step',   '');

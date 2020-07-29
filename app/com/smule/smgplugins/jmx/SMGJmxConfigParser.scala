@@ -25,8 +25,9 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
 
   val myCfParser = new SMGConfigParser(log)
 
-  private def processObject(rrdDir: String, interval: Int, pfId: String, hostPort: String, baseId: String,
-                            oid: String, ymap: mutable.Map[String, Object], confFile: String ): Option[SMGJmxObject] = {
+  private def processObject(rrdDir: String, interval: Int, pfId: String, parentIds: Seq[String], hostPort: String,
+                            baseId: String, oid: String, ymap: mutable.Map[String, Object],
+                            confFile: String ): Option[SMGJmxObject] = {
     if (!myCfParser.validateOid(oid)){
       log.error("SMGJmxConfigParser.processObject(" + confFile + "): CONFIG_ERROR: Skipping object with invalid id: " + oid)
       None
@@ -39,6 +40,7 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
 
         val obj = SMGJmxObject(baseId,
           oid,
+          parentIds,
           pfId,
           ymap.getOrElse("title", oid).toString,
           hostPort,
@@ -68,10 +70,11 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
       ymap.toMap.map(kv => (kv._1, kv._2.toString)))
     val pf = SMGPreFetchCmd(pfId, SMGCmd(s"jmx://$hostPort"), parentState, ignoreTs = true,
                             childConc = 1, notifyConf, passData = false)
+    val parentIds = Seq(Some(pfId), parentState).flatten
     var ret = ListBuffer[SMGJmxObject]()
     ymap("objs").asInstanceOf[java.util.ArrayList[java.util.Map[String, Object]]].asScala.foreach { oymap =>
       val t = myCfParser.keyValFromMap(oymap)
-      val opt = processObject(rrdDir, interval, pf.id, hostPort, baseId, baseId + "." + t._1,
+      val opt = processObject(rrdDir, interval, pf.id, parentIds, hostPort, baseId, baseId + "." + t._1,
         t._2.asInstanceOf[java.util.Map[String, Object]].asScala, confFile)
       if (opt.isDefined) ret += opt.get
     }

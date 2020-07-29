@@ -60,6 +60,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     )(SMGRraDef.apply _)
 
   val nonAggObjectBuilder = (JsPath \ "id").read[String].map(id => prefixedId(id)) and
+    (JsPath \ "pids").readNullable[Seq[String]].map(seqOpt => seqOpt.map(sq => sq.map(prefixedId)).getOrElse(Seq())) and
     (JsPath \ "interval").read[Int] and
     (JsPath \ "vars").read[List[Map[String, String]]] and
     (JsPath \ "cdefVars").readNullable[List[Map[String, String]]].map(ol => ol.getOrElse(List())) and
@@ -107,6 +108,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "rx").readNullable[String] and
       (JsPath \ "rxx").readNullable[String] and
       (JsPath \ "trx").readNullable[String] and
+      (JsPath \ "prx").readNullable[String] and
       (JsPath \ "remote").readNullable[String].map { remoteIds =>
         if (remoteIds.isDefined) {
           val ret = remoteIds.get.split(",").toSeq
@@ -837,6 +839,7 @@ object SMGRemoteClient {
   // A bit of a hack to avoid code duplication
   def writeNonAggObject(obj: SMGObjectView) = Json.obj(
     "id" -> obj.id,
+    "pids" -> obj.parentIds,
     "interval" -> obj.interval,
     "vars" -> Json.toJson(obj.vars),
     "cdefVars" -> Json.toJson(obj.cdefVars),
@@ -901,6 +904,7 @@ object SMGRemoteClient {
       if (flt.sx.isDefined) mm += ("sx" -> Json.toJson(flt.sx.get))
       if (flt.rx.isDefined) mm += ("rx" -> Json.toJson(flt.rx.get))
       if (flt.rxx.isDefined) mm += ("rxx" -> Json.toJson(flt.rxx.get))
+      if (flt.prx.isDefined) mm += ("prx" -> Json.toJson(flt.trx.get))
       if (flt.trx.isDefined) mm += ("trx" -> Json.toJson(flt.trx.get))
       if (flt.remotes.nonEmpty) mm += ("remote" -> Json.toJson(flt.remotes.mkString(",")))
       if (flt.gopts != GraphOptions.default) mm += ("gopts" -> Json.toJson(flt.gopts))

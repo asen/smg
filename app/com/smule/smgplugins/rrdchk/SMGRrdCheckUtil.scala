@@ -59,6 +59,7 @@ object SMGRrdCheckUtil {
     }
     val tempOu = SMGRrdObject(
       id = ou.id + mysx,
+      parentIds = ou.parentIds,
       command = SMGCmd("echo 0"),
       vars = ou.vars,
       title = ou.title,

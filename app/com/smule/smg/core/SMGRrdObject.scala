@@ -17,6 +17,7 @@ import com.smule.smg.rrd.{SMGRraDef, SMGRrd}
   *                 object's fetch command
   */
 case class SMGRrdObject(id: String,
+                        parentIds: Seq[String],
                         command: SMGCmd,
                         vars: List[Map[String, String]],
                         title: String,
@@ -33,13 +34,13 @@ case class SMGRrdObject(id: String,
 
   private val log = SMGLogger
 
-  private val nanList: List[Double] = vars.map(v => Double.NaN)
+//  private val nanList: List[Double] = vars.map(v => Double.NaN)
 
-  private var myPrevCacheTs: Int = 0
-  private var myPrevCachedValues: List[Double] = nanList
-
-  private var myCacheTs: Int = SMGRrd.tssNow
-  private var myCachedValues = nanList
+//  private var myPrevCacheTs: Int = 0
+//  private var myPrevCachedValues: List[Double] = nanList
+//
+//  private var myCacheTs: Int = SMGRrd.tssNow
+//  private var myCachedValues = nanList
 
   def fetchValues(parentData: Option[ParentCommandData]): List[Double] = {
     val out = this.command.run(parentData.map(_.asStr))

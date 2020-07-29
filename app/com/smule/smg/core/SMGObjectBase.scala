@@ -13,6 +13,9 @@ trait SMGObjectBase {
     */
   val id: String
 
+  //all prent/pre-fech ids
+  val parentIds: Seq[String]
+
   /**
     * object title
     */
@@ -42,7 +45,8 @@ trait SMGObjectBase {
     */
   def searchVars : List[Map[String, String]]
 
-  private def searchRemoteIdSeq = if (SMGRemote.isRemoteObj(id)) Seq(SMGRemote.remoteId(id)) else Seq(SMGRemote.localName)
+  private def searchRemoteIdSeq: Seq[String] =
+    if (SMGRemote.isRemoteObj(id)) Seq(SMGRemote.remoteId(id)) else Seq(SMGRemote.localName)
 
   lazy val searchText: String = (Seq(SMGRemote.localId(id)) ++ searchRemoteIdSeq ++ Seq(title,
     searchVars.map(v => v.getOrElse("label","") + " " + v.getOrElse("mu", "") ).mkString(" ")

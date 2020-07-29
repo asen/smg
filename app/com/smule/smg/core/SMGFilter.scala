@@ -27,13 +27,15 @@ case class SMGFilter(px: Option[String],
                      sx: Option[String],
                      rx: Option[String],
                      rxx: Option[String],
+                     prx: Option[String],
                      trx: Option[String],
                      remotes: Seq[String],
                      gopts: GraphOptions
                     ) {
 
   // Local version of the filter (pinned to "local" remote)
-  def asLocalFilter = SMGFilter(px = px, sx = sx, rx = rx, rxx = rxx, trx = trx, remotes = Seq(SMGRemote.local.id), gopts = gopts)
+  def asLocalFilter: SMGFilter =
+    SMGFilter(px = px, sx = sx, rx = rx, rxx = rxx, trx = trx, prx = prx, remotes = Seq(SMGRemote.local.id), gopts = gopts)
 
   // make regexes case insensitive
   private def ciRegex(so: Option[String]): Option[Regex] = so.map(s => if (s.isEmpty) s else  "(?i)" + s ).
@@ -47,11 +49,13 @@ case class SMGFilter(px: Option[String],
   private val ciTrxs = trx.map { s =>
     s.split("\\s+").filter(s => s != "").map(rxs => ciRegex(Some(rxs)).get).toSeq
   }.getOrElse(Seq())
+  private val ciPrx = ciRegex(prx)
 
-  lazy val matchesAnyObjectIdAndText: Boolean = px.isEmpty && sx.isEmpty && rx.isEmpty && rxx.isEmpty && trx.isEmpty
+  lazy val matchesAnyObjectIdAndText: Boolean = px.isEmpty && sx.isEmpty && rx.isEmpty && rxx.isEmpty &&
+    trx.isEmpty && prx.isEmpty
 
   def matches(ob: SMGObjectBase) : Boolean = {
-    matchesRemotes(ob.id) && matchesId(ob.id) && matchesText(ob)
+    matchesRemotes(ob.id) && matchesId(ob.id) && matchesText(ob) && matchesParentId(ob)
   }
 
   private def matchesRemotes(oid: String): Boolean = {
@@ -62,7 +66,7 @@ case class SMGFilter(px: Option[String],
       remotes.contains(SMGRemote.remoteId(oid))
   }
 
-  private def matchesId(oid: String) = {
+  private def matchesId(oid: String): Boolean = {
     var ret = true
     if ((px.getOrElse("") != "") && (!SMGRemote.localId(oid).startsWith(px.get))) ret = false
     if ((sx.getOrElse("") != "") && (!SMGRemote.localId(oid).endsWith(sx.get))) ret = false
@@ -71,10 +75,15 @@ case class SMGFilter(px: Option[String],
     ret
   }
 
-  private def matchesText(ob: SMGObjectBase) = {
+  private def matchesText(ob: SMGObjectBase): Boolean = {
     ciTrxs.isEmpty || {
       ciTrxs.forall( rx => rx.findFirstIn(ob.searchText).nonEmpty)
     }
+  }
+
+  private def matchesParentId(ob: SMGObjectBase): Boolean = {
+    (prx.getOrElse("") == "") ||
+      ob.parentIds.exists(pid => ciPrx.get.findFirstIn(SMGRemote.localId(pid)).isDefined)
   }
 
   def asUrlForPeriod(aPeriod: Option[String] = None): String = {
@@ -85,6 +94,7 @@ case class SMGFilter(px: Option[String],
     if (rx.isDefined) sb.append("&rx=").append(URLEncoder.encode(rx.get,"UTF-8"))
     if (rxx.isDefined) sb.append("&rxx=").append(URLEncoder.encode(rxx.get,"UTF-8"))
     if (trx.isDefined) sb.append("&trx=").append(URLEncoder.encode(trx.get,"UTF-8"))
+    if (prx.isDefined) sb.append("&prx=").append(URLEncoder.encode(prx.get,"UTF-8"))
     remotes.foreach { rmt => sb.append("&remote=").append(URLEncoder.encode(rmt,"UTF-8")) }
 
     if (gopts.step.isDefined) sb.append("&step=").append(URLEncoder.encode(gopts.step.get.toString,"UTF-8"))
@@ -117,7 +127,8 @@ case class SMGFilter(px: Option[String],
     if (px.isDefined) "px=" + px.get else "",
     if (sx.isDefined) "sx=" + sx.get else "",
     if (rx.isDefined) "rx=" + rx.get else "",
-    if (rxx.isDefined) "rx exclude=" + rxx.get else ""
+    if (rxx.isDefined) "rx exclude=" + rxx.get else "",
+    if (prx.isDefined) "prx=" + prx.get else ""
   ).filter(s => s.nonEmpty)
 
   private val paramsHumanText = if (paramsIdHumanSeq.isEmpty) "*" else paramsIdHumanSeq.mkString(" AND ")
@@ -131,12 +142,12 @@ case class SMGFilter(px: Option[String],
 
 object SMGFilter {
 
-  val matchLocal = SMGFilter(None,None,None,None,None, Seq(SMGRemote.local.id), GraphOptions.default )
+  val matchLocal = SMGFilter(None,None,None,None,None,None, Seq(SMGRemote.local.id), GraphOptions.default )
 
-  val matchAll = SMGFilter(None,None,None,None,None, Seq(SMGRemote.wildcard.id), GraphOptions.default )
+  val matchAll = SMGFilter(None,None,None,None, None, None, Seq(SMGRemote.wildcard.id), GraphOptions.default )
 
   def fromPrefixWithRemote(px:String, remoteIds: Seq[String]): SMGFilter =
-    SMGFilter(Some(px), None, None, None, None, remoteIds, GraphOptions.default )
+    SMGFilter(Some(px), None, None, None, None, None, remoteIds, GraphOptions.default )
 
   def fromPrefixLocal(px:String): SMGFilter = fromPrefixWithRemote(px, Seq(SMGRemote.local.id))
 
@@ -157,6 +168,7 @@ object SMGFilter {
       params.get("sx").map(_.head),
       params.get("rx").map(_.head),
       params.get("rxx").map(_.head),
+      params.get("prx").map(_.head),
       params.get("trx").map(_.head),
       params.getOrElse("remote", Seq(SMGRemote.local.id)), // TODO or use empty seq here?
       gopts

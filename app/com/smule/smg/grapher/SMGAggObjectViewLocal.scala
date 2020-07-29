@@ -16,7 +16,7 @@ case class SMGAggObjectViewLocal(id: String,
                                  graphVarsIndexes: Seq[Int],
                                  title: String ) extends SMGAggObjectView {
   override val refObj: Option[SMGObjectUpdate] = None
-
+  override val parentIds: Seq[String] = Seq() // TODO??
   override lazy val rrdType: String = objs.map(_.rrdType).distinct.mkString(",")
 }
 
