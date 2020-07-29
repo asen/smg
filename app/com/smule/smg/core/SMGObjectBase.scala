@@ -13,7 +13,7 @@ trait SMGObjectBase {
     */
   val id: String
 
-  //all prent/pre-fech ids
+  //all prent/pre-fetch ids
   val parentIds: Seq[String]
 
   /**
