@@ -103,6 +103,8 @@ trait SMGMonInternalState extends SMGMonState {
       return None
     if (ouids.tail.isEmpty)
       return Some(SMGMonState.oidFilter(ouids.head))
+    if (pfId.isDefined)
+      return Some(s"prx=^${SMGRemote.localId(pfId.get)}$$")
     val rx = s"^(${ouids.map(oid => SMGRemote.localId(oid)).distinct.mkString("|")})$$"
     Some("rx=" + java.net.URLEncoder.encode(rx, "UTF-8")) // TODO, better showUrl?
   }
@@ -120,8 +122,9 @@ trait SMGMonInternalState extends SMGMonState {
     s"${currentState.desc} (ts=${currentState.timeStr}$goodBadSince)"
   }
 
-  protected def logEntry(logIsHard: Boolean) = SMGMonitorLogMsg(currentState.ts, Some(this.id), currentState, myRecentStates.tail.headOption,
-    errorRepeat, isHard = logIsHard, isAcked = isAcked, isSilenced = isSilenced , ouids , vixOpt, remote)
+  protected def logEntry(logIsHard: Boolean): SMGMonitorLogMsg =
+    SMGMonitorLogMsg(currentState.ts, Some(this.id), currentState, myRecentStates.tail.headOption,
+      errorRepeat, isHard = logIsHard, isAcked = isAcked, isSilenced = isSilenced , ouids , vixOpt, remote)
 
   protected def processAlertsAndLogs(prevStateWasInherited: Boolean): Unit = {
     val curState: SMGState = myRecentStates.head

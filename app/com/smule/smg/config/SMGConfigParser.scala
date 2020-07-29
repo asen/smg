@@ -471,8 +471,12 @@ class SMGConfigParser(log: SMGLoggerApi) {
               var preFetch = if (ymap.contains("pre_fetch")) Some(ymap("pre_fetch").toString) else None
               while (preFetch.isDefined && depth < 100){
                 parentIds += preFetch.get
-                preFetch = preFetches.get(preFetch.get).map(_.id)
+                preFetch = preFetches.get(preFetch.get).flatMap(_.preFetch)
                 depth += 1
+              }
+              if(depth> 50){
+                processConfigError(confFile,
+                  s"processObject: ${oid}: parentIds depth exceeds 50: ${depth}", isWarn = depth < 100)
               }
               val obj = SMGRrdObject(
                 id = oid,
