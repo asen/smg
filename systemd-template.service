@@ -1,0 +1,27 @@
+[Unit]
+Description=smg
+After=multi-user.target
+
+[Service]
+#required
+Environment=APP_HOME=/opt/smg
+# not needed if java can be found on standard paths
+#Environment=JAVA_HOME=/usr/libexec/java
+# optional
+#Environment=JVM_MEM="8g"
+#Environment=HTTP_PORT=9000
+#Environment=BIND_ADDRESS=""
+#Environment=GC_OPTS=""
+#Environment=GC_OPTS="-J-XX:+UseParallelGC"
+
+Type=simple
+# just using $APP_HOME doesn't work, replace <APP_HOME> with actual APP_HOME value above
+ExecStartPre=/bin/rm -f <APP_HOME>/run/play.pid
+ExecStart=<APP_HOME>/systemd-smg.sh
+#User=play
+#Group=play
+TimeoutStopSec=10
+LimitNOFILE=10240
+
+[Install]
+WantedBy=multi-user.target

@@ -45,8 +45,8 @@ cp -r smgconf smgscripts target/universal/stage/
 
 mkdir -p target/universal/stage/{smgrrd/jmx,logs,public/smg,run}
 
-rm -f target/universal/stage/{start-smg.sh,stop-smg.sh}
-cp start-smg.sh stop-smg.sh target/universal/stage/
+rm -f target/universal/stage/{start-smg.sh,stop-smg.sh,systemd-smg.sh,systemd-template.service}
+cp start-smg.sh stop-smg.sh systemd-smg.sh systemd-template.service target/universal/stage/
 
 echo "*** Custom Packaging"
 
