@@ -104,7 +104,7 @@ trait SMGMonInternalState extends SMGMonState {
     if (ouids.tail.isEmpty)
       return Some(SMGMonState.oidFilter(ouids.head))
     if (pfId.isDefined)
-      return Some(s"prx=^${SMGRemote.localId(pfId.get)}$$")
+      return Some("prx=" + java.net.URLEncoder.encode(s"^${SMGRemote.localId(pfId.get)}$$", "UTF-8"))
     val rx = s"^(${ouids.map(oid => SMGRemote.localId(oid)).distinct.mkString("|")})$$"
     Some("rx=" + java.net.URLEncoder.encode(rx, "UTF-8")) // TODO, better showUrl?
   }
