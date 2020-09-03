@@ -6,7 +6,7 @@ if [ "$1" == "--no-pkg" ] ; then
     NOPKG=true
 fi
 
-VERSION=1.1
+VERSION=${VERSION:-1.1}
 
 echo "*** Building docs"
 
@@ -45,23 +45,24 @@ sbt stage
 
 rm -rf target/universal/stage/{smgconf,smgscripts}
 
-cp -r smgconf smgscripts target/universal/stage/
+cp -r Dockerfile smgconf smgscripts target/universal/stage/
 
 mkdir -p target/universal/stage/{smgrrd/jmx,logs,public/smg,run}
 
 rm -f target/universal/stage/{start-smg.sh,stop-smg.sh,systemd-smg.sh,systemd-template.service}
 cp start-smg.sh stop-smg.sh systemd-smg.sh systemd-template.service target/universal/stage/
 
+echo "*** Staging done. Output in target/universal/stage. Preparing versioned dir"
+
+rm -rf target/universal/smg-$VERSION
+mkdir target/universal/smg-$VERSION
+
+cp -pr target/universal/stage/* target/universal/smg-$VERSION/
+
 if [ "$NOPKG" == "true" ] ; then
-  echo "*** Staging done. Output in target/universal/stage"
+  echo "*** Staging versioned dir done. Output in target/universal/smg-$VERSION"
 else
   echo "*** Custom Packaging"
-
-  rm -rf target/universal/smg-$VERSION
-  mkdir target/universal/smg-$VERSION
-
-  cp -pr target/universal/stage/* target/universal/smg-$VERSION/
-
   cd target/universal
   tar -czf smg-$VERSION.tgz smg-$VERSION
   cd ../..

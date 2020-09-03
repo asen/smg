@@ -1,3 +1,6 @@
+# This should be used from within the staged build dir after ./build-smg.sh
+# see ./build-smg.sh and ./build-docker.sh
+
 FROM centos:8
 
 RUN yum install -y gcc make cairo-devel pango-devel libxml2-devel freetype-devel perl-ExtUtils-MakeMaker \
@@ -22,7 +25,10 @@ VOLUME [ "/opt/smg/data" ]
 RUN mkdir -p /opt/smg
 RUN mkdir -p /opt/smg/inst
 
-COPY target/universal/stage /opt/smg/inst/smg
+# this implies top-level dir as context, better use the staging dir as context itself
+# COPY target/universal/stage /opt/smg/inst/smg
+COPY . /opt/smg/inst/smg
+
 # A hack to point the jmx plugin to use /opt/smg/data/rrd/jmx for rrd data dir
 RUN sed -i 's|smgrrd/jmx|/opt/smg/data/rrd/jmx|' /opt/smg/inst/smg/smgconf/jmx-plugin.yml
 

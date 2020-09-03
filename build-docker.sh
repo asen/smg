@@ -11,13 +11,17 @@ fi
 
 IMAGE_VERSION=${IMAGE_VERSION:-0.1}
 IMAGE_NAME=${IMAGE_NAME:-asen/smg}
+export VERSION=${VERSION:-1.1}
 
 ./build-smg.sh --no-pkg
+
+echo "Done with SMG build, proceeding with container building"
 
 docker build \
     -t $IMAGE_NAME:$IMAGE_VERSION \
     -t $IMAGE_NAME:latest \
-    .
+    target/universal/smg-$VERSION
+
 if [ "$PUSH" == "true" ] ; then
     echo "Pushing to container registry ..."
     docker push $IMAGE_NAME:$IMAGE_VERSION
