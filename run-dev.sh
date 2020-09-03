@@ -6,6 +6,7 @@ export JAVA_OPTS="-XX:+UseParallelGC -Dcom.sun.management.jmxremote.port=9001 \
     -Dakka.http.parsing.max-uri-length=2m \
     -Dakka.http.parsing.max-header-value-length=2m \
     -Dplay.server.akka.max-header-value-length=2m \
+    -Djdk.tls.client.protocols=TLSv1.2 \
     "
 
 exec sbt run

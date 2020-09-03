@@ -91,16 +91,26 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
     val ret = ListBuffer[SMGJmxObject]()
     val retPfs = mutable.Map[String, SMGPreFetchCmd]()
     tlConf("includes").asInstanceOf[util.ArrayList[String]].asScala.foreach { globStr: String =>
-      myCfParser.expandGlob(globStr).foreach { yamlfn =>
-        val confTxt = configSvc.sourceFromFile(yamlfn)
-        val yaml = new Yaml()
-        val yamlTopObject = yaml.load(confTxt)
-        yamlTopObject.asInstanceOf[java.util.List[Object]].asScala.foreach { yamlObj: Object =>
-          val t = myCfParser.keyValFromMap(yamlObj.asInstanceOf[java.util.Map[String, Object]])
-          val (lst, pf) = parseHostDef(rrdDir, interval, t._1, t._2.asInstanceOf[java.util.Map[String, Object]].asScala, yamlfn)
-          ret ++= lst
-          retPfs(pf.id) = pf
+      try {
+        myCfParser.expandGlob(globStr).foreach { yamlfn =>
+          try {
+            val confTxt = configSvc.sourceFromFile(yamlfn)
+            val yaml = new Yaml()
+            val yamlTopObject: Object = yaml.load(confTxt)
+            yamlTopObject.asInstanceOf[java.util.List[Object]].asScala.foreach { yamlObj: Object =>
+              val t = myCfParser.keyValFromMap(yamlObj.asInstanceOf[java.util.Map[String, Object]])
+              val (lst, pf) = parseHostDef(rrdDir, interval, t._1, t._2.asInstanceOf[java.util.Map[String, Object]].asScala, yamlfn)
+              ret ++= lst
+              retPfs(pf.id) = pf
+            }
+          } catch {
+            case t: Throwable =>
+              log.error(s"Unexpected exception parsing $yamlfn")
+          }
         }
+      } catch {
+        case t: Throwable =>
+          log.error(s"Unexpected exception processing glob $globStr")
       }
     }
     (ret.toList, retPfs.toMap)

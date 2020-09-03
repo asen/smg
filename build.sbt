@@ -26,7 +26,7 @@ libraryDependencies ++= Seq(
   "commons-logging" % "commons-logging" % "1.1.3",
   jdbc,
   ws,
-  "org.yaml" % "snakeyaml" % "1.16",
+  "org.yaml" % "snakeyaml" % "1.26",
   specs2 % Test,
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
   "org.scalatestplus.play" % "scalatestplus-play_2.11" % "4.0.3" % "test"
@@ -36,6 +36,7 @@ libraryDependencies ++= Seq(
 libraryDependencies += "com.typesafe.play" %% "play-iteratees" % "2.6.1"
 libraryDependencies += "javax.inject" % "javax.inject" % "1"
 libraryDependencies += "com.google.inject" % "guice" % "4.2.2"
+libraryDependencies += "io.kubernetes" % "client-java" % "9.0.2"
 
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 

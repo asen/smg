@@ -623,7 +623,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       try {
         val confTxt = sourceFromFile(confFile)
         val yaml = new Yaml()
-        val yamlTopObject = yaml.load(confTxt)
+        val yamlTopObject: Object = yaml.load(confTxt)
         try {
           yamlTopObject.asInstanceOf[java.util.List[Object]].asScala.foreach { yamlObj: Object =>
             if (yamlObj == null) {

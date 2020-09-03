@@ -1,9 +1,9 @@
 
 calc:
-  expressions:
-    - netext:
-      title: "Test expression"
-      expr: "localhost.sysload + localhost.dummy"
+#  expressions:
+#    - netext:
+#      title: "Test expression"
+#      expr: "localhost.sysload + localhost.dummy"
 #      period: 24h
 #      step: 60
 #      maxy: 1000
