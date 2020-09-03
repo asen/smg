@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: smg-data-vol1
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/opt/smg/data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: smg-data-vol1-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: "manual"
+  resources:
+    requests:
+      storage: 50Gi

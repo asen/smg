@@ -15,5 +15,7 @@ target
 /public/plugins/jsgraph/pl/plotly-1.18.0.min.js
 /conf/build-number.conf
 .DS_Store
+k8s-local
+
 
 

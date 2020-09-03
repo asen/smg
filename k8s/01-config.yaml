@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smg-configmap
+data:
+  000-rrdcached.yml: |
+    # /opt/rrdtool/bin/rrdcached -g -l unix:/var/rrdtool/rrdcached/rrdcached.sock -m 664 -b /var/rrdtool/rrdcached
+    ## path to rrdcached socket, if used. sync this with the deploy yaml if changing
+    - $rrd_socket: /var/rrdtool/rrdcached/rrdcached.sock
+
+    ## set $rrdcached_update_batch_size to more than 1 to enable batched updates via socat and rrdcached protocol
+    ## the following properties set the external socat command to use and whether to flush writes at the end of
+    ## every run or before every read. Check teh docs for more details
+    - $rrdcached_update_batch_size: 10
+    #- $rrdcached_socat_command: "socat"
+    #- $rrdcached_flush_all_on_run: false
+    #- $rrdcached_flush_on_read: true
+  custom.yml: |
+    # TODO add your stuff here
+    - $dummy_global: value

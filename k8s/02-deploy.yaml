@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smg-server
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: smg-server
+  template:
+    metadata:
+      labels:
+        app: smg-server
+    spec:
+      containers:
+        # The SMG container
+        - name: smg
+          image: "asen/smg:latest"
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          volumeMounts:
+            - name: smg-config-volume
+              mountPath: /etc/smg/conf.d
+            - name: smg-data-volume
+              mountPath: /opt/smg/data
+            - name: rrdcached-sock-volume
+              mountPath: /var/rrdtool/rrdcached
+        # a rrdcached container (same image but runs rrdcached)
+        - name: rrdcached
+          image: "asen/smg:latest"
+          command: [ "/usr/bin/rrdcached" ]
+          args: ["-g", "-l", "unix:/var/rrdtool/rrdcached/rrdcached.sock", "-m", "664", "-b", "/var/rrdtool/rrdcached"]
+          volumeMounts:
+            - name: smg-data-volume
+              mountPath: /opt/smg/data
+            - name: rrdcached-sock-volume
+              mountPath: /var/rrdtool/rrdcached
+        # one more container to watch for changes and reload config
+        - name: watch
+          image: "weaveworks/watch:master-5b2a6e5"
+          imagePullPolicy: IfNotPresent
+          args: ["-v", "-t", "-p=/etc/smg/conf.d", "curl", "-X", "POST", "--fail", "-o", "-", "-sS", "http://localhost:9000/reload"]
+          volumeMounts:
+            - name: smg-config-volume
+              mountPath: /etc/smg/conf.d
+      volumes:
+        - name: smg-config-volume
+          configMap:
+            name: smg-configmap
+        - name: smg-data-volume
+          persistentVolumeClaim:
+            claimName: smg-data-vol1-claim
+        - name: rrdcached-sock-volume
+          emptyDir: {}

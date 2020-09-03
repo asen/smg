@@ -41,7 +41,7 @@ cat $BNFILE
 
 rm -rf public/smg/*.png
 
-sbt clean compile stage
+sbt stage
 
 rm -rf target/universal/stage/{smgconf,smgscripts}
 
