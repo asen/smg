@@ -16,7 +16,7 @@
 
 ## set $rrdcached_update_batch_size to more than 1 to enable batched updates via socat and rrdcached protocol
 ## the following properties set the external socat command to use and whether to flush writes at the end of
-## every run or before every read. Check teh docs fo rmore details
+## every run or before every read. Check teh docs for more details
 #- $rrdcached_update_batch_size: 1
 #- $rrdcached_socat_command: "socat"
 #- $rrdcached_flush_all_on_run: false

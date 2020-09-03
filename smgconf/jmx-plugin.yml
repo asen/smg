@@ -1,6 +1,7 @@
 
 jmx:
-  rrd_dir: "smgrrd/jmx"
+  rrd_dir: smgrrd/jmx
   rmi_socket_timeout: 3000
   includes:
    - "smgconf/jmx/*.yml"
+   - "/etc/smg/conf.d/jmx/*.yml"

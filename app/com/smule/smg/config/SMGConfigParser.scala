@@ -131,7 +131,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     val hiddenIndexConfs = mutable.Map[String, SMGConfIndex]()
     val objectAlertConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonAlertConfVar]]]()
     val objectNotifyConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonNotifyConf]]]()
-    var rrdDir = "smgrrd"
+    var rrdDir = SMGLocalConfig.DEFAULT_RRD_DIR
     val rrdTool = "rrdtool"
     val imgDir = "public/smg"
     val urlPrefix: String = "/assets/smg"

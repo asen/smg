@@ -2,10 +2,11 @@
 - $pre_fetch:
   id: cache_snmp_linux_stats_localhost
   # May have to edit the specific oids, these are good for centos 6
-  command: "smgscripts/snmp_pf.sh public localhost.localdomain /tmp/smg-snmp-pf-localhost.out laLoad.1 laLoad.2 \
+  command: "smgscripts/snmp_pf.sh public localhost.localdomain - laLoad.1 laLoad.2 \
     ssCpuRawUser.0 ssCpuRawNice.0 ssCpuRawSystem.0 ssCpuRawIdle.0 ssCpuRawWait.0 ssCpuRawInterrupt.0 \
     ssCpuRawSoftIRQ.0 ssRawInterrupts.0 ssRawContexts.0 ssIORawSent.0 ssIORawReceived.0 \
     ssSwapIn.0 ssSwapOut.0 ifHCInOctets.2 ifHCOutOctets.2 tcpPassiveOpens.0 tcpActiveOpens.0 tcpCurrEstab.0"
+  pass_data: true
   timeout: 10
 
 
@@ -17,7 +18,7 @@
 
 - host.localhost.sysload:
   pre_fetch: cache_snmp_linux_stats_localhost
-  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out laLoad.1 laLoad.2"
+  command: "smgscripts/snmp_pf_get.sh - laLoad.1 laLoad.2"
   title: "localhost - Load average over 1/5 min periods"
   interval: 60
   vars:
@@ -27,7 +28,7 @@
 - host.localhost.cpu:
   title: "localhost - CPU usage"
   pre_fetch: cache_snmp_linux_stats_localhost
-  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssCpuRawUser.0 ssCpuRawNice.0 \
+  command: "smgscripts/snmp_pf_get.sh - ssCpuRawUser.0 ssCpuRawNice.0 \
   ssCpuRawSystem.0 ssCpuRawIdle.0 ssCpuRawWait.0 ssCpuRawInterrupt.0 ssCpuRawSoftIRQ.0"
   rrdType: COUNTER
   stack: true
@@ -68,7 +69,7 @@
 - host.localhost.cpu0:
   title: "localhost - User and System CPU usage"
   pre_fetch: cache_snmp_linux_stats_localhost
-  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssCpuRawUser.0 ssCpuRawSystem.0"
+  command: "smgscripts/snmp_pf_get.sh - ssCpuRawUser.0 ssCpuRawSystem.0"
   rrdType: COUNTER
   interval: 60
   vars:
@@ -82,7 +83,7 @@
 - host.localhost.cpu1:
   title: "localhost - Nice and Wait CPU usage"
   pre_fetch: cache_snmp_linux_stats_localhost
-  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssCpuRawNice.0 ssCpuRawWait.0"
+  command: "smgscripts/snmp_pf_get.sh - ssCpuRawNice.0 ssCpuRawWait.0"
   rrdType: COUNTER
   interval: 60
   vars:
@@ -95,7 +96,7 @@
 
 - host.localhost.intctx:
   pre_fetch: cache_snmp_linux_stats_localhost
-  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssRawInterrupts.0 ssRawContexts.0"
+  command: "smgscripts/snmp_pf_get.sh - ssRawInterrupts.0 ssRawContexts.0"
   title: "localhost - Interrupts/context switches"
   rrdType: COUNTER
   interval: 60
@@ -107,7 +108,7 @@
 
 - host.localhost.blkio:
   pre_fetch: cache_snmp_linux_stats_localhost
-  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssIORawSent.0 ssIORawReceived.0"
+  command: "smgscripts/snmp_pf_get.sh - ssIORawSent.0 ssIORawReceived.0"
   title: "localhost - Block Device I/O"
   rrdType: COUNTER
   interval: 60
@@ -121,7 +122,7 @@
 
 - host.localhost.swpio:
   pre_fetch: cache_snmp_linux_stats_localhost
-  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ssSwapIn.0 ssSwapOut.0"
+  command: "smgscripts/snmp_pf_get.sh - ssSwapIn.0 ssSwapOut.0"
   title: "localhost - Swap I/O"
   rrdType: GAUGE
   interval: 60
@@ -135,7 +136,7 @@
 
 - host.localhost.netio:
   pre_fetch: cache_snmp_linux_stats_localhost
-  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out ifHCInOctets.2 ifHCOutOctets.2"
+  command: "smgscripts/snmp_pf_get.sh - ifHCInOctets.2 ifHCOutOctets.2"
   title: "localhost - Network I/O Octets"
   rrdType: COUNTER
   interval: 60
@@ -158,7 +159,7 @@
 
 - host.localhost.newconn:
   pre_fetch: cache_snmp_linux_stats_localhost
-  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out tcpPassiveOpens.0 tcpActiveOpens.0"
+  command: "smgscripts/snmp_pf_get.sh - tcpPassiveOpens.0 tcpActiveOpens.0"
   title: "localhost - Network New Connections"
   rrdType: COUNTER
   interval: 60
@@ -172,7 +173,7 @@
 
 - host.localhost.estconn:
   pre_fetch: cache_snmp_linux_stats_localhost
-  command: "smgscripts/snmp_pf_get.sh /tmp/smg-snmp-pf-localhost.out tcpCurrEstab.0"
+  command: "smgscripts/snmp_pf_get.sh - tcpCurrEstab.0"
   title: "localhost - Network Established Connections"
   interval: 60
   vars:

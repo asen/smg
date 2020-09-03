@@ -5,9 +5,11 @@ CACHE_FILE=$1
 if [ "$CACHE_FILE" == "" ] ; then
   echo "Usage $0 <cache_file> <oid1> [<oid2>...]"
 fi
+CACHE_DATA=`cat $CACHE_FILE`
+
 shift
 
-for v in "$@" ; do grep -E ":$v\\s+=" $CACHE_FILE ; done | sed -e 's/^.*:\s//g' | while read line ;
+for v in "$@" ; do grep -E ":$v\\s+=" <<< "$CACHE_DATA" ; done | sed -e 's/^.*:\s//g' | while read line ;
 do
   # do stuff with $line
   case $line in

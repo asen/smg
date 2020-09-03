@@ -1,8 +1,9 @@
 package com.smule.smgplugins.jmx
 
+import java.io.File
 import java.util
 
-import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
+import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core.{SMGCmd, SMGFilter, SMGPreFetchCmd}
 import com.smule.smg.monitor._
 import com.smule.smg.plugin.SMGPluginLogger
@@ -82,7 +83,11 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
   }
 
   def parseObjects(interval: Int, tlConf: Map[String, Object]): (List[SMGJmxObject], Map[String,SMGPreFetchCmd]) = {
-    val rrdDir = tlConf("rrd_dir").asInstanceOf[String]
+    val rrdDir = if (tlConf.contains("rrd_dir"))
+      tlConf("rrd_dir").asInstanceOf[String]
+    else
+      SMGLocalConfig.DEFAULT_RRD_DIR + "/jmx"
+    new File(rrdDir).mkdirs()
     val ret = ListBuffer[SMGJmxObject]()
     val retPfs = mutable.Map[String, SMGPreFetchCmd]()
     tlConf("includes").asInstanceOf[util.ArrayList[String]].asScala.foreach { globStr: String =>

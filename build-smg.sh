@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-
 set -e
+
+NOPKG=false
+if [ "$1" == "--no-pkg" ] ; then
+    NOPKG=true
+fi
 
 VERSION=1.1
 
@@ -48,16 +52,19 @@ mkdir -p target/universal/stage/{smgrrd/jmx,logs,public/smg,run}
 rm -f target/universal/stage/{start-smg.sh,stop-smg.sh,systemd-smg.sh,systemd-template.service}
 cp start-smg.sh stop-smg.sh systemd-smg.sh systemd-template.service target/universal/stage/
 
-echo "*** Custom Packaging"
+if [ "$NOPKG" == "true" ] ; then
+  echo "*** Staging done. Output in target/universal/stage"
+else
+  echo "*** Custom Packaging"
 
-rm -rf target/universal/smg-$VERSION
-mkdir target/universal/smg-$VERSION
+  rm -rf target/universal/smg-$VERSION
+  mkdir target/universal/smg-$VERSION
 
-cp -pr target/universal/stage/* target/universal/smg-$VERSION/
+  cp -pr target/universal/stage/* target/universal/smg-$VERSION/
 
-cd target/universal
-tar -czf smg-$VERSION.tgz smg-$VERSION
-cd ../..
+  cd target/universal
+  tar -czf smg-$VERSION.tgz smg-$VERSION
+  cd ../..
 
-echo "*** Done. Output in target/universal/smg-$VERSION.tgz"
-
+  echo "*** Done. Output in target/universal/smg-$VERSION.tgz"
+fi

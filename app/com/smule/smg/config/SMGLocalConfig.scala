@@ -13,6 +13,10 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.stm.CommitBarrier.Timeout
 
+object SMGLocalConfig {
+  val DEFAULT_RRD_DIR: String = "smgrrd"
+}
+
 /**
   * An object representing the local SMG configuration as provided in yml file(s)
  *
@@ -143,7 +147,6 @@ case class SMGLocalConfig(
   val reloadSlaveRemotes: Boolean = globals.getOrElse("$reload-slave-remotes", "false") == "true"
 
   val monStateDir: String = globals.getOrElse("$monstate_dir", "monstate")
-
 
   private def buildCommandsTree(rrdObjs: Seq[SMGRrdObject], myPreFetches: Map[String, SMGPreFetchCmd]): Seq[SMGFetchCommandTree] = {
     val ret = ListBuffer[SMGFetchCommandTree]()
