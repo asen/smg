@@ -11,7 +11,7 @@ class SMGKubeConfigPlugin(val pluginId: String,
                          ) extends SMGPlugin {
 
   private val log = new SMGPluginLogger(pluginId)
-  private val kubectlClient = new SMGKubeClient()
+  private val kubectlClient = new SMGKubeClient(log)
 
   override def run(): Unit = {
     log.info("SMGKubeConfigPlugin - running")

@@ -36,7 +36,7 @@ libraryDependencies ++= Seq(
 libraryDependencies += "com.typesafe.play" %% "play-iteratees" % "2.6.1"
 libraryDependencies += "javax.inject" % "javax.inject" % "1"
 libraryDependencies += "com.google.inject" % "guice" % "4.2.2"
-libraryDependencies += "io.kubernetes" % "client-java" % "9.0.2"
+libraryDependencies += "io.fabric8" % "kubernetes-client" % "4.11.1"
 
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 

@@ -1,27 +1,62 @@
 package com.smule.smgplugins.kubeConf
 
-import io.kubernetes.client.openapi.ApiClient
-import io.kubernetes.client.openapi.ApiException
-import io.kubernetes.client.openapi.Configuration
-import io.kubernetes.client.openapi.apis.CoreV1Api
-import io.kubernetes.client.openapi.models.V1Pod
-import io.kubernetes.client.openapi.models.V1PodList
-import io.kubernetes.client.util.Config
+import io.fabric8.kubernetes.api.model.metrics.v1beta1.{ContainerMetrics, NodeMetrics, NodeMetricsList, PodMetrics}
+import io.fabric8.kubernetes.client.DefaultKubernetesClient
+import io.fabric8.kubernetes.client.KubernetesClient
+import io.fabric8.kubernetes.client.KubernetesClientException
 import java.io.IOException
+
+import com.smule.smg.core.SMGLoggerApi
+import com.smule.smg.plugin.SMGPluginLogger
+import io.fabric8.kubernetes.api.model.Pod
 
 import scala.collection.JavaConversions._
 
-class SMGKubeClient() {
-
-  private val client: ApiClient = Config.fromConfig(sys.env("HOME") + "/.kube/config")
+class SMGKubeClient(log: SMGLoggerApi) {
 
   def listPods(): Seq[String] = {
+    Seq()
+  }
 
-    Configuration.setDefaultApiClient(client)
+  def topNodes() = {
+    val client = new DefaultKubernetesClient()
+    try {
+      val nodeMetricList = client.top.nodes.metrics
+      log.info("==== Node Metrics  ====")
+      nodeMetricList.getItems.foreach { nodeMetrics: NodeMetrics =>
+        log.info("{}\tCPU: {}{}\tMemory: {}{}",
+          nodeMetrics.getMetadata.getName,
+          nodeMetrics.getUsage.get("cpu").getAmount,
+          nodeMetrics.getUsage.get("cpu").getFormat,
+          nodeMetrics.getUsage.get("memory").getAmount,
+          nodeMetrics.getUsage.get("memory").getFormat)
+      }
+      log.info("==== Pod Metrics ====")
+      client.inAnyNamespace().top.pods.metrics().getItems.foreach{ podMetrics: PodMetrics =>
+        podMetrics.getContainers.foreach((containerMetrics: ContainerMetrics) =>
+          log.info("{}\t{}\tCPU: {}{}\tMemory: {}{}",
+            podMetrics.getMetadata.getName, containerMetrics.getName,
+            containerMetrics.getUsage.get("cpu").getAmount, containerMetrics.getUsage.get("cpu").getFormat,
+            containerMetrics.getUsage.get("memory").getAmount, containerMetrics.getUsage.get("memory").getFormat))
+      }
 
-    val api = new CoreV1Api
-    val list: V1PodList = api.listPodForAllNamespaces(null, null, null,
-      null, null, null, null, null, null)
-    list.getItems.map(_.getMetadata.getName)
+      client.pods.inAnyNamespace().list.getItems.foreach { pod: Pod =>
+        log.info("==== Individual Pod Metrics ({}) ====", pod.getMetadata.getName)
+        val podMetrics = client.top.pods.metrics(pod.getMetadata.getNamespace, pod.getMetadata.getName)
+        podMetrics.getContainers.foreach { containerMetrics =>
+          log.info("{}\t{}\tCPU: {}{}\tMemory: {}{}",
+            podMetrics.getMetadata.getName,
+            containerMetrics.getName,
+            containerMetrics.getUsage.get("cpu").getAmount,
+            containerMetrics.getUsage.get("cpu").getFormat,
+            containerMetrics.getUsage.get("memory").getAmount,
+            containerMetrics.getUsage.get("memory").getFormat)
+        }
+      }
+    } catch { case e: KubernetesClientException =>
+      log.error(e.getMessage, e);
+    } finally {
+      if (client != null) client.close()
+    }
   }
 }
