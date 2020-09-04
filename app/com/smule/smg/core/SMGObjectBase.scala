@@ -39,6 +39,8 @@ trait SMGObjectBase {
 
   val rraDef: Option[SMGRraDef]
 
+  val labels: Map[String, String]
+
   /**
     * All applicable for search vars definitions (object views can define subsets)
     * @return
@@ -48,8 +50,10 @@ trait SMGObjectBase {
   private def searchRemoteIdSeq: Seq[String] =
     if (SMGRemote.isRemoteObj(id)) Seq(SMGRemote.remoteId(id)) else Seq(SMGRemote.localName)
 
-  lazy val searchText: String = (Seq(SMGRemote.localId(id)) ++ searchRemoteIdSeq ++ parentIds ++ Seq(title,
-    searchVars.map(v => v.getOrElse("label","") + " " + v.getOrElse("mu", "") ).mkString(" ")
-  )).mkString(" ").toLowerCase
+  lazy val searchText: String = (
+    Seq(SMGRemote.localId(id)) ++ searchRemoteIdSeq ++ parentIds ++ Seq(title,
+      searchVars.map(v => v.getOrElse("label","") + " " + v.getOrElse("mu", "") ).mkString(" ")
+      ) ++ labels.keys.toSeq.sorted.map{k => s"$k=${labels(k)}"}
+    ).mkString(" ").toLowerCase
 
 }

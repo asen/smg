@@ -22,7 +22,8 @@ case class SMGJmxObject(baseId: String,
                         rrdDir: String,
                         interval : Int,
                         pluginId: Option[String],
-                        notifyConf: Option[SMGMonNotifyConf]
+                        notifyConf: Option[SMGMonNotifyConf],
+                        labels: Map[String,String]
                        ) extends SMGObjectUpdate with SMGObjectView {
 
   override val rrdFile: Option[String] = Some(rrdDir + "/" + id + ".rrd")

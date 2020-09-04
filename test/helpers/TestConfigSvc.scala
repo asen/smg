@@ -32,7 +32,8 @@ class TestConfigSvc() extends SMGConfigService {
     rrdFile = Some(s"test-out/$oid.rrd"),
     rraDef = None,
     None,
-    None
+    None,
+    Map()
   )
 
   def rrdAggObject(oid: String, ous: Seq[SMGObjectUpdate], numVars: Int): SMGRrdAggObject = {
@@ -48,7 +49,8 @@ class TestConfigSvc() extends SMGConfigService {
       rrdFile = Some(s"test-out/$oid.rrd"),
       rraDef = None,
       None,
-      None
+      None,
+      Map()
     )
   }
 

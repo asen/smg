@@ -68,7 +68,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     (JsPath \ "title").read[String].map(title => "(" + remote.id + ") " + title) and
     (JsPath \ "stack").read[Boolean] and
     (JsPath \ "rrdType").readNullable[String].map(_.getOrElse("UNKNOWN")) and
-    (JsPath \ "rrad").readNullable[SMGRraDef]
+    (JsPath \ "rrad").readNullable[SMGRraDef] and
+    (JsPath \ "labels").readNullable[Map[String,String]].map(mopt => mopt.getOrElse(Map[String,String]()))
 
   val nonAggObjectReads = nonAggObjectBuilder.apply(SMGRemoteObject.apply _)
 
@@ -847,7 +848,8 @@ object SMGRemoteClient {
     "title" -> obj.title,
     "stack" -> obj.stack,
     "rrdType" -> obj.rrdType,
-    "rrad" -> obj.rraDef
+    "rrad" -> obj.rraDef,
+    "labels" -> obj.labels
   )
 
   def writeAggObject(obj: SMGAggObjectView) = {

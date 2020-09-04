@@ -29,7 +29,8 @@ case class SMGRrdObject(id: String,
                         rrdFile: Option[String],
                         rraDef: Option[SMGRraDef],
                         override val rrdInitSource: Option[String],
-                        notifyConf: Option[SMGMonNotifyConf]
+                        notifyConf: Option[SMGMonNotifyConf],
+                        labels: Map[String,String]
                        ) extends SMGObjectView with SMGObjectUpdate with SMGFetchCommand {
 
   private val log = SMGLogger
@@ -41,20 +42,6 @@ case class SMGRrdObject(id: String,
 //
 //  private var myCacheTs: Int = SMGRrd.tssNow
 //  private var myCachedValues = nanList
-
-  def fetchValues(parentData: Option[ParentCommandData]): List[Double] = {
-    val out = this.command.run(parentData.map(_.asStr))
-    val ret = for (ln <- out.take(this.vars.size)) yield {
-      ln.toDouble
-    }
-    if (ret.lengthCompare(this.vars.size) < 0) {
-      val errMsg = "Bad output from external command - less lines than expected (" + ret.size + "<" + this.vars.size + ")"
-      log.error(errMsg)
-      log.error(out)
-      throw SMGCmdException(this.command.str, this.command.timeoutSec, -1, out.mkString("\n"), errMsg)
-    }
-    ret
-  }
 
   override val graphVarsIndexes: List[Int] = vars.indices.toList
 

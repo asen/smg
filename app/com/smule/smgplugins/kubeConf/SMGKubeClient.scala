@@ -15,7 +15,18 @@ import scala.collection.JavaConversions._
 class SMGKubeClient(log: SMGLoggerApi) {
 
   def listPods(): Seq[String] = {
-    Seq()
+    val client = new DefaultKubernetesClient()
+    try {
+//      val nsList = client.namespaces().list()
+//      nsList.getItems
+      val podList = client.pods().inAnyNamespace().list()
+      podList.getItems.map(_.toString)
+    } catch { case e: KubernetesClientException =>
+      log.error(e.getMessage, e)
+      Seq()
+    } finally {
+      if (client != null) client.close()
+    }
   }
 
   def topNodes() = {

@@ -26,6 +26,13 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
 
   val myCfParser = new SMGConfigParser(log)
 
+  def getLabels(ymap: mutable.Map[String, Object]): Map[String,String] ={
+    if (ymap.contains("labels") && (ymap("labels") != null)) {
+      ymap("labels").asInstanceOf[java.util.Map[String, Object]].
+        asScala.map { case (k, v) => (k, v.toString)}.toMap
+    } else Map()
+  }
+
   private def processObject(rrdDir: String, interval: Int, pfId: String, parentIds: Seq[String], hostPort: String,
                             baseId: String, oid: String, ymap: mutable.Map[String, Object],
                             confFile: String ): Option[SMGJmxObject] = {
@@ -51,7 +58,8 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
           rrdDir,
           interval,
           Some(pluginId),
-          notifyConf
+          notifyConf,
+          getLabels(ymap)
         )
         Some(obj)
       } catch {

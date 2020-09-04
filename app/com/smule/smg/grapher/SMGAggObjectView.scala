@@ -4,6 +4,9 @@ import com.smule.smg.core.{SMGAggGroupBy, SMGObjectView}
 import com.smule.smg.rrd.SMGRraDef
 import com.smule.smg.remote.SMGRemote
 
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+
 /**
   * A SMG aggregate object view - representing a set of SMGObjects (rrd dbs) having compatible
   * variables (grouped according to groupBy rules) and subject to aggregation.
@@ -21,6 +24,20 @@ trait SMGAggObjectView extends SMGObjectView {
   def groupByKey: SMGAggGroupBy = SMGAggGroupBy.objectGroupByVars(objs.head, groupBy)
 
   override val stack: Boolean = (op == "STACK") || objs.head.stack
+
+  // merge values with the same key with a comma
+  override val labels: Map[String, String] =
+    objs.map(_.labels).foldLeft(mutable.Map[String, ListBuffer[String]]()) { case (mm, sm) =>
+      sm.foreach { case (k,v) =>
+        if (!mm.contains(k)){
+          mm(k) = ListBuffer()
+        }
+        mm(k) += v
+      }
+      mm
+    }.map { case (k, lb) =>
+      (k, lb.mkString(","))
+    }.toMap
 
   /**
     * @inheritdoc

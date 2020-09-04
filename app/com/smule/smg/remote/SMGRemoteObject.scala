@@ -21,7 +21,8 @@ case class SMGRemoteObject(
                             title: String,
                             stack: Boolean,
                             rrdType: String,
-                            rraDef: Option[SMGRraDef]
+                            rraDef: Option[SMGRraDef],
+                            labels: Map[String,String]
                           ) extends SMGObjectView {
 
   override val rrdFile: Option[String] = None

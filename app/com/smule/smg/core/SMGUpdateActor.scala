@@ -25,6 +25,25 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
 
   private def ecForInterval(interval: Int): ExecutionContext = configSvc.executionContexts.ctxForInterval(interval)
 
+  private def fetchValues(rrdObj: SMGRrdObject, parentData: Option[ParentCommandData]): List[Double] = {
+    val out = rrdObj.command.run(parentData.map(_.asStr))
+    val ret = for (ln <- out.take(rrdObj.vars.size)) yield {
+      ln.toDouble
+    }
+    if (ret.lengthCompare(rrdObj.vars.size) < 0) {
+      val errMsg = "Bad output from external command - less lines than expected (" +
+        ret.size + "<" + rrdObj.vars.size + ")"
+      log.error(errMsg)
+      log.error(out)
+      throw SMGCmdException(rrdObj.command.str, rrdObj.command.timeoutSec, -1, out.mkString("\n"), errMsg)
+    }
+    ret
+  }
+
+  private def fetchAggValues(aggObj: SMGRrdAggObject, confSvc: SMGConfigService): List[Double] = {
+    val sources = aggObj.ous.map(ou => confSvc.getCachedValues(ou, !aggObj.isCounter)).toList
+    SMGRrd.mergeValues(aggObj.aggOp, sources)
+  }
 
   private def processSMGUpdateObjectMessage(obj: SMGObjectUpdate,
                                             ts: Option[Int], updateCounters: Boolean,
@@ -35,8 +54,8 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
         val t0 = System.currentTimeMillis()
         try {
           obj match {
-            case rrdObj: SMGRrdObject => rrdObj.fetchValues(parentData)
-            case aggObj: SMGRrdAggObject => aggObj.fetchValues(configSvc)
+            case rrdObj: SMGRrdObject => fetchValues(rrdObj, parentData)
+            case aggObj: SMGRrdAggObject => fetchAggValues(aggObj, configSvc)
             case x => throw new SMGFetchException(s"SMGERR: Invalid object update type: ${x.getClass}")
           }
         } finally {

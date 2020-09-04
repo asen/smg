@@ -23,13 +23,9 @@ case class SMGRrdAggObject(id: String,
                            rrdFile: Option[String],
                            rraDef: Option[SMGRraDef],
                            override val rrdInitSource: Option[String],
-                           notifyConf: Option[SMGMonNotifyConf]
+                           notifyConf: Option[SMGMonNotifyConf],
+                           labels: Map[String, String]
                           ) extends SMGObjectView with SMGObjectUpdate {
-
-  def fetchValues(confSvc: SMGConfigService): List[Double] = {
-    val sources = ous.map(ou => confSvc.getCachedValues(ou, !this.isCounter)).toList
-    SMGRrd.mergeValues(aggOp, sources)
-  }
 
   override val preFetch: Option[String] = None
   override val parentIds: Seq[String] = Seq() // TODO - or all ous parents?

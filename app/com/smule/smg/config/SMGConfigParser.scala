@@ -411,6 +411,13 @@ class SMGConfigParser(log: SMGLoggerApi) {
       } else pluginObjs.get(k)
     }
 
+    def getLabels(ymap: mutable.Map[String, Object]): Map[String,String] ={
+      if (ymap.contains("labels") && (ymap("labels") != null)) {
+        ymap("labels").asInstanceOf[java.util.Map[String, Object]].
+          asScala.map { case (k, v) => (k, v.toString)}.toMap
+      } else Map()
+    }
+
     def createGraphObject(oid: String,
                           ymap: mutable.Map[String, Object],
                           confFile: String,
@@ -434,7 +441,9 @@ class SMGConfigParser(log: SMGLoggerApi) {
             gvIxes = ymap.getOrElse("gv", new util.ArrayList[Int]()).asInstanceOf[util.ArrayList[Int]].asScala.toList,
             rrdFile = refobj.rrdFile,
             refObj = refobj.refObj,
-            rrdType = refobj.rrdType)
+            rrdType = refobj.rrdType,
+            labels = getLabels(ymap)
+          )
           allViewObjectsById(obj.id) = obj
         }
       } catch {
@@ -492,7 +501,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
                 rraDef = rraDef,
                 rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap("rrd_init_source").toString) else None,
-                notifyConf = notifyConf
+                notifyConf = notifyConf,
+                labels = getLabels(ymap)
               )
               objectIds += oid
               objectUpdateIds(oid) = obj
@@ -583,7 +593,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
                 rraDef = myRraDef,
                 rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap("rrd_init_source").toString) else None,
-                notifyConf = notifyConf
+                notifyConf = notifyConf,
+                labels = getLabels(ymap)
               )
               objectUpdateIds(oid) = rrdAggObj
               allViewObjectsById(rrdAggObj.id) = rrdAggObj

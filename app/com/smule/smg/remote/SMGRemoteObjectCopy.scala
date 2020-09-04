@@ -17,7 +17,8 @@ case class SMGRemoteObjectCopy(
                                 stack: Boolean,
                                 rrdFile: Option[String],
                                 rrdType: String,
-                                rraDef: Option[SMGRraDef]
+                                rraDef: Option[SMGRraDef],
+                                labels: Map[String,String]
                               ) extends SMGObjectView {
 
   def this(robj:SMGObjectView, rrdFile: String) = this(robj.id,
@@ -30,7 +31,8 @@ case class SMGRemoteObjectCopy(
     robj.stack,
     Some(rrdFile),
     robj.rrdType,
-    robj.rraDef
+    robj.rraDef,
+    robj.labels
   )
 
   override val refObj: Option[SMGObjectUpdate] = None

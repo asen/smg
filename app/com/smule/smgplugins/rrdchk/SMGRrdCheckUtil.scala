@@ -71,7 +71,8 @@ object SMGRrdCheckUtil {
       rrdFile = Some(newRrdFile),
       rraDef = ou.rraDef,
       rrdInitSource = Some(ou.rrdFile.get),
-      notifyConf = None
+      notifyConf = None,
+      labels = Map()
     )
     val rrdU = new SMGRrdUpdate(tempOu, smgConfSvc)
     rrdU.checkOrCreateRrd(None)
