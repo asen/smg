@@ -1,5 +1,5 @@
 import com.smule.smg.core.SMGLogger
-import com.smule.smgplugins.kubeConf.SMGKubeClient
+import com.smule.smgplugins.kube.SMGKubeClient
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner

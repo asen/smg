@@ -21,15 +21,16 @@ import scala.util.Try
 /**
   * Helper class to deal with Yaml parsing
   */
-class SMGConfigParser(log: SMGLoggerApi) {
+
+object SMGConfigParser {
 
   // TODO
-  val defaultInterval: Int = 60 // seconds
-  val defaultTimeout: Int = 30  // seconds
+  val defaultInterval: Int = SMGConfigParser.defaultInterval // seconds
+  val defaultTimeout: Int = SMGConfigParser.defaultTimeout  // seconds
 
   def validateOid(oid: String): Boolean = oid.matches("^[\\w\\._-]+$")
 
-  def getListOfFiles(dir: String, matcher: PathMatcher):List[File] = {
+  private def getListOfFiles(dir: String, matcher: PathMatcher, log: SMGLoggerApi):List[File] = {
     val d = new File(dir)
     if (d.exists && d.isDirectory) {
       d.listFiles.filter{ (f:File) =>
@@ -41,7 +42,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
   }
 
-  def expandGlob(glob: String) : List[String] = {
+  def expandGlob(glob: String, log: SMGLoggerApi) : List[String] = {
     if (new File(glob).isFile) {
       return List(glob)
     }
@@ -54,16 +55,62 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
     //    log.info("expandGlob: listing dir " + dir + " with glob " + glob)
     val matcher = fs.getPathMatcher("glob:" + glob)
-    getListOfFiles(dir, matcher).map( (f: File) => f.getPath)
+    getListOfFiles(dir, matcher, log).map( (f: File) => f.getPath)
   }
+}
 
+class SMGConfigParser(log: SMGLoggerApi) {
+
+  // TODO
+  val defaultInterval: Int = 60 // seconds
+  val defaultTimeout: Int = 30  // seconds
+
+  def validateOid(oid: String): Boolean = SMGConfigParser.validateOid(oid)
+
+  def expandGlob(glob: String) : List[String] = SMGConfigParser.expandGlob(glob, log)
+
+  // m should be one of
+  // 1. (old style) map where the first key has null value (key would be the id) { k -> null, a -> b, ...}
+  // 2. (old style) map with only one key (returned as the "id key") where value is either
+  //   2.1. a string (global val) { k -> v }  (this is also valid "new style")
+  //   2.2. a map representing the object data { k -> {a -> b, ...} }
+  // 3. (new style) map { "id" -> k, "type" -> "...", a -> b, c -> d .. }
+  //   3.1. if it has a type -> "auto" pair or doesn't have a type key,
+  //        the map value for "id" key is used as return key
+  //   3.2. if type is diff than "auto" - type value is returned as the key
   def keyValFromMap(m: util.Map[String, Object]): (String,Object) = {
     val firstKey = m.asScala.keys.head
-    val retVal = m.remove(firstKey)
-    if (retVal != null)
-      (firstKey, retVal)
-    else
+    if (m.get(firstKey) == null){
+      // old style config - map where the first key has null value and that key is the object id
+      // { id -> null, a -> b, ..,
+      m.remove(firstKey)
       (firstKey, m)
+    } else {
+      if (m.size() == 1) {
+        // old style map nested under id key, or a global
+        // { id -> {a -> b, ...} }
+        (firstKey, m.get(firstKey))
+      } else {
+        // a new style config  { type -> ..., id -> .... }
+        if (m.containsKey("type")) {
+          var retKey = m.get("type").toString
+          if ((retKey == "auto") && (m.get("id") != null)) {
+            retKey = m.remove("id").toString
+          } else {
+            if (!retKey.startsWith("$")) retKey = "$" + retKey
+          }
+          (retKey, m)
+        } else { // new style auto type object
+          if (m.containsKey("id")) {
+            val retKey = m.remove("id").toString
+            (retKey, m)
+          } else { // error?
+            log.warn(s"SMGConfigParser.keyValFromMap: unexpected config object: $firstKey : ${m.asScala.toMap}")
+            (firstKey, m)
+          }
+        }
+      }
+    }
   }
 
   def getRrdType(ymap: mutable.Map[String, Object], default: Option[String]): String = {
@@ -74,7 +121,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     else ymap.getOrElse("rrdType", realDefault).toString
   }
 
-  private def yamlVarsToVars(yamlVars: Object): List[Map[String, String]] = {
+  def yamlVarsToVars(yamlVars: Object): List[Map[String, String]] = {
     yamlVars.asInstanceOf[util.ArrayList[util.Map[String, Object]]].asScala.toList.map(
       (m: util.Map[String, Object]) => m.asScala.map { t => (t._1, t._2.toString) }.toMap
     )
@@ -88,7 +135,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
   }
 
-  def ymapCdefVars(ymap: mutable.Map[String, Object]): List[Map[String, String]] = {
+  private def ymapCdefVars(ymap: mutable.Map[String, Object]): List[Map[String, String]] = {
     if (ymap.contains("cdef_vars")) {
       yamlVarsToVars(ymap("cdef_vars"))
     } else {
@@ -96,7 +143,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
   }
 
-  def sourceFromFile(fn:String): String = {
+  private def sourceFromFile(fn:String): String = {
     SMGFileUtil.getFileContents(fn)
   }
 
@@ -645,7 +692,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
               val t = keyValFromMap(yamlObj.asInstanceOf[java.util.Map[String, Object]])
               if (t._1 == "$include") {
                 processInclude(t._2.toString)
-              } else if (t._1 == "$pre_fetch"){
+              } else if ((t._1 == "$pre_fetch") || (t._1 == "$pf")){
                 processPrefetch(t, confFile)
               } else if (t._1 == "$notify-command"){
                 processNotifyCommand(t, confFile)
@@ -657,7 +704,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 processCustomDashboard(t, confFile)
               } else if (t._1.startsWith("$")) { // a global def
                 processGlobal(t, confFile)
-              } else if (t._1.startsWith("^")) { // an index def
+              } // type: auto below
+                else if (t._1.startsWith("^")) { // an index def
                 processIndex(t, isHidden = false, confFile)
               } else if (t._1.startsWith("~")) { // a "hidden" index def
                 processIndex(t, isHidden = true, confFile)

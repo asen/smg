@@ -1,0 +1,18 @@
+
+scrape:
+  targets:
+    - uid: test
+      name: Test
+      conf_output: /etc/smg/cust/test.yml
+      conf_output_backup_ext: backup
+#      command: curl http://skube-int.oak.smle.co:31025/metrics
+      command: cat test-data/metrics.txt
+      timeout: 30
+      filter:
+        rxx: "^prometheus"
+      interval: 60
+      pre_fetch: host_localhost_up
+      parent_index: localhost
+      id_prefix: my_scrape.
+      notify-unkn: "mail-asen"
+    - include: /etc/smg/scrape-targets.yml

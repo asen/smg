@@ -99,18 +99,25 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
         log.warn("SMGConfigServiceImpl.createPlugins: Ignoring plugin application.conf entry specifying non-existing confFile: " + ac)
       }
       ret
-    }.map { ac =>
-      val klass = Class.forName(ac.className)
-      klass.getConstructor(
-        classOf[String],
-        classOf[Int],
-        classOf[String],
-        classOf[SMGConfigService]
-      ).newInstance(ac.id,
-        ac.interval.asInstanceOf[Object],
-        ac.confFile,
-        this
-      ).asInstanceOf[SMGPlugin]
+    }.flatMap { ac =>
+      try {
+        val klass = Class.forName(ac.className)
+        val ret = klass.getConstructor(
+          classOf[String],
+          classOf[Int],
+          classOf[String],
+          classOf[SMGConfigService]
+        ).newInstance(ac.id,
+          ac.interval.asInstanceOf[Object],
+          ac.confFile,
+          this
+        ).asInstanceOf[SMGPlugin]
+        log.info(s"Created plugin: ${ret.pluginId} - klass=${ac.className}")
+        Some(ret)
+      } catch { case t: Throwable =>
+        log.ex(t, s"Unexpected error while loading plugin: $ac")
+        None
+      }
     }
   }
 
@@ -258,7 +265,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   private val deadLetterListener = actorSystem.actorOf(Props(classOf[SMGDeadLetterActor]))
   actorSystem.eventStream.subscribe(deadLetterListener, classOf[DeadLetter])
 
-  override def sourceFromFile(fn: String): String = configParser.sourceFromFile(fn)
+  override def sourceFromFile(fn: String): String = SMGFileUtil.getFileContents(fn)
 
   override def isDevMode: Boolean = environment.mode() == Mode.DEV
 }

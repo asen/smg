@@ -1,4 +1,4 @@
-package com.smule.smgplugins.kubeConf
+package com.smule.smgplugins.kube
 
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.{ContainerMetrics, NodeMetrics, NodeMetricsList, PodMetrics}
 import io.fabric8.kubernetes.client.DefaultKubernetesClient

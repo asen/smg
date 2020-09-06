@@ -25,17 +25,45 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
 
   private def ecForInterval(interval: Int): ExecutionContext = configSvc.executionContexts.ctxForInterval(interval)
 
+  private val PLUGIN_COMMAND_PREFIX = ":"
+
+  private def runPluginFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
+    val arr = command.str.split("\\s+", 2)
+    val pluginId = arr(0).stripPrefix(PLUGIN_COMMAND_PREFIX)
+    val pluginOpt = configSvc.pluginsById.get(pluginId)
+    if (pluginOpt.isEmpty){
+      throw new SMGFetchException(s"Command references invalid plugin id: $pluginId, cmd: ${command.str}")
+    }
+    val cmdStr = if (arr.length > 1) arr(1) else ""
+    pluginOpt.get.runPluginFetchCommand(cmdStr, command.timeoutSec, parentData)
+  }
+
+  private def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
+    if (command.str.startsWith(PLUGIN_COMMAND_PREFIX)) {
+      log.debug(s"RUN_COMMAND: tms=${command.timeoutSec} : (plugin) ${command.str}")
+      runPluginFetchCommand(command, parentData)
+    } else {
+      CommandResultListString(command.run(parentData.map(_.res.asStr)))
+    }
+  }
+
   private def fetchValues(rrdObj: SMGRrdObject, parentData: Option[ParentCommandData]): List[Double] = {
-    val out = rrdObj.command.run(parentData.map(_.asStr))
-    val ret = for (ln <- out.take(rrdObj.vars.size)) yield {
-      ln.toDouble
+    val res = runFetchCommand(rrdObj.command, parentData)
+    def handleError(errMsg: String) = {
+      log.error(errMsg)
+      log.error(res.asStr)
+      throw SMGCmdException(rrdObj.command.str, rrdObj.command.timeoutSec, -1, res.asStr, errMsg)
+    }
+    val ret = try {
+      res.asDoubleList(rrdObj.vars.size)
+    } catch { case t: Throwable =>
+      val errMsg = s"Unexpected exception processing fetch output: ${t.getClass.getName}: ${t.getMessage}"
+      handleError(errMsg)
     }
     if (ret.lengthCompare(rrdObj.vars.size) < 0) {
       val errMsg = "Bad output from external command - less lines than expected (" +
         ret.size + "<" + rrdObj.vars.size + ")"
-      log.error(errMsg)
-      log.error(out)
-      throw SMGCmdException(rrdObj.command.str, rrdObj.command.timeoutSec, -1, out.mkString("\n"), errMsg)
+      handleError(errMsg)
     }
     ret
   }
@@ -108,7 +136,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                       "Aborted due to too slow pre-fetch commands sequence.",
                       "Consider adjusting timeouts" +
                         pf.parentId.map(s => s" and/or increasing child_conc on the parent: $s").getOrElse("") + ".")
-                  val out = pf.command.run(parentData.map(_.asStr))
+                  val out = runFetchCommand(pf.command, parentData)
                   if (pf.passData)
                     myData = Some(ParentCommandData(out))
                   cmdTimeMs = System.currentTimeMillis() - t0

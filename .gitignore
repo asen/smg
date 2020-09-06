@@ -16,6 +16,6 @@ target
 /conf/build-number.conf
 .DS_Store
 k8s-local
-
+test-data
 
 

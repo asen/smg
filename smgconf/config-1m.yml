@@ -31,9 +31,32 @@
 - localhost.passed.data:
   pre_fetch: test.pass.data
   command: "cat - | cut -d = -f 2"
+  labels:
+    testing: data
   vars:
     - label: a
     - label: b
+
+- $pre_fetch:
+  id: test.scrape.data
+  pre_fetch: host_localhost_up
+  pass_data: true
+  command: 'cat test-data/metrics.txt'
+
+- $pre_fetch:
+  id: test.parse.data
+  pre_fetch: test.scrape.data
+  pass_data: true
+  command: :scrape parse
+
+- localhost.plugin.parsed.data:
+  pre_fetch: test.parse.data
+  command: :scrape get go_gc_duration_seconds_sum,go_gc_duration_seconds_count
+  labels:
+    testing: data
+  vars:
+    - label: sum
+    - label: count
 
 - +localhost.agg:
   op: SUM

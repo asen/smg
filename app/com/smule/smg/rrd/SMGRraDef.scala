@@ -41,10 +41,15 @@ case class SMGRraDef(rraId: String, defs: Seq[String]) {
 
 object SMGRraDef {
 
-  private def rrdMinutesSteps(v:Int, interval: Int):Int = (v * 60) / interval
+  private def rrdMinutesSteps(v:Int, interval: Int):Int = {
+    val myInterval = if (interval == 0) 60 else interval // XXX preventing division by zero
+    (v * 60) / myInterval
+  }
   private def rrdDaysRows(v:Int, steps: Int, interval: Int):Int = {
+    // XXX preventing division by zero
     val mySteps = if (steps == 0) 1 else steps
-    ((3600 * 24) / (interval * mySteps)) * v
+    val myInterval = if (interval == 0) 60 else interval
+    ((3600 * 24) / (myInterval * mySteps)) * v
   }
 
   private def createDefaultRraDef(rraId: String, interval: Int): SMGRraDef = {

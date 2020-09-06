@@ -3,7 +3,7 @@ package com.smule.smg.plugin
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.smule.smg.config.SMGConfIndex
-import com.smule.smg.core.{SMGObjectView, SMGPreFetchCmd}
+import com.smule.smg.core.{CommandResult, ParentCommandData, SMGFetchException, SMGObjectView, SMGPreFetchCmd}
 import com.smule.smg.monitor.SMGMonCheck
 import com.smule.smg.remote.SMGRemotesApi
 import com.smule.smg.GrapherApi
@@ -98,6 +98,18 @@ trait SMGPlugin {
     * @return
     */
   def valueChecks: Map[String, SMGMonCheck] = Map()
+
+  /**
+    * Plugin can implement custom fetch commands which are then referenced in conf via the plugin ID:
+    *   command: :pluginId [plugin command and params]
+    *
+    * @param cmd
+    * @param timeoutSec
+    * @param parentData
+    * @return
+    */
+  def runPluginFetchCommand(cmd: String, timeoutSec: Int, parentData: Option[ParentCommandData]): CommandResult =
+    throw new SMGFetchException(s"Plugin $pluginId does not support command: $cmd")
 
   // XXX TODO need to rethink dependencies (who creates the plugins) to get rid of this
   // Curently these are set by SMGConfigService and the SMGrapher singletons on startup

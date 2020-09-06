@@ -1,0 +1,5 @@
+
+kube:
+  clusters:
+    - name: skube-int
+      confFile: $HOME/.kube/config
