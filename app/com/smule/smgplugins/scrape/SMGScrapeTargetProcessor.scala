@@ -91,20 +91,50 @@ class SMGScrapeTargetProcessor(pluginConf: SMGScrapePluginConf,
       if (resOpt.isEmpty)
         return false
       val yamlText = getYamlText(tgt, resOpt.get)
-      val oldYamlText = if (new File(tgt.confOutput).exists())
-        SMGFileUtil.getFileContents(tgt.confOutput)
+      val confOutputFile = tgt.confOutputFile(pluginConf.confOutputDir)
+      val oldYamlText = if (Files.exists(Paths.get(confOutputFile)))
+        SMGFileUtil.getFileContents(confOutputFile)
       else
         ""
       if (oldYamlText == yamlText) {
         log.debug(s"SMGScrapeTargetProcessor.processTarget(${tgt.uid}) - no config changes detected")
         return false
       }
-      outputStringToFile(tgt.confOutput, yamlText, tgt.confOutputBackupExt)
+      outputStringToFile(confOutputFile, yamlText, tgt.confOutputBackupExt)
       true
     } catch { case t: Throwable =>
       log.ex(t, s"SMGScrapeTargetProcessor.processTarget(${tgt.uid}): unexpected error: ${t.getMessage}")
       false
     }
+  }
+
+  // remove all files not part of targets
+  private def cleanupOwnedDir(dir: String, ownedFiles: Seq[String]): Boolean = {
+    // find the set of all files and remove the supplied ownedFile set
+    val ownedFilesInDir = ownedFiles.withFilter { fn =>
+      fn.startsWith(dir) && {
+        val relName = fn.stripPrefix(dir).stripPrefix(File.separator)
+        (new File(relName).getName == relName) //not a sub dir path
+      }
+    }.map { fn =>
+      new File(fn).getName
+    }.toSet
+    val allFilesInDir = new File(dir).listFiles().withFilter(_.isFile).map(_.getName).toSet
+    val toDel = allFilesInDir -- ownedFilesInDir
+    // actually delete files
+    if (toDel.nonEmpty){
+      toDel.foreach { fn =>
+        val fullFn = dir.stripSuffix(File.separator) + File.separator + fn
+        try {
+          Files.delete(Paths.get(fullFn))
+          log.info(s"SMGScrapeTargetProcessor.cleanupOwnedDir: deleted file: $fullFn")
+        } catch { case t: Throwable =>
+          log.ex(t, s"Unexpected error while deleting $fullFn")
+        }
+      }
+      true
+    } else
+      false
   }
 
   // for each target:
@@ -123,6 +153,11 @@ class SMGScrapeTargetProcessor(pluginConf: SMGScrapePluginConf,
         needReload = true
       log.info(s"SMGScrapeTargetProcessor: Done processing taget conf: ${targetConf.uid}: " +
         s"targetReload=$targetReload needReload=$needReload")
+    }
+    if (pluginConf.confOutputDir.isDefined && pluginConf.confOutputDirOwned){
+      if (cleanupOwnedDir(pluginConf.confOutputDir.get,
+       pluginConf.targets.map(_.confOutputFile(pluginConf.confOutputDir))))
+        needReload = true
     }
     needReload
   }

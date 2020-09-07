@@ -1,5 +1,8 @@
 package com.smule.smgplugins.scrape
 
+import java.io.File
+import java.nio.file.Paths
+
 import com.smule.smg.core.SMGFilter
 import com.smule.smg.monitor.SMGMonNotifyConf
 
@@ -8,7 +11,7 @@ case class SMGScrapeTargetConf(
                                 humanName: String,
                                 command: String,
                                 timeoutSec: Int,
-                                confOutput: String,
+                                private val confOutput: String,
                                 confOutputBackupExt: Option[String],
                                 filter: SMGFilter,
                                 interval: Int,
@@ -20,4 +23,10 @@ case class SMGScrapeTargetConf(
                               ) {
    lazy val inspect: String = s"uid=$uid humanName=$humanName command=$command timeout=$timeoutSec " +
      s"confOutput=$confOutput parentPfId=$parentPfId filter: ${filter.humanText}"
+
+  def confOutputFile(confDir: Option[String]): String = {
+    if (confDir.isDefined && !Paths.get(confOutput).isAbsolute){
+      confDir.get.stripSuffix(File.separator) + File.separator + confOutput
+    } else confOutput
+  }
 }

@@ -1,8 +1,7 @@
 
 scrape:
-# TODO support these two
-#  conf_dir: "/etc/smg/scrape"
-#  conf_dir_owned: true
+#  conf_output_dir: "/etc/smg/scrape.d"
+#  conf_output_dir_owned: true
   targets:
     - uid: local-metrics
       name: Scrape Test

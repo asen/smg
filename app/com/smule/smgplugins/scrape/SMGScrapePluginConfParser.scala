@@ -110,20 +110,24 @@ class SMGScrapePluginConfParser(pluginId: String, confFile: String, log: SMGLogg
     val yamlTopObject: Object = yaml.load(confTxt)
     val pluginConfObj = yobjMap(yamlTopObject)(pluginId)
     if (pluginConfObj == null)
-      return SMGScrapePluginConf(targets = Seq())
+      return SMGScrapePluginConf(targets = Seq(), None, confOutputDirOwned = false)
     val pluginConfMap = yobjMap(pluginConfObj)
-    val autoConfs = if (pluginConfMap.contains("targets")){
+    val targetConfs = if (pluginConfMap.contains("targets")){
       val yamlList = yobjList(pluginConfMap("targets"))
       parseTargetsSeq(yamlList, confFile)
     } else Seq()
-    SMGScrapePluginConf(autoConfs)
+    SMGScrapePluginConf(
+      targetConfs,
+      pluginConfMap.get("conf_output_dir").map(_.toString),
+      pluginConfMap.get("conf_output_dir_owned").exists(_.toString == "true")
+    )
   }
 
   private var myConf: SMGScrapePluginConf = try {
     parseConf()
   } catch { case t: Throwable =>
     log.ex(t, s"SMGScrapeConfParser.init - unexpected exception (assuming empty conf): ${t.getMessage}")
-    SMGScrapePluginConf(targets = Seq())
+    SMGScrapePluginConf(targets = Seq(), confOutputDir = None, confOutputDirOwned = false)
   }
 
   def reload(): Unit = {
