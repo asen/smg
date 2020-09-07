@@ -1,6 +1,6 @@
 package com.smule.smgplugins.scrape
 
-import com.smule.smg.core.{CommandResult, CommandResultCustom, CommandResultListDouble, ParentCommandData, SMGCmdException, SMGFileUtil}
+import com.smule.smg.core._
 import com.smule.smg.plugin.SMGPluginLogger
 
 class SMGScrapeCommands(log: SMGPluginLogger) {
@@ -9,7 +9,7 @@ class SMGScrapeCommands(log: SMGPluginLogger) {
 
   private def parseText(inp: String): CommandResult = {
     val stats  = OpenMetricsStat.parseText(inp, log)
-    val byUid = stats.groupBy(_.normalizedUid).map { t =>
+    val byUid = stats.groupBy(_.safeUid).map { t =>
       if (t._2.lengthCompare(1) > 0) {
         log.warn(s"SMGScrapePlugin.parseText: Non unique normalizedUid: ${t._1} (${t._2.size} entries)")
       }

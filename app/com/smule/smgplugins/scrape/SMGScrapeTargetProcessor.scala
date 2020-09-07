@@ -1,12 +1,10 @@
 package com.smule.smgplugins.scrape
 
 import java.io.File
-import java.nio.file.{CopyOption, Files, Paths, StandardCopyOption}
+import java.nio.file.{Files, Paths, StandardCopyOption}
 
 import com.smule.smg.config.SMGConfigService
-import com.smule.smg.core.{CommandResult, CommandResultListString, SMGCmd, SMGCmdException, SMGFetchException, SMGFileUtil, SMGLoggerApi}
-
-import scala.util.Try
+import com.smule.smg.core._
 
 
 class SMGScrapeTargetProcessor(pluginConf: SMGScrapePluginConf,

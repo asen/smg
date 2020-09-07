@@ -1,5 +1,6 @@
 package com.smule.smgplugins.scrape
 
+import com.smule.smg.config.SMGConfigParser
 import com.smule.smg.core.SMGLoggerApi
 
 import scala.collection.immutable.StringOps
@@ -15,9 +16,12 @@ case class OpenMetricsStat(
                           value: Double,
                           tsms: Option[Long]
                           ) {
-  lazy val normalizedUid: String = name + (if (labels.nonEmpty){
+  private lazy val normalizedUid: String = name + (if (labels.nonEmpty){
     "." + labels.map(t => s"${t._1}.${t._2}").mkString(".")
   } else "")
+
+  lazy val safeUid: String = normalizedUid.replaceAll(
+    "[^" + SMGConfigParser.ALLOWED_UID_CHARS_REGEX_STR + "]", "_")
 
   lazy val title: String = name + (if (labels.nonEmpty) {
     " " + labels.map(t => s"${t._1}=${t._2}").mkString(" ") } else "")

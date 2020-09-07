@@ -1,7 +1,7 @@
 package com.smule.smgplugins.scrape
 
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser}
-import com.smule.smg.core.{SMGCmd, SMGFilter, SMGLoggerApi, SMGPreFetchCmd, SMGRrdAggObject, SMGRrdObject}
+import com.smule.smg.core._
 import com.smule.smg.grapher.SMGraphObject
 
 import scala.collection.mutable.ListBuffer
@@ -11,9 +11,6 @@ class SMGScrapeObjectGen(
                           scrapedMetrics: Seq[OpenMetricsStat],
                           log: SMGLoggerApi
                         ) {
-
-  private def filteredMetrics(): Seq[OpenMetricsStat] = scrapedMetrics // TODO apply filters
-
   private def metaType2RrdType(mt: Option[String]): String = {
      mt.getOrElse("gauge") match {
        case "gauge" => "GAUGE"
@@ -27,6 +24,16 @@ class SMGScrapeObjectGen(
      }
   }
 
+  def processRegexReplaces(ln: String, regexReplaces: Seq[RegexReplaceConf]): String = {
+    var ret = ln
+    regexReplaces.foreach { rr =>
+      if ((rr.filterRegex.isEmpty) || (rr.filterRegexRx.get.findFirstMatchIn(ret).isDefined)){
+        ret = ret.replaceAll(rr.regex, rr.replace)
+      }
+    }
+    ret
+  }
+
   private def processMetaGroup(
                                 grp: Seq[OpenMetricsStat],
                                 idPrefix: String,
@@ -37,8 +44,11 @@ class SMGScrapeObjectGen(
     val retObjects = ListBuffer[SMGRrdObject]()
     val retIxes = ListBuffer[SMGConfIndex]()
     val rrdType = metaType2RrdType(metaStat.metaType)
+
+    val metaKey = metaStat.metaKey.map(k => processRegexReplaces(k, scrapeTargetConf.regexReplaces))
+
     grp.foreach { stat =>
-      val ouid = idPrefix + stat.normalizedUid
+      val ouid = idPrefix + processRegexReplaces(stat.safeUid, scrapeTargetConf.regexReplaces)
       if (!SMGConfigParser.validateOid(ouid)){
         // TODO can do better than this
         log.error(s"SMGScrapeObjectGen: ${scrapeTargetConf.uid}: invalid ouid (ignoring stat): $ouid")
@@ -46,10 +56,10 @@ class SMGScrapeObjectGen(
       } else {
         val varLabel = stat.name.split('_').last
         val varMu = if (rrdType == "GAUGE") "" else s"$varLabel/sec"
-        retObjects += SMGRrdObject(
+        val retObj = SMGRrdObject(
           id = ouid,
           parentIds = parentPfIds,
-          command = SMGCmd(s":scrape get ${stat.normalizedUid}", scrapeTargetConf.timeoutSec),
+          command = SMGCmd(s":scrape get ${stat.safeUid}", scrapeTargetConf.timeoutSec),
           vars = List(Map(
             "label" -> varLabel,
             "mu" -> varMu
@@ -66,14 +76,16 @@ class SMGScrapeObjectGen(
           rrdInitSource = None,
           labels = stat.labels.toMap
         )
+        if (scrapeTargetConf.filter.matches(retObj))
+          retObjects += retObj
       } // valid oid
     }
 
-    if (retObjects.nonEmpty && (metaStat.metaKey.getOrElse("") != "")){
+    if (retObjects.nonEmpty && (metaKey.getOrElse("") != "")){
       retIxes += SMGConfIndex(
-        id = idPrefix + metaStat.metaKey.get,
-        title = metaStat.metaKey.get,
-        flt = SMGFilter.fromPrefixLocal(idPrefix + metaStat.metaKey.get),
+        id = idPrefix + metaKey.get,
+        title = metaKey.get,
+        flt = SMGFilter.fromPrefixLocal(idPrefix + metaKey.get),
         cols = None,
         rows = None,
         aggOp = None,
@@ -156,10 +168,9 @@ class SMGScrapeObjectGen(
     }
 
     // group metrics by metaName but try to preserve order
-    val src = filteredMetrics()
     val curGroup = ListBuffer[OpenMetricsStat]()
     var curMetaKey = ""
-    src.foreach { stat =>
+    scrapedMetrics.foreach { stat =>
       if (curMetaKey != stat.metaKey.getOrElse("")) {
         if (curGroup.nonEmpty){
           myProcessMetaGroup(curGroup)

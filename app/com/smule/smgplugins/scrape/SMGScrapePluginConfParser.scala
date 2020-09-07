@@ -50,7 +50,19 @@ class SMGScrapePluginConfParser(pluginId: String, confFile: String, log: SMGLogg
         parentPfId  = ymap.get("pre_fetch").map(_.toString),
         parentIndexId = ymap.get("parent_index").map(_.toString),
         idPrefix = ymap.get("id_prefix").map(_.toString),
-        notifyConf = notifyConf
+        notifyConf = notifyConf,
+        regexReplaces = ymap.get("regex_replaces").map { yo: Object =>
+          yobjList(yo).flatMap { o =>
+            val m = yobjMap(o)
+            if (m.contains("regex") && m.contains("replace"))
+              Some(RegexReplaceConf(
+                regex = m("regex").toString,
+                replace = m("replace").toString,
+                filterRegex = m.get("filterRegex").map(_.toString)
+              ))
+            else None
+          }
+        }.getOrElse(Seq())
       )
     )
   }

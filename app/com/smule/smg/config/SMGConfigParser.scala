@@ -28,13 +28,15 @@ object SMGConfigParser {
   val defaultInterval: Int = SMGConfigParser.defaultInterval // seconds
   val defaultTimeout: Int = SMGConfigParser.defaultTimeout  // seconds
 
-  def validateOid(oid: String): Boolean = oid.matches("^[\\w\\._-]+$")
+  val ALLOWED_UID_CHARS_REGEX_STR = "\\w\\._-"
+
+  def validateOid(oid: String): Boolean = oid.matches("^[" + ALLOWED_UID_CHARS_REGEX_STR + "]+$")
 
   private def getListOfFiles(dir: String, matcher: PathMatcher, log: SMGLoggerApi):List[File] = {
     val d = new File(dir)
     if (d.exists && d.isDirectory) {
       d.listFiles.filter{ (f:File) =>
-        //        log.info(f.toPath);
+//        log.info(f.toPath);
         f.isFile && matcher.matches(f.toPath)}.toList.sortBy(f => f.toPath)
     } else {
       log.warn("SMGConfigServiceImpl.getListOfFiles: " + dir + " : glob did not match anything")

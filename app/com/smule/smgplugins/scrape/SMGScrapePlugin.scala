@@ -1,7 +1,7 @@
 package com.smule.smgplugins.scrape
 
 import com.smule.smg.config.SMGConfigService
-import com.smule.smg.core.{CommandResult, CommandResultCustom, CommandResultListDouble, CommandResultListString, ParentCommandData, SMGCmdException, SMGFileUtil}
+import com.smule.smg.core.{CommandResult, ParentCommandData}
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 
 import scala.concurrent.{ExecutionContext, Future}

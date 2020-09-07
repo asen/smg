@@ -1,18 +1,24 @@
 
 scrape:
+# TODO support these two
+#  conf_dir: "/etc/smg/scrape"
+#  conf_dir_owned: true
   targets:
-    - uid: test
-      name: Test
-      conf_output: /etc/smg/cust/test.yml
+    - uid: local-metrics
+      name: Scrape Test
+      conf_output: /etc/smg/cust/local-metrics.yml
       conf_output_backup_ext: backup
-#      command: curl http://skube-int.oak.smle.co:31025/metrics
       command: cat test-data/metrics.txt
+      interval: 60
       timeout: 30
       filter:
-        rxx: "^prometheus"
-      interval: 60
+        rxx: "^scrape-test.local-metrics.prometheus"
+      regex_replaces:
+        - filterRegex: "^go_gc"
+          regex: "^go_(gc)_(duration)"
+          replace: "go_$2_$1"
       pre_fetch: host_localhost_up
-      parent_index: localhost
-      id_prefix: my_scrape.
+#      parent_index: localhost
+      id_prefix: scrape-test.
       notify-unkn: "mail-asen"
-    - include: /etc/smg/scrape-targets.yml
+#    - include: /etc/smg/scrape-targets.yml

@@ -10,12 +10,13 @@ case class SMGScrapeTargetConf(
                                 timeoutSec: Int,
                                 confOutput: String,
                                 confOutputBackupExt: Option[String],
-                                filter: SMGFilter, // XXX somewhat misusing that as not all properties are relevant
+                                filter: SMGFilter,
                                 interval: Int,
                                 parentPfId: Option[String],
                                 parentIndexId: Option[String],
                                 idPrefix: Option[String],
-                                notifyConf: Option[SMGMonNotifyConf]
+                                notifyConf: Option[SMGMonNotifyConf],
+                                regexReplaces: Seq[RegexReplaceConf]
                               ) {
    lazy val inspect: String = s"uid=$uid humanName=$humanName command=$command timeout=$timeoutSec " +
      s"confOutput=$confOutput parentPfId=$parentPfId filter: ${filter.humanText}"
