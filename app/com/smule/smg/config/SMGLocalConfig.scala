@@ -9,6 +9,7 @@ import com.smule.smg.monitor.{SMGMonAlertConfObj, SMGMonNotifyCmd, SMGMonNotifyC
 import com.smule.smg.remote.SMGRemote
 import com.smule.smg.rrd.{SMGRrd, SMGRrdConfig}
 
+import scala.collection.immutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.stm.CommitBarrier.Timeout
@@ -82,12 +83,15 @@ case class SMGLocalConfig(
 
   val viewObjectsByUpdateId: Map[String, Seq[SMGObjectView]] = viewObjects.groupBy(o => o.refObj.map(_.id).getOrElse(o.id))
 
-  private def getUpdateObjectsFromViewObjects(ovs: Seq[SMGObjectView]) = ovs.filter(ov => ov.refObj.isDefined || ov.isInstanceOf[SMGObjectUpdate]).map {
-    case update: SMGObjectUpdate => update
-    case ov => ov.refObj.get
-  }.distinct
+  private def getUpdateObjectsFromViewObjects(ovs: Seq[SMGObjectView]): Seq[SMGObjectUpdate] =
+    ovs.filter(ov => ov.refObj.isDefined || ov.isInstanceOf[SMGObjectUpdate]).map {
+      case update: SMGObjectUpdate => update
+      case ov => ov.refObj.get
+    }.distinct
 
   private val pluginsUpdateObjects = pluginObjects.flatMap(t => getUpdateObjectsFromViewObjects(t._2))
+
+  lazy val pluginsUpdateObjectsSize: Int = pluginsUpdateObjects.size
 
   val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++ rrdAggObjects ++ pluginsUpdateObjects
 

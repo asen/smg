@@ -1,7 +1,9 @@
 package com.smule.smg.core
 
+import com.smule.smg.core.SMGStagedRunCounter.IncResult
 import com.smule.smg.rrd.SMGRrd
 
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
 /**
@@ -42,14 +44,14 @@ class SMGStagedRunCounter(interval: Int, stageDefs: Array[SMGRunStageDef]) {
     * @return - true if a stage was complete (including the last stage which means the run completed)
     *         false otherwise. Note that from all callers only one is guaranteed to get true
     */
-  protected def inc(): Boolean = {
+  protected def inc(): IncResult = {
     this.synchronized {
       if (curStage < numStages) {
         curPerStage(curStage) += 1
         val newCur = curPerStage(curStage)
         val stageMax = stageDefs(curStage).maxCount
         if ( newCur < stageMax) {
-          false
+          IncResult(stageCompleted = false)
         } else {
           if (newCur > stageMax) {
             // this should never happen
@@ -59,12 +61,12 @@ class SMGStagedRunCounter(interval: Int, stageDefs: Array[SMGRunStageDef]) {
           // stage completed
           stageDefs(curStage).proc()
           curStage += 1
-          true
+          IncResult(stageCompleted = true, runCompleted = curStage == numStages)
         }
-      } else {
+      } else {  // this should never happen
         log.error(s"SMGStagedRunCounter(interval=$interval, stages=[${stageDefs.map(_.maxCount).mkString(",")}]): " +
           s"current stage $curStage exceded max (${numStages - 1})")
-        true
+        IncResult(stageCompleted = true, runCompleted = true)
       }
     }
   }
@@ -88,9 +90,14 @@ class SMGStagedRunCounter(interval: Int, stageDefs: Array[SMGRunStageDef]) {
   */
 object SMGStagedRunCounter {
 
+  case class IncResult(stageCompleted: Boolean, runCompleted: Boolean = false)
+
   private val log = SMGLogger
 
   private val totalsPerInterval = mutable.Map[Int, SMGStagedRunCounter]()
+
+  private val startTimePerInterval = TrieMap[Int,Long]()
+  private val runTimePerInterval = TrieMap[Int,Long]()
 
   /**
     * Reset the counter for given interval using the supplied stage defs. The reset will fail if the
@@ -106,15 +113,20 @@ object SMGStagedRunCounter {
       val prev = totalsPerInterval.get(interval)
       if (prev.isEmpty || prev.get.checkCompleted) {
         totalsPerInterval(interval) = new SMGStagedRunCounter(interval, stageDefs)
+        startTimePerInterval(interval) = System.currentTimeMillis()
         true
       } else { // prev is defined and not done
         val tsDiff = SMGRrd.tssNow - prev.get.resetTss
-        val maxTsDiff = 5 * interval
+        val maxTsDiff = 10 * interval
         if ( tsDiff > maxTsDiff) {
           log.error(s"SMGStagedRunCounter.resetInterval(interval=$interval): " +
             s"Reset did not succeed for $tsDiff seconds (max=$maxTsDiff, prev resetTss=${prev.get.resetTss}): " +
             "forcing reset")
           totalsPerInterval(interval) = new SMGStagedRunCounter(interval, stageDefs)
+          val now = System.currentTimeMillis()
+          if (startTimePerInterval.contains(interval))
+            runTimePerInterval(interval) = startTimePerInterval(interval) - now
+          startTimePerInterval(interval) = now
           true
         } else { // "normal" overlap
           false
@@ -131,6 +143,12 @@ object SMGStagedRunCounter {
     */
 
   def incIntervalCount(interval: Int): Boolean = {
-    totalsPerInterval(interval).inc()
+    val ret = totalsPerInterval(interval).inc()
+    if ((ret.runCompleted) && (startTimePerInterval.contains(interval))){
+      runTimePerInterval(interval) = System.currentTimeMillis() - startTimePerInterval(interval)
+    }
+    ret.stageCompleted
   }
+
+  def getLastRunTimesPerInterval: Map[Int, Long] = runTimePerInterval.toMap
 }

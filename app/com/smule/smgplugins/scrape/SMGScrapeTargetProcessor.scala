@@ -5,6 +5,7 @@ import java.nio.file.{Files, Paths, StandardCopyOption}
 
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core._
+import com.smule.smg.openmetrics.OpenMetricsStat
 
 
 class SMGScrapeTargetProcessor(pluginConf: SMGScrapePluginConf,

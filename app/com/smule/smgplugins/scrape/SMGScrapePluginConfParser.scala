@@ -1,5 +1,7 @@
 package com.smule.smgplugins.scrape
 
+import java.io.File
+
 import com.smule.smg.config.SMGConfigParser
 import com.smule.smg.core.{SMGFileUtil, SMGFilter, SMGLoggerApi}
 import com.smule.smg.monitor.{SMGMonAlertConfSource, SMGMonNotifyConf}
@@ -116,10 +118,17 @@ class SMGScrapePluginConfParser(pluginId: String, confFile: String, log: SMGLogg
       val yamlList = yobjList(pluginConfMap("targets"))
       parseTargetsSeq(yamlList, confFile)
     } else Seq()
+    val confOutputDir = pluginConfMap.get("conf_output_dir").map(_.toString)
+    val confOutputDirOwned = pluginConfMap.get("conf_output_dir_owned").exists(_.toString == "true")
+    if (confOutputDir.isDefined && confOutputDirOwned){
+      val dirFile = new File(confOutputDir.get)
+      if (!dirFile.exists())
+        dirFile.mkdirs() // this would throw if there is fs/permissions issue and reject the conf
+    }
     SMGScrapePluginConf(
       targetConfs,
-      pluginConfMap.get("conf_output_dir").map(_.toString),
-      pluginConfMap.get("conf_output_dir_owned").exists(_.toString == "true")
+      confOutputDir,
+      confOutputDirOwned
     )
   }
 

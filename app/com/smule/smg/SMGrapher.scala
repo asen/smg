@@ -10,14 +10,17 @@ import akka.util.Timeout
 import com.smule.smg.config.{SMGAutoIndex, SMGConfigService}
 import com.smule.smg.core._
 import com.smule.smg.grapher._
+import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.{SMGRrdFetch, SMGRrdFetchAgg, SMGRrdFetchParams, SMGRrdRow}
 import com.smule.smg.search.SMGSearchCache
 import javax.inject.{Inject, Singleton}
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.Try
 
 
 /**
@@ -558,5 +561,84 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
         byRemote.map { t => SMGImageViewsGroup(t._1 :: dg.levels, t._2) }
       }
     }
+  }
+
+  private def myOpenMetricsStat(name: String, help: String, value: Double,
+                                typ: String = "gauge",
+                                labels: Seq[(String,String)] = Seq(),
+                                tsms: Option[Long] = None
+                               ): OpenMetricsStat = {
+    OpenMetricsStat(
+      metaKey = Some(name),
+      metaType = Some(typ),
+      metaHelp = Some(help),
+      name = name,
+      labels = labels,
+      value = value,
+      tsms = tsms
+    )
+  }
+
+  def getMetrics: Seq[OpenMetricsStat] = {
+    val ret = ListBuffer[OpenMetricsStat]()
+    val versBuildArr = configSvc.smgVersionStr.split("-")
+    val smgVers = Try(versBuildArr(0).replaceAll("[^\\d\\.]", "").toDouble).getOrElse(0.0)
+    val buildNum = Try(versBuildArr.last.toInt).getOrElse(0)
+
+    ret += myOpenMetricsStat(
+      name = "smg_vers",
+      help = "SMG version",
+      labels = Seq(("version","number")),
+      value = smgVers)
+
+    ret += myOpenMetricsStat(
+      name = "smg_vers",
+      help = "SMG version",
+      labels = Seq(("build","number")),
+      value = buildNum)
+
+    val config = configSvc.config
+    ret += myOpenMetricsStat(
+      name = "smg_config_objects",
+      help = "SMG configured objects",
+      value = config.rrdObjects.size,
+      labels = List(("type", "rrd"))
+    )
+    ret += myOpenMetricsStat(
+      name = "smg_config_objects",
+      help = "SMG configured objects",
+      value = config.rrdAggObjects.size,
+      labels = List(("type", "agg"))
+    )
+    ret += myOpenMetricsStat(
+      name = "smg_config_objects",
+      help = "SMG configured objects",
+      value = config.pluginsUpdateObjectsSize,
+      labels = List(("type", "plugin"))
+    )
+
+    val cmdTreesByInterval = config.getFetchCommandsTreesByInterval
+    cmdTreesByInterval.keys.toSeq.sorted.foreach { intvl =>
+      val intvlTrees =  cmdTreesByInterval(intvl)
+      val numNodes = intvlTrees.map(_.size).sum
+      ret += myOpenMetricsStat(
+        name = "smg_tree_interval_commands",
+        help = "Configured SMG commands per interval",
+        value = numNodes,
+        labels = List(("interval", intvl.toString))
+      )
+    }
+
+    val runTimesByInterval = SMGStagedRunCounter.getLastRunTimesPerInterval
+    runTimesByInterval.keys.toSeq.sorted.foreach { intvl =>
+      val lastRuntImeMs =  runTimesByInterval(intvl)
+      ret += myOpenMetricsStat(
+        name = "smg_interval_run_time_ms",
+        help = "Total run time per interval",
+        value = lastRuntImeMs,
+        labels = List(("interval", intvl.toString))
+      )
+    }
+    ret.toList
   }
 }

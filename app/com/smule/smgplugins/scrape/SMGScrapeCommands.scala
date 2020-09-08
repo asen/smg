@@ -1,6 +1,7 @@
 package com.smule.smgplugins.scrape
 
 import com.smule.smg.core._
+import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smg.plugin.SMGPluginLogger
 
 class SMGScrapeCommands(log: SMGPluginLogger) {

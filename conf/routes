@@ -54,6 +54,9 @@ GET     /inspect/:id          controllers.Application.inspect(id: String)
 GET     /config/status        controllers.Application.configStatus()
 GET     /run/times            controllers.Application.commandRunTimes(lmt: Int ?= 500)
 
+# Prometheus scrape metrics
+GET     /metrics              controllers.Application.metrics
+
 
 # JSON response for JS UI
 GET     /json/periods         controllers.Application.jsonPeriods()

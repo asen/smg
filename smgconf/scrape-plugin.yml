@@ -1,23 +1,24 @@
 
 scrape:
-#  conf_output_dir: "/etc/smg/scrape.d"
-#  conf_output_dir_owned: true
+  # this dir needs to be included by /etc/smg/config.yml for this to work
+  conf_output_dir: "/etc/smg/scrape.d"
+  conf_output_dir_owned: true
   targets:
-    - uid: local-metrics
-      name: Scrape Test
-      conf_output: /etc/smg/cust/local-metrics.yml
+    - uid: smg-metrics
+      name: Local SMG Metrics
+      conf_output: local-metrics.yml
       conf_output_backup_ext: backup
-      command: cat test-data/metrics.txt
+      command: curl localhost:9000/metrics
       interval: 60
       timeout: 30
-      filter:
-        rxx: "^scrape-test.local-metrics.prometheus"
-      regex_replaces:
-        - filterRegex: "^go_gc"
-          regex: "^go_(gc)_(duration)"
-          replace: "go_$2_$1"
-      pre_fetch: host_localhost_up
+#      filter:
+#        rxx: "^scrape-test.local-metrics.prometheus"
+#      regex_replaces:
+#        - filterRegex: "^go_gc"
+#          regex: "^go_(gc)_(duration)"
+#          replace: "go_$2_$1"
+#      pre_fetch: host_localhost_up
 #      parent_index: localhost
-      id_prefix: scrape-test.
-      notify-unkn: "mail-asen"
-#    - include: /etc/smg/scrape-targets.yml
+#      id_prefix: scrape-test.
+#      notify-unkn: "mail-asen"
+    - include: /etc/smg/scrape-targets.yml

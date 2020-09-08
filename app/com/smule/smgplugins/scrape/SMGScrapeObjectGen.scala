@@ -3,6 +3,7 @@ package com.smule.smgplugins.scrape
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser}
 import com.smule.smg.core._
 import com.smule.smg.grapher.SMGraphObject
+import com.smule.smg.openmetrics.OpenMetricsStat
 
 import scala.collection.mutable.ListBuffer
 

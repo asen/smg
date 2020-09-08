@@ -9,6 +9,7 @@ import com.smule.smg.config.{SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._
 import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView, SMGImageViewsGroup}
 import com.smule.smg.monitor._
+import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.{SMGRrd, SMGRrdFetchParams, SMGRrdRow}
 import javax.inject.{Inject, Singleton}
@@ -653,6 +654,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
       (id, tmms, retOpt)
     }.filter(_._3.isDefined).map(t => (t._1, t._2, t._3.get))
     Ok(views.html.inspectSlowCommands(ret, myMap.size))
+  }
+
+  def metrics : Action[AnyContent] = Action {
+    val stats = smg.getMetrics
+    Ok(OpenMetricsStat.dumpStats(stats).mkString("\n") + "\n")
   }
 
   def pluginIndex(pluginId: String): Action[AnyContent] = Action { implicit request =>

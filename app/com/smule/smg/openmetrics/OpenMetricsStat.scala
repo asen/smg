@@ -1,4 +1,4 @@
-package com.smule.smgplugins.scrape
+package com.smule.smg.openmetrics
 
 import com.smule.smg.config.SMGConfigParser
 import com.smule.smg.core.SMGLoggerApi
@@ -163,6 +163,33 @@ object OpenMetricsStat {
           if (pOpt.isDefined) ret += pOpt.get
         }
       } // else - empty line ... TODO - should we reset curMetaKey?
+    }
+    ret.toList
+  }
+
+  def dumpStats(stats: Seq[OpenMetricsStat]): List[String] = {
+    val ret = ListBuffer[String]()
+    var curMetaKey: Option[String] = None
+    stats.foreach { stat =>
+      if (stat.metaKey != curMetaKey) {
+        if (stat.metaKey.isDefined) {
+          if (stat.metaHelp.isDefined)
+            ret += s"# HELP ${stat.metaKey.get} ${stat.metaHelp.get}"
+          if (stat.metaType.isDefined)
+            ret += s"# TYPE ${stat.metaKey.get} ${stat.metaType.get}"
+        }
+      }
+      curMetaKey = stat.metaKey
+      val labelsStr = if (stat.labels.isEmpty) "" else {
+        s"${START_LABELS}" + stat.labels.map { case (k, v) =>
+          k + "=\"" + v + "\""
+        }.mkString(",") + END_LABELS
+      }
+      val tsStr = if (stat.tsms.isEmpty) "" else {
+        " " + stat.tsms.get.toString
+      }
+      val statStr = stat.name + labelsStr + s" ${stat.value}" + tsStr
+      ret += statStr
     }
     ret.toList
   }
