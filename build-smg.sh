@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+CLEAN=false
+if [ "$1" == "--clean" ] ; then
+    CLEAN=true
+    shift
+fi
+
 NOPKG=false
 if [ "$1" == "--no-pkg" ] ; then
     NOPKG=true
@@ -40,6 +46,10 @@ cat $BNFILE
 
 
 rm -rf public/smg/*.png
+
+if [ "$CLEAN" == "true" ] ; then
+  sbt clean
+fi
 
 sbt stage
 
