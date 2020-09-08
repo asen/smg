@@ -17,6 +17,7 @@ RUN echo '- $monlog_dir: "/opt/smg/data/monlog"' >> /etc/smg/config.yml
 RUN echo '- $monstate_dir: "/opt/smg/data/monstate"' >> /etc/smg/config.yml
 RUN echo '' >> /etc/smg/config.yml
 RUN echo '- $include: "/etc/smg/conf.d/*.ya?ml"' >> /etc/smg/config.yml
+RUN echo '- $include: "/etc/smg/scrape-private.d/*.ya?ml"' >> /etc/smg/config.yml
 RUN echo '' >> /etc/smg/config.yml
 
 VOLUME [ "/etc/smg/conf.d" ]
