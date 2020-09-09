@@ -4,7 +4,7 @@ import java.io.{File, FileWriter}
 
 import javax.inject.{Inject, Singleton}
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsValue, Json, Writes}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -656,13 +656,20 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   def saveStateToDisk(): Unit = {
     try {
       log.info("SMGMonitor.saveStateToDisk BEGIN")
-
+      try {
+        new File(monStateDir).mkdirs()
+      } catch {
+        case t: Throwable => {
+          log.ex(t, s"Unable to create monstate_dir: $monStateDir")
+        }
+      }
       val notifyStatesStr = notifSvc.serializeState().toString()
       val fw3 = new FileWriter(notifyStatesFname, false)
       try {
         fw3.write(notifyStatesStr)
       } finally fw3.close()
-      implicit val stickySilenceWrites = SMGMonStickySilence.jsWrites
+      implicit val stickySilenceWrites: Writes[SMGMonStickySilence] =
+        SMGMonStickySilence.jsWrites
       val stickySilencesStr = Json.toJson(localStickySilences).toString()
       val fw4 = new FileWriter(stickySilencesFname, false)
       try {
