@@ -39,7 +39,7 @@ object SMGConfigParser {
 //        log.info(f.toPath);
         f.isFile && matcher.matches(f.toPath)}.toList.sortBy(f => f.toPath)
     } else {
-      log.warn("SMGConfigServiceImpl.getListOfFiles: " + dir + " : glob did not match anything")
+      log.warn("SMGConfigParser.getListOfFiles: " + dir + " - not a directory")
       List[File]()
     }
   }

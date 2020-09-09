@@ -19,10 +19,12 @@ case class SMGScrapeTargetConf(
                                 parentIndexId: Option[String],
                                 idPrefix: Option[String],
                                 notifyConf: Option[SMGMonNotifyConf],
-                                regexReplaces: Seq[RegexReplaceConf]
+                                regexReplaces: Seq[RegexReplaceConf],
+                                labelsInUids: Boolean
                               ) {
-   lazy val inspect: String = s"uid=$uid humanName=$humanName command=$command timeout=$timeoutSec " +
-     s"confOutput=$confOutput parentPfId=$parentPfId filter: ${filter.humanText}"
+   lazy val inspect: String = s"uid=$uid humanName=$humanName interval=$interval command=$command " +
+     s"timeout=$timeoutSec confOutput=$confOutput parentPfId=$parentPfId labelsInUids=$labelsInUids " +
+     s"filter: ${filter.humanText}"
 
   def confOutputFile(confDir: Option[String]): String = {
     if (confDir.isDefined && !Paths.get(confOutput).isAbsolute){

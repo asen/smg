@@ -64,7 +64,8 @@ class SMGScrapePluginConfParser(pluginId: String, confFile: String, log: SMGLogg
               ))
             else None
           }
-        }.getOrElse(Seq())
+        }.getOrElse(Seq()),
+        labelsInUids = ymap.getOrElse("labels_in_uids", "false").toString == "true"
       )
     )
   }

@@ -11,10 +11,13 @@ class SMGKubeClientSpec extends Specification {
   "SMGKubeClient" should {
     "work" in {
       val cli = new SMGKubeClient(log)
-      cli.listPods().foreach { s =>
-        log.info(s"POD: ${s}")
+//      cli.listPods().foreach { s =>
+//        log.info(s"POD: ${s}")
+//      }
+//      cli.topNodes()
+      cli.listNodes().foreach { s =>
+        log.info(s"NODE: ${s}")
       }
-      cli.topNodes()
       1 equals(1)
     }
   }

@@ -49,7 +49,7 @@ class SMGScrapeObjectGen(
     val metaKey = metaStat.metaKey.map(k => processRegexReplaces(k, scrapeTargetConf.regexReplaces))
 
     grp.foreach { stat =>
-      val ouid = idPrefix + processRegexReplaces(stat.safeUid, scrapeTargetConf.regexReplaces)
+      val ouid = idPrefix + processRegexReplaces(stat.smgUid, scrapeTargetConf.regexReplaces)
       if (!SMGConfigParser.validateOid(ouid)){
         // TODO can do better than this
         log.error(s"SMGScrapeObjectGen: ${scrapeTargetConf.uid}: invalid ouid (ignoring stat): $ouid")
@@ -60,7 +60,7 @@ class SMGScrapeObjectGen(
         val retObj = SMGRrdObject(
           id = ouid,
           parentIds = parentPfIds,
-          command = SMGCmd(s":scrape get ${stat.safeUid}", scrapeTargetConf.timeoutSec),
+          command = SMGCmd(s":scrape get ${stat.smgUid}", scrapeTargetConf.timeoutSec),
           vars = List(Map(
             "label" -> varLabel,
             "mu" -> varMu
@@ -130,10 +130,14 @@ class SMGScrapeObjectGen(
     preFetchIds = scrapeFetchPf.id :: preFetchIds
 
     // another prefetch to parse them
+    val labelUidOpt = if (scrapeTargetConf.labelsInUids)
+      " " + SMGScrapeCommands.PARSE_OPTION_LABEL_UIDS
+    else
+      ""
     val scrapeParsePfId = idPrefix + "scrape.parse"
     val scrapeParsePf = SMGPreFetchCmd(
       id = scrapeParsePfId,
-      command = SMGCmd(":scrape parse", scrapeTargetConf.timeoutSec),
+      command = SMGCmd(s":scrape parse$labelUidOpt", scrapeTargetConf.timeoutSec),
       preFetch = Some(scrapeFetchPfId),
       ignoreTs = false,
       childConc = 1,

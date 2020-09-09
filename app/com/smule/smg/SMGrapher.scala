@@ -569,13 +569,15 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
                                 tsms: Option[Long] = None
                                ): OpenMetricsStat = {
     OpenMetricsStat(
+      smgUid = OpenMetricsStat.labelUid(name, labels),
       metaKey = Some(name),
       metaType = Some(typ),
       metaHelp = Some(help),
       name = name,
       labels = labels,
       value = value,
-      tsms = tsms
+      tsms = tsms,
+      groupIndex = 0
     )
   }
 

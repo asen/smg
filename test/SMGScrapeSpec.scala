@@ -34,7 +34,7 @@ class SMGScrapeSpec extends Specification {
     "work" in {
       val parser = new SMGScrapePluginConfParser("scrape", "smgconf/scrape-plugin.yml", log)
       val txt = SMGFileUtil.getFileContents("test-data/metrics.txt")
-      val parsed = OpenMetricsStat.parseText(txt, log)
+      val parsed = OpenMetricsStat.parseText(txt, log, labelsInUid = false)
       val ogen = new SMGScrapeObjectGen(parser.conf.targets.head, parsed, log)
       val res = ogen.generateSMGObjects()
 

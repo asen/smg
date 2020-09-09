@@ -8,21 +8,16 @@ import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 
 case class OpenMetricsStat(
+                          smgUid: String,
                           metaKey: Option[String],
                           metaType: Option[String],
                           metaHelp: Option[String],
                           name: String,
                           labels: Seq[(String, String)],
                           value: Double,
-                          tsms: Option[Long]
+                          tsms: Option[Long],
+                          groupIndex: Int
                           ) {
-  private lazy val normalizedUid: String = name + (if (labels.nonEmpty){
-    "." + labels.map(t => s"${t._1}.${t._2}").mkString(".")
-  } else "")
-
-  lazy val safeUid: String = normalizedUid.replaceAll(
-    "[^" + SMGConfigParser.ALLOWED_UID_CHARS_REGEX_STR + "]", "_")
-
   lazy val title: String = name + (if (labels.nonEmpty) {
     " " + labels.map(t => s"${t._1}=${t._2}").mkString(" ") } else "")
 }
@@ -32,6 +27,20 @@ object OpenMetricsStat {
   private val START_LABELS = '{'
   private val END_LABELS = '}'
   private val END_OF_LABEL_REGEX: Regex = "[\\s,}]".r
+
+  private def normalizedUid(name: String, labels: Seq[(String, String)]): String =
+    name + (if (labels.nonEmpty){
+        "." + labels.map(t => s"${t._1}.${t._2}").mkString(".")
+      } else "")
+
+  private val replaceRegexStr = "[^" + SMGConfigParser.ALLOWED_UID_CHARS_REGEX_STR + "]"
+
+  def labelUid(name: String, labels: Seq[(String, String)]): String =
+    normalizedUid(name, labels).replaceAll(replaceRegexStr, "_")
+
+  def groupIndexUid(name: String, groupIndex: Int): String =
+    name.replaceAll(replaceRegexStr, "_") + s"_$groupIndex"
+
 
   // extract a quoted value out of inp and return it together with the remaining string
   // assumes inpiut starts with a single or double quote
@@ -81,7 +90,9 @@ object OpenMetricsStat {
                          metaKey: Option[String],
                          metaType: Option[String],
                          metaHelp: Option[String],
-                         log: SMGLoggerApi
+                         log: SMGLoggerApi,
+                         groupIndex: Int,
+                         labelsInUid: Boolean
                        ): Option[OpenMetricsStat] = {
     try {
       val hasLabels = ln.contains(START_LABELS)
@@ -104,15 +115,24 @@ object OpenMetricsStat {
       }
       val value = arr(0).toDouble
       val tsms = arr.lift(1).map(_.toLong)
+      val smgUid = if (!hasLabels) name else {
+        if (labelsInUid){
+          OpenMetricsStat.labelUid(name, labels)
+        } else {
+          OpenMetricsStat.groupIndexUid(name, groupIndex)
+        }
+      }
       Some(
         OpenMetricsStat(
+          smgUid = smgUid,
           metaKey = metaKey,
           metaType = metaType,
           metaHelp = metaHelp,
           name = name,
           labels = labels,
           value = value,
-          tsms = tsms
+          tsms = tsms,
+          groupIndex = groupIndex
         )
       )
     } catch { case t: Throwable =>
@@ -121,11 +141,12 @@ object OpenMetricsStat {
     }
   }
 
-  def parseText(inp: String, log: SMGLoggerApi): Seq[OpenMetricsStat] = {
+  def parseText(inp: String, log: SMGLoggerApi, labelsInUid: Boolean): Seq[OpenMetricsStat] = {
     val ret = ListBuffer[OpenMetricsStat]()
     var curMetaKey: Option[String] = None
     var curMetaType: Option[String] = None
     var curMetaHelp: Option[String] = None
+    var groupIndex = 0
     val inpRef: StringOps = inp // XXX workaround for Java 11 String.lines() overriding Scala
     inpRef.lines.foreach { rawLine =>
       val ln = rawLine.strip()
@@ -142,6 +163,7 @@ object OpenMetricsStat {
                 if (!curMetaKey.contains(metaKey)) {
                   curMetaHelp = None
                   curMetaType = None
+                  groupIndex = 0
                 }
                 curMetaKey = Some(metaKey)
                 val metaData = arr1(1)
@@ -157,10 +179,14 @@ object OpenMetricsStat {
           } catch { case t: Throwable =>
             log.ex(t, s"Unexpected error processing comment line: $ln")
             curMetaKey = None
+            groupIndex = 0
           }
         } else { // parse line
-          val pOpt = parseLine(ln, curMetaKey, curMetaType, curMetaHelp, log)
-          if (pOpt.isDefined) ret += pOpt.get
+          val pOpt = parseLine(ln, curMetaKey, curMetaType, curMetaHelp, log, groupIndex, labelsInUid)
+          if (pOpt.isDefined) {
+            ret += pOpt.get
+            groupIndex += 1
+          }
         }
       } // else - empty line ... TODO - should we reset curMetaKey?
     }

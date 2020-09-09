@@ -4,13 +4,16 @@ import com.smule.smg.core._
 import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smg.plugin.SMGPluginLogger
 
+object SMGScrapeCommands {
+  val VALID_COMMANDS = Set("fetch", "parse", "get")
+  val PARSE_OPTION_LABEL_UIDS = ":lbluid"
+}
+
 class SMGScrapeCommands(log: SMGPluginLogger) {
 
-  private val VALID_COMMANDS = Set("fetch", "parse", "get")
-
-  private def parseText(inp: String): CommandResult = {
-    val stats  = OpenMetricsStat.parseText(inp, log)
-    val byUid = stats.groupBy(_.safeUid).map { t =>
+  private def parseText(inp: String, labelUid: Boolean): CommandResult = {
+    val stats  = OpenMetricsStat.parseText(inp, log, labelsInUid = labelUid)
+    val byUid = stats.groupBy(_.smgUid).map { t =>
       if (t._2.lengthCompare(1) > 0) {
         log.warn(s"SMGScrapePlugin.parseText: Non unique normalizedUid: ${t._1} (${t._2.size} entries)")
       }
@@ -33,20 +36,26 @@ class SMGScrapeCommands(log: SMGPluginLogger) {
   private def commandParse(paramStr: String,
                           timeoutSec: Int,
                           parentData: Option[ParentCommandData]): CommandResult = {
-    val dataTxt = if ((paramStr == "") || (paramStr == "-")){
+    var myParamStr = paramStr
+    var labelUids: Boolean = false
+    if (myParamStr.startsWith(SMGScrapeCommands.PARSE_OPTION_LABEL_UIDS)){
+      labelUids = true
+      myParamStr = myParamStr.stripPrefix(SMGScrapeCommands.PARSE_OPTION_LABEL_UIDS).stripLeading()
+    }
+    val dataTxt = if ((myParamStr == "") || (myParamStr == "-")){
       // expecting data from parent
       if (parentData.isEmpty)
-        throwOnError("parse", paramStr, timeoutSec, "Did not get parentData to parse")
+        throwOnError("parse", myParamStr, timeoutSec, "Did not get parentData to parse")
       parentData.get.res.asStr
     } else {
       try {
-        SMGFileUtil.getFileContents(paramStr.strip())
+        SMGFileUtil.getFileContents(myParamStr.strip())
       } catch { case t: Throwable =>
-        throwOnError("parse", paramStr, timeoutSec, s"Could not read file: $paramStr: ${t.getMessage}")
+        throwOnError("parse", paramStr, timeoutSec, s"Could not read file: $myParamStr: ${t.getMessage}")
       }
     }
     try {
-      parseText(dataTxt)
+      parseText(dataTxt, labelUids)
     } catch { case t: Throwable =>
       throwOnError("parse", paramStr, timeoutSec,
         s"Unexpected OpenMetrics parse error: ${t.getClass.getName}: ${t.getMessage}")
@@ -75,7 +84,7 @@ class SMGScrapeCommands(log: SMGPluginLogger) {
                             parentData: Option[ParentCommandData]): CommandResult = {
     val arr = cmd.split("\\s+", 2)
     val action = arr(0)
-    if (!VALID_COMMANDS.contains(action)){
+    if (!SMGScrapeCommands.VALID_COMMANDS.contains(action)){
       throw new SMGCmdException(cmd, timeoutSec, -1, "", s"Invalid command action: ${action}")
     }
     val paramStr = arr.lift(1).getOrElse("")
