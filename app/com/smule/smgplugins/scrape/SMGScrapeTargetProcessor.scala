@@ -130,12 +130,13 @@ class SMGScrapeTargetProcessor(pluginConf: SMGScrapePluginConf,
     // may consider async processing (via an Actor in the future)
     var needReload: Boolean = false
     pluginConf.targets.foreach { targetConf =>
-      log.info(s"SMGScrapeTargetProcessor: Processing taget conf: ${targetConf.uid}: conf=$targetConf")
+      log.debug(s"SMGScrapeTargetProcessor: Processing taget conf: ${targetConf.uid}: conf=$targetConf")
       val targetReload = processTarget(targetConf)
-      if (targetReload)
+      if (targetReload) {
+        log.info(s"SMGScrapeTargetProcessor: Done processing taget conf: ${targetConf.uid}: " +
+          s"targetReload=$targetReload needReload=$needReload")
         needReload = true
-      log.info(s"SMGScrapeTargetProcessor: Done processing taget conf: ${targetConf.uid}: " +
-        s"targetReload=$targetReload needReload=$needReload")
+      }
     }
     if (pluginConf.confOutputDir.isDefined && pluginConf.confOutputDirOwned){
       if (cleanupOwnedDir(pluginConf.confOutputDir.get,
