@@ -18,8 +18,8 @@ case class OpenMetricsStat(
                           tsms: Option[Long],
                           groupIndex: Int
                           ) {
-  lazy val title: String = name + (if (labels.nonEmpty) {
-    " " + labels.map(t => s"${t._1}=${t._2}").mkString(" ") } else "")
+  private lazy val grpIdxTitlePart = if (groupIndex > 0) { s" ($groupIndex)" } else ""
+  lazy val title: String = name + grpIdxTitlePart + metaHelp.map(s => s" - ${s}").getOrElse("")
 }
 
 object OpenMetricsStat {
@@ -40,7 +40,6 @@ object OpenMetricsStat {
 
   def groupIndexUid(name: String, groupIndex: Int): String =
     name.replaceAll(replaceRegexStr, "_") + s"_$groupIndex"
-
 
   // extract a quoted value out of inp and return it together with the remaining string
   // assumes inpiut starts with a single or double quote
