@@ -25,8 +25,8 @@ import scala.util.Try
 object SMGConfigParser {
 
   // TODO
-  val defaultInterval: Int = SMGConfigParser.defaultInterval // seconds
-  val defaultTimeout: Int = SMGConfigParser.defaultTimeout  // seconds
+  val defaultInterval: Int = 60// seconds
+  val defaultTimeout: Int = 30  // seconds
 
   val ALLOWED_UID_CHARS_REGEX_STR = "\\w\\._-"
 
@@ -64,8 +64,8 @@ object SMGConfigParser {
 class SMGConfigParser(log: SMGLoggerApi) {
 
   // TODO
-  val defaultInterval: Int = 60 // seconds
-  val defaultTimeout: Int = 30  // seconds
+  val defaultInterval: Int = SMGConfigParser.defaultInterval // seconds
+  val defaultTimeout: Int = SMGConfigParser.defaultTimeout  // seconds
 
   def validateOid(oid: String): Boolean = SMGConfigParser.validateOid(oid)
 
@@ -536,6 +536,13 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 processConfigError(confFile,
                   s"processObject: ${oid}: parentIds depth exceeds 50: ${depth}", isWarn = depth < 100)
               }
+              var confInterval = ymap.getOrElse("interval", myDefaultInterval).asInstanceOf[Int]
+              if (confInterval <= 0){
+                processConfigError(confFile,
+                  s"processObject: ${oid}: config interval is not positove: ${confInterval} " +
+                    s"(assuming default)", isWarn = true)
+                confInterval = SMGConfigParser.defaultInterval
+              }
               val obj = SMGRrdObject(
                 id = oid,
                 parentIds = parentIds.toList,
@@ -543,7 +550,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 vars = ymapFilteredVars,
                 title = ymap.getOrElse("title", oid).toString,
                 rrdType = myRrdType,
-                interval = ymap.getOrElse("interval", myDefaultInterval).asInstanceOf[Int],
+                interval = confInterval,
                 dataDelay = ymap.getOrElse("dataDelay", 0).asInstanceOf[Int],
                 stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
                 preFetch = parentIds.headOption,

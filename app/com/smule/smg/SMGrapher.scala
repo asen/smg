@@ -632,11 +632,12 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
 
     val runTimesByInterval = SMGStagedRunCounter.getLastRunTimesPerInterval
-    runTimesByInterval.keys.toSeq.sorted.foreach { intvl =>
-      val lastRuntImeMs =  runTimesByInterval(intvl)
+    config.intervals.toSeq.sorted.foreach { intvl =>
+//    runTimesByInterval.keys.toSeq.sorted.foreach { intvl =>
+      val lastRuntImeMs =  runTimesByInterval.get(intvl).map(_.toDouble).getOrElse(Double.NaN)
       ret += myOpenMetricsStat(
         name = "smg_interval_run_time_ms",
-        help = "Total run time per interval",
+        help = "Total run time per interval in milliseconds",
         value = lastRuntImeMs,
         labels = List(("interval", intvl.toString))
       )

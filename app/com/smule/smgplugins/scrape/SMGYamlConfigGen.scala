@@ -11,7 +11,7 @@ import scala.collection.JavaConverters._
 
 
 // sync this with SMGConfigParser
-class SMGYamlConfigGen() {
+object SMGYamlConfigGen {
 
   def yamlObjToStr(in: Object): String = {
     val yaml = new Yaml()
@@ -40,7 +40,7 @@ class SMGYamlConfigGen() {
     smgObjectsToYamlList(objs, confIndexToYamlObj)
   }
 
-  private def notifyConfToYamlMap(obj: SMGMonNotifyConf): util.Map[String, Object] =  {
+  def notifyConfToYamlMap(obj: SMGMonNotifyConf): util.Map[String, Object] =  {
     val ret = new util.HashMap[String, Object]()
     if (obj.crit.nonEmpty)
       ret.put("notify-crit", obj.crit.mkString(","))
@@ -179,7 +179,7 @@ class SMGYamlConfigGen() {
     ret
   }
 
-  private def filterToYamlMap(obj: SMGFilter): util.Map[String, Object] = {
+  def filterToYamlMap(obj: SMGFilter): util.Map[String, Object] = {
     val ret = new util.HashMap[String, Object]()
     if (obj.px.isDefined)
       ret.put("px", obj.px.get)

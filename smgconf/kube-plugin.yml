@@ -1,5 +1,21 @@
 
 kube:
+  scrape_targets_d: "/etc/smg/scrape-targets.d"
   clusters:
-    - name: skube-int
-      confFile: $HOME/.kube/config
+#    - uid: skube-int
+##      name: skube-int
+#      kube_conf_file: "/etc/smg/kube-config"
+##      kube_token_file: "/etc/smg/kube-token"
+##      kube_url: "https://kubernetes.default.svc"
+#      fetch_command: 'curl -k -H "Authorization: Bearer `cat /etc/smg/kube-token`"'
+#      fetch_timeout: 10
+#      node_metrcis:
+#        - uid: kubelet
+#          proto: https
+#          port_path: ":10250/metrics"
+##          filter:
+##            rx: blah
+#        - uid: cadvisor
+#          proto: https
+#          port_path: ":10250/metrics/cadvisor"
+    - include: "/etc/smg/kube-clusters.d/*.{yml,yaml}"

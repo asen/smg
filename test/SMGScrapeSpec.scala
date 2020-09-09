@@ -38,7 +38,7 @@ class SMGScrapeSpec extends Specification {
       val ogen = new SMGScrapeObjectGen(parser.conf.targets.head, parsed, log)
       val res = ogen.generateSMGObjects()
 
-      val cgen = new SMGYamlConfigGen()
+      val cgen = SMGYamlConfigGen
       val yamlPfsList = cgen.yamlObjToStr(cgen.preFetchesToYamlList(res.preFetches))
       log.info(s"PREFETCH_YAMLS:\n$yamlPfsList")
       log.info("============================================")

@@ -1,5 +1,5 @@
 import com.smule.smg.core.SMGLogger
-import com.smule.smgplugins.kube.SMGKubeClient
+import com.smule.smgplugins.kube.{SMGKubeClient, SMGKubeClusterAuthConf}
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
@@ -10,7 +10,10 @@ class SMGKubeClientSpec extends Specification {
 
   "SMGKubeClient" should {
     "work" in {
-      val cli = new SMGKubeClient(log)
+//      val authConf = SMGKubeClusterAuthConf.fromTokenFileAndUrl("/etc/smg/kube-token",
+//        Some("https://kubernetes.default.svc:6443"))
+      val authConf = SMGKubeClusterAuthConf.fromConfFile("/etc/smg/kube-config")
+      val cli = new SMGKubeClient(log, "test", authConf)
 //      cli.listPods().foreach { s =>
 //        log.info(s"POD: ${s}")
 //      }

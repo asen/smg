@@ -113,7 +113,15 @@ object OpenMetricsStat {
       if (arr.length > 2) {
         log.warn(s"OpenMetricsStat.parseLine: bad line (too many tokens): $ln")
       }
-      val value = arr(0).toDouble
+      // some special cases for Go NaN formatting
+      val value = if (arr(0).matches("^[\\+-]?Inf.*") )
+        Double.NaN
+      else try {
+        arr(0).toDouble
+      } catch { case t: Throwable =>
+        log.warn(s"OpenMetricsStat.parseLine: bad Double value: ${arr(0)}: ln=$ln")
+        Double.NaN
+      }
       val tsms = arr.lift(1).map(_.toLong)
       val smgUid = if (!hasLabels) name else {
         if (labelsInUid){

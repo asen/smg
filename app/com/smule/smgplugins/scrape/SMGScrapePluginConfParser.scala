@@ -13,63 +13,10 @@ import scala.collection.mutable.ListBuffer
 
 class SMGScrapePluginConfParser(pluginId: String, confFile: String, log: SMGLoggerApi) {
 
-  private def yobjMap(yobj: Object): mutable.Map[String, Object] =
-    yobj.asInstanceOf[java.util.Map[String, Object]].asScala
+  private def yobjMap(yobj: Object): mutable.Map[String, Object] = SMGScrapeTargetConf.yobjMap(yobj)
 
-  private def yobjList(yobj: Object): mutable.Seq[Object] =
-    yobj.asInstanceOf[java.util.List[Object]].asScala
-
-
-  private def parseTargetConf(ymap: mutable.Map[String, Object]): Option[SMGScrapeTargetConf] = {
-    if (!ymap.contains("uid")){
-      return None
-    }
-    if (!ymap.contains("command")){
-      return None
-    }
-    if (!ymap.contains("conf_output")){
-      return None
-    }
-    val uid = ymap("uid").toString
-    val notifyConf = SMGMonNotifyConf.fromVarMap(
-      // first two technicall unused
-      SMGMonAlertConfSource.OBJ,
-      pluginId + "." + uid,
-      ymap.toMap.map(t => (t._1, t._2.toString))
-    )
-    Some(
-      SMGScrapeTargetConf(
-        uid = uid,
-        humanName = if (ymap.contains("name")) ymap("name").toString else ymap("uid").toString,
-        command = ymap("command").toString,
-        timeoutSec = ymap.get("timeout").map(_.asInstanceOf[Int]).getOrElse(SMGConfigParser.defaultTimeout),
-        confOutput = ymap("conf_output").toString,
-        confOutputBackupExt = ymap.get("conf_output_backup_ext").map(_.toString),
-        filter = if (ymap.contains("filter")){
-          SMGFilter.fromYamlMap(yobjMap(ymap("filter")).toMap)
-        } else SMGFilter.matchAll,
-        interval = ymap.get("interval").map(_.asInstanceOf[Int]).getOrElse(SMGConfigParser.defaultInterval),
-        parentPfId  = ymap.get("pre_fetch").map(_.toString),
-        parentIndexId = ymap.get("parent_index").map(_.toString),
-        idPrefix = ymap.get("id_prefix").map(_.toString),
-        notifyConf = notifyConf,
-        regexReplaces = ymap.get("regex_replaces").map { yo: Object =>
-          yobjList(yo).flatMap { o =>
-            val m = yobjMap(o)
-            if (m.contains("regex") && m.contains("replace"))
-              Some(RegexReplaceConf(
-                regex = m("regex").toString,
-                replace = m("replace").toString,
-                filterRegex = m.get("filterRegex").map(_.toString)
-              ))
-            else None
-          }
-        }.getOrElse(Seq()),
-        labelsInUids = ymap.getOrElse("labels_in_uids", "false").toString == "true"
-      )
-    )
-  }
-
+  private def yobjList(yobj: Object): mutable.Seq[Object] = SMGScrapeTargetConf.yobjList(yobj)
+  
   private def parseTargetsSeq(yamlList: mutable.Seq[Object], fname: String): Seq[SMGScrapeTargetConf] = {
     val ret = ListBuffer[SMGScrapeTargetConf]()
     yamlList.foreach { yobj =>
@@ -85,11 +32,11 @@ class SMGScrapePluginConfParser(pluginId: String, confFile: String, log: SMGLogg
           ret ++= parseTargetsInclude(fname)
         }
       } else { // process auto-conf object
-        val copt = parseTargetConf(ymap)
+        val copt = SMGScrapeTargetConf.fromYamlObj(ymap)
         if (copt.isDefined) {
           ret += copt.get
         } else
-          log.warn(s"MGScrapeConfParser.parseConf($fname): ignoring invalid autoconf: ${ymap.toMap}")
+          log.warn(s"SMGcrapeConfParser.parseConf($fname): ignoring invalid autoconf: ${ymap.toMap}")
       }
     }
     ret.toList

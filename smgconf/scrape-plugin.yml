@@ -15,7 +15,7 @@ scrape:
 #      filter:
 #        rxx: "^scrape-test.local-metrics.prometheus"
 #      regex_replaces:
-#        - filterRegex: "^go_gc"
+#        - filter_regex: "^go_gc"
 #          regex: "^go_(gc)_(duration)"
 #          replace: "go_$2_$1"
 #      pre_fetch: host_localhost_up

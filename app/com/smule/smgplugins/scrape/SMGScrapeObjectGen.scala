@@ -44,6 +44,7 @@ class SMGScrapeObjectGen(
     val metaStat = grp.head
     val retObjects = ListBuffer[SMGRrdObject]()
     val retIxes = ListBuffer[SMGConfIndex]()
+    // TODO handle histogram/summary specially
     val rrdType = metaType2RrdType(metaStat.metaType)
 
     val metaKey = metaStat.metaKey.map(k => processRegexReplaces(k, scrapeTargetConf.regexReplaces))
@@ -77,7 +78,7 @@ class SMGScrapeObjectGen(
           rrdInitSource = None,
           labels = stat.labels.toMap
         )
-        if (scrapeTargetConf.filter.matches(retObj))
+        if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj))
           retObjects += retObj
       } // valid oid
     }
