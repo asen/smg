@@ -23,7 +23,10 @@ RUN echo '- $include: "/etc/smg/conf.d/*.{yaml,yml}"' >> /etc/smg/config.yml
 RUN echo '- $include: "/etc/smg/scrape-private.d/*.{yaml,yml}"' >> /etc/smg/config.yml
 RUN echo '' >> /etc/smg/config.yml
 
+VOLUME [ "/etc/smg/kube-clusters.d"]
+VOLUME [ "/etc/smg/scrape-targets.d"]
 VOLUME [ "/etc/smg/conf.d" ]
+VOLUME [ "/etc/smg/scrape-private.d"]
 VOLUME [ "/opt/smg/data" ]
 
 RUN mkdir -p /opt/smg
