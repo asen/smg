@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+WAIT_OPT="--wait"
+WAIT=""
+if [ "$1" == "$WAIT_OPT" ] ; then
+  WAIT=$WAIT_OPT
+  shift
+fi
+
 APP_HOME=`dirname $0`
 JVM_MEM=${1:-"8g"}
 HTTP_PORT=${2:-"9000"}
@@ -41,7 +48,17 @@ GC_OPTS=""
 # Needed to be able to talk to kubernetes cluster: https://github.com/kubernetes-client/java/issues/893
 JAVA_11_KUBE_TLS_OPT="-J-Djdk.tls.client.protocols=TLSv1.2"
 
-nohup bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS $JAVA_11_KUBE_TLS_OPT \
+NOHUP=nohup
+if [ "$WAIT" == "$WAIT_OPT" ] ; then
+  NOHUP=""
+  _term() {
+    echo "Caught SIGTERM signal!"
+    ./stop-smg.sh
+  }
+  trap _term SIGTERM
+fi
+
+$NOHUP bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS $JAVA_11_KUBE_TLS_OPT \
     -Dplay.crypto.secret=fabe980f8f27865e11eeaf9e4ff4fc65 \
     -Dhttp.port=$HTTP_PORT $BIND_OPT \
     -Dakka.http.parsing.max-uri-length=2m \
@@ -49,10 +66,17 @@ nohup bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS $JAVA_11_KUBE_TLS_OPT 
     -Dplay.server.akka.max-header-value-length=2m \
     -Dpidfile.path=run/play.pid \
     >logs/nohup.out 2>&1 &
+ret=$?
+child=$!
 
-if [ "$?" == "0" ] ; then
+if [ "$ret" == "0" ] ; then
    echo "Started (mem=$JVM_MEM port=$HTTP_PORT$BIND_STR). \
 Check $APP_HOME/logs/nohup.out for errors and $APP_HOME/logs/application.log for progress"
 else
-   echo "Some error occurred"
+   echo "Some error occurred ($ret)"
+   exit $ret
+fi
+
+if [ "$WAIT" == "$WAIT_OPT" ] ; then
+  wait "$child"
 fi

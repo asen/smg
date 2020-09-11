@@ -42,5 +42,4 @@ RUN sed -i 's|smgrrd/jmx|/opt/smg/data/rrd/jmx|' /opt/smg/inst/smg/smgconf/jmx-p
 EXPOSE 9000
 EXPOSE 9001
 ENV APP_HOME /opt/smg/inst/smg
-CMD ["/opt/smg/inst/smg/systemd-smg.sh"]
-
+CMD ["/opt/smg/inst/smg/start-smg.sh", "--wait"]
