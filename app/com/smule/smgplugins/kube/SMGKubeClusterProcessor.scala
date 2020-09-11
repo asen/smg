@@ -5,6 +5,7 @@ import java.nio.file.{Files, Paths}
 
 import com.smule.smg.config.{SMGConfigParser, SMGConfigService}
 import com.smule.smg.core.{SMGCmd, SMGCmdException, SMGFileUtil, SMGFilter, SMGLoggerApi}
+import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smgplugins.kube.SMGKubeClient.{KubeService, KubeServicePort}
 import com.smule.smgplugins.scrape.SMGScrapeTargetConf
 import org.yaml.snakeyaml.Yaml
@@ -50,7 +51,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     Some(ret)
   }
 
-  // command -> last successfully executed
+  // command -> last executed (good or bad)
   private val knownGoodServiceCommands = TrieMap[String,Long]()
   private val knownBadServiceCommands = TrieMap[String,Long]()
 
@@ -60,16 +61,15 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                            svcPort: KubeServicePort): Boolean = {
     // filter out invalid ports as far as we can tell
     def logSkipped(reason: String): Unit = {
-      log.debug(s"SMGKubeClusterProcessor.checkService: ${cConf.hname} " +
+      log.info(s"SMGKubeClusterProcessor.checkService: ${cConf.hname} " +
         s"${kubeService.namespace}.${kubeService.name}: skipped due to $reason")
     }
-    if (svcPort.protocol != "TCP") {
-      logSkipped(s"protocol=${svcPort.protocol} (not TCP)")
-      return false
-    }
+
     val lastGoodRunTs = knownGoodServiceCommands.get(command)
     if (lastGoodRunTs.isDefined) {
       // re-check occasionally?
+      // TODO: right now - once good, its good until SMG restart
+      // note that removed services will not even get here and will disappear automatically
       return true
     }
     val lastBadRunTs = knownBadServiceCommands.get(command)
@@ -77,19 +77,32 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val randomizedBackoff = cConf.svcConf.reCheckBackoff +
         Random.nextInt(cConf.svcConf.reCheckBackoff.toInt).toLong
       if (System.currentTimeMillis() - lastBadRunTs.get < randomizedBackoff) {
-        logSkipped(s"known bad command: $command")
+        //logSkipped(s"known bad command: $command")
         return false
       }
     }
+
+    // actual checks below
+    if (svcPort.protocol != "TCP") {
+      logSkipped(s"protocol=${svcPort.protocol} (not TCP)")
+      knownBadServiceCommands.put(command, System.currentTimeMillis())
+      return false
+    }
     try {
-      SMGCmd(command).run()
-      //keep known up services in a cache and not run this every minute -
-      //we only want to know if it is http and has valid /metrics URL, once
-      knownGoodServiceCommands.put(command, System.currentTimeMillis())
-      knownBadServiceCommands.remove(command)
-      true
-    } catch { case t: SMGCmdException =>
-      logSkipped(s"command failed: ${t.getMessage}")
+      val out = SMGCmd(command).run().mkString("\n")
+      if (OpenMetricsStat.parseText(out, log, labelsInUid = false).nonEmpty) {
+        //keep known up services in a cache and not run this every minute -
+        //we only want to know if it is http and has valid /metrics URL, once
+        knownGoodServiceCommands.put(command, System.currentTimeMillis())
+        knownBadServiceCommands.remove(command)
+        true
+      } else {
+        logSkipped(s"command output unparse-able ($command): ${out}")
+        knownBadServiceCommands.put(command, System.currentTimeMillis())
+        false
+      }
+    } catch { case t: Throwable => //SMGCmdException =>
+      logSkipped(s"command or metrics parse failed: ${t.getMessage}")
       knownBadServiceCommands.put(command, System.currentTimeMillis())
       false
     }
