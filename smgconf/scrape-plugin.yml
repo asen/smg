@@ -8,7 +8,7 @@ scrape:
       name: Local SMG Metrics
       conf_output: local-metrics.yml
       conf_output_backup_ext: backup
-      command: curl localhost:9000/metrics
+      command: curl -f -sS http://localhost:9000/metrics
       interval: 60
       timeout: 30
       labels_in_uids: true

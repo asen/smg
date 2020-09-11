@@ -1,11 +1,24 @@
 package com.smule.smgplugins.kube
 
 import com.smule.smg.core.{SMGFileUtil, SMGLoggerApi}
+import com.smule.smgplugins.kube.SMGKubeClient.{KubeNode, KubeService, KubeServicePort}
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.{ContainerMetrics, NodeMetrics, PodMetrics}
 import io.fabric8.kubernetes.client.{Config, ConfigBuilder, DefaultKubernetesClient, KubernetesClientException}
 
 import scala.collection.JavaConverters._
+
+object SMGKubeClient {
+  case class KubeNode(name: String, hostName: Option[String], ipAddress: Option[String])
+
+  case class KubeServicePort(port: Int, protocol: String,
+                             name: Option[String], nodePort: Option[Int],
+                             targetPort: Option[String])
+
+  case class KubeService(name: String, namespace: String, svcType: String,
+                         clusterIp: String, ports: Seq[KubeServicePort])
+
+}
 
 class SMGKubeClient(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeClusterAuthConf) {
 
@@ -44,23 +57,6 @@ class SMGKubeClient(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeClus
     client.close()
   }
 
-//  def listPods(): Seq[String] = {
-////    val client = new DefaultKubernetesClient()
-//    try {
-////      val nsList = client.namespaces().list()
-////      nsList.getItems
-//      val podList = client.pods().inAnyNamespace().list()
-//      podList.getItems.asScala.map(_.toString)
-//    } catch { case e: KubernetesClientException =>
-//      log.error(e.getMessage, e)
-//      Seq()
-//    } finally {
-//      if (client != null) client.close()
-//    }
-//  }
-
-  case class KubeNode(name: String, hostName: Option[String], ipAddress: Option[String])
-
   def listNodes(): Seq[KubeNode] = {
     client.nodes().list().getItems.asScala.map { n =>
       val nodeAddresses = n.getStatus.getAddresses.asScala
@@ -70,6 +66,31 @@ class SMGKubeClient(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeClus
         name = n.getMetadata.getName,
         hostName = hostName,
         ipAddress = ipAddress
+      )
+    }
+  }
+
+  def listNamespaces(): Seq[String] = {
+    client.namespaces().list().getItems.asScala.map(_.getMetadata.getName)
+  }
+
+  def listServices(): Seq[KubeService] = {
+    client.services().inAnyNamespace().list().getItems.asScala.map { svc =>
+      KubeService(
+      name = Option(svc.getMetadata.getName).getOrElse("UNDEFINED_NAME"),
+      namespace = Option(svc.getMetadata.getNamespace).getOrElse("default"),
+      svcType = Option(svc.getSpec.getType).getOrElse("ClusterIP"),
+      clusterIp = Option(svc.getSpec.getClusterIP).getOrElse("UNDEFINED_CLUSTER_IP"),
+      ports = Option(svc.getSpec.getPorts).map(_.asScala).getOrElse(Seq()).map { svcPort =>
+        KubeServicePort(
+          port = Option(svcPort.getPort).map(_.toInt)
+           getOrElse(0), // TODO this is error condition
+          protocol = Option(svcPort.getProtocol).getOrElse("TCP"),
+          name = Option(svcPort.getName),
+          nodePort = Option(svcPort.getNodePort).map(_.toInt),
+          targetPort = Option(svcPort.getTargetPort).map(_.toString)
+        )
+      }
       )
     }
   }

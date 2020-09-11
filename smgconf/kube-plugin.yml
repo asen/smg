@@ -7,9 +7,12 @@ kube:
 #      kube_conf_file: "/etc/smg/kube-config"
 ##      kube_token_file: "/etc/smg/kube-token"
 ##      kube_url: "https://kubernetes.default.svc"
-#      fetch_command: 'curl -k -H "Authorization: Bearer `cat /etc/smg/kube-token`"'
+#      fetch_command: 'curl -f -sS -k -H "Authorization: Bearer `cat /etc/smg/kube-token`"'
 #      fetch_timeout: 10
 #      node_metrcis:
+#        - uid: node
+#          proto: http
+#          port_path: ":9100/metrics"
 #        - uid: kubelet
 #          proto: https
 #          port_path: ":10250/metrics"
@@ -18,4 +21,13 @@ kube:
 #        - uid: cadvisor
 #          proto: https
 #          port_path: ":10250/metrics/cadvisor"
+#      services:
+#        enabled: true
+#        filter:
+#          rx: blah
+#        regex_replaces:
+#         - filter_regex: "^go_gc"
+#           regex: "^go_(gc)_(duration)"
+#           replace: "go_$2_$1"
+#        check_backoff: 600000
     - include: "/etc/smg/kube-clusters.d/*.{yml,yaml}"

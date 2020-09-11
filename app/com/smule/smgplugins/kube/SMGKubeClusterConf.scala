@@ -14,6 +14,7 @@ case class SMGKubeClusterConf(
                                idPrefix: Option[String],
                                regexReplaces: Seq[RegexReplaceConf],
                                nodeMetrics: Seq[SMGKubeClusterMetricsConf],
+                               svcConf: SMGKubeClusterSvcConf,
                                parentPfId: Option[String],
                                parentIndexId: Option[String],
                                notifyConf: Option[SMGMonNotifyConf],

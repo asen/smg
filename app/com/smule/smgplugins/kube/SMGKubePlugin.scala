@@ -15,6 +15,8 @@ class SMGKubePlugin(
 
   private val log = new SMGPluginLogger(pluginId)
   private val confParser = new SMGKubePluginConfParser(pluginId, pluginConfFile, log)
+  val targetProcessor = new SMGKubeClusterProcessor(confParser, smgConfSvc, log)
+
   private val myEc: ExecutionContext =
     smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.plugins-shared")
   
@@ -47,7 +49,6 @@ class SMGKubePlugin(
     Future {
       try {
         log.debug("SMGKubePlugin.run - processing in async thread")
-        val targetProcessor = new SMGKubeClusterProcessor(confParser.conf, smgConfSvc, log)
         if (targetProcessor.run()){
           log.info("SMGKubePlugin.run - reloading Scrape conf due to changed configs")
           reloadScrapeConf()
