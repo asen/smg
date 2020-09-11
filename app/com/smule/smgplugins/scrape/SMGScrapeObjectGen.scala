@@ -18,6 +18,7 @@ class SMGScrapeObjectGen(
        case "counter" => "DERIVE"
        case "summary" => "GAUGE" // TODO ?
        case "histogram" => "GAUGE" // TODO ?
+       case "untyped" => "GAUGE" // TODO ?
        case x => {
          log.warn(s"SMGScrapeObjectGen.metaType2RrdType (${scrapeTargetConf.uid}): Unexpected metaType: ${x}")
          "GAUGE"
