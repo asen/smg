@@ -112,7 +112,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                              kubeService: KubeService,
                              svcPort: KubeServicePort): Option[SMGScrapeTargetConf] = {
     try {
-      val command = cConf.fetchCommand + " " + kubeService.clusterIp + s"${svcPort.port}/metrics"
+      val command = cConf.fetchCommand + " " + kubeService.clusterIp + s":${svcPort.port}/metrics"
       if (!checkService(command, cConf, kubeService, svcPort))
         return None
       val uid = kubeService.namespace + "." + kubeService.name
