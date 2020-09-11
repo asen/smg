@@ -658,7 +658,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   def metrics : Action[AnyContent] = Action {
     val stats = smg.getMetrics
-    Ok(OpenMetricsStat.dumpStats(stats).mkString("\n") + "\n")
+    Ok(stats)
   }
 
   def pluginIndex(pluginId: String): Action[AnyContent] = Action { implicit request =>

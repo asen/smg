@@ -194,7 +194,7 @@ trait GrapherApi {
   // TODO
   def groupImageViewsGroupsByRemote(dglst: Seq[SMGImageViewsGroup], xRemoteAgg: Boolean): Seq[SMGImageViewsGroup]
 
-  def getMetrics: Seq[OpenMetricsStat]
+  def getMetrics: String
 }
 
 /**

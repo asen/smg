@@ -1,7 +1,7 @@
 package com.smule.smg
 
 
-import java.io.File
+import java.io.{File, StringWriter}
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{ActorRef, ActorSystem, Props}
@@ -21,7 +21,9 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Try
-
+import io.prometheus.client.CollectorRegistry
+import io.prometheus.client.hotspot.DefaultExports
+import io.prometheus.client.exporter.common.TextFormat
 
 /**
   * The SMG @GrapherApi imlementation
@@ -581,7 +583,16 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     )
   }
 
-  def getMetrics: Seq[OpenMetricsStat] = {
+  DefaultExports.initialize()
+
+  def getJvmMetricsStr: String = {
+    val data = CollectorRegistry.defaultRegistry.metricFamilySamples()
+    val writer = new StringWriter()
+    TextFormat.write004(writer,data)
+    writer.toString
+  }
+
+  def getSmgMetrics: Seq[OpenMetricsStat] = {
     val ret = ListBuffer[OpenMetricsStat]()
     val versBuildArr = configSvc.smgVersionStr.split("-")
     val smgVers = Try(versBuildArr(0).replaceAll("[^\\d\\.]", "").toDouble).getOrElse(0.0)
@@ -644,4 +655,6 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
     ret.toList
   }
+
+  def getMetrics: String = getJvmMetricsStr + OpenMetricsStat.dumpStats(getSmgMetrics).mkString("\n") + "\n"
 }
