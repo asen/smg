@@ -103,7 +103,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       if (!checkService(command, cConf, kubeService, svcPort))
         return None
       val uid = kubeService.namespace + "." + kubeService.name
-      val title = s"${kubeService.name} (${kubeService.namespace})"
+      val title = s"${cConf.hname} Service ${kubeService.name} (${kubeService.namespace})"
       val confOutput = s"${cConf.uid}-svc-${kubeService.namespace}-${kubeService.name}.yml"
       val ret = SMGScrapeTargetConf(
         uid = uid,
