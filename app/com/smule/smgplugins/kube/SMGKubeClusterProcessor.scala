@@ -118,7 +118,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val command = cConf.fetchCommand + " " + proto + ipAddr + s":${kubePort.port}/metrics"
       if (!checkAutoConf(command, cConf, autoConf, nsObject, kubePort))
         return None
-      val uid = nsObject.namespace + "." + nsObject.name
+      val uid = cConf.uid + "." + autoConf.targetType + "." + nsObject.namespace + "." + nsObject.name
       val title = s"${cConf.hname} ${autoConf.targetType} ${nsObject.name} (${nsObject.namespace})"
       val confOutput = s"${cConf.uid}-${autoConf.targetType}-${nsObject.namespace}-${nsObject.name}.yml"
       val ret = SMGScrapeTargetConf(
