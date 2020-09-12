@@ -124,8 +124,10 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         return None
       val uid = cConf.uid + "." + autoConf.targetType + "." + nsObject.namespace +
         "." + nsObject.name + "." + kubePort.port + idxId.map(x => s".$x").getOrElse("")
-      val title = s"${cConf.hname} ${autoConf.targetType} ${nsObject.name} (${nsObject.namespace})"
-      val confOutput = s"${cConf.uid}-${autoConf.targetType}-${nsObject.namespace}-${nsObject.name}.yml"
+      val title = s"${cConf.hname} ${autoConf.targetType} " +
+        s"${nsObject.namespace}.${nsObject.name}:${kubePort.port}${idxId.map(x => s" ($x)").getOrElse("")}"
+      val confOutput = s"${cConf.uid}-${autoConf.targetType}-${nsObject.namespace}-" +
+        s"${nsObject.name}-${kubePort.port}${idxId.map(x => s"-$x").getOrElse("")}.yml"
       val ret = SMGScrapeTargetConf(
         uid = uid,
         humanName = title,
