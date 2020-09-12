@@ -187,7 +187,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 
       // dump
       val objsLst = new java.util.ArrayList[Object]()
-      (nodeMetricsConfs ++ serviceMetricsConfs).foreach { stConf =>
+      // TODO need to insert indexes
+      (nodeMetricsConfs ++ serviceMetricsConfs ++ endpointsMetricsConfs).foreach { stConf =>
         objsLst.add(SMGScrapeTargetConf.dumpYamlObj(stConf))
       }
       val out = new StringBuilder()
