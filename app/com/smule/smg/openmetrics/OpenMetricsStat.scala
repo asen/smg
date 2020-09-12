@@ -62,7 +62,7 @@ object OpenMetricsStat {
         if (eqIx < 0) throw new RuntimeException("label not having equals sign")
         val key = remaining.take(eqIx)
         remaining = remaining.drop(eqIx+1).stripLeading()
-        val (value, remVal) = if (remaining.startsWith("\"") || remaining.startsWith("")){
+        val (value, remVal) = if (remaining.startsWith("\"") || remaining.startsWith("'")){
           quotedValue(remaining)
         } else {
           val evIx = END_OF_LABEL_REGEX.findFirstMatchIn(remaining).map(_.start).get // can throw ...
