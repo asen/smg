@@ -12,13 +12,9 @@ import scala.collection.mutable
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
+import com.smule.smgplugins.scrape.SMGScrapeTargetConf.{yobjList, yobjMap}
+
 class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLoggerApi) {
-
-  private def yobjMap(yobj: Object): mutable.Map[String, Object] =
-    yobj.asInstanceOf[java.util.Map[String, Object]].asScala
-
-  private def yobjList(yobj: Object): mutable.Seq[Object] =
-    yobj.asInstanceOf[java.util.List[Object]].asScala
 
   private def parseClusterMetricConf(ymap: mutable.Map[String, Object]): Option[SMGKubeClusterMetricsConf] = {
     if (!ymap.contains("uid")){
@@ -85,26 +81,8 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
           yobjList(yo).flatMap { o =>  RegexReplaceConf.fromYamlObject(yobjMap(o)) }
         }.getOrElse(Seq()),
         nodeMetrics = nodeMetrics,
-        svcConf = if (ymap.contains("services")){
-          if (ymap("services") == null)
-            SMGKubeClusterSvcConf.enabledDefault
-          else {
-            val scm = yobjMap(ymap("services"))
-            SMGKubeClusterSvcConf(
-              enabled = scm.get("enabled").forall(_.toString != "false"),
-              filter = scm.get("filter").map(yo => SMGFilter.fromYamlMap(yobjMap(yo).toMap)),
-              regexReplaces = scm.get("regex_replaces").map{ yo =>
-                yobjList(yo).flatMap { ym =>
-                  RegexReplaceConf.fromYamlObject(yobjMap(ym))
-                }
-              }.getOrElse(Seq()),
-              reCheckBackoff = scm.get("check_backoff").map(_.asInstanceOf[Long]).
-                getOrElse(SMGKubeClusterSvcConf.enabledDefault.reCheckBackoff)
-            )
-          }
-        } else {
-          SMGKubeClusterSvcConf.disabled
-        },
+        svcConf = SMGKubeClusterAutoConf.fromYamlMap(ymap, "services"),
+        endpointsConf = SMGKubeClusterAutoConf.fromYamlMap(ymap, "endpoints"),
         parentPfId  = ymap.get("pre_fetch").map(_.toString),
         parentIndexId = ymap.get("parent_index").map(_.toString),
         notifyConf = notifyConf,

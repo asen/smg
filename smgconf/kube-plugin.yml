@@ -30,4 +30,5 @@ kube:
 #           regex: "^go_(gc)_(duration)"
 #           replace: "go_$2_$1"
 #        check_backoff: 600000
+#      endpoints:
     - include: "/etc/smg/kube-clusters.d/*.{yml,yaml}"

@@ -6,7 +6,7 @@ import java.nio.file.{Files, Paths}
 import com.smule.smg.config.{SMGConfigParser, SMGConfigService}
 import com.smule.smg.core.{SMGCmd, SMGCmdException, SMGFileUtil, SMGFilter, SMGLoggerApi}
 import com.smule.smg.openmetrics.OpenMetricsStat
-import com.smule.smgplugins.kube.SMGKubeClient.{KubeService, KubeServicePort}
+import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNsObject, KubePort, KubeService, KubeServicePort}
 import com.smule.smgplugins.scrape.SMGScrapeTargetConf
 import org.yaml.snakeyaml.Yaml
 
@@ -55,16 +55,16 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   private val knownGoodServiceCommands = TrieMap[String,Long]()
   private val knownBadServiceCommands = TrieMap[String,Long]()
 
-  private def checkService(command: String,
-                           cConf: SMGKubeClusterConf,
-                           kubeService: KubeService,
-                           svcPort: KubeServicePort): Boolean = {
+  private def checkAutoConf(command: String,
+                            cConf: SMGKubeClusterConf,
+                            autoConf: SMGKubeClusterAutoConf,
+                            kubeNsObject: KubeNsObject,
+                            kubePort: KubePort): Boolean = {
     // filter out invalid ports as far as we can tell
     def logSkipped(reason: String): Unit = {
-      log.info(s"SMGKubeClusterProcessor.checkService: ${cConf.hname} " +
-        s"${kubeService.namespace}.${kubeService.name}: skipped due to $reason")
+      log.info(s"SMGKubeClusterProcessor.checkAutoConf(${autoConf.targetType}): ${cConf.hname} " +
+        s"${kubeNsObject.namespace}.${kubeNsObject.name}: skipped due to $reason")
     }
-
     val lastGoodRunTs = knownGoodServiceCommands.get(command)
     if (lastGoodRunTs.isDefined) {
       // re-check occasionally?
@@ -74,8 +74,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
     val lastBadRunTs = knownBadServiceCommands.get(command)
     if (lastBadRunTs.isDefined){
-      val randomizedBackoff = cConf.svcConf.reCheckBackoff +
-        Random.nextInt(cConf.svcConf.reCheckBackoff.toInt).toLong
+      val randomizedBackoff = autoConf.reCheckBackoff +
+        Random.nextInt(autoConf.reCheckBackoff.toInt).toLong
       if (System.currentTimeMillis() - lastBadRunTs.get < randomizedBackoff) {
         //logSkipped(s"known bad command: $command")
         return false
@@ -83,8 +83,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
 
     // actual checks below
-    if (svcPort.protocol != "TCP") {
-      logSkipped(s"protocol=${svcPort.protocol} (not TCP)")
+    if (kubePort.protocol != "TCP") {
+      logSkipped(s"protocol=${kubePort.protocol} (not TCP)")
       knownBadServiceCommands.put(command, System.currentTimeMillis())
       return false
     }
@@ -108,16 +108,19 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
-  def processServicePortConf(cConf: SMGKubeClusterConf,
-                             kubeService: KubeService,
-                             svcPort: KubeServicePort): Option[SMGScrapeTargetConf] = {
+
+  def processAutoPortConf(cConf: SMGKubeClusterConf,
+                          autoConf: SMGKubeClusterAutoConf,
+                          nsObject: KubeNsObject,
+                          ipAddr: String, kubePort: KubePort): Option[SMGScrapeTargetConf] = {
     try {
-      val command = cConf.fetchCommand + " " + kubeService.clusterIp + s":${svcPort.port}/metrics"
-      if (!checkService(command, cConf, kubeService, svcPort))
+      val proto = if (autoConf.useHttps) "https://" else "http://"
+      val command = cConf.fetchCommand + " " + proto + ipAddr + s":${kubePort.port}/metrics"
+      if (!checkAutoConf(command, cConf, autoConf, nsObject, kubePort))
         return None
-      val uid = kubeService.namespace + "." + kubeService.name
-      val title = s"${cConf.hname} Service ${kubeService.name} (${kubeService.namespace})"
-      val confOutput = s"${cConf.uid}-svc-${kubeService.namespace}-${kubeService.name}.yml"
+      val uid = nsObject.namespace + "." + nsObject.name
+      val title = s"${cConf.hname} ${autoConf.targetType} ${nsObject.name} (${nsObject.namespace})"
+      val confOutput = s"${cConf.uid}-${autoConf.targetType}-${nsObject.namespace}-${nsObject.name}.yml"
       val ret = SMGScrapeTargetConf(
         uid = uid,
         humanName = title,
@@ -125,18 +128,18 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         timeoutSec = cConf.fetchCommandTimeout,
         confOutput = confOutput,
         confOutputBackupExt = None,
-        filter = if (cConf.svcConf.filter.isDefined) cConf.svcConf.filter else cConf.filter,
+        filter = if (autoConf.filter.isDefined) autoConf.filter else cConf.filter,
         interval = cConf.interval,
         parentPfId = cConf.parentPfId,
         parentIndexId = cConf.parentIndexId,
         idPrefix = cConf.idPrefix,
         notifyConf = cConf.notifyConf,
-        regexReplaces = cConf.regexReplaces ++ cConf.svcConf.regexReplaces,
+        regexReplaces = cConf.regexReplaces ++ autoConf.regexReplaces,
         labelsInUids = false
       )
       Some(ret)
     } catch { case t: Throwable =>
-      log.ex(t, s"SMGKubeClusterProcessor.processServicePortConf(${kubeService.name},${svcPort.port}): " +
+      log.ex(t, s"SMGKubeClusterProcessor.processServicePortConf(${nsObject.name},${kubePort.port}): " +
         s"Unexpected error: ${t.getMessage}")
       None
     }
@@ -144,7 +147,21 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 
   def processServiceConf(cConf: SMGKubeClusterConf, kubeService: KubeService): Seq[SMGScrapeTargetConf] = {
     // TODO check eligibility based on labels?
-    kubeService.ports.flatMap(svcPort => processServicePortConf(cConf, kubeService, svcPort))
+    kubeService.ports.flatMap { svcPort =>
+      processAutoPortConf(cConf, cConf.svcConf, kubeService, kubeService.clusterIp, svcPort)
+    }
+  }
+
+
+  def processEndpointConf(cConf: SMGKubeClusterConf, kubeEndpoint: KubeEndpoint): Seq[SMGScrapeTargetConf] = {
+    // TODO check eligibility based on labels?
+    kubeEndpoint.subsets.flatMap { subs =>
+      subs.addresses.flatMap { addr =>
+        subs.ports.flatMap { prt =>
+           processAutoPortConf(cConf, cConf.endpointsConf, kubeEndpoint, addr, prt)
+        }
+      }
+    }
   }
 
   def getYamlText(cConf: SMGKubeClusterConf): String = {
@@ -162,6 +179,12 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           processServiceConf(cConf, ksvc)
         }
       } else Seq()
+      val endpointsMetricsConfs: Seq[SMGScrapeTargetConf] = if (cConf.endpointsConf.enabled){
+        kubeClient.listEndpoints().flatMap { kendp =>
+          processEndpointConf(cConf, kendp)
+        }
+      } else Seq()
+
       // dump
       val objsLst = new java.util.ArrayList[Object]()
       (nodeMetricsConfs ++ serviceMetricsConfs).foreach { stConf =>

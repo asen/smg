@@ -18,8 +18,8 @@ class SMGKubeClientSpec extends Specification {
 //        log.info(s"POD: ${s}")
 //      }
 //      cli.topNodes()
-      cli.listServices().foreach { s =>
-        log.info(s"SERVICE: ${s}")
+      cli.listEndpoints().foreach { s =>
+        log.info(s"OUT: ${s}")
       }
       1 equals(1)
     }

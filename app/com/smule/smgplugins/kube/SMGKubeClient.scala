@@ -1,7 +1,7 @@
 package com.smule.smgplugins.kube
 
 import com.smule.smg.core.{SMGFileUtil, SMGLoggerApi}
-import com.smule.smgplugins.kube.SMGKubeClient.{KubeNode, KubeService, KubeServicePort}
+import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeEndpointPort, KubeEndpointSubset, KubeNode, KubeService, KubeServicePort}
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.{ContainerMetrics, NodeMetrics, PodMetrics}
 import io.fabric8.kubernetes.client.{Config, ConfigBuilder, DefaultKubernetesClient, KubernetesClientException}
@@ -11,13 +11,27 @@ import scala.collection.JavaConverters._
 object SMGKubeClient {
   case class KubeNode(name: String, hostName: Option[String], ipAddress: Option[String])
 
+  trait KubePort {
+    val port: Int
+    val protocol: String
+    val name: Option[String]
+  }
+
+  trait KubeNsObject {
+    val name: String
+    val namespace: String
+  }
+
   case class KubeServicePort(port: Int, protocol: String,
                              name: Option[String], nodePort: Option[Int],
-                             targetPort: Option[String])
-
+                             targetPort: Option[String]) extends KubePort
   case class KubeService(name: String, namespace: String, svcType: String,
-                         clusterIp: String, ports: Seq[KubeServicePort])
+                         clusterIp: String, ports: Seq[KubeServicePort]) extends KubeNsObject
 
+  case class KubeEndpointPort(port: Int, protocol: String, name: Option[String]) extends KubePort
+  case class KubeEndpointSubset(addresses: Seq[String], ports: Seq[KubeEndpointPort])
+  case class KubeEndpoint(name: String, namespace: String,
+                          subsets: Seq[KubeEndpointSubset]) extends KubeNsObject
 }
 
 class SMGKubeClient(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeClusterAuthConf) {
@@ -91,6 +105,27 @@ class SMGKubeClient(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeClus
           targetPort = Option(svcPort.getTargetPort).map(_.toString)
         )
       }
+      )
+    }
+  }
+
+  def listEndpoints(): Seq[KubeEndpoint] = {
+    client.endpoints().inAnyNamespace().list().getItems.asScala.map { ep =>
+      KubeEndpoint(
+        name = Option(ep.getMetadata.getName).getOrElse("UNDEFINED_NAME"),
+        namespace = Option(ep.getMetadata.getNamespace).getOrElse("UNDEFINED_NAME"),
+        subsets = ep.getSubsets.asScala.map { eps =>
+          KubeEndpointSubset(
+            eps.getAddresses.asScala.map(_.getIp),
+            eps.getPorts.asScala.map { epp =>
+              KubeEndpointPort(
+                port = epp.getPort,
+                protocol = Option(epp.getProtocol).getOrElse("TCP"),
+                name = Option(epp.getName)
+              )
+            }
+          )
+        }
       )
     }
   }
