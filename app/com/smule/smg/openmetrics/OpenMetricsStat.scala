@@ -118,8 +118,8 @@ object OpenMetricsStat {
       else try {
         arr(0).toDouble
       } catch { case t: Throwable =>
-        log.warn(s"OpenMetricsStat.parseLine: bad Double value: ${arr(0)}: ln=$ln")
-        Double.NaN
+        log.warn(s"OpenMetricsStat.parseLine: bad line (invalid Double value): ${arr(0)}: ln=$ln")
+        return None
       }
       val tsms = arr.lift(1).map(_.toLong)
       val smgUid = if (!hasLabels) name else {
