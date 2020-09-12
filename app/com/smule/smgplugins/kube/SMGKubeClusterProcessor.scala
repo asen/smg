@@ -46,7 +46,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       idPrefix = cConf.idPrefix,
       notifyConf = if (cmConf.notifyConf.isDefined) cmConf.notifyConf else cConf.notifyConf,
       regexReplaces = cConf.regexReplaces ++ cmConf.regexReplaces,
-      labelsInUids = cmConf.labelsInUids
+      labelsInUids = cmConf.labelsInUids,
+      extraLabels = Map("smg_target_host"-> targetHost, "smg_target_port_path" -> cmConf.portAndPath)
     )
     Some(ret)
   }
@@ -112,13 +113,17 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   def processAutoPortConf(cConf: SMGKubeClusterConf,
                           autoConf: SMGKubeClusterAutoConf,
                           nsObject: KubeNsObject,
-                          ipAddr: String, kubePort: KubePort): Option[SMGScrapeTargetConf] = {
+                          ipAddr: String,
+                          kubePort: KubePort,
+                          idxId: Option[Int]
+                         ): Option[SMGScrapeTargetConf] = {
     try {
       val proto = if (autoConf.useHttps) "https://" else "http://"
       val command = cConf.fetchCommand + " " + proto + ipAddr + s":${kubePort.port}/metrics"
       if (!checkAutoConf(command, cConf, autoConf, nsObject, kubePort))
         return None
-      val uid = cConf.uid + "." + autoConf.targetType + "." + nsObject.namespace + "." + nsObject.name
+      val uid = cConf.uid + "." + autoConf.targetType + "." + nsObject.namespace +
+        "." + nsObject.name + "." + kubePort.port + idxId.map(x => s".$x").getOrElse("")
       val title = s"${cConf.hname} ${autoConf.targetType} ${nsObject.name} (${nsObject.namespace})"
       val confOutput = s"${cConf.uid}-${autoConf.targetType}-${nsObject.namespace}-${nsObject.name}.yml"
       val ret = SMGScrapeTargetConf(
@@ -135,7 +140,10 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         idPrefix = cConf.idPrefix,
         notifyConf = cConf.notifyConf,
         regexReplaces = cConf.regexReplaces ++ autoConf.regexReplaces,
-        labelsInUids = false
+        labelsInUids = false,
+        extraLabels = Map("smg_target_type"-> autoConf.targetType,
+          "smg_target_host"-> ipAddr,
+          "smg_target_port" -> kubePort.port.toString)
       )
       Some(ret)
     } catch { case t: Throwable =>
@@ -148,17 +156,23 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   def processServiceConf(cConf: SMGKubeClusterConf, kubeService: KubeService): Seq[SMGScrapeTargetConf] = {
     // TODO check eligibility based on labels?
     kubeService.ports.flatMap { svcPort =>
-      processAutoPortConf(cConf, cConf.svcConf, kubeService, kubeService.clusterIp, svcPort)
+      processAutoPortConf(cConf, cConf.svcConf, kubeService, kubeService.clusterIp, svcPort, None)
     }
   }
 
 
   def processEndpointConf(cConf: SMGKubeClusterConf, kubeEndpoint: KubeEndpoint): Seq[SMGScrapeTargetConf] = {
     // TODO check eligibility based on labels?
+    var idx: Option[Int] = None
+    if (kubeEndpoint.subsets.size > 1)
+      idx = Some(0)
     kubeEndpoint.subsets.flatMap { subs =>
+      if ((subs.addresses.size > 1) && idx.isEmpty)
+        idx = Some(0)
       subs.addresses.flatMap { addr =>
+        if (idx.isDefined) idx = Some(idx.get + 1)
         subs.ports.flatMap { prt =>
-           processAutoPortConf(cConf, cConf.endpointsConf, kubeEndpoint, addr, prt)
+           processAutoPortConf(cConf, cConf.endpointsConf, kubeEndpoint, addr, prt, idx)
         }
       }
     }

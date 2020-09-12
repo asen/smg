@@ -81,8 +81,8 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
           yobjList(yo).flatMap { o =>  RegexReplaceConf.fromYamlObject(yobjMap(o)) }
         }.getOrElse(Seq()),
         nodeMetrics = nodeMetrics,
-        svcConf = SMGKubeClusterAutoConf.fromYamlMap(ymap, "services"),
-        endpointsConf = SMGKubeClusterAutoConf.fromYamlMap(ymap, "endpoints"),
+        svcConf = SMGKubeClusterAutoConf.fromYamlMap(ymap, "service"),
+        endpointsConf = SMGKubeClusterAutoConf.fromYamlMap(ymap, "endpoint"),
         parentPfId  = ymap.get("pre_fetch").map(_.toString),
         parentIndexId = ymap.get("parent_index").map(_.toString),
         notifyConf = notifyConf,

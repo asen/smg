@@ -25,7 +25,8 @@ case class SMGScrapeTargetConf(
                                 idPrefix: Option[String],
                                 notifyConf: Option[SMGMonNotifyConf],
                                 regexReplaces: Seq[RegexReplaceConf],
-                                labelsInUids: Boolean
+                                labelsInUids: Boolean,
+                                extraLabels: Map[String,String]
                               ) {
    lazy val inspect: String = s"uid=$uid humanName=$humanName interval=$interval command=$command " +
      s"timeout=$timeoutSec confOutput=$confOutput parentPfId=$parentPfId labelsInUids=$labelsInUids " +
@@ -82,6 +83,11 @@ object SMGScrapeTargetConf {
     }
     if (in.labelsInUids)
       ret.put("labels_in_uids", Boolean.box(true))
+    if (in.extraLabels.nonEmpty){
+      val elMap = new util.HashMap[String,Object]()
+      in.extraLabels.foreach { case (k,v) => elMap.put(k,v)}
+      ret.put("extra_labels", elMap)
+    }
     ret
   }
 
@@ -121,7 +127,10 @@ object SMGScrapeTargetConf {
         regexReplaces = ymap.get("regex_replaces").map { yo: Object =>
           yobjList(yo).flatMap { o =>  RegexReplaceConf.fromYamlObject(yobjMap(o)) }
         }.getOrElse(Seq()),
-        labelsInUids = ymap.getOrElse("labels_in_uids", "false").toString == "true"
+        labelsInUids = ymap.getOrElse("labels_in_uids", "false").toString == "true",
+        extraLabels = ymap.get("extra_labels").map{ o: Object =>
+          yobjMap(o).map{case (k,v) => (k,v.toString)}.toMap
+        }.getOrElse(Map[String,String]())
       )
     )
   }
