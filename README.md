@@ -13,8 +13,12 @@ Intended to be a simple to maintain but scalable monitoring system for
 people who prefer to generate their configs over clicking on UI to set 
 it up.
 
+Recently it seems that Prometheus is taking over the monitoring world. 
+Check the [SMG_VS_PROMETHEUS.md](SMG_VS_PROMETHEUS.md) file for a 
+(possibly opinionated) comparison. 
+
 Check the docs/ dir (or Docs link in a running SMG instance) for more 
-information.
+information including configuration reference.
 
 Live demo: http://smg1.ace-tek.net/
 
