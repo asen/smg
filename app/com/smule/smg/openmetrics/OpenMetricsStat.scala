@@ -39,7 +39,7 @@ object OpenMetricsStat {
     normalizedUid(name, labels).replaceAll(replaceRegexStr, "_")
 
   def groupIndexUid(name: String, groupIndex: Int): String =
-    name.replaceAll(replaceRegexStr, "_") + s"_$groupIndex"
+    name.replaceAll(replaceRegexStr, "_") + s"._$groupIndex"
 
   // extract a quoted value out of inp and return it together with the remaining string
   // assumes inpiut starts with a single or double quote
