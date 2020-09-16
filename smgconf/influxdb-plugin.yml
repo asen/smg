@@ -1,0 +1,8 @@
+
+influxdb:
+#  write_host_port: "localhost:8086"
+#  write_url_path: "/api/v2/write?bucket=smg_db&precision=s"
+#  write_url_proto: "http"
+#  write_batch_size: 100
+#  write_timeout_ms: 30000
+#  strip_group_index: true

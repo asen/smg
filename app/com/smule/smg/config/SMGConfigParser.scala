@@ -59,6 +59,12 @@ object SMGConfigParser {
     val matcher = fs.getPathMatcher("glob:" + glob)
     getListOfFiles(dir, matcher, log).map( (f: File) => f.getPath)
   }
+
+  def yobjMap(yobj: Object): mutable.Map[String, Object] =
+    yobj.asInstanceOf[java.util.Map[String, Object]].asScala
+
+  def yobjList(yobj: Object): mutable.Seq[Object] =
+    yobj.asInstanceOf[java.util.List[Object]].asScala
 }
 
 class SMGConfigParser(log: SMGLoggerApi) {

@@ -3,16 +3,14 @@ package com.smule.smgplugins.kube
 import java.io.File
 
 import com.smule.smg.config.SMGConfigParser
+import com.smule.smg.config.SMGConfigParser.{yobjList, yobjMap}
 import com.smule.smg.core.{SMGFileUtil, SMGFilter, SMGLoggerApi}
 import com.smule.smg.monitor.{SMGMonAlertConfSource, SMGMonNotifyConf}
 import com.smule.smgplugins.scrape.RegexReplaceConf
 import org.yaml.snakeyaml.Yaml
 
 import scala.collection.mutable
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-
-import com.smule.smgplugins.scrape.SMGScrapeTargetConf.{yobjList, yobjMap}
 
 class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLoggerApi) {
 

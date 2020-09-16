@@ -1,8 +1,8 @@
 package com.smule.smgplugins.kube
 
+import com.smule.smg.config.SMGConfigParser.{yobjList, yobjMap}
 import com.smule.smg.core.SMGFilter
 import com.smule.smgplugins.scrape.RegexReplaceConf
-import com.smule.smgplugins.scrape.SMGScrapeTargetConf.{yobjList, yobjMap}
 
 import scala.collection.mutable
 

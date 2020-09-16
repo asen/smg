@@ -3,20 +3,15 @@ package com.smule.smgplugins.scrape
 import java.io.File
 
 import com.smule.smg.config.SMGConfigParser
-import com.smule.smg.core.{SMGFileUtil, SMGFilter, SMGLoggerApi}
-import com.smule.smg.monitor.{SMGMonAlertConfSource, SMGMonNotifyConf}
+import com.smule.smg.config.SMGConfigParser.{yobjList, yobjMap}
+import com.smule.smg.core.{SMGFileUtil, SMGLoggerApi}
 import org.yaml.snakeyaml.Yaml
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class SMGScrapePluginConfParser(pluginId: String, confFile: String, log: SMGLoggerApi) {
 
-  private def yobjMap(yobj: Object): mutable.Map[String, Object] = SMGScrapeTargetConf.yobjMap(yobj)
-
-  private def yobjList(yobj: Object): mutable.Seq[Object] = SMGScrapeTargetConf.yobjList(yobj)
-  
   private def parseTargetsSeq(yamlList: mutable.Seq[Object], fname: String): Seq[SMGScrapeTargetConf] = {
     val ret = ListBuffer[SMGScrapeTargetConf]()
     yamlList.foreach { yobj =>

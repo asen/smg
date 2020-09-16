@@ -5,6 +5,7 @@ import java.nio.file.Paths
 import java.util
 
 import com.smule.smg.config.SMGConfigParser
+import com.smule.smg.config.SMGConfigParser.{yobjList, yobjMap}
 import com.smule.smg.core.SMGFilter
 import com.smule.smg.monitor.{SMGMonAlertConfSource, SMGMonNotifyConf}
 
@@ -40,12 +41,6 @@ case class SMGScrapeTargetConf(
 }
 
 object SMGScrapeTargetConf {
-
-  def yobjMap(yobj: Object): mutable.Map[String, Object] =
-    yobj.asInstanceOf[java.util.Map[String, Object]].asScala
-
-  def yobjList(yobj: Object): mutable.Seq[Object] =
-    yobj.asInstanceOf[java.util.List[Object]].asScala
 
   def dumpYamlObj(in: SMGScrapeTargetConf): java.util.Map[String,Object] = {
     val ret = new java.util.HashMap[String,Object]()
