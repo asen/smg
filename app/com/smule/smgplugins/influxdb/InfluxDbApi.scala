@@ -25,6 +25,11 @@ class InfluxDbApi(confParser: SMGInfluxDbPluginConfParser, log: SMGLoggerApi) {
       }
       override def onResponse(call: Call, response: Response): Unit = {
         log.debug(s"InfluxDbApi: Successfully written ${batch.size} records to $myUrl")
+        try {
+          response.body().close()
+        } catch { case t: Throwable =>
+          log.warn(s"InfluxDbApi: Failed to close response body from $myUrl : ${t.getMessage}")
+        }
       }
     })
   }
