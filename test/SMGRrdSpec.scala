@@ -9,22 +9,29 @@ class SMGRrdSpec extends Specification  {
 
   "SMGRraDef.getDefaultRraDef" should {
 
+    "work with interval 15" in {
+      val rras = SMGRraDef.getDefaultRraDef(15, Seq("AVERAGE"))
+      rras.defs.foreach(s => System.out.println(s))
+      System.out.println(rras)
+      rras.defs must have size 6
+    }
+
     "work with interval 60" in {
-      val rras = SMGRraDef.getDefaultRraDef(60)
+      val rras = SMGRraDef.getDefaultRraDef(60, Seq("AVERAGE", "MAX"))
 //      rras.defs.foreach(s => System.out.println(s))
 //      System.out.println(rras)
       rras.defs must have size 12
     }
 
     "work with interval 300" in {
-      val rras = SMGRraDef.getDefaultRraDef(300)
+      val rras = SMGRraDef.getDefaultRraDef(300, Seq("AVERAGE", "MAX"))
 //      rras.defs.foreach(s => System.out.println(s))
 //      System.out.println(rras)
       rras.defs must have size 10
     }
 
     "work with interval 3600" in {
-      val rras = SMGRraDef.getDefaultRraDef(3600)
+      val rras = SMGRraDef.getDefaultRraDef(3600, Seq("AVERAGE", "MAX"))
 //      rras.defs.foreach(s => System.out.println(s))
 //      System.out.println(rras)
       rras.defs must have size 8
@@ -35,21 +42,21 @@ class SMGRrdSpec extends Specification  {
 
   "SMGRrd.getDataResolution" should {
     "work fo 1M" in {
-      val rraDef = SMGRraDef.getDefaultRraDef(60)
+      val rraDef = SMGRraDef.getDefaultRraDef(60, Seq("AVERAGE", "MAX"))
       val res = SMGRrd.getDataResolution(60, "30h",
         GraphOptions.default, Some(rraDef), dataPointsPerImage)
       res mustEqual "1M avg (estimated)"
     }
 
     "work for 5M" in {
-      val rraDef = SMGRraDef.getDefaultRraDef(60)
+      val rraDef = SMGRraDef.getDefaultRraDef(60, Seq("AVERAGE", "MAX"))
       val res = SMGRrd.getDataResolution(60, "31h",
         GraphOptions.default, Some(rraDef), dataPointsPerImage)
       res mustEqual "5M avg (estimated)"
     }
 
     "work with pl" in {
-      val rraDef = SMGRraDef.getDefaultRraDef(60)
+      val rraDef = SMGRraDef.getDefaultRraDef(60, Seq("AVERAGE", "MAX"))
       val res = SMGRrd.getDataResolution(60, "282d",
         GraphOptions.withSome(pl=Some("24h")), Some(rraDef), dataPointsPerImage)
       res mustEqual "6h avg (estimated)"

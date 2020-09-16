@@ -70,7 +70,7 @@ case class SMGRrdCheckInfo(ou: SMGObjectUpdate, raw: List[String]) {
   val vars: List[SMGRrdVarInfo] = parseVars
   val infoRras: List[SMGRraInfo] = parseRras
   val ouRras: List[SMGRraInfo] =
-    ou.rraDef.getOrElse(SMGRraDef.getDefaultRraDef(ou.interval)).parsedDefsAll.sortBy(_.sortTuple)
+    ou.rraDef.getOrElse(SMGRraDef.getDefaultRraDef(ou.interval, ou.rraCfs)).parsedDefsAll.sortBy(_.sortTuple)
 
   def isOkIntervalMinMax: Boolean = {
     step == ou.interval &&

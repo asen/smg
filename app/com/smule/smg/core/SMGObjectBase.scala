@@ -38,6 +38,7 @@ trait SMGObjectBase {
   def rrdType: String
 
   val rraDef: Option[SMGRraDef]
+  val rraCfs: Seq[String] = Seq("AVERAGE") // TODO this should be configurable
 
   val labels: Map[String, String]
 

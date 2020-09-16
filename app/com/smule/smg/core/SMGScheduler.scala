@@ -38,7 +38,7 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
                               system: ActorSystem, lifecycle: ApplicationLifecycle) extends SMGSchedulerApi {
   private val log = SMGLogger
 
-  val MIN_INTERVAL = 10
+  val MIN_INTERVAL = 1
 
   val MAX_TICK_JITTER = 15
 
@@ -60,13 +60,14 @@ class SMGScheduler @Inject() (configSvc: SMGConfigService,
       } else {
         val ret = intervals.tail.foldLeft[Int](intervals.head) { (prev: Int, cur: Int) => BigInt(cur).gcd(prev).toInt }
         if (ret < MIN_INTERVAL) {
-          log.error("SMGScheduler.calcTickInterval: refusing to work with interval of less than " + MIN_INTERVAL + " seconds (" + ret + ") fall-back to 10 seconds")
+          log.error("SMGScheduler.calcTickInterval: refusing to work with interval of less than " +
+            MIN_INTERVAL + " second(s) (" + ret + s") fall-back to $MIN_INTERVAL seconds")
           MIN_INTERVAL
         } else if (ret % 2 == 0) {
           // use half the interval for improved accuracy
           ret / 2
         } else {
-          log.warn("SMGScheduler.calcTickInterval: calculated odd tick interval " + ret)
+          //log.warn("SMGScheduler.calcTickInterval: calculated odd tick interval " + ret)
           ret
         }
       }

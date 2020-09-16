@@ -120,7 +120,7 @@ object SMGRrd {
   def getDataResolution(rrdInterval: Int, period: String, gopts: GraphOptions,
                         rraDef: Option[SMGRraDef], dataPointsPerImage: Int): String = {
     val periodStart = parseRrdPeriod(period)
-    val myRraDef = rraDef.getOrElse(SMGRraDef.getDefaultRraDef(rrdInterval))
+    val myRraDef = rraDef.getOrElse(SMGRraDef.getDefaultRraDef(rrdInterval, Seq()))
     lazy val autoRes = getAutoResolution(rrdInterval, periodStart, gopts.pl, myRraDef, dataPointsPerImage)
     if (gopts.step.isDefined) {
       val res = intervalToStr(gopts.step.get) + " avg (requested)"

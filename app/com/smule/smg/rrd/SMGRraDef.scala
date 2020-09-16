@@ -52,9 +52,10 @@ object SMGRraDef {
     ((3600 * 24) / (myInterval * mySteps)) * v
   }
 
-  private def createDefaultRraDef(rraId: String, interval: Int): SMGRraDef = {
+  private def createDefaultRraDef(rraId: String, interval: Int, cfs: Seq[String]): SMGRraDef = {
     val lst = ListBuffer[String]()
-    Seq("AVERAGE", "MAX").foreach{ cf =>
+//    Seq("AVERAGE", "MAX").foreach{ cf =>
+    cfs.foreach{ cf =>
       if (interval <= 60) {
         lst += s"RRA:$cf:0.5:1:" + rrdDaysRows(4, 1, interval)
         //if (rrdMinutesSteps(5,interval) > 1) // only applcable on 1 min interval
@@ -74,8 +75,9 @@ object SMGRraDef {
 
   private val defaultRraDefs = mutable.Map[String, SMGRraDef]()
 
-  def getDefaultRraDef(interval: Int): SMGRraDef = {
+  def getDefaultRraDef(interval: Int, cfs: Seq[String]): SMGRraDef = {
     val rraId = "_default-" + interval
-    defaultRraDefs.getOrElseUpdate(rraId, { createDefaultRraDef(rraId, interval) })
+    val myCfs = if (cfs.isEmpty) Seq("AVERAGE", "MAX") else cfs
+    defaultRraDefs.getOrElseUpdate(rraId, { createDefaultRraDef(rraId, interval, myCfs) })
   }
 }

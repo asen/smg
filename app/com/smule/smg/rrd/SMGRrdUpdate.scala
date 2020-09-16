@@ -74,7 +74,10 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
       c.append(":").append((obju.interval * 2.5).toInt).append(":").append(v.getOrElse("min", "0"))
       c.append(":").append(v.getOrElse("max", "U"))
     }
-    val myRraDef = if (obju.rraDef.isDefined) obju.rraDef.get else SMGRraDef.getDefaultRraDef(obju.interval)
+    val myRraDef = if (obju.rraDef.isDefined)
+      obju.rraDef.get
+    else
+      SMGRraDef.getDefaultRraDef(obju.interval, obju.rraCfs)
     c.append(" ").append(myRraDef.defs.mkString(" "))
     c.toString
   }
