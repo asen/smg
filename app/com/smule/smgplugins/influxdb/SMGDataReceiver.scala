@@ -34,6 +34,8 @@ class SMGDataReceiver(confParser: SMGInfluxDbPluginConfParser,
   }
 
   override def receiveRunMsg(msg: SMGDataFeedMsgRun): Unit = {
+    if (!conf.writesEnabled)
+      return
     if (!msg.isOverlap)
       flush()
   }

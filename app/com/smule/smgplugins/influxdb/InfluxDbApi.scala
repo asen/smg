@@ -7,13 +7,22 @@ import com.smule.smg.core.SMGLoggerApi
 import okhttp3.{Call, Callback, MediaType, OkHttpClient, Request, RequestBody, Response}
 
 class InfluxDbApi(confParser: SMGInfluxDbPluginConfParser, log: SMGLoggerApi) {
-  private def dbConf = confParser.conf.dbConf.get
+  private def conf = confParser.conf
+  private def dbConf: InfluxDbConf = confParser.conf.dbConf
+
   private def influxDbUrl =
     dbConf.writeProto + "://" + dbConf.writeHostPort + dbConf.writeUrlPath
 
   private val httpClient = new OkHttpClient()
 
   def writeBatchAsync(batch: List[InfluxDbRecord]): Unit = {
+    if (!conf.writesEnabled){
+      if (batch.nonEmpty) {
+        log.warn(s"InfluxDbApi.writeBatchAsync: write request received with disabled config: " +
+          s"batch.size=${batch.size} batch.head=${batch.head}")
+      }
+      return
+    }
     val myUrl = influxDbUrl
     val myClient = httpClient.newBuilder().
       callTimeout(dbConf.writeTimeoutMs, TimeUnit.MILLISECONDS).build()

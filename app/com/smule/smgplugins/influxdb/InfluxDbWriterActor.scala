@@ -9,7 +9,7 @@ import scala.collection.mutable.ListBuffer
 class InfluxDbWriterActor(log: SMGLoggerApi,
                           confParser: SMGInfluxDbPluginConfParser) extends Actor {
   private def conf = confParser.conf
-  private def dbConf = confParser.conf.dbConf.get // XXX this will throw if used when disabled
+  private def dbConf = confParser.conf.dbConf // XXX this will throw if used when disabled
 
   private val dbApi = new InfluxDbApi(confParser, log)
   private val pending: ListBuffer[InfluxDbRecord] = ListBuffer[InfluxDbRecord]()
@@ -26,7 +26,8 @@ class InfluxDbWriterActor(log: SMGLoggerApi,
   private def flushRecords(): Unit = {
     val toWrite = pending.toList
     recordsSinceLastFlushMsg += toWrite.size
-    dbApi.writeBatchAsync(toWrite)
+    if (toWrite.nonEmpty)
+      dbApi.writeBatchAsync(toWrite)
     pending.clear()
   }
 
