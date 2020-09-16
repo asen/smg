@@ -90,7 +90,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       return false
     }
     try {
-      val out = SMGCmd(command).run().mkString("\n")
+      val out = SMGCmd(command, cConf.fetchCommandTimeout).run().mkString("\n")
       if (OpenMetricsStat.parseText(out, log, labelsInUid = false).nonEmpty) {
         //keep known up services in a cache and not run this every minute -
         //we only want to know if it is http and has valid /metrics URL, once
