@@ -15,7 +15,7 @@ class SMGScrapeObjectGen(
   private def metaType2RrdType(mt: Option[String]): String = {
      mt.getOrElse("gauge") match {
        case "gauge" => "GAUGE"
-       case "counter" => "DERIVE"
+       case "counter" => "DDERIVE" // XXX DDERIVE also covers float number counters
        case "summary" => "GAUGE" // TODO ?
        case "histogram" => "GAUGE" // TODO ?
        case "untyped" => "GAUGE" // TODO ?
