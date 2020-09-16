@@ -9,10 +9,8 @@ import com.smule.smg.monitor.{SMGMonAlertConfObj, SMGMonNotifyCmd, SMGMonNotifyC
 import com.smule.smg.remote.SMGRemote
 import com.smule.smg.rrd.{SMGRrd, SMGRrdConfig}
 
-import scala.collection.immutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.stm.CommitBarrier.Timeout
 
 object SMGLocalConfig {
   val DEFAULT_RRD_DIR: String = "smgrrd"
@@ -41,6 +39,8 @@ case class SMGLocalConfig(
                            indexes: Seq[SMGConfIndex],
                            rrdConf: SMGRrdConfig,
                            imgDir: String,
+                           defaultRrdDir: String,
+                           rrdDirLevelsDef: Option[DirLevelsDef],
                            urlPrefix: String,
                            intervals: Set[Int],
                            preFetches: Map[String, SMGPreFetchCmd],

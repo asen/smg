@@ -24,13 +24,23 @@ import scala.util.Try
 
 object SMGConfigParser {
 
-  // TODO
-  val defaultInterval: Int = 60// seconds
+  val defaultInterval: Int = 60 // seconds
   val defaultTimeout: Int = 30  // seconds
 
   val ALLOWED_UID_CHARS_REGEX_STR = "\\w\\._-"
 
   def validateOid(oid: String): Boolean = oid.matches("^[" + ALLOWED_UID_CHARS_REGEX_STR + "]+$")
+
+  def getRrdFile(baseDir: String, oid: String, levelsDef: Option[DirLevelsDef], mkDirs: Boolean = true): String = {
+    val myBaseDir = if (levelsDef.isEmpty)
+      baseDir + File.separator
+    else
+      baseDir + File.separator + levelsDef.get.getHashLevelsPath(oid)
+    val bdFile = new File(myBaseDir)
+    if (mkDirs && !bdFile.exists())
+      bdFile.mkdirs()
+    myBaseDir + oid + ".rrd"
+  }
 
   private def getListOfFiles(dir: String, matcher: PathMatcher, log: SMGLoggerApi):List[File] = {
     val d = new File(dir)
@@ -187,6 +197,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     val objectAlertConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonAlertConfVar]]]()
     val objectNotifyConfMaps = mutable.Map[String,mutable.Map[Int, ListBuffer[SMGMonNotifyConf]]]()
     var rrdDir = SMGLocalConfig.DEFAULT_RRD_DIR
+    var levelsDef: Option[DirLevelsDef] = None
     val rrdTool = "rrdtool"
     val imgDir = "public/smg"
     val urlPrefix: String = "/assets/smg"
@@ -367,7 +378,21 @@ class SMGConfigParser(log: SMGLoggerApi) {
         rrdDir = sval
         new File(rrdDir).mkdirs()
       }
-      globalConf(key) = sval
+      var ignore = false
+      if (key == "$rrd_dir_levels") {
+        if (levelsDef.isDefined) {
+          processConfigError(confFile, "processGlobal: $rrd_dir_levels global " +
+            s"can not be specified more than once", isWarn = true)
+          ignore = true
+        } else {
+          levelsDef = DirLevelsDef.parse(sval)
+          if (levelsDef.isEmpty)
+            processConfigError(confFile, "processGlobal: $rrd_dir_levels global " +
+              s"contains invalid value sval=$sval", isWarn = true)
+        }
+      }
+      if (!ignore)
+        globalConf(key) = sval
     }
 
     def processIndex( t: (String,Object), isHidden: Boolean, confFile: String ): Unit = {
@@ -560,7 +585,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 dataDelay = ymap.getOrElse("dataDelay", 0).asInstanceOf[Int],
                 stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
                 preFetch = parentIds.headOption,
-                rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
+                rrdFile = Some(SMGConfigParser.getRrdFile(rrdDir, oid, levelsDef)),
                 rraDef = rraDef,
                 rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap("rrd_init_source").toString) else None,
                 notifyConf = notifyConf,
@@ -881,6 +906,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
       confViewObjects = allViewObjectsConf.toList,
       indexes = indexConfsWithChildIds,
       rrdConf = createRrdConf,
+      defaultRrdDir = rrdDir,
+      rrdDirLevelsDef = levelsDef,
       imgDir = if (globalConf.contains("$img_dir")) globalConf("$img_dir") else imgDir,
       urlPrefix = if (globalConf.contains("$url_prefix")) globalConf("$url_prefix") else urlPrefix,
       intervals = intervals.toSet,

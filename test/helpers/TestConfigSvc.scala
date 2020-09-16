@@ -98,7 +98,8 @@ class TestConfigSvc() extends SMGConfigService {
         rrdGraphWidth = 607, rrdGraphHeight = 400,
         rrdGraphFont = None, dataPointsPerPixel = 3, dataPointsPerImageOpt = None,
         rrdGraphWidthPadding = None, maxArgsLengthOpt = None),
-
+      defaultRrdDir = "smgrrd",
+      rrdDirLevelsDef = None,
       imgDir = "test-out",
       urlPrefix = "",
       intervals = Set(60),

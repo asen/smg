@@ -1,9 +1,9 @@
 package com.smule.smg.rrd
 
 import java.io.File
-import java.nio.file.Paths
+import java.nio.file.{Files, Path, Paths}
 
-import com.smule.smg.config.SMGConfigService
+import com.smule.smg.config.{SMGConfigParser, SMGConfigService}
 import com.smule.smg.core.{SMGCmd, SMGObjectUpdate}
 
 import scala.collection.mutable
@@ -51,8 +51,16 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
       val fn = obju.rrdInitSource.get
       val absfn = if (fn.contains(File.separator)) {
         fn
-      } else { // assume same dir as original if conf value does not contain directory parts
-        Paths.get(new File(rrdFname).getParent, fn).toString
+      } else { // assume its an oid[.rrd] name if conf value does not contain directory parts
+        val sameDirPath = Paths.get(new File(rrdFname).getParent, fn)
+        if (Files.exists(sameDirPath)){ // backwards compatible
+          sameDirPath.toString
+        } else {
+          // XXX not stripping .rrd suffix as that might be valid object suffix?
+          // this assumes we are specifying other/former object id and not a file
+          SMGConfigParser.getRrdFile(configSvc.config.defaultRrdDir,
+            oid = fn, configSvc.config.rrdDirLevelsDef, mkDirs = false)
+        }
       }
       if (new File(absfn).exists()){
         c.append(s" --source $absfn")
