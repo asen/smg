@@ -31,4 +31,5 @@ kube:
 #           replace: "go_$2_$1"
 #        check_backoff: 600000
 #      endpoint:
+#      prefix_ids_with_cluster_id: false
     - include: "/etc/smg/kube-clusters.d/*.{yml,yaml}"

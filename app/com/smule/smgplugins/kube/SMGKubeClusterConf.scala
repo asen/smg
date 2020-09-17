@@ -19,11 +19,14 @@ case class SMGKubeClusterConf(
                                parentPfId: Option[String],
                                parentIndexId: Option[String],
                                notifyConf: Option[SMGMonNotifyConf],
-                               authConf: SMGKubeClusterAuthConf
+                               authConf: SMGKubeClusterAuthConf,
+                               prefixIdsWithClusterId: Boolean
                              ) {
-  lazy val hname: String = humanName.getOrElse(uid)
+  lazy val hnamePrefix: String = if (prefixIdsWithClusterId) humanName.getOrElse(uid) + " " else ""
 
-  lazy val inspect: String = s"uid=$uid humanName=$hname interval=$interval command=$fetchCommand " +
+  lazy val uidPrefix: String = if (prefixIdsWithClusterId) uid + "." else ""
+
+  lazy val inspect: String = s"uid=$uid humanNamePrefix=$hnamePrefix interval=$interval command=$fetchCommand " +
     s"timeout=$fetchCommandTimeout nodeMetrics=${nodeMetrics.size} " +
     s"filter: ${filter.map(_.humanText).getOrElse("None")}"
 }

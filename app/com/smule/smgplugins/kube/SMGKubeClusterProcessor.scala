@@ -24,13 +24,13 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                                 cConf: SMGKubeClusterConf,
                                 cmConf: SMGKubeClusterMetricsConf): Option[SMGScrapeTargetConf] = {
     val targetType = targetTypeHuman.toLowerCase
-    val tcUid = s"${cConf.uid}.$targetType.$objectName.${cmConf.uid}"
+    val tcUid = s"${cConf.uidPrefix}$targetType.$objectName.${cmConf.uid}"
     if (!SMGConfigParser.validateOid(tcUid)) {
       log.error(s"SMGKubeClusterProcessor - invalid SMG uid: $tcUid, ignoring metric conf")
       return None
     }
     val confOutput = s"${cConf.uid}-$targetType-$objectName-${cmConf.uid}.yml"
-    val humanName = s"${cConf.hname} ${targetTypeHuman} $objectName ${cmConf.hname}"
+    val humanName = s"${cConf.hnamePrefix}${targetTypeHuman} $objectName ${cmConf.hname}"
     val ret = SMGScrapeTargetConf(
       uid = tcUid,
       humanName = humanName,
@@ -63,7 +63,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                             kubePort: KubePort): Boolean = {
     // filter out invalid ports as far as we can tell
     def logSkipped(reason: String): Unit = {
-      log.info(s"SMGKubeClusterProcessor.checkAutoConf(${autoConf.targetType}): ${cConf.hname} " +
+      log.info(s"SMGKubeClusterProcessor.checkAutoConf(${autoConf.targetType}): ${cConf.uid}" +
         s"${kubeNsObject.namespace}.${kubeNsObject.name}: skipped due to $reason")
     }
     val lastGoodRunTs = knownGoodServiceCommands.get(command)
@@ -122,9 +122,9 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val command = cConf.fetchCommand + " " + proto + ipAddr + s":${kubePort.port}/metrics"
       if (!checkAutoConf(command, cConf, autoConf, nsObject, kubePort))
         return None
-      val uid = cConf.uid + "." + autoConf.targetType + "." + nsObject.namespace +
+      val uid = cConf.uidPrefix + autoConf.targetType + "." + nsObject.namespace +
         "." + nsObject.name + "." + kubePort.port + idxId.map(x => s"._$x").getOrElse("")
-      val title = s"${cConf.hname} ${autoConf.targetType} " +
+      val title = s"${cConf.hnamePrefix}${autoConf.targetType} " +
         s"${nsObject.namespace}.${nsObject.name}:${kubePort.port}${idxId.map(x => s" ($x)").getOrElse("")}"
       val confOutput = s"${cConf.uid}-${autoConf.targetType}-${nsObject.namespace}-" +
         s"${nsObject.name}-${kubePort.port}${idxId.map(x => s"-$x").getOrElse("")}.yml"

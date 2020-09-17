@@ -84,7 +84,8 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
         parentPfId  = ymap.get("pre_fetch").map(_.toString),
         parentIndexId = ymap.get("parent_index").map(_.toString),
         notifyConf = notifyConf,
-        authConf = SMGKubeClusterAuthConf.fromYamlObject(ymap)
+        authConf = SMGKubeClusterAuthConf.fromYamlObject(ymap),
+        prefixIdsWithClusterId = ymap.get("prefix_ids_with_cluster_id").map(_.toString).getOrElse("false") == "true"
       )
     )
   }
