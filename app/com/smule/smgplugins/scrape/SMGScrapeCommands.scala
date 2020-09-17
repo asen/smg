@@ -69,14 +69,24 @@ class SMGScrapeCommands(log: SMGPluginLogger) {
       throwOnError("get", paramStr, timeoutSec, "Did not get parsed parentData to get data from")
     val parsedData = parentData.get.res.data.asInstanceOf[OpenMetricsData]
     val keys = paramStr.strip().split("\\s*,\\s*")
+    var conflictingTsms = false
+    var tsms: Option[Long] = None
     val ret = keys.map { k =>
       val opt = parsedData.byUid.get(k)
       if (opt.isEmpty){
         throwOnError("get", paramStr, timeoutSec, s"Key not found in metrics data: ${k}")
       }
+      val newTsms = opt.get.tsms
+      if (tsms.isEmpty && !conflictingTsms)
+        tsms = newTsms
+      else if (tsms != newTsms){
+        conflictingTsms = true
+        tsms = None
+      }
       opt.get.value
     }
-    CommandResultListDouble(ret.toList)
+    val mytss = tsms.map(x => (x / 1000).toInt)
+    CommandResultListDouble(ret.toList, if (mytss.isDefined) mytss else parentData.flatMap(_.useTss) )
   }
 
   def runPluginFetchCommand(cmd: String,

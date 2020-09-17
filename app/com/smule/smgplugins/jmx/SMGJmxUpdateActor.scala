@@ -8,6 +8,7 @@ import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core.{SMGDataFeedMsgPf, SMGFetchException, SMGRunStats, SMGUpdateActor}
 import com.smule.smg.monitor.SMGState
 import com.smule.smg.plugin.SMGPlugin
+import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdateData}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -52,14 +53,15 @@ class SMGJmxUpdateActor(
             List(), Some(plugin.pluginId)))
           objs.foreach { obj =>
 
-            def fetchFn(): List[Double] = {
-              try {
+            def fetchFn(): SMGRrdUpdateData = {
+              val lst = try {
                 jmxClient.fetchJmxValues(hostPort, obj.jmxName, obj.attrs)
               } catch {
                 case ex: Throwable => {
                   throw new SMGFetchException(s"JMX fetch error: $hostPort, ${obj.jmxName}:${obj.attrs}, msg=${ex.getMessage}")
                 }
               }
+              SMGRrdUpdateData(lst, Some(SMGRrd.tssNow))
             }
 
             try {

@@ -43,11 +43,11 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
       log.debug(s"RUN_COMMAND: tms=${command.timeoutSec} : (plugin) ${command.str}")
       runPluginFetchCommand(command, parentData)
     } else {
-      CommandResultListString(command.run(parentData.map(_.res.asStr)))
+      CommandResultListString(command.run(parentData.map(_.res.asStr)), parentData.flatMap(_.useTss))
     }
   }
 
-  private def fetchValues(rrdObj: SMGRrdObject, parentData: Option[ParentCommandData]): List[Double] = {
+  private def fetchValues(rrdObj: SMGRrdObject, parentData: Option[ParentCommandData]): SMGRrdUpdateData = {
     val res = runFetchCommand(rrdObj.command, parentData)
     def handleError(errMsg: String) = {
       log.error(errMsg)
@@ -55,22 +55,22 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
       throw SMGCmdException(rrdObj.command.str, rrdObj.command.timeoutSec, -1, res.asStr, errMsg)
     }
     val ret = try {
-      res.asDoubleList(rrdObj.vars.size)
+      res.asUpdateData(rrdObj.vars.size)
     } catch { case t: Throwable =>
       val errMsg = s"Unexpected exception processing fetch output: ${t.getClass.getName}: ${t.getMessage}"
       handleError(errMsg)
     }
-    if (ret.lengthCompare(rrdObj.vars.size) < 0) {
+    if (ret.values.lengthCompare(rrdObj.vars.size) < 0) {
       val errMsg = "Bad output from external command - less lines than expected (" +
-        ret.size + "<" + rrdObj.vars.size + ")"
+        ret.values.size + "<" + rrdObj.vars.size + ")"
       handleError(errMsg)
     }
     ret
   }
 
-  private def fetchAggValues(aggObj: SMGRrdAggObject, confSvc: SMGConfigService): List[Double] = {
+  private def fetchAggValues(aggObj: SMGRrdAggObject, confSvc: SMGConfigService): SMGRrdUpdateData = {
     val sources = aggObj.ous.map(ou => confSvc.getCachedValues(ou, !aggObj.isCounter)).toList
-    SMGRrd.mergeValues(aggObj.aggOp, sources)
+    SMGRrdUpdateData(SMGRrd.mergeValues(aggObj.aggOp, sources), None)
   }
 
   private def processSMGUpdateObjectMessage(obj: SMGObjectUpdate,
@@ -78,7 +78,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                                             parentData: Option[ParentCommandData]): Unit = {
     log.debug(s"SMGUpdateActor received SMGUpdateObjectMessage for ${obj.id}")
     Future {
-      def fetchFn() = {
+      def fetchFn(): SMGRrdUpdateData = {
         val t0 = System.currentTimeMillis()
         try {
           obj match {
@@ -130,6 +130,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
               try {
                 var cmdTimeMs: Long = -1L
                 val t0 = System.currentTimeMillis()
+                val updTss = if (pf.ignoreTs) None else Some(SMGRrd.tssNow)
                 try {
                   if (childSeqAborted)
                     throw SMGCmdException(pf.command.str, pf.command.timeoutSec, -1,
@@ -138,7 +139,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                         pf.parentId.map(s => s" and/or increasing child_conc on the parent: $s").getOrElse("") + ".")
                   val out = runFetchCommand(pf.command, parentData)
                   if (pf.passData)
-                    myData = Some(ParentCommandData(out))
+                    myData = Some(ParentCommandData(out, updTss))
                   cmdTimeMs = System.currentTimeMillis() - t0
                   if (cmdTimeMs > (pf.command.timeoutSec.toLong * 1000) * 0.5) { // more than 50% of timeout time
                     log.warn(s"SMGUpdateActor: slow pre_fetch command: ${pf.id}: ${pf.command.str} " +
@@ -152,18 +153,17 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                 configSvc.sendPfMsg(SMGDataFeedMsgPf(SMGRrd.tssNow, pf.id, interval, leafObjs, 0, List(), None))
                 if (updateCounters)
                   SMGStagedRunCounter.incIntervalCount(interval)
-                val updTs = if (pf.ignoreTs) None else Some(SMGRrd.tssNow)
                 val (childObjTrees, childPfTrees) = fRoot.children.partition(_.node.isRrdObj)
                 if (childObjTrees.nonEmpty) {
                   val childObjSeq = childObjTrees.map(_.node.asInstanceOf[SMGRrdObject])
                   childObjSeq.foreach { rrdObj =>
-                    sendToSelfActor ! SMGUpdateObjectMessage(rrdObj, updTs, updateCounters, myData)
+                    sendToSelfActor ! SMGUpdateObjectMessage(rrdObj, updTss, updateCounters, myData)
                   }
                   log.debug(s"SMGUpdateActor.runPrefetched($interval): Sent update messages for " +
                     s"[${pf.id}] object children (${childObjSeq.size})")
                 }
                 if (childPfTrees.nonEmpty) {
-                  sendToSelfActor ! SMGUpdateFetchMessage(interval, childPfTrees, updTs, pf.childConc,
+                  sendToSelfActor ! SMGUpdateFetchMessage(interval, childPfTrees, updTss, pf.childConc,
                     updateCounters, myData)
                   log.debug(s"SMGUpdateActor.runPrefetched($interval): Sent update messages for " +
                     s"[${pf.id}] pre_fetch children (${childPfTrees.size})")
@@ -258,16 +258,16 @@ object SMGUpdateActor {
   def processObjectUpdate(obj: SMGObjectUpdate,
                           smgConfSvc: SMGConfigService,
                           ts: Option[Int],
-                          fetchFn: () => List[Double],
+                          fetchFn: () => SMGRrdUpdateData,
                           log: SMGLoggerApi
                          ): Unit = {
     try {
       val rrd = new SMGRrdUpdate(obj, smgConfSvc)
       rrd.checkOrCreateRrd()
       try {
-        val values = fetchFn()
-        smgConfSvc.cacheValues(obj, ts.getOrElse(SMGRrd.tssNow), values)
-        processRrdUpdate(rrd, smgConfSvc, ts, values, log)
+        val res = fetchFn()
+        smgConfSvc.cacheValues(obj, res.ts.getOrElse(ts.getOrElse(SMGRrd.tssNow)), res.values)
+        processRrdUpdate(rrd, smgConfSvc, ts, res, log)
       } catch {
         case cex: SMGCmdException => {
           smgConfSvc.invalidateCachedValues(obj)
@@ -306,22 +306,22 @@ object SMGUpdateActor {
     *
     * @param rrd
     * @param smgConfSvc
-    * @param ts
-    * @param values
+    * @param udata
     * @param log
     */
   def processRrdUpdate(rrd: SMGRrdUpdate,
                        smgConfSvc: SMGConfigService,
                        ts: Option[Int],
-                       values: List[Double],
+                       udata: SMGRrdUpdateData,
                        log: SMGLoggerApi): Unit = {
+    val realTss = if (udata.ts.isDefined) udata.ts else ts
     try {
       if (smgConfSvc.config.rrdConf.useBatchedUpdates)
-        SMGUpdateBatchActor.sendUpdate(smgConfSvc.getBatchUpdateActor.get, rrd.obju, SMGRrdUpdateData(values, ts))
+        SMGUpdateBatchActor.sendUpdate(smgConfSvc.getBatchUpdateActor.get, rrd.obju, udata.withTss(realTss))
       else
-        rrd.updateValues(values, ts)
+        rrd.updateValues(udata.values, realTss)
       smgConfSvc.sendObjMsg(
-        SMGDataFeedMsgObj(ts.getOrElse(SMGRrd.tssNow), rrd.obju, values, 0, List())
+        SMGDataFeedMsgObj(realTss.getOrElse(SMGRrd.tssNow), rrd.obju, udata.values, 0, List())
       )
     } catch {
       case cex: SMGCmdException => {
