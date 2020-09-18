@@ -7,7 +7,7 @@ import scala.collection.concurrent.TrieMap
 /**
   * Mutable store for keeping a cache of recently fetched values.
   */
-class SMGValuesCache() {
+class SMGValuesCache(log: SMGLoggerApi) {
 
   private def maxCacheAge(ou: SMGObjectUpdate) = (ou.interval.toDouble * 2.5).toInt
 
@@ -27,6 +27,8 @@ class SMGValuesCache() {
     * @param vals - fetched values
     */
   def cacheValues(ou: SMGObjectUpdate, tss: Int, vals: List[Double]): Unit = {
+    if (tss < 0)
+      log.error(s"SMGValuesCache.cacheValues(${ou.id}): negative tss: $tss vals=$vals")
     val key = ckey(ou)
     val prev = myLastCache.get(key)
     myLastCache.put(key, CachedVals(tss, vals))
@@ -49,7 +51,7 @@ class SMGValuesCache() {
     * @param ou - object update
     * @return - list of vals if (existing and valid) in cache, list of NaNs otherwise
     */
-  def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int]) = {
+  private def myGetCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int]) = {
     lazy val nanList: List[Double] = ou.vars.map(v => Double.NaN)
     val key = ckey(ou)
     val opt = myLastCache.get(key)
@@ -80,6 +82,13 @@ class SMGValuesCache() {
       } else //not a counter
         (opt.get.vals, Some(opt.get.tss))
     } else  (nanList, None)
+  }
+
+  def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int]) = {
+    val ret = myGetCachedValues(ou, counterAsRate)
+    if (ret._2.isDefined && ret._2.get < 0)
+      log.error(s"SMGValuesCache.getCachedValues(${ou.id}): negative tss: $ret._2.get vals=${ret._1}")
+    ret
   }
 
   def purgeObsoleteObjs(newObjs: Seq[SMGObjectUpdate]): Unit = {

@@ -1,7 +1,6 @@
 package com.smule.smg.core
 
 import akka.actor.Actor
-import com.smule.smg._
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdate, SMGRrdUpdateData}
 
@@ -71,8 +70,8 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
   private def fetchAggValues(aggObj: SMGRrdAggObject, confSvc: SMGConfigService): SMGRrdUpdateData = {
     val cache = aggObj.ous.map(ou => confSvc.getCachedValues(ou, !aggObj.isCounter)).toList
     val sources = cache.map(_._1)
-    val tssSeq = cache.flatMap(_._2)
-    val tss = if (tssSeq.isEmpty){
+    val tssSeq: Seq[Int] = cache.flatMap(_._2)
+    val tss: Option[Int] = if (tssSeq.isEmpty){
       None
     } else Some(tssSeq.sum / tssSeq.size)
     if (tss.getOrElse(0)< 0)

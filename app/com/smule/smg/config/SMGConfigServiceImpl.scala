@@ -162,7 +162,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   override val pluginsById: Map[String, SMGPlugin] = plugins.groupBy(_.pluginId).map(t => (t._1, t._2.head))
 
   // XXX this is only updated on config reload (getNewConfig) to avoid the need of synchronization
-  private val valuesCache = new SMGValuesCache()
+  private val valuesCache = new SMGValuesCache(log)
 
   override def cacheValues(ou: SMGObjectUpdate, tss: Int, vals: List[Double]): Unit = {
     // check whether ou.id is still valid and don't cache values if object was expunged by config reload
