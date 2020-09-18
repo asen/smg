@@ -33,13 +33,17 @@ class SMGMonInternalVarState(var objectUpdate: SMGObjectUpdate,
   private def processCounterUpdate(ts: Int, rawVal: Double): Option[(Double,Option[String])] = {
     val tsDelta = ts - myCounterPrevTs
 
-    val ret = if (tsDelta > (objectUpdate.interval * 3)) {
+    val ret = if (tsDelta > (objectUpdate.interval * 10)) {
       if (myCounterPrevTs > 0) {
         log.debug(s"SMGMonInternalVarState.processCounterUpdate($id): Time delta is too big: $ts - $myCounterPrevTs = $tsDelta")
       }
       None
     } else if (tsDelta <= 0) {
-      log.error(s"SMGMonInternalVarState.processCounterUpdate($id): Non-positive time delta detected: $ts - $myCounterPrevTs = $tsDelta")
+      // XXX tsDelta == 0 is a vailid case with openmetrics where a counter comes with
+      // its timestamp and that may update less frequently than our poll interval
+      if (tsDelta < 0)
+        log.error(s"SMGMonInternalVarState.processCounterUpdate($id): Negative time delta " +
+          s"detected: $ts - $myCounterPrevTs = $tsDelta")
       None
     } else {
       val maxr = objectUpdate.vars(vix).get("max").map(_.toDouble)
