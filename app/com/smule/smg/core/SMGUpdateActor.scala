@@ -75,8 +75,9 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
     val tss = if (tssSeq.isEmpty){
       None
     } else Some(tssSeq.sum / tssSeq.size)
-//    if (tss.getOrElse(0)< 0)
-//      log.error(s"fetchAggValues: Calculated negative TSS: $tss sum = ${tss.sum} size=${tss.size}")
+    if (tss.getOrElse(0)< 0)
+      log.error(s"fetchAggValues (${aggObj.ouId}: Calculated negative TSS: " +
+        s"$tss sum = ${tssSeq.sum} size=${tss.size}")
     SMGRrdUpdateData(SMGRrd.mergeValues(aggObj.aggOp, sources), tss)
   }
 
@@ -273,7 +274,10 @@ object SMGUpdateActor {
       rrd.checkOrCreateRrd()
       try {
         val res = fetchFn()
-        smgConfSvc.cacheValues(obj, res.ts.getOrElse(ts.getOrElse(SMGRrd.tssNow)), res.values)
+        val cacheTs = res.ts.getOrElse(ts.getOrElse(SMGRrd.tssNow))
+        if (cacheTs < 0)
+          log.error(s"SMGUpdateActor.processObjectUpdate (${obj.id}): negative cacheTs $cacheTs (ts=$ts res=$res)")
+        smgConfSvc.cacheValues(obj, cacheTs, res.values)
         processRrdUpdate(rrd, smgConfSvc, ts, res, log)
       } catch {
         case cex: SMGCmdException => {
