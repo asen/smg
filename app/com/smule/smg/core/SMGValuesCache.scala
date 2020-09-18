@@ -51,7 +51,7 @@ class SMGValuesCache(log: SMGLoggerApi) {
     * @param ou - object update
     * @return - list of vals if (existing and valid) in cache, list of NaNs otherwise
     */
-  private def myGetCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int]) = {
+  def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int]) = {
     lazy val nanList: List[Double] = ou.vars.map(v => Double.NaN)
     val key = ckey(ou)
     val opt = myLastCache.get(key)
@@ -82,13 +82,6 @@ class SMGValuesCache(log: SMGLoggerApi) {
       } else //not a counter
         (opt.get.vals, Some(opt.get.tss))
     } else  (nanList, None)
-  }
-
-  def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int]) = {
-    val ret = myGetCachedValues(ou, counterAsRate)
-    if (ret._2.isDefined && ret._2.get < 0)
-      log.error(s"SMGValuesCache.getCachedValues(${ou.id}): negative tss: $ret._2.get vals=${ret._1}")
-    ret
   }
 
   def purgeObsoleteObjs(newObjs: Seq[SMGObjectUpdate]): Unit = {

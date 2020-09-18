@@ -70,13 +70,10 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
   private def fetchAggValues(aggObj: SMGRrdAggObject, confSvc: SMGConfigService): SMGRrdUpdateData = {
     val cache = aggObj.ous.map(ou => confSvc.getCachedValues(ou, !aggObj.isCounter)).toList
     val sources = cache.map(_._1)
-    val tssSeq: Seq[Int] = cache.flatMap(_._2)
+    val tssSeq: Seq[Long] = cache.flatMap(_._2.map(_.toLong)) // using long to avoid the sum overflowing 32 its
     val tss: Option[Int] = if (tssSeq.isEmpty){
       None
-    } else Some(tssSeq.sum / tssSeq.size)
-    if (tss.getOrElse(0)< 0)
-      log.error(s"fetchAggValues (${aggObj.ouId}: Calculated negative TSS: " +
-        s"$tss sum = ${tssSeq.sum} size=${tss.size}")
+    } else Some( (tssSeq.sum / tssSeq.size).toInt )
     SMGRrdUpdateData(SMGRrd.mergeValues(aggObj.aggOp, sources), tss)
   }
 
