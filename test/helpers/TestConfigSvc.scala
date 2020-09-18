@@ -188,7 +188,8 @@ class TestConfigSvc() extends SMGConfigService {
     * @param ou - object update
     * @return
     */
-  override def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): List[Double] = List()
+  override def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int]) =
+    (List(), None)
 
   /**
     * Invalidate any previously cached values for this object

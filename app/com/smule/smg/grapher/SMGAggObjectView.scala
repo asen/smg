@@ -4,6 +4,7 @@ import com.smule.smg.core.{SMGAggGroupBy, SMGObjectView}
 import com.smule.smg.rrd.SMGRraDef
 import com.smule.smg.remote.SMGRemote
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
@@ -26,18 +27,7 @@ trait SMGAggObjectView extends SMGObjectView {
   override val stack: Boolean = (op == "STACK") || objs.head.stack
 
   // merge values with the same key with a comma
-  override val labels: Map[String, String] =
-    objs.map(_.labels).foldLeft(mutable.Map[String, ListBuffer[String]]()) { case (mm, sm) =>
-      sm.foreach { case (k,v) =>
-        if (!mm.contains(k)){
-          mm(k) = ListBuffer()
-        }
-        mm(k) += v
-      }
-      mm
-    }.map { case (k, lb) =>
-      (k, lb.mkString(","))
-    }.toMap
+  override val labels: Map[String, String] = SMGAggObjectView.mergeLabels(objs.map(_.labels))
 
   /**
     * @inheritdoc
@@ -140,6 +130,7 @@ object SMGAggObjectView {
     getLcp(sl.toList, tl.toList).mkString(sep.toString)
   }
 
+  @tailrec
   private def commonListPrefix(sep: Char, lst: Seq[String], soFar: Option[String] = None): String = {
     if (lst.isEmpty) soFar.getOrElse("")
     else {
@@ -152,6 +143,7 @@ object SMGAggObjectView {
     commonPrefix(sep, s.reverse, t.reverse).reverse
   }
 
+  @tailrec
   private def commonListSuffix(sep: Char, lst: Seq[String], soFar: Option[String] = None): String = {
     if (lst.isEmpty) soFar.getOrElse("")
     else {
@@ -211,5 +203,16 @@ object SMGAggObjectView {
       title = myTitle)
   }
 
-
+  def mergeLabels(inp: Seq[Map[String, String]]): Map[String, String] =
+    inp.foldLeft(mutable.Map[String, ListBuffer[String]]()) { case (mm, sm) =>
+      sm.foreach { case (k,v) =>
+        if (!mm.contains(k)){
+          mm(k) = ListBuffer()
+        }
+        mm(k) += v
+      }
+      mm
+    }.map { case (k, lb) =>
+      (k, lb.mkString(","))
+    }.toMap
 }

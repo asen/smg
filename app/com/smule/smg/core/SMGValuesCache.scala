@@ -49,7 +49,7 @@ class SMGValuesCache() {
     * @param ou - object update
     * @return - list of vals if (existing and valid) in cache, list of NaNs otherwise
     */
-  def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): List[Double] = {
+  def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int]) = {
     lazy val nanList: List[Double] = ou.vars.map(v => Double.NaN)
     val key = ckey(ou)
     val opt = myLastCache.get(key)
@@ -67,19 +67,19 @@ class SMGValuesCache() {
             }
             if (isGood)
               if (counterAsRate)
-                rates
+                (rates, Some(opt.get.tss))
               else
-                opt.get.vals
+                (opt.get.vals, Some(opt.get.tss))
             else {
-              nanList // rates not good
+              (nanList, None) // rates not good
             }
           } else {
-            nanList // time delta outside range
+            (nanList, None) // time delta outside range
           }
-        } else nanList
-      } else
-        opt.get.vals
-    } else nanList
+        } else  (nanList, None)
+      } else //not a counter
+        (opt.get.vals, Some(opt.get.tss))
+    } else  (nanList, None)
   }
 
   def purgeObsoleteObjs(newObjs: Seq[SMGObjectUpdate]): Unit = {

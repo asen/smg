@@ -115,7 +115,7 @@ trait SMGConfigService {
     * @param ou - object update
     * @return - list of values (can be NaNs if no valid cache)
     */
-  def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): List[Double]
+  def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int])
 
   /**
     * published here for plugins to use

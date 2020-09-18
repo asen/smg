@@ -2,7 +2,7 @@ package com.smule.smgplugins.scrape
 
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser}
 import com.smule.smg.core._
-import com.smule.smg.grapher.SMGraphObject
+import com.smule.smg.grapher.{SMGAggObjectView, SMGraphObject}
 import com.smule.smg.openmetrics.OpenMetricsStat
 
 import scala.collection.mutable.ListBuffer
@@ -12,6 +12,9 @@ class SMGScrapeObjectGen(
                           scrapedMetrics: Seq[OpenMetricsStat],
                           log: SMGLoggerApi
                         ) {
+  private val aggUidStr = "agg."
+  private val nonAggUidStr = "dtl."
+
   private def metaType2RrdType(mt: Option[String]): String = {
      mt.getOrElse("gauge") match {
        case "gauge" => "GAUGE"
@@ -41,17 +44,18 @@ class SMGScrapeObjectGen(
                                 idPrefix: String,
                                 parentPfIds: Seq[String],
                                 parentIndexId: String
-                              ): (Seq[SMGRrdObject], Seq[SMGConfIndex]) = {
+                              ): (Seq[SMGRrdObject], Seq[SMGRrdAggObject], Seq[SMGConfIndex]) = {
     val metaStat = grp.head
     val retObjects = ListBuffer[SMGRrdObject]()
     val retIxes = ListBuffer[SMGConfIndex]()
+    val aggObjects = ListBuffer[SMGRrdAggObject]()
     // TODO handle histogram/summary specially
     val rrdType = metaType2RrdType(metaStat.metaType)
 
     val metaKey = metaStat.metaKey.map(k => processRegexReplaces(k, scrapeTargetConf.regexReplaces))
 
     grp.foreach { stat =>
-      val ouid = idPrefix + processRegexReplaces(stat.smgUid, scrapeTargetConf.regexReplaces)
+      val ouid = idPrefix + nonAggUidStr + processRegexReplaces(stat.smgUid, scrapeTargetConf.regexReplaces)
       if (!SMGConfigParser.validateOid(ouid)){
         // TODO can do better than this
         log.error(s"SMGScrapeObjectGen: ${scrapeTargetConf.uid}: invalid ouid (ignoring stat): $ouid")
@@ -67,7 +71,7 @@ class SMGScrapeObjectGen(
             "label" -> varLabel,
             "mu" -> varMu
           )),
-          title = stat.title,
+          title = stat.title(idPrefix),
           rrdType = rrdType,
           interval = scrapeTargetConf.interval,
           dataDelay = 0,
@@ -85,10 +89,33 @@ class SMGScrapeObjectGen(
     }
 
     if (retObjects.nonEmpty && (metaKey.getOrElse("") != "")){
+      val aggOp = "SUMN" // TODO ?? may be depend on type
+      val metaKeyReplaced = processRegexReplaces(metaKey.get, scrapeTargetConf.regexReplaces)
+      val aggOuid = idPrefix + aggUidStr + metaKeyReplaced
+      val aggTitlePrefix = if (idPrefix == "") "" else s"($idPrefix) "
+      val aggTitle = aggTitlePrefix + metaKeyReplaced + s" ($aggOp)" +
+        metaStat.metaHelp.map(s => s" - ${s}").getOrElse("")
+      aggObjects += SMGRrdAggObject(
+        id = aggOuid,
+        ous = retObjects,
+        aggOp = aggOp,
+        vars = retObjects.head.vars,
+        title = aggTitle,
+        rrdType = rrdType,
+        interval = retObjects.head.interval,
+        dataDelay = retObjects.head.dataDelay,
+        stack = retObjects.head.stack,
+        rrdFile = None,
+        rraDef = None,
+        labels = SMGAggObjectView.mergeLabels(retObjects.map(_.labels)),
+        rrdInitSource = None,
+        notifyConf = scrapeTargetConf.notifyConf
+      )
+
       retIxes += SMGConfIndex(
-        id = idPrefix + metaKey.get,
-        title = metaKey.get,
-        flt = SMGFilter.fromPrefixLocal(idPrefix + metaKey.get),
+        id = idPrefix + aggUidStr + metaKey.get,
+        title = aggTitle,
+        flt = SMGFilter.fromPrefixLocal(idPrefix + aggUidStr + metaKeyReplaced),
         cols = None,
         rows = None,
         aggOp = None,
@@ -100,8 +127,24 @@ class SMGScrapeObjectGen(
         childIds = Seq(),
         disableHeatmap = false
       )
+
+      retIxes += SMGConfIndex(
+        id = idPrefix + nonAggUidStr + metaKey.get,
+        title = metaKey.get,
+        flt = SMGFilter.fromPrefixLocal(idPrefix + nonAggUidStr + metaKeyReplaced),
+        cols = None,
+        rows = None,
+        aggOp = None,
+        xRemoteAgg = false,
+        aggGroupBy = None,
+        period = None, // TODO?
+        desc = metaStat.metaHelp,
+        parentId = Some(idPrefix + aggUidStr + metaKey.get),
+        childIds = Seq(),
+        disableHeatmap = false
+      )
     }
-    (retObjects, retIxes)
+    (retObjects, aggObjects, retIxes)
   }
 
   def generateSMGObjects(): SMGScrapedObjects = {
@@ -117,7 +160,7 @@ class SMGScrapeObjectGen(
 
     val idPrefix = scrapeTargetConf.idPrefix.getOrElse("") + scrapeTargetConf.uid + "."
 
-    // one preFetch to get the metrics (TODO can be stripped once scrape plugon supports native "fetch")
+    // one preFetch to get the metrics (TODO can be stripped once scrape plugin supports native "fetch")
     val scrapeFetchPfId = idPrefix + "scrape.fetch"
     val scrapeFetchPf = SMGPreFetchCmd(
       id = scrapeFetchPfId,
@@ -150,11 +193,12 @@ class SMGScrapeObjectGen(
     preFetchIds = scrapeParsePf.id :: preFetchIds
 
     // define a top-level index for the stats
-    val scrapeIndexId = idPrefix + "scrape.all"
-    val scrapeTopLevelIndex = SMGConfIndex(
-      id = scrapeIndexId,
-      title = scrapeTargetConf.humanName + " - all graphs",
-      flt = SMGFilter.fromPrefixLocal(idPrefix),
+    val scrapeAggsIndexId = idPrefix + "scrape." + aggUidStr + "all"
+    val scrapeNonAggsIndexId = idPrefix + "scrape." + nonAggUidStr + "all"
+    val scrapeTopLevelAggIndex = SMGConfIndex(
+      id = scrapeAggsIndexId,
+      title = scrapeTargetConf.humanName + " - summaries",
+      flt = SMGFilter.fromPrefixLocal(idPrefix + aggUidStr),
       cols = None,
       rows = None,
       aggOp = None,
@@ -166,12 +210,29 @@ class SMGScrapeObjectGen(
       childIds = Seq(), // TODO?
       disableHeatmap = false
     )
-    indexes += scrapeTopLevelIndex
+    indexes += scrapeTopLevelAggIndex
+    val scrapeTopLevelNonAggIndex = SMGConfIndex(
+      id = scrapeNonAggsIndexId,
+      title = scrapeTargetConf.humanName + " - details",
+      flt = SMGFilter.fromPrefixLocal(idPrefix + nonAggUidStr),
+      cols = None,
+      rows = None,
+      aggOp = None,
+      xRemoteAgg = false,
+      aggGroupBy = None,
+      period = None, // TODO?
+      desc = None, //TODO
+      parentId = Some(scrapeAggsIndexId),
+      childIds = Seq(), // TODO?
+      disableHeatmap = false
+    )
+
 
     def myProcessMetaGroup(grp: Seq[OpenMetricsStat]): Unit = {
-      val ret = processMetaGroup(grp, idPrefix, preFetchIds, scrapeIndexId)
+      val ret = processMetaGroup(grp, idPrefix, preFetchIds, scrapeAggsIndexId)
       rrdObjects ++= ret._1
-      indexes ++= ret._2
+      aggObjects ++= ret._2
+      indexes ++= ret._3
     }
 
     // group metrics by metaName but try to preserve order

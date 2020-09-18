@@ -177,7 +177,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     valuesCache.invalidateCache(ou)
   }
 
-  override def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): List[Double] = {
+  override def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int]) = {
     valuesCache.getCachedValues(ou, counterAsRate)
   }
 

@@ -69,8 +69,13 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
   }
 
   private def fetchAggValues(aggObj: SMGRrdAggObject, confSvc: SMGConfigService): SMGRrdUpdateData = {
-    val sources = aggObj.ous.map(ou => confSvc.getCachedValues(ou, !aggObj.isCounter)).toList
-    SMGRrdUpdateData(SMGRrd.mergeValues(aggObj.aggOp, sources), None)
+    val cache = aggObj.ous.map(ou => confSvc.getCachedValues(ou, !aggObj.isCounter)).toList
+    val sources = cache.map(_._1)
+    val tssSeq = cache.flatMap(_._2)
+    val tss = if (tssSeq.isEmpty){
+      None
+    } else Some(tssSeq.sum / tssSeq.size)
+    SMGRrdUpdateData(SMGRrd.mergeValues(aggObj.aggOp, sources), tss)
   }
 
   private def processSMGUpdateObjectMessage(obj: SMGObjectUpdate,

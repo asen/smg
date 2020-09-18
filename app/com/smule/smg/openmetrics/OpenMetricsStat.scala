@@ -19,7 +19,10 @@ case class OpenMetricsStat(
                           groupIndex: Int
                           ) {
   private lazy val grpIdxTitlePart = if (groupIndex > 0) { s" ($groupIndex)" } else ""
-  lazy val title: String = name + grpIdxTitlePart + metaHelp.map(s => s" - ${s}").getOrElse("")
+  def title(prefix: String): String = {
+    (if (prefix == "") "" else s"($prefix) ") +
+      name + grpIdxTitlePart + metaHelp.map(s => s" - ${s}").getOrElse("")
+  }
 }
 
 object OpenMetricsStat {
