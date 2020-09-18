@@ -213,6 +213,6 @@ object SMGAggObjectView {
       }
       mm
     }.map { case (k, lb) =>
-      (k, lb.mkString(","))
+      (k, lb.sorted.distinct.mkString(","))
     }.toMap
 }
