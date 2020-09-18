@@ -436,8 +436,9 @@ By default aggregation/sorting happens per-remote instance">Cross-Remote:</label
       }
       var ixRemotes = ['@{ix.get.flt.remotes.mkString("', '")}'];
       var ixRemoteStr = ixRemotes.join(",");
-      var ufltRemoteStr = myGetUserValue("remote").join(",");
-      if (ixRemoteStr != ufltRemoteStr) {
+      var ufltRemoteVal = myGetUserValue("remote")
+      var ufltRemoteStr = ufltRemoteVal ? ufltRemoteVal.join(",") : "";
+      if (ufltRemoteVal && ixRemoteStr != ufltRemoteStr) {
         conflicts.push("remote");
       }
       if (conflicts.length > 0) {
