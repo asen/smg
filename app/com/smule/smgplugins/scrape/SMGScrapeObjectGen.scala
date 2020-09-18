@@ -71,7 +71,7 @@ class SMGScrapeObjectGen(
             "label" -> varLabel,
             "mu" -> varMu
           )),
-          title = stat.title(idPrefix),
+          title = stat.title(scrapeTargetConf.humanName),
           rrdType = rrdType,
           interval = scrapeTargetConf.interval,
           dataDelay = 0,
@@ -92,8 +92,8 @@ class SMGScrapeObjectGen(
       val aggOp = "SUMN" // TODO ?? may be depend on type
       val metaKeyReplaced = processRegexReplaces(metaKey.get, scrapeTargetConf.regexReplaces)
       val aggOuid = idPrefix + aggUidStr + metaKeyReplaced
-      val aggTitlePrefix = if (idPrefix == "") "" else s"($idPrefix) "
-      val aggTitle = aggTitlePrefix + metaKeyReplaced + s" ($aggOp)" +
+      val titlePrefix = s"(${scrapeTargetConf.humanName}) "
+      val aggTitle = titlePrefix + metaKeyReplaced + s" ($aggOp)" +
         metaStat.metaHelp.map(s => s" - ${s}").getOrElse("")
       aggObjects += SMGRrdAggObject(
         id = aggOuid,
@@ -122,7 +122,7 @@ class SMGScrapeObjectGen(
         xRemoteAgg = false,
         aggGroupBy = None,
         period = None, // TODO?
-        desc = metaStat.metaHelp,
+        desc = None, //metaHelp in title
         parentId = Some(parentIndexId),
         childIds = Seq(),
         disableHeatmap = false
@@ -130,7 +130,7 @@ class SMGScrapeObjectGen(
 
       retIxes += SMGConfIndex(
         id = idPrefix + nonAggUidStr + metaKey.get,
-        title = metaKey.get,
+        title = titlePrefix + metaKeyReplaced + " (details)",
         flt = SMGFilter.fromPrefixLocal(idPrefix + nonAggUidStr + metaKeyReplaced),
         cols = None,
         rows = None,
@@ -226,7 +226,7 @@ class SMGScrapeObjectGen(
       childIds = Seq(), // TODO?
       disableHeatmap = false
     )
-
+    indexes += scrapeTopLevelNonAggIndex
 
     def myProcessMetaGroup(grp: Seq[OpenMetricsStat]): Unit = {
       val ret = processMetaGroup(grp, idPrefix, preFetchIds, scrapeAggsIndexId)
