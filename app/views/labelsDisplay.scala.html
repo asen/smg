@@ -1,0 +1,16 @@
+@(uid: String, labels: Map[String, String], alwaysFull: Boolean = false)
+@if(labels.nonEmpty){
+@defining(labels.keys.toSeq.sorted.map(k => k + "=" + labels(k)).mkString(" ")){ labelsStr =>
+<h5>
+@if(alwaysFull){<span>@{labelsStr}</span>} else {
+  <span class="labels-display-short" id="lbldisp-short-@{uid}">@{labelsStr.take(80)}
+  @if(labelsStr.lengthCompare(80) > 0){ ...
+    <button onclick="document.getElementById('lbldisp-full-@{uid}').style.display='block'; document.getElementById('lbldisp-short-@{uid}').style.display='none';">Show full</button>
+    <button onclick="$('.labels-display-full').css('display','block'); $('.labels-display-short').css('display','none')">Show all full</button>
+  }
+  </span>
+  <span class="labels-display-full" style="display: none" id="lbldisp-full-@{uid}">@{labelsStr}</span>
+}
+</h5>
+}
+}

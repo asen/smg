@@ -114,7 +114,9 @@ Changing this reloads the page.">Clean view</label>
   @if(obj.isAgg){
   <h5>@{obj.asInstanceOf[SMGAggObjectView].groupByKey.desc}</h5>
   }
-
+  @if(!cleanView){
+  @labelsDisplay(obj.id, obj.labels, true)
+  }
   @if(!cleanView && showMs) {
   <div>
     <div class="subtitle-div">

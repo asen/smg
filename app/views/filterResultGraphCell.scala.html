@@ -22,8 +22,8 @@
     @if(g.obj.isAgg){
     <h5>@{g.obj.asInstanceOf[SMGAggObjectView].groupByKey.desc}</h5>
     }
-    @if(g.obj.labels.nonEmpty){
-    <h5>Labels: @{g.obj.labels.map(t => t._1 + "=" + t._2).mkString(" ")}</h5>
+    @if(!cleanView){
+    @labelsDisplay(g.obj.id, g.obj.labels)
     }
     <div class="subtitle-div">
       <div class="subtitle-div">
