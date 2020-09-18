@@ -43,7 +43,8 @@ class SMGScrapeObjectGen(
                                 grp: Seq[OpenMetricsStat],
                                 idPrefix: String,
                                 parentPfIds: Seq[String],
-                                parentIndexId: String
+                                parentAggIndexId: String,
+                                parentNonAggIndexId: String
                               ): (Seq[SMGRrdObject], Seq[SMGRrdAggObject], Seq[SMGConfIndex]) = {
     val metaStat = grp.head
     val retObjects = ListBuffer[SMGRrdObject]()
@@ -112,24 +113,10 @@ class SMGScrapeObjectGen(
         notifyConf = scrapeTargetConf.notifyConf
       )
 
+      val aggIndexId = idPrefix + aggUidStr + metaKey.get
+      val nonAggIndexId = idPrefix + nonAggUidStr + metaKey.get
       retIxes += SMGConfIndex(
-        id = idPrefix + aggUidStr + metaKey.get,
-        title = aggTitle,
-        flt = SMGFilter.fromPrefixLocal(idPrefix + aggUidStr + metaKeyReplaced),
-        cols = None,
-        rows = None,
-        aggOp = None,
-        xRemoteAgg = false,
-        aggGroupBy = None,
-        period = None, // TODO?
-        desc = None, //metaHelp in title
-        parentId = Some(parentIndexId),
-        childIds = Seq(),
-        disableHeatmap = false
-      )
-
-      retIxes += SMGConfIndex(
-        id = idPrefix + nonAggUidStr + metaKey.get,
+        id = nonAggIndexId,
         title = titlePrefix + metaKeyReplaced + " (details)",
         flt = SMGFilter.fromPrefixLocal(idPrefix + nonAggUidStr + metaKeyReplaced),
         cols = None,
@@ -139,8 +126,23 @@ class SMGScrapeObjectGen(
         aggGroupBy = None,
         period = None, // TODO?
         desc = metaStat.metaHelp,
-        parentId = Some(idPrefix + aggUidStr + metaKey.get),
+        parentId = Some(parentNonAggIndexId),
         childIds = Seq(),
+        disableHeatmap = false
+      )
+      retIxes += SMGConfIndex(
+        id = aggIndexId,
+        title = aggTitle,
+        flt = SMGFilter.fromPrefixLocal(idPrefix + aggUidStr + metaKeyReplaced),
+        cols = None,
+        rows = None,
+        aggOp = None,
+        xRemoteAgg = false,
+        aggGroupBy = None,
+        period = None, // TODO?
+        desc = None, //metaHelp in title
+        parentId = Some(parentAggIndexId),
+        childIds = Seq(nonAggIndexId),
         disableHeatmap = false
       )
     }
@@ -229,7 +231,7 @@ class SMGScrapeObjectGen(
     indexes += scrapeTopLevelNonAggIndex
 
     def myProcessMetaGroup(grp: Seq[OpenMetricsStat]): Unit = {
-      val ret = processMetaGroup(grp, idPrefix, preFetchIds, scrapeAggsIndexId)
+      val ret = processMetaGroup(grp, idPrefix, preFetchIds, scrapeAggsIndexId, scrapeNonAggsIndexId)
       rrdObjects ++= ret._1
       aggObjects ++= ret._2
       indexes ++= ret._3
