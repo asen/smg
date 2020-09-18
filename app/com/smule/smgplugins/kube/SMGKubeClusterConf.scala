@@ -29,4 +29,9 @@ case class SMGKubeClusterConf(
   lazy val inspect: String = s"uid=$uid humanNamePrefix=$hnamePrefix interval=$interval command=$fetchCommand " +
     s"timeout=$fetchCommandTimeout nodeMetrics=${nodeMetrics.size} " +
     s"filter: ${filter.map(_.humanText).getOrElse("None")}"
+
+  lazy val clusterIndexId: Option[String] = Some("cluster."+uid) // TODO maybe optional?
+  lazy val nodesIndexId: Option[String] = clusterIndexId.map(_ + ".node")
+  lazy val endpointsIndexId: Option[String] = clusterIndexId.map(_ + ".endpoint")
+  lazy val servicessIndexId: Option[String] = clusterIndexId.map(_ + ".service")
 }

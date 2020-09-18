@@ -19,10 +19,11 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   private def pluginConf = pluginConfParser.conf // function - do not cache pluginConf
 
   private def processClusterMetricsConf(objectName: String,
-                                targetHost: String,
-                                targetTypeHuman: String,
-                                cConf: SMGKubeClusterConf,
-                                cmConf: SMGKubeClusterMetricsConf): Option[SMGScrapeTargetConf] = {
+                                        targetHost: String,
+                                        targetTypeHuman: String,
+                                        cConf: SMGKubeClusterConf,
+                                        cmConf: SMGKubeClusterMetricsConf,
+                                        parentIndexId: Option[String]): Option[SMGScrapeTargetConf] = {
     val targetType = targetTypeHuman.toLowerCase
     val tcUid = s"${cConf.uidPrefix}$targetType.$objectName.${cmConf.uid}"
     if (!SMGConfigParser.validateOid(tcUid)) {
@@ -42,7 +43,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       filter = if (cmConf.filter.isDefined) cmConf.filter else cConf.filter,
       interval = cmConf.interval.getOrElse(cConf.interval),
       parentPfId = cConf.parentPfId,
-      parentIndexId = cConf.parentIndexId,
+      parentIndexId = parentIndexId,
       idPrefix = cConf.idPrefix,
       notifyConf = if (cmConf.notifyConf.isDefined) cmConf.notifyConf else cConf.notifyConf,
       regexReplaces = cConf.regexReplaces ++ cmConf.regexReplaces,
@@ -115,7 +116,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                           nsObject: KubeNsObject,
                           ipAddr: String,
                           kubePort: KubePort,
-                          idxId: Option[Int]
+                          idxId: Option[Int],
+                          parentIndexId: Option[String]
                          ): Option[SMGScrapeTargetConf] = {
     try {
       val proto = if (autoConf.useHttps) "https://" else "http://"
@@ -138,7 +140,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         filter = if (autoConf.filter.isDefined) autoConf.filter else cConf.filter,
         interval = cConf.interval,
         parentPfId = cConf.parentPfId,
-        parentIndexId = cConf.parentIndexId,
+        parentIndexId = parentIndexId,
         idPrefix = cConf.idPrefix,
         notifyConf = cConf.notifyConf,
         regexReplaces = cConf.regexReplaces ++ autoConf.regexReplaces,
@@ -158,7 +160,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   def processServiceConf(cConf: SMGKubeClusterConf, kubeService: KubeService): Seq[SMGScrapeTargetConf] = {
     // TODO check eligibility based on labels?
     kubeService.ports.flatMap { svcPort =>
-      processAutoPortConf(cConf, cConf.svcConf, kubeService, kubeService.clusterIp, svcPort, None)
+      processAutoPortConf(cConf, cConf.svcConf, kubeService, kubeService.clusterIp, svcPort,
+        None, cConf.servicessIndexId)
     }
   }
 
@@ -174,7 +177,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       subs.addresses.flatMap { addr =>
         if (idx.isDefined) idx = Some(idx.get + 1)
         subs.ports.flatMap { prt =>
-           processAutoPortConf(cConf, cConf.endpointsConf, kubeEndpoint, addr, prt, idx)
+           processAutoPortConf(cConf, cConf.endpointsConf, kubeEndpoint, addr, prt, idx, cConf.endpointsIndexId)
         }
       }
     }
@@ -187,7 +190,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val nodeMetricsConfs: Seq[SMGScrapeTargetConf] = cConf.nodeMetrics.flatMap { cmConf =>
         kubeClient.listNodes().flatMap { kubeNode =>
           val targetHost = kubeNode.ipAddress.getOrElse(kubeNode.hostName.getOrElse(kubeNode.name))
-          processClusterMetricsConf(kubeNode.name, targetHost, "Node", cConf, cmConf)
+          processClusterMetricsConf(kubeNode.name, targetHost, "Node", cConf, cmConf, cConf.nodesIndexId)
         }
       }
       val serviceMetricsConfs: Seq[SMGScrapeTargetConf] = if (cConf.svcConf.enabled){
