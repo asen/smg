@@ -80,6 +80,7 @@ class SMGScrapeCommands(log: SMGPluginLogger) {
       if (tsms.isEmpty && !conflictingTsms)
         tsms = newTsms
       else if (tsms != newTsms){
+        log.warn(s"SMGScrapeCommands.commandGet: Conflicting timestamps in get: $paramStr")
         conflictingTsms = true
         tsms = None
       }

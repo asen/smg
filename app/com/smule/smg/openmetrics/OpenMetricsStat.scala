@@ -124,7 +124,11 @@ object OpenMetricsStat {
         log.warn(s"OpenMetricsStat.parseLine: bad line (invalid Double value): ${arr(0)}: ln=$ln")
         return None
       }
-      val tsms = arr.lift(1).map(_.toLong)
+      var tsms = arr.lift(1).map(_.toLong)
+      if (tsms.isDefined && tsms.get <= 0){
+        log.warn(s"OpenMetricsStat.parseLine: bad line (non-positive timestamp value): ${arr(1)}: ln=$ln")
+        tsms = None
+      }
       val smgUid = if (!hasLabels) name else {
         if (labelsInUid){
           OpenMetricsStat.labelUid(name, labels)

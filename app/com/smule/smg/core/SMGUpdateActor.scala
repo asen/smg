@@ -75,8 +75,8 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
     val tss = if (tssSeq.isEmpty){
       None
     } else Some(tssSeq.sum / tssSeq.size)
-    if (tss.getOrElse(0)< 0)
-      log.error(s"fetchAggValues: Calculated negative TSS: $tss sum = ${tss.sum} size=${tss.size}")
+//    if (tss.getOrElse(0)< 0)
+//      log.error(s"fetchAggValues: Calculated negative TSS: $tss sum = ${tss.sum} size=${tss.size}")
     SMGRrdUpdateData(SMGRrd.mergeValues(aggObj.aggOp, sources), tss)
   }
 
