@@ -579,7 +579,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       labels = labels,
       value = value,
       tsms = tsms,
-      groupIndex = 0
+      groupIndex = None
     )
   }
 

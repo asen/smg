@@ -4,6 +4,7 @@ import com.smule.smg.config.SMGConfigParser
 import com.smule.smg.core.SMGLoggerApi
 
 import scala.collection.immutable.StringOps
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 
@@ -16,9 +17,9 @@ case class OpenMetricsStat(
                           labels: Seq[(String, String)],
                           value: Double,
                           tsms: Option[Long],
-                          groupIndex: Int
+                          groupIndex: Option[Int]
                           ) {
-  private lazy val grpIdxTitlePart = if (groupIndex > 0) { s" ($groupIndex)" } else ""
+  private lazy val grpIdxTitlePart = if (groupIndex.isDefined) { s" (${groupIndex.get})" } else ""
   def title(prefix: String): String = {
     (if (prefix == "") "" else s"($prefix) ") +
       name + grpIdxTitlePart + metaHelp.map(s => s" - ${s}").getOrElse("")
@@ -41,8 +42,10 @@ object OpenMetricsStat {
   def labelUid(name: String, labels: Seq[(String, String)]): String =
     normalizedUid(name, labels).replaceAll(replaceRegexStr, "_")
 
-  def groupIndexUid(name: String, groupIndex: Int): String =
-    name.replaceAll(replaceRegexStr, "_") + s"._$groupIndex"
+  def groupIndexUid(name: String, groupIndex: Option[Int], suffixPrefix: String = "_"): String = {
+    if (groupIndex.isEmpty) name else
+      name.replaceAll(replaceRegexStr, "_") + s".${suffixPrefix}${groupIndex.get}"
+  }
 
   // extract a quoted value out of inp and return it together with the remaining string
   // assumes inpiut starts with a single or double quote
@@ -87,14 +90,19 @@ object OpenMetricsStat {
     }
   }
 
+  private class ParseContext(){
+    val uidCounts: mutable.Map[String, Int] = mutable.Map[String,Int]()
+  }
+
   private def parseLine(
                          ln: String,
                          metaKey: Option[String],
                          metaType: Option[String],
                          metaHelp: Option[String],
                          log: SMGLoggerApi,
-                         groupIndex: Int,
-                         labelsInUid: Boolean
+                         groupIndex: Option[Int],
+                         labelsInUid: Boolean,
+                         parseContext: ParseContext
                        ): Option[OpenMetricsStat] = {
     try {
       val hasLabels = ln.contains(START_LABELS)
@@ -129,12 +137,19 @@ object OpenMetricsStat {
         log.warn(s"OpenMetricsStat.parseLine: bad line (non-positive timestamp value): ${arr(1)}: ln=$ln")
         tsms = None
       }
-      val smgUid = if (!hasLabels) name else {
+      var smgUid = if (!hasLabels) name else {
         if (labelsInUid){
           OpenMetricsStat.labelUid(name, labels)
         } else {
           OpenMetricsStat.groupIndexUid(name, groupIndex)
         }
+      }
+      // enforce indexed uids when conflicting, ref. kube-sate-metrics
+      if (!parseContext.uidCounts.contains(smgUid)){
+        parseContext.uidCounts(smgUid) = 0
+      } else {
+        parseContext.uidCounts(smgUid) = parseContext.uidCounts(smgUid) + 1
+        smgUid =  OpenMetricsStat.groupIndexUid(name, Some(parseContext.uidCounts(smgUid)), "dup")
       }
       Some(
         OpenMetricsStat(
@@ -155,13 +170,40 @@ object OpenMetricsStat {
     }
   }
 
+  private def parseLinesGroup(
+                               lines: Seq[String],
+                               metaKey: Option[String],
+                               metaType: Option[String],
+                               metaHelp: Option[String],
+                               log: SMGLoggerApi,
+                               labelsInUid: Boolean,
+                               parseContext: ParseContext
+                             ): Seq[OpenMetricsStat] = {
+    var groupIndex = if (lines.lengthCompare(1) > 0) Some(0) else None
+    lines.flatMap { ln =>
+      val opt = parseLine(ln, metaKey, metaType, metaHelp, log, groupIndex, labelsInUid, parseContext)
+      if (opt.isDefined && groupIndex.isDefined)
+        groupIndex = Some(groupIndex.get + 1)
+      opt
+    }
+  }
+
   def parseText(inp: String, log: SMGLoggerApi, labelsInUid: Boolean): Seq[OpenMetricsStat] = {
     val ret = ListBuffer[OpenMetricsStat]()
     var curMetaKey: Option[String] = None
     var curMetaType: Option[String] = None
     var curMetaHelp: Option[String] = None
-    var groupIndex = 0
+    val curGroupLines: ListBuffer[String] = ListBuffer[String]()
     val inpRef: StringOps = inp // XXX workaround for Java 11 String.lines() overriding Scala
+    val parseContext = new ParseContext()
+    def processCurGroupLinesAndReset(): Unit = {
+      ret ++= parseLinesGroup(curGroupLines,  curMetaKey, curMetaType, curMetaHelp,
+        log, labelsInUid, parseContext)
+      curGroupLines.clear()
+      curMetaHelp = None
+      curMetaType = None
+    }
+
     inpRef.lines.foreach { rawLine =>
       val ln = rawLine.strip()
       if (!ln.isEmpty) {
@@ -175,9 +217,7 @@ object OpenMetricsStat {
               if (arr1.length > 1) {
                 val metaKey = arr1(0)
                 if (!curMetaKey.contains(metaKey)) {
-                  curMetaHelp = None
-                  curMetaType = None
-                  groupIndex = 0
+                  processCurGroupLinesAndReset()
                 }
                 curMetaKey = Some(metaKey)
                 val metaData = arr1(1)
@@ -189,21 +229,20 @@ object OpenMetricsStat {
               } else {
                 log.debug(s"Empty $metaVerb metadata (curMetaKey=${curMetaKey.getOrElse("")})")
               }
-            } // else - comment ... TODO - should we reset curMetaKey?
+            } else { //- comment ... reset curMetaKey?
+              processCurGroupLinesAndReset()
+            }
           } catch { case t: Throwable =>
             log.ex(t, s"Unexpected error processing comment line: $ln")
+            processCurGroupLinesAndReset()
             curMetaKey = None
-            groupIndex = 0
           }
         } else { // parse line
-          val pOpt = parseLine(ln, curMetaKey, curMetaType, curMetaHelp, log, groupIndex, labelsInUid)
-          if (pOpt.isDefined) {
-            ret += pOpt.get
-            groupIndex += 1
-          }
+          curGroupLines += ln
         }
       } // else - empty line ... TODO - should we reset curMetaKey?
     }
+    processCurGroupLinesAndReset()
     ret.toList
   }
 

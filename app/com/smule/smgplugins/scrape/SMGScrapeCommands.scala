@@ -15,7 +15,7 @@ class SMGScrapeCommands(log: SMGPluginLogger) {
     val stats  = OpenMetricsStat.parseText(inp, log, labelsInUid = labelUid)
     val byUid = stats.groupBy(_.smgUid).map { t =>
       if (t._2.lengthCompare(1) > 0) {
-        log.warn(s"SMGScrapePlugin.parseText: Non unique normalizedUid: ${t._1} (${t._2.size} entries)")
+        log.warn(s"SMGScrapeCommands.parseText: Non unique normalizedUid: ${t._1} (${t._2.size} entries)")
       }
       (t._1, t._2.head)
     }
