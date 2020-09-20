@@ -24,5 +24,7 @@ trait SMGSearchCache extends SMGConfigReloadListener {
 
   def getPfRxTokens(flt: String, rmtId: String): Seq[String]
 
+  def getLblsTokens(flt: String, rmtId: String): Seq[String]
+
   def getMatchingIndexes(ovs: Seq[SMGObjectView]): Seq[SMGIndex]
 }

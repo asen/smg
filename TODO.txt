@@ -2,7 +2,6 @@ v 0.6+
 
 == Short term plan ==
 
-* label filters
 * handle kube-state-metrics in Kube plugin (not really metrics)
 * stable release
 
@@ -11,6 +10,7 @@ v 0.6+
 * document JMX plugin config
 * document event log and UI
 * documnet kube and scrape plugins
+* document label filters
 
 == Known Bugs ==
 

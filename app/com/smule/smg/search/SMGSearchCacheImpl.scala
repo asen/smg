@@ -29,8 +29,8 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
                                  pxesByRemote: Map[String, Array[Seq[String]]],
                                  sxesByRemote: Map[String, Array[Seq[String]]],
                                  tknsByRemote: Map[String, Array[Seq[String]]],
-                                 wordsDict: Seq[String]
-
+                                 wordsDict: Seq[String],
+                                 labelKeysDict: Seq[String]
                                )
 
   private var cache: SMGSearchCacheData = SMGSearchCacheData(
@@ -39,7 +39,8 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     pxesByRemote = Map(),
     sxesByRemote = Map(),
     tknsByRemote = Map(),
-    wordsDict = Seq()
+    wordsDict = Seq(),
+    labelKeysDict = Seq()
   )
 
   private var cmdTknsByRemote: Map[String, Array[Seq[String]]] = Map()
@@ -167,6 +168,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     val sxesByRemote = mutable.Map[String, Array[Seq[String]]]()
     val tknsByRemote = mutable.Map[String, Array[Seq[String]]]()
     val wordsDict = mutable.Set[String]()
+    val labelKeysDict = mutable.Set[String]()
     byRemote.foreach { case (rmtId, newViewObjects) =>
       val newPxesByLevel = ArrayBuffer[mutable.Set[String]]()
       val newSxesByLevel = ArrayBuffer[mutable.Set[String]]()
@@ -189,6 +191,9 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
         ov.searchText.split("[\\s\\.]+").foreach { wrd =>
           wordsDict += wrd
         }
+        ov.labels.foreach { case (k,_) =>
+          labelKeysDict += k
+        }
         maxMaxLevels = Math.max(maxMaxLevels, ml)
       }
       pxesByRemote(rmtId) = newPxesByLevel.map(mySortIterable).toArray
@@ -202,7 +207,8 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
       pxesByRemote = pxesByRemote.toMap,
       sxesByRemote = sxesByRemote.toMap,
       tknsByRemote = tknsByRemote.toMap,
-      wordsDict = mySortIterable(wordsDict)
+      wordsDict = mySortIterable(wordsDict),
+      labelKeysDict = mySortIterable(labelKeysDict)
     )
     log.info(s"SMGSearchCache.reload - END: indexes: ${cache.allIndexes.size}, " +
       s"objects: ${cache.allViewObjects.size}, words: ${wordsDict.size}, " +
@@ -301,12 +307,12 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   }
 
 
-  private def getWordTokensForRemote(rmtId: String,
-                                     byRemote: Map[String, Seq[String]],
-                                     fltFn: (String) => Boolean): Seq[String] = {
-    val arr = byRemote.getOrElse(rmtId, Seq())
-    arr.filter(fltFn).take(MAX_TOKENS_RESULTS)
-  }
+//  private def getWordTokensForRemote(rmtId: String,
+//                                     byRemote: Map[String, Seq[String]],
+//                                     fltFn: (String) => Boolean): Seq[String] = {
+//    val arr = byRemote.getOrElse(rmtId, Seq())
+//    arr.filter(fltFn).take(MAX_TOKENS_RESULTS)
+//  }
 
   override def getTrxTokens(rawFlt: String, rmtId: String): Seq[String] = {
     val trxFlt = rawFlt.trim()
@@ -332,6 +338,10 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
 
   override def getPfRxTokens(flt: String, rmtId: String): Seq[String] = {
     getTokensCommon(flt, rmtId, cmdTknsByRemote)
+  }
+
+  override def getLblsTokens(flt: String, rmtId: String): Seq[String] = {
+    cache.wordsDict.filter { _.toLowerCase.contains(flt.toLowerCase) }.take(MAX_TOKENS_RESULTS)
   }
 
   override def getMatchingIndexes(ovsToMatch: Seq[SMGObjectView]): Seq[SMGIndex] = {

@@ -19,7 +19,9 @@ import scala.util.matching.Regex
   * @param sx - optional object id suffix. if present, only object ids matching that suffix will be selected
   * @param rx - optional object id regex. if present, only object ids matching that regex will be selected
   * @param rxx - optional object id regex to exclude. if present, only objects with ids NOT matching that regex will be selected
+  * @param prx - optional parent (pre-fetch) id regex. if present, only objects with pre-fetch ids matching that regex will be selected
   * @param trx - optional title regex. if present, only objects with titles matching that regex will be selected
+  * @param lbls - optional labels expression. if present, only objects with labels matching that label filter expression will be selected
   * @param remotes - optional list of remote ids. If set to "*", all remotes will be matched
   *               when selecting.
   */
@@ -29,33 +31,38 @@ case class SMGFilter(px: Option[String],
                      rxx: Option[String],
                      prx: Option[String],
                      trx: Option[String],
+                     lbls: Option[String],
                      remotes: Seq[String],
                      gopts: GraphOptions
                     ) {
 
   // Local version of the filter (pinned to "local" remote)
   def asLocalFilter: SMGFilter =
-    SMGFilter(px = px, sx = sx, rx = rx, rxx = rxx, trx = trx, prx = prx, remotes = Seq(SMGRemote.local.id), gopts = gopts)
+    SMGFilter(px = px, sx = sx, rx = rx, rxx = rxx, trx = trx, prx = prx, lbls = lbls,
+      remotes = Seq(SMGRemote.local.id), gopts = gopts)
 
   // make regexes case insensitive
-  private def ciRegex(so: Option[String]): Option[Regex] = so.map(s => if (s.isEmpty) s else  "(?i)" + s ).
-    map( s =>
-      Try(s.r).getOrElse(
-        "MATCH_NOTHING^".r // XXX The ^ after anything ensures nothing will match
-      )
-    )
+  private def ciRegex(so: Option[String]): Option[Regex] = SMGFilter.ciRegex(so)
+
   private val ciRx = ciRegex(rx)
   private val ciRxx = ciRegex(rxx)
   private val ciTrxs = trx.map { s =>
     s.split("\\s+").filter(s => s != "").map(rxs => ciRegex(Some(rxs)).get).toSeq
   }.getOrElse(Seq())
   private val ciPrx = ciRegex(prx)
+  private val labelFilters = if (lbls.isDefined)
+    SMGFilterLabels.parse(lbls.get)
+  else Seq()
 
   lazy val matchesAnyObjectIdAndText: Boolean = px.isEmpty && sx.isEmpty && rx.isEmpty && rxx.isEmpty &&
     trx.isEmpty && prx.isEmpty
 
   def matches(ob: SMGObjectBase) : Boolean = {
-    matchesRemotes(ob.id) && matchesId(ob.id) && matchesText(ob) && matchesParentId(ob)
+    matchesRemotes(ob.id) &&
+      matchesId(ob.id) &&
+      matchesText(ob) &&
+      matchesParentId(ob) &&
+      matchesLabels(ob)
   }
 
   private def matchesRemotes(oid: String): Boolean = {
@@ -86,6 +93,14 @@ case class SMGFilter(px: Option[String],
       ob.parentIds.exists(pid => ciPrx.get.findFirstIn(SMGRemote.localId(pid)).isDefined)
   }
 
+  private def matchesLabels(ob: SMGObjectBase): Boolean = {
+    if (labelFilters.isEmpty)
+      true
+    else labelFilters.forall { lf =>
+      lf.matches(ob.labels)
+    }
+  }
+
   def asUrlForPeriod(aPeriod: Option[String] = None): String = {
     val sb = new StringBuilder()
     if (aPeriod.isDefined) sb.append("&period=").append(URLEncoder.encode(aPeriod.get,"UTF-8"))
@@ -95,6 +110,7 @@ case class SMGFilter(px: Option[String],
     if (rxx.isDefined) sb.append("&rxx=").append(URLEncoder.encode(rxx.get,"UTF-8"))
     if (trx.isDefined) sb.append("&trx=").append(URLEncoder.encode(trx.get,"UTF-8"))
     if (prx.isDefined) sb.append("&prx=").append(URLEncoder.encode(prx.get,"UTF-8"))
+    if (lbls.isDefined) sb.append("&lbls=").append(URLEncoder.encode(lbls.get,"UTF-8"))
     remotes.foreach { rmt => sb.append("&remote=").append(URLEncoder.encode(rmt,"UTF-8")) }
 
     if (gopts.step.isDefined) sb.append("&step=").append(URLEncoder.encode(gopts.step.get.toString,"UTF-8"))
@@ -128,7 +144,8 @@ case class SMGFilter(px: Option[String],
     if (sx.isDefined) "sx=" + sx.get else "",
     if (rx.isDefined) "rx=" + rx.get else "",
     if (rxx.isDefined) "rx exclude=" + rxx.get else "",
-    if (prx.isDefined) "prx=" + prx.get else ""
+    if (prx.isDefined) "prx=" + prx.get else "",
+    if (lbls.isDefined) "lbls=" + lbls.get.mkString(" ") else ""
   ).filter(s => s.nonEmpty)
 
   private val paramsHumanText = if (paramsIdHumanSeq.isEmpty) "*" else paramsIdHumanSeq.mkString(" AND ")
@@ -142,15 +159,23 @@ case class SMGFilter(px: Option[String],
 
 object SMGFilter {
 
-  val matchLocal = SMGFilter(None,None,None,None,None,None, Seq(SMGRemote.local.id), GraphOptions.default )
+  val matchLocal: SMGFilter = SMGFilter(None,None,None,None,None,None, None,
+    Seq(SMGRemote.local.id), GraphOptions.default )
 
-  val matchAll = SMGFilter(None,None,None,None, None, None, Seq(SMGRemote.wildcard.id), GraphOptions.default )
+  val matchAll: SMGFilter = SMGFilter(None,None,None,None, None, None, None,
+    Seq(SMGRemote.wildcard.id), GraphOptions.default )
+
+  def ciRegex(so: Option[String]): Option[Regex] = so.map(s => if (s.isEmpty) s else  "(?i)" + s ).
+    map( s =>
+      Try(s.r).getOrElse(
+        "MATCH_NOTHING^".r // XXX The ^ after anything ensures nothing will match
+      )
+    )
 
   def fromPrefixWithRemote(px:String, remoteIds: Seq[String]): SMGFilter =
-    SMGFilter(Some(px), None, None, None, None, None, remoteIds, GraphOptions.default )
+    SMGFilter(Some(px), None, None, None, None, None, None, remoteIds, GraphOptions.default )
 
   def fromPrefixLocal(px:String): SMGFilter = fromPrefixWithRemote(px, Seq(SMGRemote.local.id))
-
 
   def fromParams(params: Map[String, Seq[String]]): SMGFilter = {
     val gopts = GraphOptions(
@@ -170,6 +195,7 @@ object SMGFilter {
       params.get("rxx").map(_.head),
       params.get("prx").map(_.head),
       params.get("trx").map(_.head),
+      params.get("lbls").map(_.head),
       params.getOrElse("remote", Seq(SMGRemote.local.id)), // TODO or use empty seq here?
       gopts
     )
@@ -183,6 +209,7 @@ object SMGFilter {
       if (yamlMap.contains("rxx")) Some(yamlMap("rxx").toString) else None,
       if (yamlMap.contains("prx")) Some(yamlMap("prx").toString) else None,
       if (yamlMap.contains("trx")) Some(yamlMap("trx").toString) else None,
+      if (yamlMap.contains("lbls")) Some(yamlMap("lbls").toString) else None,
       // XXX TODO using coma to separate remote ids, use space instead?
       if (yamlMap.contains("remote")) yamlMap("remote").toString.split(",").toSeq else Seq(),
       GraphOptions(

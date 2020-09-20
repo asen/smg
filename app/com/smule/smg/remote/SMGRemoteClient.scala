@@ -110,6 +110,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "rxx").readNullable[String] and
       (JsPath \ "trx").readNullable[String] and
       (JsPath \ "prx").readNullable[String] and
+      (JsPath \ "lbls").readNullable[String] and
       (JsPath \ "remote").readNullable[String].map { remoteIds =>
         if (remoteIds.isDefined) {
           val ret = remoteIds.get.split(",").toSeq
@@ -908,6 +909,7 @@ object SMGRemoteClient {
       if (flt.rxx.isDefined) mm += ("rxx" -> Json.toJson(flt.rxx.get))
       if (flt.prx.isDefined) mm += ("prx" -> Json.toJson(flt.trx.get))
       if (flt.trx.isDefined) mm += ("trx" -> Json.toJson(flt.trx.get))
+      if (flt.lbls.isDefined) mm += ("trx" -> Json.toJson(flt.lbls.get))
       if (flt.remotes.nonEmpty) mm += ("remote" -> Json.toJson(flt.remotes.mkString(",")))
       if (flt.gopts != GraphOptions.default) mm += ("gopts" -> Json.toJson(flt.gopts))
       Json.toJson(mm.toMap)

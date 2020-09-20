@@ -118,6 +118,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     rxx: Option[String],
     prx: Option[String],
     trx: Option[String],
+    lbls: Option[String],
     remotes: Seq[String],
     agg: Option[String],
     period: Option[String],
@@ -186,6 +187,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
         rxx = rxx, //myRxx,
         prx = prx,
         trx = trx, //myTrx,
+        lbls = lbls,
         remotes = myRemotes,
         gopts = myGopts)
 
@@ -231,6 +233,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       rxx = m.get("rxx").map(_.head),
       prx = m.get("prx").map(_.head),
       trx = m.get("trx").map(_.head),
+      lbls = m.get("lbls").map(_.head),
       remotes = m.getOrElse("remote", Seq()),
       agg = m.get("agg").map(_.head),
       period = m.get("period").map(_.head),
@@ -1175,6 +1178,12 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def jsonCmdTokens(q: String, remote: Option[String]): Action[AnyContent] = Action {
     val rmtId = remote.getOrElse("")
     val tkns = smg.searchCache.getPfRxTokens(q, rmtId)
+    Ok(Json.toJson(tkns))
+  }
+
+  def jsonLblsTokens(q: String, remote: Option[String]): Action[AnyContent] = Action {
+    val rmtId = remote.getOrElse("")
+    val tkns = smg.searchCache.getLblsTokens(q, rmtId)
     Ok(Json.toJson(tkns))
   }
 
