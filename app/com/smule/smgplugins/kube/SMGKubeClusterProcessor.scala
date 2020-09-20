@@ -161,7 +161,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     // TODO check eligibility based on labels?
     kubeService.ports.flatMap { svcPort =>
       processAutoPortConf(cConf, cConf.svcConf, kubeService, kubeService.clusterIp, svcPort,
-        None, cConf.servicessIndexId)
+        None, cConf.servicesIndexId)
     }
   }
 

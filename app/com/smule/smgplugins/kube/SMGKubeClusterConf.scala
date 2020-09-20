@@ -33,5 +33,5 @@ case class SMGKubeClusterConf(
   lazy val clusterIndexId: Option[String] = Some("cluster."+uid) // TODO maybe optional?
   lazy val nodesIndexId: Option[String] = clusterIndexId.map(_ + ".node")
   lazy val endpointsIndexId: Option[String] = clusterIndexId.map(_ + ".endpoint")
-  lazy val servicessIndexId: Option[String] = clusterIndexId.map(_ + ".service")
+  lazy val servicesIndexId: Option[String] = clusterIndexId.map(_ + ".service")
 }

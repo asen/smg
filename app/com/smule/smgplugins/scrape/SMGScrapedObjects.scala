@@ -10,5 +10,7 @@ case class SMGScrapedObjects(
                               viewObjects: List[SMGraphObject],
                               aggObjects: List[SMGRrdAggObject],
                               indexes: List[SMGConfIndex]
-                            )
+                            ){
+  lazy val isEmpty: Boolean = rrdObjects.isEmpty && aggObjects.isEmpty && viewObjects.isEmpty
+}
 

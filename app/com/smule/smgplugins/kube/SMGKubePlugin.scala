@@ -68,7 +68,7 @@ class SMGKubePlugin(
         )
       if (cConf.svcConf.enabled)
         ret += SMGConfIndex(
-          id = cConf.servicessIndexId.get,
+          id = cConf.servicesIndexId.get,
           title = s"Kubernetes cluster ${cConf.uid} - Services",
           flt = SMGFilter.fromPrefixLocal(idxPrefix + "service."),
           cols = None,
