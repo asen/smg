@@ -15,6 +15,7 @@ object SMGKubeClient {
     val port: Int
     val protocol: String
     val name: Option[String]
+    lazy val portName: String = name.getOrElse(port.toString)
   }
 
   trait KubeNsObject {

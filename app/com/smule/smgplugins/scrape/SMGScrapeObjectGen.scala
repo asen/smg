@@ -94,7 +94,8 @@ class SMGScrapeObjectGen(
       val metaKeyReplaced = processRegexReplaces(metaKey.get, scrapeTargetConf.regexReplaces)
       val aggOuid = idPrefix + aggUidStr + metaKeyReplaced
       val titlePrefix = s"(${scrapeTargetConf.humanName}) "
-      val aggTitle = titlePrefix + metaKeyReplaced + s" ($aggOp)" +
+      val aggTitle = titlePrefix + metaKeyReplaced +
+        s" ($aggOp, ${retObjects.size} obj${retObjects.tail.headOption.map(_ => "s").getOrElse("")})" +
         metaStat.metaHelp.map(s => s" - ${s}").getOrElse("")
       aggObjects += SMGRrdAggObject(
         id = aggOuid,
