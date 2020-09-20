@@ -7,6 +7,12 @@ RUN yum install -y gcc make cairo-devel pango-devel libxml2-devel freetype-devel
     java-11-openjdk-devel socat
 RUN yum install -y rrdtool
 
+# optional tools, helpful to have in the container
+RUN yum install -y diffutils nmap-ncat
+# install some clients for common services. note that we don't need the services, just their clients
+# also some scripting languages and tools to make writing fetch commands easy
+RUN yum install -y mysql redis net-snmp-utils ruby python36 jq perl-XML-XPath
+
 RUN mkdir -p /etc/smg/conf.d
 RUN mkdir -p /etc/smg/scrape-private.d
 RUN mkdir -p /etc/smg/scrape-targets.d
