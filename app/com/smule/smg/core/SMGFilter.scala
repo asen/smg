@@ -145,7 +145,7 @@ case class SMGFilter(px: Option[String],
     if (rx.isDefined) "rx=" + rx.get else "",
     if (rxx.isDefined) "rx exclude=" + rxx.get else "",
     if (prx.isDefined) "prx=" + prx.get else "",
-    if (lbls.isDefined) "lbls=" + lbls.get.mkString(" ") else ""
+    if (lbls.isDefined) "lbls=" + lbls.get else ""
   ).filter(s => s.nonEmpty)
 
   private val paramsHumanText = if (paramsIdHumanSeq.isEmpty) "*" else paramsIdHumanSeq.mkString(" AND ")
