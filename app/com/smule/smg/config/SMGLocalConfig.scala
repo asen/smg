@@ -132,7 +132,7 @@ case class SMGLocalConfig(
   val dashDefaultCols: Int = globals.getOrElse("$dash-default-cols", "6").toInt
   val dashDefaultRows: Int = globals.getOrElse("$dash-default-rows", "10").toInt
 
-  val searchCacheMaxLevels: Int = globals.getOrElse("$search-max-levels", "10").toInt
+  val searchCacheMaxLevels: Int = globals.getOrElse("$search-max-levels", "2").toInt
 
   val defaultAutoRefreshEnabled: Boolean = globals.getOrElse("$default-auto-refresh", "true") == "true"
   val autoRefreshInterval: Int = globals.getOrElse("$auto-refresh-interval", "300").toInt
