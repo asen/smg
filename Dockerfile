@@ -11,7 +11,7 @@ RUN yum install -y rrdtool
 RUN yum install -y diffutils nmap-ncat
 # install some clients for common services. note that we don't need the services, just their clients
 # also some scripting languages and tools to make writing fetch commands easy
-RUN yum install -y bind-utils mysql redis net-snmp-utils ruby python36 jq perl-XML-XPath
+RUN yum install -y mysql redis net-snmp-utils ruby python36 jq perl-XML-XPath bind-utils
 
 RUN echo '#!/bin/bash' > /usr/bin/tail-log ; \
     echo "tail -n2000 -f /opt/smg/inst/smg/logs/application.log" >> /usr/bin/tail-log ; \

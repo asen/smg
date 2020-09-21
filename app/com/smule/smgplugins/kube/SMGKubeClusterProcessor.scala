@@ -57,7 +57,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   private val knownGoodServiceCommands = TrieMap[String,Long]()
   private val knownBadServiceCommands = TrieMap[String,Long]()
 
-  private def checkAutoConf(command: String,
+  private def checkAutoConfCommand(command: String,
                             cConf: SMGKubeClusterConf,
                             autoConf: SMGKubeClusterAutoConf,
                             kubeNsObject: KubeNsObject,
@@ -110,6 +110,19 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
+  private def checkAutoConf(commands: Seq[String],
+                            cConf: SMGKubeClusterConf,
+                            autoConf: SMGKubeClusterAutoConf,
+                            kubeNsObject: KubeNsObject,
+                            kubePort: KubePort): Option[Int] = {
+    val ret = commands.indexWhere { cmd =>
+      checkAutoConfCommand(cmd, cConf, autoConf, kubeNsObject, kubePort)
+    }
+    if (ret < 0)
+      None
+    else
+      Some(ret)
+  }
 
   def processAutoPortConf(cConf: SMGKubeClusterConf,
                           autoConf: SMGKubeClusterAutoConf,
@@ -120,10 +133,13 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                           parentIndexId: Option[String]
                          ): Option[SMGScrapeTargetConf] = {
     try {
-      val proto = if (autoConf.useHttps) "https://" else "http://"
-      val command = cConf.fetchCommand + " " + proto + ipAddr + s":${kubePort.port}/metrics"
-      if (!checkAutoConf(command, cConf, autoConf, nsObject, kubePort))
+      def myCommand(proto: String)  = cConf.fetchCommand + " " + proto + "://" + ipAddr + s":${kubePort.port}/metrics"
+      val commands = Seq(myCommand("http")) ++
+        (if (autoConf.tryHttps) Seq(myCommand("https")) else Seq())
+      val workingCommandIdx = checkAutoConf(commands, cConf, autoConf, nsObject, kubePort)
+      if (workingCommandIdx.isEmpty)
         return None
+      val command = commands(workingCommandIdx.get)
       val uid = cConf.uidPrefix + autoConf.targetType + "." + nsObject.namespace +
         "." + nsObject.name + "." + kubePort.portName + idxId.map(x => s"._$x").getOrElse("")
       val title = s"${cConf.hnamePrefix}${autoConf.targetType} " +

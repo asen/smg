@@ -12,7 +12,7 @@ case class SMGKubeClusterAutoConf(
                                    filter: Option[SMGFilter],
                                    regexReplaces: Seq[RegexReplaceConf],
                                    reCheckBackoff: Long,
-                                   useHttps: Boolean
+                                   tryHttps: Boolean
                                  )
 
 object SMGKubeClusterAutoConf {
@@ -21,10 +21,10 @@ object SMGKubeClusterAutoConf {
 
   def disabled(ttype: String): SMGKubeClusterAutoConf =
     SMGKubeClusterAutoConf(ttype, enabled = false, filter = None,
-      regexReplaces = Seq(), defaultRecheckBackoff, useHttps = false)
+      regexReplaces = Seq(), defaultRecheckBackoff, tryHttps = false)
   def enabledDefault(ttype: String): SMGKubeClusterAutoConf =
     SMGKubeClusterAutoConf(ttype, enabled = false, filter = None,
-      regexReplaces = Seq(), defaultRecheckBackoff, useHttps = false)
+      regexReplaces = Seq(), defaultRecheckBackoff, tryHttps = false)
 
   def fromYamlMap(ymap: mutable.Map[String, Object], confKey: String): SMGKubeClusterAutoConf = {
     if (!ymap.contains(confKey))
@@ -44,7 +44,7 @@ object SMGKubeClusterAutoConf {
         }.getOrElse(Seq()),
         reCheckBackoff = scm.get("check_backoff").map(_.asInstanceOf[Long]).
           getOrElse(defaultRecheckBackoff),
-        useHttps = scm.get("use_https").exists(_.toString == "true")
+        tryHttps = scm.get("try_https").map(_.toString).getOrElse("true") != "false"
       )
     }
   }
