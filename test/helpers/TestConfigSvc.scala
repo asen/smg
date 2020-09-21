@@ -86,6 +86,7 @@ class TestConfigSvc() extends SMGConfigService {
           aggOp = None,
           xRemoteAgg = false,
           aggGroupBy = None,
+          gbParam = None,
           period = None,
           desc = None,
           parentId = None,

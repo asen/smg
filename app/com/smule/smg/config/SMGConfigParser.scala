@@ -832,6 +832,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
         aggOp = oi.aggOp,
         xRemoteAgg = oi.xRemoteAgg,
         aggGroupBy = oi.aggGroupBy,
+        gbParam = oi.gbParam,
         period = oi.period,
         desc = oi.desc,
         parentId = oi.parentId,

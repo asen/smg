@@ -49,7 +49,7 @@
   @if(dep.rows > 0) {
     @defining(cfSvc.config){ conf =>
     @filter(cfSvc, idxes, flt, dep.period, dep.cols, dep.rows, availRemotes, aggOp,
-            showXRemote, dep.xRemoteAgg, dep.groupBy, gopts, conf.maxUrlSize,
+            showXRemote, dep.xRemoteAgg, dep.groupBy, dep.gbParam, gopts, conf.maxUrlSize,
             GrapherApi.defaultPeriod, conf.dashDefaultCols,
             conf.dashDefaultRows, dep.pg, cleanView)
     }

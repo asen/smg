@@ -80,6 +80,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "op").read[String] and
       (JsPath \ "gb").readNullable[String].map { gbOpt =>
         gbOpt.flatMap(gbs => SMGAggGroupBy.gbVal(gbs)).getOrElse(SMGAggGroupBy.defaultGroupBy) } and
+      (JsPath \ "gbp").readNullable[String] and
       (JsPath \ "vars").read[List[Map[String, String]]] and
       (JsPath \ "cdefVars").readNullable[List[Map[String, String]]].map(ol => ol.getOrElse(List())) and
       (JsPath \ "graphVarsIndexes").readNullable[List[Int]].map(ol => ol.getOrElse(List())) and
@@ -132,6 +133,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "agg_op").readNullable[String] and
       (JsPath \ "xagg").readNullable[String].map(xaggs => xaggs.getOrElse("") == "true") and
       (JsPath \ "gb").readNullable[String].map(gbsOpt => gbsOpt.flatMap(gbs => SMGAggGroupBy.gbVal(gbs))) and
+      (JsPath \ "gbp").readNullable[String] and
       (JsPath \ "period").readNullable[String] and
       (JsPath \ "desc").readNullable[String] and
       (JsPath \ "parent").readNullable[String].map(os => if (os.nonEmpty) Some(prefixedId(os.get)) else None ) and
@@ -329,7 +331,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     val periodStr: String = periods.mkString(",")
     val oids: String = aobj.objs.map(o => toLocalId(o.id)).mkString(",")
     val postMap = Map("ids" -> Seq(oids), "op" -> Seq(aobj.op), "gb" -> Seq(aobj.groupBy.toString),
-      "title" -> Seq(aobj.title), "periods" -> Seq(periodStr)) ++ goptsMap(gopts)
+      "title" -> Seq(aobj.title), "periods" -> Seq(periodStr)) ++
+      goptsMap(gopts) ++ gbParamMap(aobj.gbParam)
     ws.url(remote.url + API_PREFIX + "agg").
       withRequestTimeout(graphTimeoutMs).post(postMap).map { resp =>
       val jsval = Json.parse(resp.body)
@@ -342,7 +345,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
-  private def goptsMap(gopts:GraphOptions) = {
+  private def goptsMap(gopts:GraphOptions): Map[String, Seq[String]] = {
     val ret = mutable.Map[String, Seq[String]]()
     if (gopts.disablePop) ret("dpp") = Seq("on")
     if (gopts.disable95pRule) ret("d95p") = Seq("on")
@@ -353,6 +356,11 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     if (gopts.logY) ret("logy") = Seq("on")
     ret.toMap
   }
+
+  private def gbParamMap(gbParam: Option[String]): Map[String, Seq[String]] = if (gbParam.isDefined){
+    Map("gbp" -> Seq(gbParam.get))
+  } else Map()
+
   /**
     *  Asynchronous call to POST /api/reloadLocal to request from the remote instance to reload its configuration
     */
@@ -864,6 +872,7 @@ object SMGRemoteClient {
       "objs" -> Json.toJson(obj.objs),
       "op" -> obj.op,
       "gb" -> obj.groupBy.toString,
+      "gbp" -> Json.toJson(obj.gbParam),
       "vars" -> Json.toJson(obj.vars),
       "cdefVars" -> Json.toJson(obj.cdefVars),
       "graphVarsIndexes" -> Json.toJson(obj.graphVarsIndexes),
@@ -928,6 +937,7 @@ object SMGRemoteClient {
       if (ix.aggOp.isDefined) mm += ("agg_op" -> Json.toJson(ix.aggOp.get))
       if (ix.xRemoteAgg) mm += ("xagg" -> Json.toJson("true"))
       if (ix.aggGroupBy.isDefined) mm += ("gb" -> Json.toJson(ix.aggGroupBy.get.toString))
+      if (ix.gbParam.isDefined) mm += ("gbp" -> Json.toJson(ix.gbParam.get))
       if (ix.period.isDefined) mm += ("period" -> Json.toJson(ix.period.get))
       if (ix.desc.isDefined) mm += ("desc" -> Json.toJson(ix.desc.get))
       if (ix.parentId.isDefined) mm += ("parent" -> Json.toJson(ix.parentId.get))

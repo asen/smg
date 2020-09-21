@@ -7,7 +7,7 @@
 
 @(cfSvc: SMGConfigService, idxes: Seq[SMGIndex], flt: SMGFilter, period: String, cols: Int, rows: Int,
         availRemotes: Seq[SMGRemote], aggOp: Option[String],
-        showXagg: Boolean, xagg: Boolean, groupBy: SMGAggGroupBy.Value,
+        showXagg: Boolean, xagg: Boolean, groupBy: SMGAggGroupBy.Value, groupByParam: Option[String],
         gopts: GraphOptions, maxUrlSize: Int, defaultPeriod: String, defaultCols: Int,
         defaultRows: Int, page: Int, cleanView: Boolean)
 
@@ -280,16 +280,26 @@ sort by the average value with specified 1-based index. 0 means default order."
       <span><strong>Aggregate function: @aggOp.get @if(xagg){(Cross-Remote)}</strong></span>
       <input type="button" class="btn btn-default btn-submit" onclick="mySubmitAgg(this);" value="Unapply">
       }
-      <label for="smg-fliter-gb" class="manualsubmit-lbl"
+      <label for="smg-filter-gb" class="manualsubmit-lbl"
              title="Select how to group displayed objects for aggregation and sorting.
 All types of groupings require the same number of variables. The different values determine
 whether all variable definition properties are used or just a subset of them and also whether
 object id suffix is included">Group By:</label>
-      <select id="smg-fliter-gb" name="gb">
+      <select id="smg-filter-gb" name="gb" onchange="smgFilterGbChange()">
         @for(gbv <- SMGAggGroupBy.values.toSeq) {
         <option value="@gbv.toString" @if(gbv==groupBy){ selected }>@{SMGAggGroupBy.gbDesc(gbv)}</option>
         }
       </select>
+
+      <span id="smg-gbp-span" style="display: none">
+      <label class="manualsubmit-lbl" for="smg-filter-gbp"
+               title="Optional parameter for group by function">Param:</label>
+      <img src='@routes.Assets.versioned("images/delete.png")' class="clear-button"
+             title="Clear value" onclick="clearElem('smg-filter-gbp');" />
+      <input type="text" id="smg-filter-gbp"
+               size="16" name="gbp" value="@groupByParam" >
+      </span>
+
       <input class="btn btn-default btn-submit"
              title="Group the DISPLAYED on the page graphs by graphed variables as specified by Group By"
              type="button" onclick="mySubmitGroupBy(this);" value="GroupBy">
@@ -358,6 +368,18 @@ By default aggregation/sorting happens per-remote instance">Cross-Remote:</label
         document.getElementById("smgFilterForm").method = "POST";
       }
   };
+
+  function smgFilterGbChange() {
+    var gbSelectElem = document.getElementById("smg-filter-gb")
+    var gbParamSpan = document.getElementById("smg-gbp-span")
+    if (gbSelectElem.value == 'GB_OBJLBLS'){
+      gbParamSpan.style.display = 'inline'
+    } else {
+      gbParamSpan.style.display = 'none'
+    }
+  }
+
+  smgFilterGbChange();
 
   function mySubmitGroupBy(elem) {
     var xsortInput = document.getElementById("smg-filter-xsort");
@@ -485,6 +507,7 @@ By default aggregation/sorting happens per-remote instance">Cross-Remote:</label
   smgAutocompleteSetup('smg-filter-lbls',   '/json/lbltokens');
   smgAutocompleteSetup('smg-filter-period', '/json/periods');
   smgAutocompleteSetup('smg-filter-pl',     '/json/periods');
+  smgAutocompleteSetup('smg-filter-gbp',    '/json/lbltokens');
   smgAutocompleteSetup('smg-filter-step',   '');
   smgAutocompleteSetup('smg-filter-maxy',   '');
 } @* end defining(idxes.headOption) *@

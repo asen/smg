@@ -21,8 +21,9 @@ trait SMGAggObjectView extends SMGObjectView {
   val objs: Seq[SMGObjectView]
   val op: String
   val groupBy: SMGAggGroupBy.Value
+  val gbParam: Option[String]
 
-  def groupByKey: SMGAggGroupBy = SMGAggGroupBy.objectGroupByVars(objs.head, groupBy)
+  def groupByKey: SMGAggGroupBy = SMGAggGroupBy.objectGroupByVars(objs.head, groupBy, gbParam)
 
   override val stack: Boolean = (op == "STACK") || objs.head.stack
 
@@ -68,7 +69,7 @@ trait SMGAggObjectView extends SMGObjectView {
     */
   def splitByRemoteId: Map[String,SMGAggObjectView] = {
     objs.groupBy( o => SMGRemote.remoteId(o.id)).map { t =>
-      ( t._1, SMGAggObjectView.build(t._2, op, groupBy) )
+      ( t._1, SMGAggObjectView.build(t._2, op, groupBy, gbParam, None) )
     }
   }
 
@@ -190,13 +191,16 @@ object SMGAggObjectView {
     * @param title - optional title. If None, a title will be generated from the object titles
     * @return - the newly created SMGAggObjectViewLocal
     */
-  def build(objs: Seq[SMGObjectView], op:String, groupBy: SMGAggGroupBy.Value, title: Option[String] = None): SMGAggObjectViewLocal = {
+  def build(objs: Seq[SMGObjectView], op:String,
+            groupBy: SMGAggGroupBy.Value, gbParam: Option[String],
+            title: Option[String]): SMGAggObjectViewLocal = {
     val myTitle = if (title.isDefined) title.get else "(" + op + ", " + objs.size + " objects) " +
        buildTitle(objs.map(o => o.title))
     SMGAggObjectViewLocal(id = myGenId(objs, objs.head.vars, objs.head.cdefVars, objs.head.graphVarsIndexes, op),
       objs = objs,
       op = op,
       groupBy = groupBy,
+      gbParam = gbParam,
       vars = objs.head.vars,
       cdefVars = objs.head.cdefVars,
       graphVarsIndexes = objs.head.graphVarsIndexes,

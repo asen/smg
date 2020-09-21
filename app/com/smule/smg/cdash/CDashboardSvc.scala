@@ -99,7 +99,7 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
         idx.rows.getOrElse(configSvc.config.dashDefaultRows)
       val objsSlice = filteredObjects.take(indexLimit)
       lazy val aggObjs = idx.aggOp.map(agg => smg.buildAggObjects(objsSlice, agg,
-        idx.aggGroupBy.getOrElse(SMGAggGroupBy.defaultGroupBy)))
+        idx.aggGroupBy.getOrElse(SMGAggGroupBy.defaultGroupBy), idx.gbParam))
       val myPeriod = idx.period.getOrElse(GrapherApi.defaultPeriod)
       val futImages = if (idx.aggOp.nonEmpty && objsSlice.nonEmpty) {
         smg.graphAggObjects(aggObjs.get, myPeriod, idx.flt.gopts,

@@ -32,21 +32,22 @@ case class SMGAggGroupBy(groupBy: SMGAggGroupBy.Value, tlMap: Map[String,String]
 
 object SMGAggGroupBy extends Enumeration {
 
-  val GB_VARS,
+  val GB_VARS, GB_OBJLBLS,
   GB_VARSSX, GB_VARSSX2, GB_VARSSX3,
   GB_VARSPX, GB_VARSPX2, GB_VARSPX3,
-  GB_LBLMU, GB_LBLMUSX, GB_NUMV, GB_NUMVSX = Value
+  GB_VARLBLMU, GB_VARLBLMUSX, GB_NUMV, GB_NUMVSX = Value
 
   def gbDesc(v: Value): String = v match {
     case GB_VARS => "By same vars definitions (default)"
+    case GB_OBJLBLS => "By same object label values"
     case GB_VARSSX => "By same vars defs and object id suffix"
     case GB_VARSSX2 => "By same vars defs and object id suffix (2 levels)"
     case GB_VARSSX3 => "By same vars defs and object id suffix (3 levels)"
     case GB_VARSPX => "By same vars defs and object id prefix"
     case GB_VARSPX2 => "By same vars defs and object id prefix (2 levels)"
     case GB_VARSPX3 => "By same vars defs and object id prefix (3 levels)"
-    case GB_LBLMU => "By same vars labels and units"
-    case GB_LBLMUSX => "By same vars labels and units and object id suffix"
+    case GB_VARLBLMU => "By same vars labels and units"
+    case GB_VARLBLMUSX => "By same vars labels and units and object id suffix"
     case GB_NUMV => "By same number of vars"
     case GB_NUMVSX => "By same number of vars and suffix"
     case x => throw new RuntimeException(s"The impossible has happened: $x")
@@ -58,7 +59,14 @@ object SMGAggGroupBy extends Enumeration {
 
   def defaultGroupBy: Value = GB_VARS
 
-  def objectGroupByVars(ov: SMGObjectView, gb: Value): SMGAggGroupBy = {
+  def objectGroupByVars(ov: SMGObjectView, gb: Value, gbParam: Option[String]): SMGAggGroupBy = {
+
+    lazy val byLabelsMap = (if (gbParam.getOrElse("") == "") ov.labels else {
+      gbParam.get.split("\\s+").map { expr =>
+        // assuming just label name for now
+        (expr, ov.labels.getOrElse(expr, ""))
+      }.toMap
+    }).map { case (k,v) => ("label:" + k, v) }
 
     lazy val labelMuVars = ov.filteredVars(true).map { m =>
       m.filter { case (k, v) =>
@@ -74,26 +82,27 @@ object SMGAggGroupBy extends Enumeration {
     lazy val emptyFilteredVars = ov.filteredVars(true).map { m => Map[String,String]() }
 
     gb match {
-      case GB_VARS => SMGAggGroupBy(gb, Map(),ov.filteredVars(true))
+      case GB_VARS => SMGAggGroupBy(gb, Map(), ov.filteredVars(true))
+      case GB_OBJLBLS => SMGAggGroupBy(gb, byLabelsMap, emptyFilteredVars)
       case GB_VARSSX => SMGAggGroupBy(gb, bySxTlMap, ov.filteredVars(true))
       case GB_VARSSX2 => SMGAggGroupBy(gb, bySx2TlMap, ov.filteredVars(true))
       case GB_VARSSX3 => SMGAggGroupBy(gb, bySx3TlMap, ov.filteredVars(true))
       case GB_VARSPX => SMGAggGroupBy(gb, byPxTlMap, ov.filteredVars(true))
       case GB_VARSPX2 => SMGAggGroupBy(gb, byPx2TlMap, ov.filteredVars(true))
       case GB_VARSPX3 => SMGAggGroupBy(gb, byPx3TlMap, ov.filteredVars(true))
-      case GB_LBLMU => SMGAggGroupBy(gb, Map(), labelMuVars)
-      case GB_LBLMUSX => SMGAggGroupBy(gb, bySxTlMap, labelMuVars)
+      case GB_VARLBLMU => SMGAggGroupBy(gb, Map(), labelMuVars)
+      case GB_VARLBLMUSX => SMGAggGroupBy(gb, bySxTlMap, labelMuVars)
       case GB_NUMV => SMGAggGroupBy(gb, Map(), emptyFilteredVars)
       case GB_NUMVSX => SMGAggGroupBy(gb, bySxTlMap, emptyFilteredVars)
     }
   }
 
-  def groupByVars(lst: Seq[SMGObjectView], gb: Value): Seq[(String, Seq[SMGObjectView])] = {
+  def groupByVars(lst: Seq[SMGObjectView], gb: Value, gbParam: Option[String]): Seq[(String, Seq[SMGObjectView])] = {
     // group by vars trying to preserve ordering
-    val grouped = mutable.Map[SMGAggGroupBy,Seq[SMGObjectView]](lst.groupBy(ov => objectGroupByVars(ov,gb)).toSeq:_*)
+    val grouped = mutable.Map[SMGAggGroupBy,Seq[SMGObjectView]](lst.groupBy(ov => objectGroupByVars(ov,gb, gbParam)).toSeq:_*)
     val ret = ListBuffer[(String, Seq[SMGObjectView])]()
     lst.foreach { ov =>
-      val gbv = objectGroupByVars(ov, gb)
+      val gbv = objectGroupByVars(ov, gb, gbParam)
       val elem = grouped.remove(gbv)
       if (elem.isDefined) {
         ret += Tuple2(gbv.desc, elem.get)

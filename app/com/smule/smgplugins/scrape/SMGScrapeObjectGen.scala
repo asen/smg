@@ -125,6 +125,7 @@ class SMGScrapeObjectGen(
         aggOp = None,
         xRemoteAgg = false,
         aggGroupBy = None,
+        gbParam = None,
         period = None, // TODO?
         desc = metaStat.metaHelp,
         parentId = Some(parentNonAggIndexId),
@@ -140,6 +141,7 @@ class SMGScrapeObjectGen(
         aggOp = None,
         xRemoteAgg = false,
         aggGroupBy = None,
+        gbParam = None,
         period = None, // TODO?
         desc = None, //metaHelp in title
         parentId = Some(parentAggIndexId),
@@ -207,6 +209,7 @@ class SMGScrapeObjectGen(
       aggOp = None,
       xRemoteAgg = false,
       aggGroupBy = None,
+      gbParam = None,
       period = None, // TODO?
       desc = None, //TODO
       parentId = scrapeTargetConf.parentIndexId,
@@ -223,6 +226,7 @@ class SMGScrapeObjectGen(
       aggOp = None,
       xRemoteAgg = false,
       aggGroupBy = None,
+      gbParam = None,
       period = None, // TODO?
       desc = None, //TODO
       parentId = Some(scrapeAggsIndexId),

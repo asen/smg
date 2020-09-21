@@ -89,7 +89,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
                                     pg: Int,
                                     agg: Option[String],
                                     xRemoteAgg: Boolean,
-                                    groupBy: SMGAggGroupBy.Value
+                                    groupBy: SMGAggGroupBy.Value,
+                                    gbParam: Option[String]
                                   ){
     var actualPg: Int = pg
   }
@@ -135,6 +136,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     miny: Option[String],
     logy: String,
     gb: Option[String],
+    gbp: Option[String],
     cleanView: Boolean
   ) {
 
@@ -209,6 +211,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val groupBy = if (idx.isEmpty || gb.isDefined) {
         gb.map(s => SMGAggGroupBy.gbParamVal(Some(s)))
       } else idx.get.aggGroupBy
+      val gbParam = if (idx.isEmpty || gbp.isDefined) gbp else idx.get.gbParam
 
       val dep = DashboardExtraParams(
         period = myPeriod,
@@ -217,7 +220,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
         pg = pg,
         agg = myAgg,
         xRemoteAgg = myXRemoteAgg,
-        groupBy = groupBy.getOrElse(SMGAggGroupBy.defaultGroupBy)
+        groupBy = groupBy.getOrElse(SMGAggGroupBy.defaultGroupBy),
+        gbParam = gbParam
       )
 
       (flt,dep)
@@ -250,6 +254,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       miny = m.get("miny").map(_.head),
       logy = m.getOrElse("logy", Seq("")).head,
       gb = m.get("gb").map(_.head),
+      gbp = m.get("gbp").map(_.head),
       cleanView = m.getOrElse("cleanView", Seq("off")).head == "on"
     )
   }
@@ -346,7 +351,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
     // group objects by "graph vars" (identical var defs, subject to aggregation) and produce an aggregate
     // object and corresponding image for each group
-    lazy val aggObjs = dep.agg.map{ aggOp => smg.buildAggObjects(objsSlice, aggOp, dep.groupBy) }
+    lazy val aggObjs = dep.agg.map{ aggOp => smg.buildAggObjects(objsSlice, aggOp, dep.groupBy, dep.gbParam) }
 
     // images future
     val futImages = if (dep.agg.nonEmpty && objsSlice.nonEmpty) {
@@ -373,9 +378,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
       val sortedGroups = if (dep.agg.isEmpty && (flt.gopts.xsort.getOrElse(0) != 0)){
         val mysb = flt.gopts.xsort.get
         if (mysb < 0)
-          smg.groupImageViews(lst, dep.groupBy)
+          smg.groupImageViews(lst, dep.groupBy, dep.gbParam)
         else
-          smg.xsortImageViews(lst, mysb - 1, dep.groupBy, dep.period)
+          smg.xsortImageViews(lst, mysb - 1, dep.groupBy, dep.gbParam, dep.period)
       } else {
         List(SMGImageViewsGroup(List(), lst))
       }
@@ -435,9 +440,12 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param cols - number fo columns to display graphs in
     * @return
     */
-  def showAgg(ids:String, op:String, gb: Option[String], title: Option[String], cols: Int, dpp: String, d95p: String,
-              maxy: Option[String], miny: Option[String], cleanView: Option[String], logy: String): Action[AnyContent] = Action.async { implicit request =>
-    showAggCommon(ids, op, gb, title, cols, dpp, d95p, maxy, miny, logy, cleanView.getOrElse("off") == "on", request)
+  def showAgg(ids:String, op:String, gb: Option[String], gbParam: Option[String],
+              title: Option[String], cols: Int, dpp: String, d95p: String,
+              maxy: Option[String], miny: Option[String], cleanView: Option[String],
+              logy: String): Action[AnyContent] = Action.async { implicit request =>
+    showAggCommon(ids, op, gb, gbParam, title, cols, dpp, d95p,
+      maxy, miny, logy, cleanView.getOrElse("off") == "on", request)
   }
 
   def showAggPost(): Action[AnyContent] = Action.async { implicit request =>
@@ -445,6 +453,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     showAggCommon(params("ids").head,
       params("op").head,
       params.get("gb").map(_.head),
+      params.get("gbp").map(_.head),
       params.get("title").map(_.head),
       params.get("cols").map(_.head.toInt).getOrElse(6), // TODO use default cols
       params.get("dpp").map(_.head).getOrElse(""),
@@ -457,8 +466,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
 
-  def showAggCommon(ids:String, op:String, gb: Option[String], title: Option[String], cols: Int, dpp: String, d95p: String,
-              maxy: Option[String], miny: Option[String], logy: String, cleanView: Boolean,
+  def showAggCommon(ids:String, op:String, gb: Option[String], gbParam: Option[String],
+                    title: Option[String], cols: Int, dpp: String, d95p: String,
+                    maxy: Option[String], miny: Option[String], logy: String, cleanView: Boolean,
                     request: Request[AnyContent] ): Future[Result] = {
     implicit val theRequest: Request[AnyContent] = request
     val showMs = !cleanView && msEnabled(request)
@@ -472,7 +482,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     else {
       val byRemote = objList.groupBy(o => SMGRemote.remoteId(o.id))
       val groupBy = SMGAggGroupBy.gbParamVal(gb)
-      val aobj = SMGAggObjectView.build(objList, op, groupBy, title)
+      val aobj = SMGAggObjectView.build(objList, op, groupBy, gbParam, title)
       val gfut = smg.graphAggObject(aobj, smg.detailPeriods, gopts, byRemote.keys.size > 1)
       val mfut = if (showMs) monitorApi.objectViewStates(objList) else Future { Map() }
       val ixes = smg.objectIndexes(aobj)
@@ -520,9 +530,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @param d - download or inline display
     * @return
     */
-  def fetchAgg(ids:String, op:String, gb: Option[String], r: Option[String], s: Option[String], e: Option[String],
+  def fetchAgg(ids:String, op:String, gb: Option[String], gbp: Option[String], r: Option[String], s: Option[String], e: Option[String],
                d:Boolean): Action[AnyContent] = Action.async {
-    fetchAggCommon(ids, op, gb, r, s, e, d)
+    fetchAggCommon(ids, op, gb, gbp, r, s, e, d)
   }
 
   def fetchAggPost(): Action[AnyContent] = Action.async { request =>
@@ -530,6 +540,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     fetchAggCommon(params("ids").head,
       params("op").head,
       params.get("gb").map(_.head),
+      params.get("gbp").map(_.head),
       params.get("r").map(_.head),
       params.get("s").map(_.head),
       params.get("e").map(_.head),
@@ -537,7 +548,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
 
-  def fetchAggCommon(ids:String, op:String, gb: Option[String], r: Option[String], s: Option[String], e: Option[String],
+  def fetchAggCommon(ids:String, op:String, gb: Option[String], gbp: Option[String], r: Option[String], s: Option[String], e: Option[String],
                d:Boolean): Future[Result] = {
     val intres = SMGRrd.parsePeriod(r.getOrElse(""))
     val idLst = ids.split(',')
@@ -546,7 +557,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       Future { }.map { _ => NotFound("object ids not found") }
     else {
       val groupBy = SMGAggGroupBy.gbParamVal(gb)
-      val aobj = SMGAggObjectView.build(objList, op, groupBy)
+      val aobj = SMGAggObjectView.build(objList, op, groupBy, gbp, None)
       val pl = if (e.getOrElse("") == "") None else e
       val params = SMGRrdFetchParams(intres, s, pl, filterNan = false)
       smg.fetchAgg(aobj, params).map { ret =>

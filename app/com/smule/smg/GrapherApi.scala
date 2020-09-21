@@ -101,7 +101,7 @@ trait GrapherApi {
 
   //TODO
   def buildAggObjects(objsSlice: Seq[SMGObjectView], aggOp: String,
-                      groupBy: SMGAggGroupBy.Value): Seq[SMGAggObjectView]
+                      groupBy: SMGAggGroupBy.Value, gbParam: Option[String]): Seq[SMGAggObjectView]
 
   //TODO
   def graphAggObjects(aggObjs: Seq[SMGAggObjectView], period: String, gopts: GraphOptions,
@@ -110,7 +110,8 @@ trait GrapherApi {
   //TODO
   def groupAndGraphObjects(objsSlice: Seq[SMGObjectView], period: String, gopts: GraphOptions,
                            aggOp: Option[String], xRemoteAgg: Boolean,
-                           groupBy: SMGAggGroupBy.Value): Future[Seq[SMGImageView]]
+                           groupBy: SMGAggGroupBy.Value,
+                           gbParam: Option[String]): Future[Seq[SMGImageView]]
 
     /**
     * Asynchronous call to graph a SMGObjectView for the set of
@@ -186,10 +187,11 @@ trait GrapherApi {
     *         where within each group the images are sorted as described.
     */
   def xsortImageViews(lst: Seq[SMGImageView], sortBy: Int,
-                      groupBy: SMGAggGroupBy.Value, period: String): Seq[SMGImageViewsGroup]
+                      groupBy: SMGAggGroupBy.Value, gbParam: Option[String],
+                      period: String): Seq[SMGImageViewsGroup]
 
 
-  def groupImageViews(lst: Seq[SMGImageView], groupBy: SMGAggGroupBy.Value): Seq[SMGImageViewsGroup]
+  def groupImageViews(lst: Seq[SMGImageView], groupBy: SMGAggGroupBy.Value, gbParam: Option[String]): Seq[SMGImageViewsGroup]
 
   // TODO
   def groupImageViewsGroupsByRemote(dglst: Seq[SMGImageViewsGroup], xRemoteAgg: Boolean): Seq[SMGImageViewsGroup]

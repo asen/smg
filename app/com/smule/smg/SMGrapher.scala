@@ -365,6 +365,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
         Some(SMGAggObjectViewLocal(aobj.id, objOpts.map(_.get),
           aobj.op,
           aobj.groupBy,
+          aobj.gbParam,
           aobj.vars,
           aobj.cdefVars,
           aobj.graphVarsIndexes,
@@ -410,10 +411,10 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
   }
 
   def buildAggObjects(objsSlice: Seq[SMGObjectView], aggOp: String,
-                      groupBy: SMGAggGroupBy.Value): Seq[SMGAggObjectView] = {
-    val byGraphVars = SMGAggGroupBy.groupByVars(objsSlice, groupBy)
+                      groupBy: SMGAggGroupBy.Value, gbParam: Option[String]): Seq[SMGAggObjectView] = {
+    val byGraphVars = SMGAggGroupBy.groupByVars(objsSlice, groupBy, gbParam)
     byGraphVars.map { case (vdesc, vseq) =>
-      SMGAggObjectView.build(vseq, aggOp, groupBy)
+      SMGAggObjectView.build(vseq, aggOp, groupBy, gbParam, None)
     }
   }
 
@@ -426,11 +427,12 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
 
   def groupAndGraphObjects(objsSlice: Seq[SMGObjectView], period: String, gopts: GraphOptions,
                            aggOp: Option[String], xRemoteAgg: Boolean,
-                           groupBy: SMGAggGroupBy.Value): Future[Seq[SMGImageView]] = {
+                           groupBy: SMGAggGroupBy.Value,
+                           gbParam: Option[String]): Future[Seq[SMGImageView]] = {
     if (aggOp.nonEmpty) {
       // group objects by "graph vars" (identical var defs, subject to aggregation) and produce an aggregate
       // object and corresponding image for each group
-      val aggObjs = buildAggObjects(objsSlice, aggOp.get, groupBy)
+      val aggObjs = buildAggObjects(objsSlice, aggOp.get, groupBy, gbParam)
       graphAggObjects(aggObjs, period, gopts, aggOp.get, xRemoteAgg)
     } else {
       this.graphObjects(objsSlice, Seq(period), gopts)
@@ -508,13 +510,15 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     searchCache.getMatchingIndexes(ovs)
   }
 
-  def xsortImageViews(lst: Seq[SMGImageView], sortBy: Int, groupBy: SMGAggGroupBy.Value, period: String): Seq[SMGImageViewsGroup]  = {
+  def xsortImageViews(lst: Seq[SMGImageView], sortBy: Int,
+                      groupBy: SMGAggGroupBy.Value, gbParam: Option[String],
+                      period: String): Seq[SMGImageViewsGroup]  = {
     val fparams = SMGRrdFetchParams(None, Some(period), None, filterNan = true)
     val objLst = lst.map { iv => iv.obj }
     val ov2iv = lst.groupBy(_.obj.id)
     val fut = this.fetchMany(objLst, fparams)
     val fetchResults = Await.result(fut, Duration(120, "seconds")).toMap
-    val byVars = SMGAggGroupBy.groupByVars(objLst, groupBy)
+    val byVars = SMGAggGroupBy.groupByVars(objLst, groupBy, gbParam)
     byVars.map { case (vdesc, vlst) =>
       val vlstSorted = vlst.sortBy { ov =>
         val rows = fetchResults.getOrElse(ov.id, Seq())
@@ -539,9 +543,10 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
   }
 
-  def groupImageViews(lst: Seq[SMGImageView], groupBy: SMGAggGroupBy.Value): Seq[SMGImageViewsGroup] = {
+  def groupImageViews(lst: Seq[SMGImageView],
+                      groupBy: SMGAggGroupBy.Value, gbParam: Option[String]): Seq[SMGImageViewsGroup] = {
     val objLst = lst.map { iv => iv.obj }
-    val byVars = SMGAggGroupBy.groupByVars(objLst, groupBy)
+    val byVars = SMGAggGroupBy.groupByVars(objLst, groupBy, gbParam)
     val ov2iv = lst.groupBy(_.obj.id)
     byVars.map { case (vdesc, vlst) =>
       SMGImageViewsGroup(List(vdesc), vlst.flatMap(ov => ov2iv.getOrElse(ov.id, Seq())))

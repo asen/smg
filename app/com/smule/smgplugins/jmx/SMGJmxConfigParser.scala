@@ -136,6 +136,7 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
         aggOp = None,
         xRemoteAgg = false,
         aggGroupBy = None,
+        gbParam = None,
         period = None,
         desc = None,
         parentId = Some(pluginId),
@@ -145,13 +146,13 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
       id = pluginId + "_all",
       title = s"JMX Graphs ($pluginId - All)",
       flt = SMGFilter.matchLocal,
-      cols = None, rows = Some(0), aggOp = None, xRemoteAgg = false, aggGroupBy = None,
+      cols = None, rows = Some(0), aggOp = None, xRemoteAgg = false, aggGroupBy = None, gbParam = None,
       period = None, desc = None, parentId = Some(pluginId), childIds = ret.map(_.id), disableHeatmap = false)
     ret += secondLevel
     val topLevel = SMGConfIndex(
       id = pluginId, title = s"JMX Graphs ($pluginId)",
       flt = SMGFilter.matchLocal,
-      cols = None, rows = Some(0), aggOp = None, xRemoteAgg = false, aggGroupBy = None,
+      cols = None, rows = Some(0), aggOp = None, xRemoteAgg = false, aggGroupBy = None, gbParam = None,
       period = None, desc = None, parentId = None, childIds = Seq(pluginId + "_all"), disableHeatmap = false)
     ret += topLevel
     ret.toList

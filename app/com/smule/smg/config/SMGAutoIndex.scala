@@ -37,6 +37,7 @@ case class SMGAutoIndex(id: String, children: Seq[SMGAutoIndex], remoteId: Optio
   override val aggOp: Option[String] = None
   override val xRemoteAgg = false
   override val aggGroupBy: Option[SMGAggGroupBy.Value] = None
+  override val gbParam: Option[String] = None
 
   override val period: Option[String] = None
   override val desc: Option[String] = None
