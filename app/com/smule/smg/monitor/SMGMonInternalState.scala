@@ -98,12 +98,18 @@ trait SMGMonInternalState extends SMGMonState {
 
   protected val log: SMGLoggerApi = SMGLogger
 
+  private def distincRefObjs: Seq[String] = ouids.flatMap { ouid =>
+    configSvc.config.viewObjectsById.get(ouid).flatMap(_.refObj.map(_.id))
+  }.distinct
+
   override def aggShowUrlFilter: Option[String] = {
     if (ouids.isEmpty)
       return None
     if (ouids.tail.isEmpty)
       return Some(SMGMonState.oidFilter(ouids.head))
-    if (pfId.isDefined)
+    // also handle the case where the ouids are aliases to the same update object,
+    // in that case we don't want a prx= filter
+    if (pfId.isDefined && distincRefObjs.lengthCompare(1) > 0)
       return Some("prx=" + java.net.URLEncoder.encode(s"^${SMGRemote.localId(pfId.get)}$$", "UTF-8"))
     val rx = s"^(${ouids.map(oid => SMGRemote.localId(oid)).distinct.mkString("|")})$$"
     Some("rx=" + java.net.URLEncoder.encode(rx, "UTF-8")) // TODO, better showUrl?
