@@ -1,10 +1,8 @@
 package com.smule.smgplugins.kube
 
 import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
-import com.smule.smg.core.SMGFilter
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -27,84 +25,7 @@ class SMGKubePlugin(
     confParser.reload()
   }
 
-  override def indexes: Seq[SMGConfIndex] = confParser.conf.clusterConfs.flatMap { cConf =>
-    if (cConf.clusterIndexId.isDefined) {
-      val idxPrefix = if (cConf.prefixIdsWithClusterId) cConf.uid + "." else ""
-      val ret = ListBuffer[SMGConfIndex]()
-      var myParentIndexId = cConf.parentIndexId
-      if (cConf.prefixIdsWithClusterId) {
-        ret += SMGConfIndex(
-          id = cConf.clusterIndexId.get,
-          title = s"Kubernetes cluster ${cConf.uid}",
-          flt = SMGFilter.fromPrefixLocal(idxPrefix),
-          cols = None,
-          rows = None,
-          aggOp = None,
-          xRemoteAgg = false,
-          aggGroupBy = None,
-          gbParam = None,
-          period = None,
-          desc = None,
-          parentId = cConf.parentIndexId,
-          childIds = Seq(),
-          disableHeatmap = false
-        )
-        myParentIndexId = cConf.clusterIndexId
-      }
-      if (cConf.nodeMetrics.nonEmpty)
-        ret +=  SMGConfIndex(
-          id = cConf.nodesIndexId.get,
-          title = s"Kubernetes cluster ${cConf.uid} - Nodes",
-          flt = SMGFilter.fromPrefixLocal(idxPrefix + "node."),
-          cols = None,
-          rows = None,
-          aggOp = None,
-          xRemoteAgg = false,
-          aggGroupBy = None,
-          gbParam = None,
-          period = None,
-          desc = None,
-          parentId = myParentIndexId,
-          childIds = Seq(),
-          disableHeatmap = false
-        )
-      if (cConf.svcConf.enabled)
-        ret += SMGConfIndex(
-          id = cConf.servicesIndexId.get,
-          title = s"Kubernetes cluster ${cConf.uid} - Services",
-          flt = SMGFilter.fromPrefixLocal(idxPrefix + "service."),
-          cols = None,
-          rows = None,
-          aggOp = None,
-          xRemoteAgg = false,
-          aggGroupBy = None,
-          gbParam = None,
-          period = None,
-          desc = None,
-          parentId = myParentIndexId,
-          childIds = Seq(),
-          disableHeatmap = false
-        )
-      if (cConf.endpointsConf.enabled)
-        ret += SMGConfIndex(
-          id = cConf.endpointsIndexId.get,
-          title = s"Kubernetes cluster ${cConf.uid} - Endpoints",
-          flt = SMGFilter.fromPrefixLocal(idxPrefix + "endpoint."),
-          cols = None,
-          rows = None,
-          aggOp = None,
-          xRemoteAgg = false,
-          aggGroupBy = None,
-          gbParam = None,
-          period = None,
-          desc = None,
-          parentId = myParentIndexId,
-          childIds = Seq(),
-          disableHeatmap = false
-        )
-      ret.toList
-    } else Seq()
-  }  // TODO add some cluster-leve meaningful indexes ?
+  override def indexes: Seq[SMGConfIndex] = targetProcessor.indexes
 
   private def reloadScrapeConf(): Unit = {
     val scrapePlugin = smgConfSvc.plugins.find(_.pluginId == "scrape")

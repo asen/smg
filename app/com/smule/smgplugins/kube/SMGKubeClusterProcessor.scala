@@ -3,7 +3,7 @@ package com.smule.smgplugins.kube
 import java.io.File
 import java.nio.file.{Files, Paths}
 
-import com.smule.smg.config.{SMGConfigParser, SMGConfigService}
+import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
 import com.smule.smg.core.{SMGCmd, SMGCmdException, SMGFileUtil, SMGFilter, SMGLoggerApi}
 import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNsObject, KubePort, KubeService, KubeServicePort}
@@ -11,6 +11,7 @@ import com.smule.smgplugins.scrape.SMGScrapeTargetConf
 import org.yaml.snakeyaml.Yaml
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
@@ -268,5 +269,84 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
          ret = true
     }
     ret
+  }
+
+  def indexes: Seq[SMGConfIndex] = pluginConfParser.conf.clusterConfs.flatMap { cConf =>
+    if (cConf.clusterIndexId.isDefined) {
+      val idxPrefix = if (cConf.prefixIdsWithClusterId) cConf.uid + "." else ""
+      val ret = ListBuffer[SMGConfIndex]()
+      var myParentIndexId = cConf.parentIndexId
+      if (cConf.prefixIdsWithClusterId) {
+        ret += SMGConfIndex(
+          id = cConf.clusterIndexId.get,
+          title = s"Kubernetes cluster ${cConf.uid}",
+          flt = SMGFilter.fromPrefixLocal(idxPrefix),
+          cols = None,
+          rows = None,
+          aggOp = None,
+          xRemoteAgg = false,
+          aggGroupBy = None,
+          gbParam = None,
+          period = None,
+          desc = None,
+          parentId = cConf.parentIndexId,
+          childIds = Seq(),
+          disableHeatmap = false
+        )
+        myParentIndexId = cConf.clusterIndexId
+      }
+      if (cConf.nodeMetrics.nonEmpty)
+        ret +=  SMGConfIndex(
+          id = cConf.nodesIndexId.get,
+          title = s"Kubernetes cluster ${cConf.uid} - Nodes",
+          flt = SMGFilter.fromPrefixLocal(idxPrefix + "node."),
+          cols = None,
+          rows = None,
+          aggOp = None,
+          xRemoteAgg = false,
+          aggGroupBy = None,
+          gbParam = None,
+          period = None,
+          desc = None,
+          parentId = myParentIndexId,
+          childIds = Seq(),
+          disableHeatmap = false
+        )
+      if (cConf.svcConf.enabled)
+        ret += SMGConfIndex(
+          id = cConf.servicesIndexId.get,
+          title = s"Kubernetes cluster ${cConf.uid} - Services",
+          flt = SMGFilter.fromPrefixLocal(idxPrefix + "service."),
+          cols = None,
+          rows = None,
+          aggOp = None,
+          xRemoteAgg = false,
+          aggGroupBy = None,
+          gbParam = None,
+          period = None,
+          desc = None,
+          parentId = myParentIndexId,
+          childIds = Seq(),
+          disableHeatmap = false
+        )
+      if (cConf.endpointsConf.enabled)
+        ret += SMGConfIndex(
+          id = cConf.endpointsIndexId.get,
+          title = s"Kubernetes cluster ${cConf.uid} - Endpoints",
+          flt = SMGFilter.fromPrefixLocal(idxPrefix + "endpoint."),
+          cols = None,
+          rows = None,
+          aggOp = None,
+          xRemoteAgg = false,
+          aggGroupBy = None,
+          gbParam = None,
+          period = None,
+          desc = None,
+          parentId = myParentIndexId,
+          childIds = Seq(),
+          disableHeatmap = false
+        )
+      ret.toList
+    } else Seq()
   }
 }
