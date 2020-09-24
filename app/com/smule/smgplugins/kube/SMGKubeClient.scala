@@ -115,8 +115,9 @@ class SMGKubeClient(log: SMGLoggerApi,
 
   private def createClient(): DefaultKubernetesClient = {
     val myTimeoutMs = callTimeoutSec * 1000
-    val connectTimeoutMs = (myTimeoutMs / 3) + 1000
-    val requestTimeoutMs = myTimeoutMs - connectTimeoutMs
+    val extraSec = if (callTimeoutSec < 6) 1000 else 0
+    val connectTimeoutMs = (myTimeoutMs / 3) + extraSec
+    val requestTimeoutMs = myTimeoutMs - connectTimeoutMs  + extraSec
     if (authConf.confFile.isDefined) {
       val confData = SMGFileUtil.getFileContents(authConf.confFile.get)
       val conf = Config.fromKubeconfig(confData)
