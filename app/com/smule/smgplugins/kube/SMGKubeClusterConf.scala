@@ -20,7 +20,8 @@ case class SMGKubeClusterConf(
                                parentIndexId: Option[String],
                                notifyConf: Option[SMGMonNotifyConf],
                                authConf: SMGKubeClusterAuthConf,
-                               prefixIdsWithClusterId: Boolean
+                               prefixIdsWithClusterId: Boolean,
+                               kubectlTopStats: Boolean
                              ) {
   lazy val hnamePrefix: String = if (prefixIdsWithClusterId) humanName.getOrElse(uid) + " " else ""
 
@@ -34,4 +35,5 @@ case class SMGKubeClusterConf(
   lazy val nodesIndexId: Option[String] = clusterIndexId.map(_ + ".node")
   lazy val endpointsIndexId: Option[String] = clusterIndexId.map(_ + ".endpoint")
   lazy val servicesIndexId: Option[String] = clusterIndexId.map(_ + ".service")
+  lazy val kubectlTopIndexId: Option[String] = clusterIndexId.map(_ + "kubectl.top")
 }

@@ -1,8 +1,10 @@
 package com.smule.smgplugins.kube
 
 import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
+import com.smule.smg.core.{CommandResult, ParentCommandData}
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -15,8 +17,8 @@ class SMGKubePlugin(
 
   private val log = new SMGPluginLogger(pluginId)
   private val confParser = new SMGKubePluginConfParser(pluginId, pluginConfFile, log)
-  val targetProcessor = new SMGKubeClusterProcessor(confParser, smgConfSvc, log)
-
+  private val targetProcessor = new SMGKubeClusterProcessor(confParser, smgConfSvc, log)
+  private val commandRunners = TrieMap[String,SMGKubeCommands]()
   private val myEc: ExecutionContext =
     smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.plugins-shared")
   
@@ -64,6 +66,15 @@ class SMGKubePlugin(
       }
     }(myEc)
     log.info("SMGKubePlugin - done")
+  }
+
+  override def runPluginFetchCommand(cmd: String, timeoutSec: Int,
+                                     parentData: Option[ParentCommandData]): CommandResult = {
+    val arr = cmd.split("\\s+", 2)
+    val runner = commandRunners.getOrElseUpdate(arr(0), {
+      new SMGKubeCommands(log, arr(0), confParser.conf.clusterConfByUid(arr(0)).authConf)
+    })
+    runner.runPluginFetchCommand(arr(1), timeoutSec, parentData)
   }
 
   override def htmlContent(httpParams: Map[String,String]): String = {

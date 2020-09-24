@@ -16,10 +16,7 @@ class SMGScrapeTargetProcessor(pluginConf: SMGScrapePluginConf,
 
   private def runTargetCommand(tgt: SMGScrapeTargetConf): Option[CommandResult] = {
     try {
-      // TODO support plugin commands (via conf svc?)
-      // at least :scrape fetch should be supported internally
-      val stdout = SMGCmd(tgt.command, tgt.timeoutSec).run()
-      Some(CommandResultListString(stdout, None))
+      Some(smgConfSvc.runFetchCommand(SMGCmd(tgt.command, tgt.timeoutSec), None))
     } catch { case fetchEx: SMGFetchException =>
       log.error(s"SCRAPE_ERROR: ${tgt.uid}: ${fetchEx.getMessage}")
       None

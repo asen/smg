@@ -24,30 +24,8 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
 
   private def ecForInterval(interval: Int): ExecutionContext = configSvc.executionContexts.ctxForInterval(interval)
 
-  private val PLUGIN_COMMAND_PREFIX = ":"
-
-  private def runPluginFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
-    val arr = command.str.split("\\s+", 2)
-    val pluginId = arr(0).stripPrefix(PLUGIN_COMMAND_PREFIX)
-    val pluginOpt = configSvc.pluginsById.get(pluginId)
-    if (pluginOpt.isEmpty){
-      throw new SMGFetchException(s"Command references invalid plugin id: $pluginId, cmd: ${command.str}")
-    }
-    val cmdStr = if (arr.length > 1) arr(1) else ""
-    pluginOpt.get.runPluginFetchCommand(cmdStr, command.timeoutSec, parentData)
-  }
-
-  private def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
-    if (command.str.startsWith(PLUGIN_COMMAND_PREFIX)) {
-      log.debug(s"RUN_COMMAND: tms=${command.timeoutSec} : (plugin) ${command.str}")
-      runPluginFetchCommand(command, parentData)
-    } else {
-      CommandResultListString(command.run(parentData.map(_.res.asStr)), parentData.flatMap(_.useTss))
-    }
-  }
-
   private def fetchValues(rrdObj: SMGRrdObject, parentData: Option[ParentCommandData]): SMGRrdUpdateData = {
-    val res = runFetchCommand(rrdObj.command, parentData)
+    val res = configSvc.runFetchCommand(rrdObj.command, parentData)
     def handleError(errMsg: String) = {
       log.error(errMsg)
       log.error(res.asStr)
@@ -141,7 +119,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                       "Aborted due to too slow pre-fetch commands sequence.",
                       "Consider adjusting timeouts" +
                         pf.parentId.map(s => s" and/or increasing child_conc on the parent: $s").getOrElse("") + ".")
-                  val out = runFetchCommand(pf.command, parentData)
+                  val out = configSvc.runFetchCommand(pf.command, parentData)
                   if (pf.passData)
                     myData = Some(ParentCommandData(out, updTss))
                   cmdTimeMs = System.currentTimeMillis() - t0

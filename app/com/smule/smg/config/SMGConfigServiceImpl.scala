@@ -268,5 +268,27 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   override def sourceFromFile(fn: String): String = SMGFileUtil.getFileContents(fn)
 
   override def isDevMode: Boolean = environment.mode() == Mode.DEV
+
+  private val PLUGIN_COMMAND_PREFIX = ":"
+
+  private def runPluginFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
+    val arr = command.str.split("\\s+", 2)
+    val pluginId = arr(0).stripPrefix(PLUGIN_COMMAND_PREFIX)
+    val pluginOpt = pluginsById.get(pluginId)
+    if (pluginOpt.isEmpty){
+      throw new SMGFetchException(s"Command references invalid plugin id: $pluginId, cmd: ${command.str}")
+    }
+    val cmdStr = if (arr.length > 1) arr(1) else ""
+    pluginOpt.get.runPluginFetchCommand(cmdStr, command.timeoutSec, parentData)
+  }
+
+  def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
+    if (command.str.startsWith(PLUGIN_COMMAND_PREFIX)) {
+      log.debug(s"RUN_COMMAND: tms=${command.timeoutSec} : (plugin) ${command.str}")
+      runPluginFetchCommand(command, parentData)
+    } else {
+      CommandResultListString(command.run(parentData.map(_.res.asStr)), parentData.flatMap(_.useTss))
+    }
+  }
 }
 

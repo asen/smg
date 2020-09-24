@@ -130,6 +130,8 @@ trait SMGConfigService {
 
   def notifyReloadListeners(ctx: String): Unit
 
+  def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult
+
   /**
   * Get all applicable to the provided object value (at index vix) AlertConfigs (a.k.a. checks)
   * @param ou

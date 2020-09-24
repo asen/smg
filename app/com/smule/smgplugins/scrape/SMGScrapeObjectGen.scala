@@ -39,6 +39,23 @@ class SMGScrapeObjectGen(
     ret
   }
 
+  private val MAX_AUTO_VAR_LABEL_LEN = 15
+
+  private def varLabelFromStatName(statName: String): String = {
+    val varLabelUnderscore = statName.split('_').last
+    val varLabelDot = statName.split('.').last
+    val varLabelAuto = if (varLabelDot.nonEmpty && varLabelDot.length <= varLabelUnderscore.length)
+      varLabelDot
+    else if (varLabelUnderscore.nonEmpty)
+      varLabelUnderscore
+    else
+      ""
+    if (varLabelAuto.nonEmpty && varLabelAuto.lengthCompare(MAX_AUTO_VAR_LABEL_LEN) <= 0)
+      varLabelAuto
+    else
+      "value"
+  }
+
   private def processMetaGroup(
                                 grp: Seq[OpenMetricsStat],
                                 idPrefix: String,
@@ -52,17 +69,15 @@ class SMGScrapeObjectGen(
     val aggObjects = ListBuffer[SMGRrdAggObject]()
     // TODO handle histogram/summary specially
     val rrdType = metaType2RrdType(metaStat.metaType)
-
     val metaKey = metaStat.metaKey.map(k => processRegexReplaces(k, scrapeTargetConf.regexReplaces))
-
     grp.foreach { stat =>
       val ouid = idPrefix + nonAggUidStr + processRegexReplaces(stat.smgUid, scrapeTargetConf.regexReplaces)
       if (!SMGConfigParser.validateOid(ouid)){
-        // TODO can do better than this
+        // TODO can do better than this?
         log.error(s"SMGScrapeObjectGen: ${scrapeTargetConf.uid}: invalid ouid (ignoring stat): $ouid")
         log.error(stat)
       } else {
-        val varLabel = stat.name.split('_').last
+        val varLabel = varLabelFromStatName(stat.name)
         val varMu = if (rrdType == "GAUGE") "" else s"$varLabel/sec"
         val retObj = SMGRrdObject(
           id = ouid,

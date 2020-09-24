@@ -3,6 +3,7 @@ v 0.6+
 == Short term plan ==
 
 * handle kube-state-metrics in Kube plugin (not really metrics)
+* per-recipient throttling of alerts
 * stable release
 
 == Documentation ==

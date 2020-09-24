@@ -1,12 +1,15 @@
 package com.smule.smgplugins.kube
 
+import com.smule.smg.config.SMGConfigParser
 import com.smule.smg.core.{SMGFileUtil, SMGLoggerApi}
-import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeEndpointPort, KubeEndpointSubset, KubeNode, KubeService, KubeServicePort}
-import io.fabric8.kubernetes.api.model.Pod
+import com.smule.smg.openmetrics.OpenMetricsStat
+import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeEndpointPort, KubeEndpointSubset, KubeNode, KubeNsObject, KubePod, KubePodOwner, KubeService, KubeServicePort, KubeTopNamedUsage, KubeTopNodesResult, KubeTopPodUsage, KubeTopPodsResult, KubeTopUsage}
+import io.fabric8.kubernetes.api.model.{Pod, Quantity}
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.{ContainerMetrics, NodeMetrics, PodMetrics}
 import io.fabric8.kubernetes.client.{Config, ConfigBuilder, DefaultKubernetesClient, KubernetesClientException}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 object SMGKubeClient {
   case class KubeNode(name: String, hostName: Option[String], ipAddress: Option[String])
@@ -33,6 +36,75 @@ object SMGKubeClient {
   case class KubeEndpointSubset(addresses: Seq[String], ports: Seq[KubeEndpointPort])
   case class KubeEndpoint(name: String, namespace: String,
                           subsets: Seq[KubeEndpointSubset]) extends KubeNsObject
+
+  case class KubeTopUsage(map: Map[String, Double]) {
+    lazy val cpu: Double = map.getOrElse("cpu", 0.0)
+    lazy val memory: Double = map.getOrElse("memory", 0.0)
+  }
+
+  object KubeTopUsage {
+    def apply(in: java.util.Map[String, Quantity]): KubeTopUsage = {
+      val m = in.asScala.map{ case (k, v) =>
+        (k, Quantity.getAmountInBytes(v).doubleValue())
+      }.toMap
+      KubeTopUsage(m)
+    }
+  }
+
+  case class KubeTopNamedUsage(name: String, usage: KubeTopUsage)
+  case class KubeTopNodesResult(tsms: Long, nodesUsage: List[KubeTopNamedUsage])
+
+  case class KubePodOwner(kind: String, name: String)  {
+    private lazy val stripSuffixTokens = kind match {
+      case "DaemonSet" => 1            //"-xxxxx"
+      case "ReplicaSet" => 2            //"-xxxxxxxxxx-xxxxx"
+      case "StatefulSet" => 2           //"-xxxxxxxxxx-xxxxx" ??? TODO
+      case "Job" => 2                   //"-<timestamp>-xxxxx"
+      case "ReplicationController" => 1 //"-xxxxx"
+      case "Node" => 0                  //drop nothing
+      case _ => 0
+    }
+
+    def podStableUid(podName: String, groupIndex: Option[Int]): String = {
+      val stableName = if (stripSuffixTokens > 0){
+        val ret = podName.split("-").dropRight(stripSuffixTokens).mkString("-")
+        if (ret.isBlank)
+          podName
+        else
+          ret
+      } else podName
+      OpenMetricsStat.groupIndexUid(stableName, groupIndex)
+    }
+  }
+
+  case class KubePod(
+                      name: String,
+                      namespace: String,
+                      node: String,
+                      owner: Option[KubePodOwner]
+                    ) extends KubeNsObject {
+    def stableUid(groupIndex: Option[Int]): String = namespace + "." +
+      owner.map(_.podStableUid(name, groupIndex)).getOrElse(name)
+  }
+
+
+
+  case class KubeTopPodUsage(kubePod: KubePod,
+                             containersUsage: List[KubeTopNamedUsage]) {
+    lazy val usage: KubeTopUsage = {
+      // sum of all container usages
+      val mm = mutable.Map[String,Double]()
+      containersUsage.foreach { cu =>
+        cu.usage.map.foreach { case (k,v) =>
+          if (!mm.contains(k)) mm(k) = 0.0
+          mm(k) += v
+        }
+      }
+      KubeTopUsage(mm.toMap)
+    }
+  }
+
+  case class KubeTopPodsResult(tsms: Long, podsUsage: List[KubeTopPodUsage])
 }
 
 class SMGKubeClient(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeClusterAuthConf) {
@@ -131,45 +203,65 @@ class SMGKubeClient(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeClus
     }
   }
 
-//  def topNodes() = {
-////    val client = new DefaultKubernetesClient()
-//    try {
-//      val nodeMetricList = client.top.nodes.metrics
-//      log.info("==== Node Metrics  ====")
-//      nodeMetricList.getItems.asScala.foreach { nodeMetrics: NodeMetrics =>
-//        log.info("{}\tCPU: {}{}\tMemory: {}{}",
-//          nodeMetrics.getMetadata.getName,
-//          nodeMetrics.getUsage.get("cpu").getAmount,
-//          nodeMetrics.getUsage.get("cpu").getFormat,
-//          nodeMetrics.getUsage.get("memory").getAmount,
-//          nodeMetrics.getUsage.get("memory").getFormat)
-//      }
-//      log.info("==== Pod Metrics ====")
-//      client.inAnyNamespace().top.pods.metrics().getItems.asScala.foreach{ podMetrics: PodMetrics =>
-//        podMetrics.getContainers.asScala.foreach((containerMetrics: ContainerMetrics) =>
-//          log.info("{}\t{}\tCPU: {}{}\tMemory: {}{}",
-//            podMetrics.getMetadata.getName, containerMetrics.getName,
-//            containerMetrics.getUsage.get("cpu").getAmount, containerMetrics.getUsage.get("cpu").getFormat,
-//            containerMetrics.getUsage.get("memory").getAmount, containerMetrics.getUsage.get("memory").getFormat))
-//      }
-//
-//      client.pods.inAnyNamespace().list.getItems.asScala.foreach { pod: Pod =>
-//        log.info("==== Individual Pod Metrics ({}) ====", pod.getMetadata.getName)
-//        val podMetrics = client.top.pods.metrics(pod.getMetadata.getNamespace, pod.getMetadata.getName)
-//        podMetrics.getContainers.asScala.foreach { containerMetrics =>
-//          log.info("{}\t{}\tCPU: {}{}\tMemory: {}{}",
-//            podMetrics.getMetadata.getName,
-//            containerMetrics.getName,
-//            containerMetrics.getUsage.get("cpu").getAmount,
-//            containerMetrics.getUsage.get("cpu").getFormat,
-//            containerMetrics.getUsage.get("memory").getAmount,
-//            containerMetrics.getUsage.get("memory").getFormat)
-//        }
-//      }
-//    } catch { case e: KubernetesClientException =>
-//      log.error(e.getMessage, e);
-//    } finally {
-//      if (client != null) client.close()
-//    }
-//  }
+  def topNodes: KubeTopNodesResult = {
+    val nodeMetricList = client.top.nodes.metrics
+    val myTsms = System.currentTimeMillis()
+    val nodesUsage = nodeMetricList.getItems.asScala.map { nm =>
+      KubeTopNamedUsage(nm.getMetadata.getName, KubeTopUsage(nm.getUsage))
+    }
+    KubeTopNodesResult(myTsms, nodesUsage.toList)
+  }
+
+  private def listPods: Seq[KubePod] = {
+    client.pods.inAnyNamespace().list.getItems.asScala.map { jpod =>
+      val podName = jpod.getMetadata.getName
+      val podNamespace = Option(jpod.getMetadata.getNamespace).getOrElse("default")
+      val owners = jpod.getMetadata.getOwnerReferences.asScala.map { ow =>
+        KubePodOwner(ow.getKind, ow.getName)
+      }
+      val owner = if (owners.isEmpty)
+        None
+      else {
+        if (owners.tail.nonEmpty){
+          log.warn(s"SMGKubeClient.getPodOwners: multiple owners returned " +
+            s"for $podNamespace.$podName: ${owners.mkString(",")}")
+        }
+        owners.headOption
+      }
+      KubePod(podName, podNamespace, Option(jpod.getSpec.getNodeName).getOrElse("undefined") , owner)
+    }
+  }
+
+  private def namespaceName(name: String, namespace: Option[String]): String =
+    s"${namespace.getOrElse("default")}.${name}"
+
+  private def namespaceName(obj: KubeNsObject): String =
+    namespaceName(obj.name, Some(obj.namespace))
+
+  private def getAllPodsByNamespaceName: Map[String, KubePod] = {
+    listPods.groupBy(kp => namespaceName(kp)).map { case (k,v) =>
+      if (v.lengthCompare(1) > 0)
+        log.error(s"SMGKubeClient.getAllPodsByNamespaceName: Duplicate pod names: ${k} : $v")
+      (k,v.head)
+    }
+  }
+
+  def topPods: KubeTopPodsResult = {
+    val podsMap = getAllPodsByNamespaceName
+    val podMetrics = client.inAnyNamespace().top.pods.metrics()
+    val myTsms = System.currentTimeMillis()
+    val podUsages = podMetrics.getItems.asScala.flatMap { pm =>
+      val contUsages = pm.getContainers.asScala.map { cm =>
+        KubeTopNamedUsage(cm.getName, KubeTopUsage(cm.getUsage))
+      }
+      val podNamespaceName = namespaceName(pm.getMetadata.getName, Option(pm.getMetadata.getNamespace))
+      val podOpt = podsMap.get(podNamespaceName)
+      if (podOpt.isEmpty) {
+        log.error(s"SMGKubeClient.topPods: Could not find pod info " +
+          s"for $podNamespaceName  (podsMap.size=${podsMap.size})")
+        None
+      } else Some(KubeTopPodUsage(podOpt.get,contUsages.toList))
+    }
+    KubeTopPodsResult(myTsms, podUsages.toList)
+  }
 }

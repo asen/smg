@@ -14,13 +14,17 @@ class SMGKubeClientSpec extends Specification {
 //        Some("https://kubernetes.default.svc:6443"))
       val authConf = SMGKubeClusterAuthConf.fromConfFile("/etc/smg/kube-config")
       val cli = new SMGKubeClient(log, "test", authConf)
-//      cli.listPods().foreach { s =>
-//        log.info(s"POD: ${s}")
-//      }
-//      cli.topNodes()
-      cli.listEndpoints().foreach { s =>
-        log.info(s"OUT: ${s}")
+      cli.topNodes.nodesUsage.foreach { s =>
+        log.info(s"TOP NODE: ${s}")
       }
+
+      log.info("===========================")
+
+      cli.topPods.podsUsage.foreach { s =>
+        log.info(s"TOP POD: ${s}")
+      }
+
+      cli.close()
       1 equals(1)
     }
   }

@@ -19,20 +19,19 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                               log: SMGLoggerApi) {
   private def pluginConf = pluginConfParser.conf // function - do not cache pluginConf
 
-  private def processClusterMetricsConf(objectName: String,
-                                        targetHost: String,
-                                        targetTypeHuman: String,
-                                        cConf: SMGKubeClusterConf,
-                                        cmConf: SMGKubeClusterMetricsConf,
-                                        parentIndexId: Option[String]): Option[SMGScrapeTargetConf] = {
-    val targetType = targetTypeHuman.toLowerCase
+  private def processClusterNodeMetricsConf(objectName: String,
+                                            targetHost: String,
+                                            cConf: SMGKubeClusterConf,
+                                            cmConf: SMGKubeClusterMetricsConf,
+                                            parentIndexId: Option[String]): Option[SMGScrapeTargetConf] = {
+    val targetType = "node"
     val tcUid = s"${cConf.uidPrefix}$targetType.$objectName.${cmConf.uid}"
     if (!SMGConfigParser.validateOid(tcUid)) {
       log.error(s"SMGKubeClusterProcessor - invalid SMG uid: $tcUid, ignoring metric conf")
       return None
     }
     val confOutput = s"${cConf.uid}-$targetType-$objectName-${cmConf.uid}.yml"
-    val humanName = s"${cConf.hnamePrefix}${targetTypeHuman} $objectName ${cmConf.hname}"
+    val humanName = s"${cConf.hnamePrefix}Node $objectName ${cmConf.hname}"
     val ret = SMGScrapeTargetConf(
       uid = tcUid,
       humanName = humanName,
@@ -92,7 +91,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       return false
     }
     try {
-      val out = SMGCmd(command, cConf.fetchCommandTimeout).run().mkString("\n")
+      val out = smgConfSvc.runFetchCommand(SMGCmd(command, cConf.fetchCommandTimeout), None).asStr
       if (OpenMetricsStat.parseText(out, log, labelsInUid = false).nonEmpty) {
         //keep known up services in a cache and not run this every minute -
         //we only want to know if it is http and has valid /metrics URL, once
@@ -182,7 +181,6 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
-
   def processEndpointConf(cConf: SMGKubeClusterConf, kubeEndpoint: KubeEndpoint): Seq[SMGScrapeTargetConf] = {
     // TODO check eligibility based on labels?
     var idx: Option[Int] = None
@@ -200,14 +198,64 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
+  private def processKubectlTopStats(cConf: SMGKubeClusterConf): Seq[SMGScrapeTargetConf] = {
+    if (!cConf.kubectlTopStats) {
+      log.debug("SMGKubeClusterProcessor.processKubectlTopStats: kubectlTopStats is disabled in conf")
+      return Seq()
+    }
+    val ret = ListBuffer[SMGScrapeTargetConf]()
+    val scrapeBaseCmd = s":kube ${cConf.uid}"
+    val uidPx = cConf.uidPrefix + "kubectl.top."
+//    val titlePx = s"${cConf.hnamePrefix}kubectl top stats - "
+    val confOutputPx = s"${cConf.uid}-kubectl-top-stats-"
+    ret += SMGScrapeTargetConf(
+      uid = uidPx + "nodes",
+      humanName = "Top Nodes",
+      command = s"$scrapeBaseCmd top-nodes",
+      timeoutSec = cConf.fetchCommandTimeout,
+      confOutput = confOutputPx + "nodes.yml",
+      confOutputBackupExt = None,
+      filter = cConf.filter,
+      interval = cConf.interval,
+      parentPfId = cConf.parentPfId,
+      parentIndexId = cConf.kubectlTopIndexId,
+      idPrefix = cConf.idPrefix,
+      notifyConf = cConf.notifyConf,
+      regexReplaces = cConf.regexReplaces,
+      labelsInUids = false,
+      extraLabels = Map("smg_target_type"-> "kubectl-top-nodes")
+    )
+    ret += SMGScrapeTargetConf(
+      uid = uidPx + "pods",
+      humanName = "Top Pods",
+      command = s"$scrapeBaseCmd top-pods",
+      timeoutSec = cConf.fetchCommandTimeout,
+      confOutput = confOutputPx + "pods.yml",
+      confOutputBackupExt = None,
+      filter = cConf.filter,
+      interval = cConf.interval,
+      parentPfId = cConf.parentPfId,
+      parentIndexId = cConf.kubectlTopIndexId,
+      idPrefix = cConf.idPrefix,
+      notifyConf = cConf.notifyConf,
+      regexReplaces = cConf.regexReplaces,
+      labelsInUids = false,
+      extraLabels = Map("smg_target_type"-> "kubectl-top-pods")
+    )
+    ret.toList
+  }
+
   def getYamlText(cConf: SMGKubeClusterConf): String = {
     val kubeClient = new SMGKubeClient(log, cConf.uid, cConf.authConf)
     try {
+      // TODO generate SMGScrapeTargetConf from topNodes and topPods
+      val topStats = processKubectlTopStats(cConf)
+
       // generate metrics confs
       val nodeMetricsConfs: Seq[SMGScrapeTargetConf] = cConf.nodeMetrics.flatMap { cmConf =>
         kubeClient.listNodes().flatMap { kubeNode =>
           val targetHost = kubeNode.ipAddress.getOrElse(kubeNode.hostName.getOrElse(kubeNode.name))
-          processClusterMetricsConf(kubeNode.name, targetHost, "Node", cConf, cmConf, cConf.nodesIndexId)
+          processClusterNodeMetricsConf(kubeNode.name, targetHost, cConf, cmConf, cConf.nodesIndexId)
         }
       }
       val serviceMetricsConfs: Seq[SMGScrapeTargetConf] = if (cConf.svcConf.enabled){
@@ -223,8 +271,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 
       // dump
       val objsLst = new java.util.ArrayList[Object]()
-      // TODO need to insert indexes
-      (nodeMetricsConfs ++ serviceMetricsConfs ++ endpointsMetricsConfs).foreach { stConf =>
+      // TODO need to insert indexes ?
+      (topStats ++ nodeMetricsConfs ++ serviceMetricsConfs ++ endpointsMetricsConfs).foreach { stConf =>
         objsLst.add(SMGScrapeTargetConf.dumpYamlObj(stConf))
       }
       val out = new StringBuilder()
@@ -271,7 +319,29 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     ret
   }
 
+  private def myIndexDef(id: String,
+                         title: String,
+                         filterPrefix: String,
+                         parentIndexId: Option[String]
+                        ) = SMGConfIndex(
+    id = id,
+    title = title,
+    flt = SMGFilter.fromPrefixLocal(filterPrefix),
+    cols = None,
+    rows = None,
+    aggOp = None,
+    xRemoteAgg = false,
+    aggGroupBy = None,
+    gbParam = None,
+    period = None,
+    desc = None,
+    parentId = parentIndexId,
+    childIds = Seq(),
+    disableHeatmap = false
+  )
+
   def indexes: Seq[SMGConfIndex] = pluginConfParser.conf.clusterConfs.flatMap { cConf =>
+    // optional top-level index
     if (cConf.clusterIndexId.isDefined) {
       val idxPrefix = if (cConf.prefixIdsWithClusterId) cConf.uid + "." else ""
       val ret = ListBuffer[SMGConfIndex]()
@@ -295,56 +365,29 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         )
         myParentIndexId = cConf.clusterIndexId
       }
-      if (cConf.nodeMetrics.nonEmpty)
-        ret +=  SMGConfIndex(
-          id = cConf.nodesIndexId.get,
-          title = s"Kubernetes cluster ${cConf.uid} - Nodes",
-          flt = SMGFilter.fromPrefixLocal(idxPrefix + "node."),
-          cols = None,
-          rows = None,
-          aggOp = None,
-          xRemoteAgg = false,
-          aggGroupBy = None,
-          gbParam = None,
-          period = None,
-          desc = None,
-          parentId = myParentIndexId,
-          childIds = Seq(),
-          disableHeatmap = false
+      if (cConf.kubectlTopStats)
+        ret += myIndexDef(cConf.kubectlTopIndexId.get,
+          s"Kubernetes cluster ${cConf.uid} - Kubectl Top Stats",
+          idxPrefix + "kubectl.top.",
+          myParentIndexId
         )
-      if (cConf.svcConf.enabled)
-        ret += SMGConfIndex(
-          id = cConf.servicesIndexId.get,
-          title = s"Kubernetes cluster ${cConf.uid} - Services",
-          flt = SMGFilter.fromPrefixLocal(idxPrefix + "service."),
-          cols = None,
-          rows = None,
-          aggOp = None,
-          xRemoteAgg = false,
-          aggGroupBy = None,
-          gbParam = None,
-          period = None,
-          desc = None,
-          parentId = myParentIndexId,
-          childIds = Seq(),
-          disableHeatmap = false
+      if (cConf.nodeMetrics.nonEmpty) // top level node metrics index
+        ret += myIndexDef(cConf.nodesIndexId.get,
+          s"Kubernetes cluster ${cConf.uid} - Nodes",
+          idxPrefix + "node.",
+          myParentIndexId
         )
-      if (cConf.endpointsConf.enabled)
-        ret += SMGConfIndex(
-          id = cConf.endpointsIndexId.get,
-          title = s"Kubernetes cluster ${cConf.uid} - Endpoints",
-          flt = SMGFilter.fromPrefixLocal(idxPrefix + "endpoint."),
-          cols = None,
-          rows = None,
-          aggOp = None,
-          xRemoteAgg = false,
-          aggGroupBy = None,
-          gbParam = None,
-          period = None,
-          desc = None,
-          parentId = myParentIndexId,
-          childIds = Seq(),
-          disableHeatmap = false
+      if (cConf.svcConf.enabled)  // top level svcs metrics index
+        ret += myIndexDef(cConf.servicesIndexId.get,
+          s"Kubernetes cluster ${cConf.uid} - Services",
+          idxPrefix + "service.",
+          myParentIndexId
+        )
+      if (cConf.endpointsConf.enabled) // top level endpoints metrics index
+        ret += myIndexDef(cConf.endpointsIndexId.get,
+          s"Kubernetes cluster ${cConf.uid} - Endpoints",
+          idxPrefix + "endpoint.",
+          myParentIndexId
         )
       ret.toList
     } else Seq()

@@ -203,7 +203,16 @@ class TestConfigSvc() extends SMGConfigService {
   override val defaultInterval: Int = 60
   override val defaultTimeout: Int = 30
 
-  override def sourceFromFile(fn: String): String = Source.fromFile(fn).mkString
+  override def sourceFromFile(fn: String): String = {
+    val f = Source.fromFile(fn)
+    val ret = f.mkString
+    f.close()
+    ret
+  }
 
   override def isDevMode: Boolean = false
+
+  override def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
+    CommandResultListString(command.run(parentData.map(_.res.asStr)), None)
+  }
 }
