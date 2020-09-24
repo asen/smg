@@ -48,7 +48,9 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       notifyConf = if (cmConf.notifyConf.isDefined) cmConf.notifyConf else cConf.notifyConf,
       regexReplaces = cConf.regexReplaces ++ cmConf.regexReplaces,
       labelsInUids = cmConf.labelsInUids,
-      extraLabels = Map("smg_target_host"-> targetHost, "smg_target_port_path" -> cmConf.portAndPath)
+      extraLabels = Map("smg_target_host"-> targetHost, "smg_target_port_path" -> cmConf.portAndPath),
+      rraDefAgg = cConf.rraDefAgg,
+      rraDefDtl = cConf.rraDefDtl
     )
     Some(ret)
   }
@@ -163,7 +165,9 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         labelsInUids = false,
         extraLabels = Map("smg_target_type"-> autoConf.targetType,
           "smg_target_host"-> ipAddr,
-          "smg_target_port" -> kubePort.port.toString)
+          "smg_target_port" -> kubePort.port.toString),
+        rraDefAgg = cConf.rraDefAgg,
+        rraDefDtl = cConf.rraDefDtl
       )
       Some(ret)
     } catch { case t: Throwable =>
@@ -223,7 +227,9 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       notifyConf = cConf.notifyConf,
       regexReplaces = cConf.regexReplaces,
       labelsInUids = false,
-      extraLabels = Map("smg_target_type"-> "kubectl-top-nodes")
+      extraLabels = Map("smg_target_type"-> "kubectl-top-nodes"),
+      rraDefAgg = cConf.rraDefAgg,
+      rraDefDtl = cConf.rraDefDtl
     )
     val topPodsPfId = cConf.uidPrefix + KUBECTL_TOP_PODS_PF_NAME
 
@@ -242,7 +248,9 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       notifyConf = cConf.notifyConf,
       regexReplaces = cConf.regexReplaces,
       labelsInUids = false,
-      extraLabels = Map("smg_target_type"-> "kubectl-top-pods")
+      extraLabels = Map("smg_target_type"-> "kubectl-top-pods"),
+      rraDefAgg = cConf.rraDefAgg,
+      rraDefDtl = cConf.rraDefDtl
     )
     ret += SMGScrapeTargetConf(
       uid = uidPx + "conts",
@@ -259,7 +267,9 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       notifyConf = cConf.notifyConf,
       regexReplaces = cConf.regexReplaces,
       labelsInUids = false,
-      extraLabels = Map("smg_target_type"-> "kubectl-top-conts")
+      extraLabels = Map("smg_target_type"-> "kubectl-top-conts"),
+      rraDefAgg = cConf.rraDefAgg,
+      rraDefDtl = cConf.rraDefDtl
     )
     ret.toList
   }

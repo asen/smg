@@ -1,13 +1,15 @@
 package com.smule.smgplugins.scrape
 
-import com.smule.smg.config.{SMGConfIndex, SMGConfigParser}
+import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
 import com.smule.smg.core._
 import com.smule.smg.grapher.{SMGAggObjectView, SMGraphObject}
 import com.smule.smg.openmetrics.OpenMetricsStat
+import com.smule.smg.rrd.SMGRraDef
 
 import scala.collection.mutable.ListBuffer
 
 class SMGScrapeObjectGen(
+                          smgConfigService: SMGConfigService,
                           scrapeTargetConf: SMGScrapeTargetConf,
                           scrapedMetrics: Seq[OpenMetricsStat],
                           log: SMGLoggerApi
@@ -56,6 +58,17 @@ class SMGScrapeObjectGen(
       "value"
   }
 
+  private def getRraDef(defName: Option[String], rraTyp: String): Option[SMGRraDef] = {
+    if (defName.isEmpty)
+      None
+    else {
+      val d = smgConfigService.config.rraDefs.get(defName.get)
+      if (d.isEmpty)
+        log.warn(s"SMGScrapeObjectGen: Config specifies invalid rra_$rraTyp value: ${defName.get}")
+      d
+    }
+  }
+
   private def processMetaGroup(
                                 grp: Seq[OpenMetricsStat],
                                 idPrefix: String,
@@ -77,6 +90,7 @@ class SMGScrapeObjectGen(
         log.error(s"SMGScrapeObjectGen: ${scrapeTargetConf.uid}: invalid ouid (ignoring stat): $ouid")
         log.error(stat)
       } else {
+        val rraDef = getRraDef(scrapeTargetConf.rraDefDtl, "dtl")
         val varLabel = varLabelFromStatName(stat.name)
         val varMu = if (rrdType == "GAUGE") "" else s"$varLabel/sec"
         val retObj = SMGRrdObject(
@@ -94,7 +108,7 @@ class SMGScrapeObjectGen(
           stack = false,
           preFetch = parentPfIds.headOption,
           rrdFile = None, //TODO ?
-          rraDef = None,
+          rraDef = rraDef,
           notifyConf = scrapeTargetConf.notifyConf,
           rrdInitSource = None,
           labels = stat.labels.toMap
@@ -105,6 +119,7 @@ class SMGScrapeObjectGen(
     }
 
     if (retObjects.nonEmpty && (metaKey.getOrElse("") != "")){
+      val rraDef = getRraDef(scrapeTargetConf.rraDefAgg, "agg")
       val aggOp = "SUMN" // TODO ?? may be depend on type
       val metaKeyReplaced = processRegexReplaces(metaKey.get, scrapeTargetConf.regexReplaces)
       val aggOuid = idPrefix + aggUidStr + metaKeyReplaced
@@ -123,7 +138,7 @@ class SMGScrapeObjectGen(
         dataDelay = retObjects.head.dataDelay,
         stack = retObjects.head.stack,
         rrdFile = None,
-        rraDef = None,
+        rraDef = rraDef,
         labels = SMGAggObjectView.mergeLabels(retObjects.map(_.labels)),
         rrdInitSource = None,
         notifyConf = scrapeTargetConf.notifyConf

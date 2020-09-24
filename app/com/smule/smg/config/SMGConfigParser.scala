@@ -922,6 +922,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       objectNotifyConfs = objectNotifyConfs.toMap,
       hiddenIndexes = hiddenIndexConfs.toMap,
       customDashboards = cDashboardConfigs.toList,
+      rraDefs = rraDefs.toMap,
       configErrors = configErrors.toList
     )
     ret

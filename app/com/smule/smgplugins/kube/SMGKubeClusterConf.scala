@@ -21,7 +21,9 @@ case class SMGKubeClusterConf(
                                notifyConf: Option[SMGMonNotifyConf],
                                authConf: SMGKubeClusterAuthConf,
                                prefixIdsWithClusterId: Boolean,
-                               kubectlTopStats: Boolean
+                               kubectlTopStats: Boolean,
+                               rraDefAgg: Option[String],
+                               rraDefDtl: Option[String]
                              ) {
   lazy val hnamePrefix: String = if (prefixIdsWithClusterId) humanName.getOrElse(uid) + " " else ""
 

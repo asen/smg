@@ -51,3 +51,18 @@
     - "RRA:MAX:0.5:6:700"
     - "RRA:MAX:0.5:24:775"
     - "RRA:MAX:0.5:288:795"
+
+- $rra_def:
+  id: kube_dtl_15s
+  rra:
+    - "RRA:AVERAGE:0.5:1:5760"  # 1 day x 15 sec
+    - "RRA:AVERAGE:0.5:20:4320"  # 15d x 5M
+    - "RRA:AVERAGE:0.5:120:2880"  # 60d x 30M
+
+- $rra_def:
+  id: kube_agg_15s
+  rra:
+    - "RRA:AVERAGE:0.5:1:5760"  # 15 sec - 1 day
+    - "RRA:AVERAGE:0.5:20:4320"  # 5M - 15d
+    - "RRA:AVERAGE:0.5:120:2880"  # 30M - 60d
+    - "RRA:AVERAGE:0.5:1440:3000"  # 6h - 750d

@@ -7,7 +7,7 @@ import com.smule.smg.cdash.CDashboardConfig
 import com.smule.smg.core._
 import com.smule.smg.monitor.{SMGMonAlertConfObj, SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifyConfObj}
 import com.smule.smg.remote.SMGRemote
-import com.smule.smg.rrd.{SMGRrd, SMGRrdConfig}
+import com.smule.smg.rrd.{SMGRraDef, SMGRrd, SMGRrdConfig}
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -53,6 +53,7 @@ case class SMGLocalConfig(
                            objectNotifyConfs: Map[String, SMGMonNotifyConfObj],
                            hiddenIndexes: Map[String, SMGConfIndex],
                            customDashboards: Seq[CDashboardConfig],
+                           rraDefs: Map[String, SMGRraDef],
                            private val configErrors: List[String] // use allErrors at the bottom instead
                     ) extends SMGConfig {
 

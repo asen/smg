@@ -27,7 +27,9 @@ case class SMGScrapeTargetConf(
                                 notifyConf: Option[SMGMonNotifyConf],
                                 regexReplaces: Seq[RegexReplaceConf],
                                 labelsInUids: Boolean,
-                                extraLabels: Map[String,String]
+                                extraLabels: Map[String,String],
+                                rraDefAgg: Option[String],
+                                rraDefDtl: Option[String]
                               ) {
    lazy val inspect: String = s"uid=$uid humanName=$humanName interval=$interval command=$command " +
      s"timeout=$timeoutSec confOutput=$confOutput parentPfId=$parentPfId labelsInUids=$labelsInUids " +
@@ -83,6 +85,12 @@ object SMGScrapeTargetConf {
       in.extraLabels.foreach { case (k,v) => elMap.put(k,v)}
       ret.put("extra_labels", elMap)
     }
+    if (in.rraDefAgg.isDefined){
+      ret.put("rra_agg", in.rraDefAgg.get)
+    }
+    if (in.rraDefDtl.isDefined){
+      ret.put("rra_dtl", in.rraDefDtl.get)
+    }
     ret
   }
 
@@ -125,7 +133,9 @@ object SMGScrapeTargetConf {
         labelsInUids = ymap.getOrElse("labels_in_uids", "false").toString == "true",
         extraLabels = ymap.get("extra_labels").map{ o: Object =>
           yobjMap(o).map{case (k,v) => (k,v.toString)}.toMap
-        }.getOrElse(Map[String,String]())
+        }.getOrElse(Map[String,String]()),
+        rraDefAgg = ymap.get("rra_agg").map(_.toString),
+        rraDefDtl = ymap.get("rra_dtl").map(_.toString)
       )
     )
   }
