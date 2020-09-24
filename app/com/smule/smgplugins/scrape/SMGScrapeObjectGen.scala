@@ -123,15 +123,17 @@ class SMGScrapeObjectGen(
       } // valid oid
     }
 
+    val nonAggIndexId = idPrefix + nonAggUidStr + metaKey.get
+    val aggOp = "SUMN" // TODO ?? may be depend on type
+    val metaKeyReplaced = processRegexReplaces(metaKey.getOrElse(""), scrapeTargetConf.regexReplaces)
+    val aggOuid = idPrefix + aggUidStr + metaKeyReplaced
+    val titlePrefix = s"(${scrapeTargetConf.humanName}) "
+    val objsSuffix = if (retObjects.lengthCompare(1) == 0) "" else "s"
+    val aggTitle = titlePrefix + metaKeyReplaced +
+      s" ($aggOp, ${retObjects.size} obj${objsSuffix})"
+
     if (retObjects.nonEmpty && retObjects.tail.nonEmpty && (metaKey.getOrElse("") != "")){
       val rraDef = getRraDef(scrapeTargetConf.rraDefAgg, "agg")
-      val aggOp = "SUMN" // TODO ?? may be depend on type
-      val metaKeyReplaced = processRegexReplaces(metaKey.get, scrapeTargetConf.regexReplaces)
-      val aggOuid = idPrefix + aggUidStr + metaKeyReplaced
-      val titlePrefix = s"(${scrapeTargetConf.humanName}) "
-      val aggTitle = titlePrefix + metaKeyReplaced +
-        s" ($aggOp, ${retObjects.size} obj${retObjects.tail.headOption.map(_ => "s").getOrElse("")})" +
-        metaStat.metaHelp.map(s => s" - ${s}").getOrElse("")
       aggObjects += SMGRrdAggObject(
         id = aggOuid,
         ous = retObjects,
@@ -148,30 +150,28 @@ class SMGScrapeObjectGen(
         rrdInitSource = None,
         notifyConf = scrapeTargetConf.notifyConf
       )
-
-      val nonAggIndexId = idPrefix + nonAggUidStr + metaKey.get
-      if (hasDetails) {
-        retIxes += SMGConfIndex(
-          id = nonAggIndexId,
-          title = titlePrefix + metaKeyReplaced + " (details)",
-          flt = SMGFilter.fromPrefixLocal(idPrefix + nonAggUidStr + metaKeyReplaced),
-          cols = None,
-          rows = None,
-          aggOp = None,
-          xRemoteAgg = false,
-          aggGroupBy = None,
-          gbParam = None,
-          period = None, // TODO?
-          desc = metaStat.metaHelp,
-          parentId = Some(parentNonAggIndexId),
-          childIds = Seq(),
-          disableHeatmap = false
-        )
-      }
-      val aggIndexId = idPrefix + aggUidStr + metaKey.get
       retIxes += SMGConfIndex(
+        id = nonAggIndexId,
+        title = titlePrefix + metaKeyReplaced + " (details)",
+        flt = SMGFilter.fromPrefixLocal(idPrefix + nonAggUidStr + metaKeyReplaced),
+        cols = None,
+        rows = None,
+        aggOp = None,
+        xRemoteAgg = false,
+        aggGroupBy = None,
+        gbParam = None,
+        period = None, // TODO?
+        desc = metaStat.metaHelp.map(_ + " - details"),
+        parentId = Some(parentNonAggIndexId),
+        childIds = Seq(),
+        disableHeatmap = false
+      )
+    }
+
+    val aggIndexId = idPrefix + aggUidStr + metaKey.get
+    retIxes += SMGConfIndex(
         id = aggIndexId,
-        title = aggTitle,
+        title = if (hasDetails) aggTitle else titlePrefix + metaKeyReplaced,
         flt = SMGFilter.fromPrefixLocal(idPrefix + aggUidStr + metaKeyReplaced),
         cols = None,
         rows = None,
@@ -180,12 +180,12 @@ class SMGScrapeObjectGen(
         aggGroupBy = None,
         gbParam = None,
         period = None, // TODO?
-        desc = None, //metaHelp in title
+        desc = metaStat.metaHelp,
         parentId = Some(parentAggIndexId),
         childIds = if (hasDetails) Seq(nonAggIndexId) else Seq(),
         disableHeatmap = false
       )
-    }
+
     (retObjects, aggObjects, retIxes)
   }
 

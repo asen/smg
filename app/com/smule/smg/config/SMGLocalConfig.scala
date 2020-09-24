@@ -201,8 +201,14 @@ case class SMGLocalConfig(
   }
 
   // build and keep the commands trees (a sequence of trees for each interval)
+  private val allPrefetches: Map[String, SMGPreFetchCmd] = {
+    val allMaps = pluginPreFetches.values ++ Seq(preFetches).toSeq
+    allMaps.foldLeft(Map[String,SMGPreFetchCmd]()) { case (itm, mm) =>
+      itm ++ mm
+    }
+  }
   private val fetchCommandTrees: Map[Int, Seq[SMGFetchCommandTree]] = rrdObjects.groupBy(_.interval).map { t =>
-    (t._1, buildCommandsTree(t._2, preFetches))
+    (t._1, buildCommandsTree(t._2, allPrefetches))
   }
 
   /**
@@ -325,7 +331,7 @@ case class SMGLocalConfig(
 
   // validate pre_fetch commands - specifying invalid command id would be ignored
   rrdObjects.foreach{ obj =>
-    if (obj.preFetch.nonEmpty && preFetches.get(obj.preFetch.get).isEmpty) {
+    if (obj.preFetch.nonEmpty && !allPrefetches.contains(obj.preFetch.get)) {
       processValidationError(s"object specifies non existing pre_fetch id: ${obj.id} - ${obj.preFetch.get}")
     }
   }
