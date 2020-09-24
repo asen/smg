@@ -1,7 +1,7 @@
 package com.smule.smgplugins.kube
 
 import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
-import com.smule.smg.core.{CommandResult, ParentCommandData}
+import com.smule.smg.core.{CommandResult, ParentCommandData, SMGPreFetchCmd}
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 
 import scala.collection.concurrent.TrieMap
@@ -28,6 +28,9 @@ class SMGKubePlugin(
   }
 
   override def indexes: Seq[SMGConfIndex] = targetProcessor.indexes
+
+  override def preFetches: Map[String, SMGPreFetchCmd] = targetProcessor.preFetches.
+    groupBy(_.id).map{ case (k,v) => (k,v.head)}
 
   private def reloadScrapeConf(): Unit = {
     val scrapePlugin = smgConfSvc.plugins.find(_.pluginId == "scrape")

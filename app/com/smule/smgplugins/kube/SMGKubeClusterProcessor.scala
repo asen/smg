@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.file.{Files, Paths}
 
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
-import com.smule.smg.core.{SMGCmd, SMGCmdException, SMGFileUtil, SMGFilter, SMGLoggerApi}
+import com.smule.smg.core.{SMGCmd, SMGCmdException, SMGFileUtil, SMGFilter, SMGLoggerApi, SMGPreFetchCmd}
 import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNsObject, KubePort, KubeService, KubeServicePort}
 import com.smule.smgplugins.scrape.SMGScrapeTargetConf
@@ -210,10 +210,10 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     val confOutputPx = s"${cConf.uid}-kubectl-top-stats-"
     ret += SMGScrapeTargetConf(
       uid = uidPx + "nodes",
-      humanName = "Top Nodes",
+      humanName = "Kubectl Top Nodes",
       command = s"$scrapeBaseCmd top-nodes",
       timeoutSec = cConf.fetchCommandTimeout,
-      confOutput = confOutputPx + "nodes.yml",
+      confOutput = confOutputPx + "10-nodes.yml",
       confOutputBackupExt = None,
       filter = cConf.filter,
       interval = cConf.interval,
@@ -225,22 +225,41 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       labelsInUids = false,
       extraLabels = Map("smg_target_type"-> "kubectl-top-nodes")
     )
+    val topPodsPfId = cConf.uidPrefix + KUBECTL_TOP_PODS_PF_NAME
+
     ret += SMGScrapeTargetConf(
       uid = uidPx + "pods",
-      humanName = "Top Pods",
+      humanName = "Kubectl Top Pods",
       command = s"$scrapeBaseCmd top-pods",
       timeoutSec = cConf.fetchCommandTimeout,
-      confOutput = confOutputPx + "pods.yml",
+      confOutput = confOutputPx + "20-pods.yml",
       confOutputBackupExt = None,
       filter = cConf.filter,
       interval = cConf.interval,
-      parentPfId = cConf.parentPfId,
+      parentPfId = Some(topPodsPfId),
       parentIndexId = cConf.kubectlTopIndexId,
       idPrefix = cConf.idPrefix,
       notifyConf = cConf.notifyConf,
       regexReplaces = cConf.regexReplaces,
       labelsInUids = false,
       extraLabels = Map("smg_target_type"-> "kubectl-top-pods")
+    )
+    ret += SMGScrapeTargetConf(
+      uid = uidPx + "conts",
+      humanName = "Kubectl Top Containers",
+      command = s"$scrapeBaseCmd top-conts",
+      timeoutSec = cConf.fetchCommandTimeout,
+      confOutput = confOutputPx + "30-conts.yml",
+      confOutputBackupExt = None,
+      filter = cConf.filter,
+      interval = cConf.interval,
+      parentPfId = Some(topPodsPfId),
+      parentIndexId = cConf.kubectlTopIndexId,
+      idPrefix = cConf.idPrefix,
+      notifyConf = cConf.notifyConf,
+      regexReplaces = cConf.regexReplaces,
+      labelsInUids = false,
+      extraLabels = Map("smg_target_type"-> "kubectl-top-conts")
     )
     ret.toList
   }
@@ -319,6 +338,26 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     ret
   }
 
+  private val KUBECTL_TOP_PODS_PF_NAME = "kubectl-top-pods-pf"
+
+  def preFetches: Seq[SMGPreFetchCmd] = pluginConfParser.conf.clusterConfs.flatMap { cConf =>
+    if (cConf.kubectlTopStats){
+      Seq(
+        SMGPreFetchCmd(
+          id = cConf.uidPrefix + KUBECTL_TOP_PODS_PF_NAME,
+          command = SMGCmd(s":kube ${cConf.uid} top-pods-pf", timeoutSec = cConf.fetchCommandTimeout),
+          preFetch = cConf.parentPfId,
+          ignoreTs = false,
+          childConc = 2,
+          notifyConf = cConf.notifyConf,
+          passData = true
+        )
+      )
+    } else {
+      Seq()
+    }
+  }
+
   private def myIndexDef(id: String,
                          title: String,
                          filterPrefix: String,
@@ -347,30 +386,20 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val ret = ListBuffer[SMGConfIndex]()
       var myParentIndexId = cConf.parentIndexId
       if (cConf.prefixIdsWithClusterId) {
-        ret += SMGConfIndex(
-          id = cConf.clusterIndexId.get,
-          title = s"Kubernetes cluster ${cConf.uid}",
-          flt = SMGFilter.fromPrefixLocal(idxPrefix),
-          cols = None,
-          rows = None,
-          aggOp = None,
-          xRemoteAgg = false,
-          aggGroupBy = None,
-          gbParam = None,
-          period = None,
-          desc = None,
-          parentId = cConf.parentIndexId,
-          childIds = Seq(),
-          disableHeatmap = false
+        ret += myIndexDef(cConf.clusterIndexId.get,
+          s"Kubernetes cluster ${cConf.uid}",
+          idxPrefix,
+          cConf.parentIndexId
         )
         myParentIndexId = cConf.clusterIndexId
       }
-      if (cConf.kubectlTopStats)
+      if (cConf.kubectlTopStats) {
         ret += myIndexDef(cConf.kubectlTopIndexId.get,
           s"Kubernetes cluster ${cConf.uid} - Kubectl Top Stats",
           idxPrefix + "kubectl.top.",
           myParentIndexId
         )
+      }
       if (cConf.nodeMetrics.nonEmpty) // top level node metrics index
         ret += myIndexDef(cConf.nodesIndexId.get,
           s"Kubernetes cluster ${cConf.uid} - Nodes",
