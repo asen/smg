@@ -83,14 +83,19 @@ class SMGScrapeObjectGen(
     // TODO handle histogram/summary specially
     val rrdType = metaType2RrdType(metaStat.metaType)
     val metaKey = metaStat.metaKey.map(k => processRegexReplaces(k, scrapeTargetConf.regexReplaces))
+    val hasDetails = grp.lengthCompare(1) > 0
+    val myNonAggUidStr = if (hasDetails) nonAggUidStr else aggUidStr
+    val myNonAggRraDef = if (hasDetails)
+      getRraDef(scrapeTargetConf.rraDefDtl, "dtl")
+    else
+      getRraDef(scrapeTargetConf.rraDefAgg, "agg")
     grp.foreach { stat =>
-      val ouid = idPrefix + nonAggUidStr + processRegexReplaces(stat.smgUid, scrapeTargetConf.regexReplaces)
+      val ouid = idPrefix + myNonAggUidStr + processRegexReplaces(stat.smgUid, scrapeTargetConf.regexReplaces)
       if (!SMGConfigParser.validateOid(ouid)){
         // TODO can do better than this?
         log.error(s"SMGScrapeObjectGen: ${scrapeTargetConf.uid}: invalid ouid (ignoring stat): $ouid")
         log.error(stat)
       } else {
-        val rraDef = getRraDef(scrapeTargetConf.rraDefDtl, "dtl")
         val varLabel = varLabelFromStatName(stat.name)
         val varMu = if (rrdType == "GAUGE") "" else s"$varLabel/sec"
         val retObj = SMGRrdObject(
@@ -108,7 +113,7 @@ class SMGScrapeObjectGen(
           stack = false,
           preFetch = parentPfIds.headOption,
           rrdFile = None, //TODO ?
-          rraDef = rraDef,
+          rraDef = myNonAggRraDef,
           notifyConf = scrapeTargetConf.notifyConf,
           rrdInitSource = None,
           labels = stat.labels.toMap
@@ -118,7 +123,7 @@ class SMGScrapeObjectGen(
       } // valid oid
     }
 
-    if (retObjects.nonEmpty && (metaKey.getOrElse("") != "")){
+    if (retObjects.nonEmpty && retObjects.tail.nonEmpty && (metaKey.getOrElse("") != "")){
       val rraDef = getRraDef(scrapeTargetConf.rraDefAgg, "agg")
       val aggOp = "SUMN" // TODO ?? may be depend on type
       val metaKeyReplaced = processRegexReplaces(metaKey.get, scrapeTargetConf.regexReplaces)
@@ -144,24 +149,26 @@ class SMGScrapeObjectGen(
         notifyConf = scrapeTargetConf.notifyConf
       )
 
-      val aggIndexId = idPrefix + aggUidStr + metaKey.get
       val nonAggIndexId = idPrefix + nonAggUidStr + metaKey.get
-      retIxes += SMGConfIndex(
-        id = nonAggIndexId,
-        title = titlePrefix + metaKeyReplaced + " (details)",
-        flt = SMGFilter.fromPrefixLocal(idPrefix + nonAggUidStr + metaKeyReplaced),
-        cols = None,
-        rows = None,
-        aggOp = None,
-        xRemoteAgg = false,
-        aggGroupBy = None,
-        gbParam = None,
-        period = None, // TODO?
-        desc = metaStat.metaHelp,
-        parentId = Some(parentNonAggIndexId),
-        childIds = Seq(),
-        disableHeatmap = false
-      )
+      if (hasDetails) {
+        retIxes += SMGConfIndex(
+          id = nonAggIndexId,
+          title = titlePrefix + metaKeyReplaced + " (details)",
+          flt = SMGFilter.fromPrefixLocal(idPrefix + nonAggUidStr + metaKeyReplaced),
+          cols = None,
+          rows = None,
+          aggOp = None,
+          xRemoteAgg = false,
+          aggGroupBy = None,
+          gbParam = None,
+          period = None, // TODO?
+          desc = metaStat.metaHelp,
+          parentId = Some(parentNonAggIndexId),
+          childIds = Seq(),
+          disableHeatmap = false
+        )
+      }
+      val aggIndexId = idPrefix + aggUidStr + metaKey.get
       retIxes += SMGConfIndex(
         id = aggIndexId,
         title = aggTitle,
@@ -175,7 +182,7 @@ class SMGScrapeObjectGen(
         period = None, // TODO?
         desc = None, //metaHelp in title
         parentId = Some(parentAggIndexId),
-        childIds = Seq(nonAggIndexId),
+        childIds = if (hasDetails) Seq(nonAggIndexId) else Seq(),
         disableHeatmap = false
       )
     }
