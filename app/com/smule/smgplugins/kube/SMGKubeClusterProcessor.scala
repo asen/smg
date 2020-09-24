@@ -246,7 +246,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   }
 
   def getYamlText(cConf: SMGKubeClusterConf): String = {
-    val kubeClient = new SMGKubeClient(log, cConf.uid, cConf.authConf)
+    val kubeClient = new SMGKubeClient(log, cConf.uid, cConf.authConf, cConf.fetchCommandTimeout)
     try {
       // TODO generate SMGScrapeTargetConf from topNodes and topPods
       val topStats = processKubectlTopStats(cConf)

@@ -107,29 +107,42 @@ object SMGKubeClient {
   case class KubeTopPodsResult(tsms: Long, podsUsage: List[KubeTopPodUsage])
 }
 
-class SMGKubeClient(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeClusterAuthConf) {
+class SMGKubeClient(log: SMGLoggerApi,
+                    clusterUid: String,
+                    authConf: SMGKubeClusterAuthConf,
+                    callTimeoutSec: Int
+                   ) {
 
   private def createClient(): DefaultKubernetesClient = {
-    if (authConf.useDefault)
-      new DefaultKubernetesClient()
-    else if (authConf.confFile.isDefined){
+    val myTimeoutMs = callTimeoutSec * 1000
+    val connectTimeoutMs = (myTimeoutMs / 3) + 1000
+    val requestTimeoutMs = myTimeoutMs - connectTimeoutMs
+    if (authConf.confFile.isDefined) {
       val confData = SMGFileUtil.getFileContents(authConf.confFile.get)
       val conf = Config.fromKubeconfig(confData)
-      val ret = new DefaultKubernetesClient(conf)
-      ret
-    } else if (authConf.saTokenFile.isDefined){
-      val tokenData = SMGFileUtil.getFileContents(authConf.saTokenFile.get).strip()
+      conf.setConnectionTimeout(connectTimeoutMs)
+      conf.setRequestTimeout(requestTimeoutMs)
+      new DefaultKubernetesClient(conf)
+    } else if (authConf.saTokenFile.isDefined) {
       var builder = new ConfigBuilder()
-      if (authConf.clusterUrl.isDefined){
+      val tokenData = SMGFileUtil.getFileContents(authConf.saTokenFile.get).strip()
+      if (authConf.clusterUrl.isDefined) {
         builder = builder.withMasterUrl(authConf.clusterUrl.get)
       }
       builder = builder.
         withTrustCerts(true). // TODO
-        withOauthToken(tokenData)
+        withOauthToken(tokenData).
+        withConnectionTimeout(connectTimeoutMs).
+        withRequestTimeout(requestTimeoutMs)
       new DefaultKubernetesClient(builder.build())
     } else {
-      log.error(s"SMGKubeClient($clusterUid).createClient: unexpected authConf ($authConf) - trying default")
-      new DefaultKubernetesClient()
+      if (!authConf.useDefault){
+        log.warn(s"SMGKubeClient($clusterUid).createClient: unexpected authConf ($authConf) - trying default")
+      }
+      val conf = Config.autoConfigure(null)
+      conf.setConnectionTimeout(connectTimeoutMs)
+      conf.setRequestTimeout(requestTimeoutMs)
+      new DefaultKubernetesClient(conf)
     }
   }
 

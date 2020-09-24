@@ -15,7 +15,9 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
     val baseLabels = Seq[(String,String)](
       ("smg_cluster_id", clusterUid)
     )
-    in.groupBy(_.kubePod.owner).toSeq.flatMap { case (owner, pods) =>
+    in.groupBy(_.kubePod.owner).toSeq.sortBy{ t =>
+      t._2.head.kubePod.namespace + "/" + t._1.map(x => x.name).getOrElse("")
+    }.flatMap { case (owner, pods) =>
       val ownerLabels = baseLabels ++ Seq[(String,String)](
         ("smg_pod_owner_kind", owner.map(_.kind).getOrElse("none")),
         ("smg_pod_owner_name", owner.map(_.name).getOrElse("none"))
@@ -59,7 +61,7 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
           groupIndex = None
         )
         val contPodKey = s"top.pod.dtl.${podStats.kubePod.stableUid(groupIndex)}"
-        podStats.containersUsage.foreach { contStats =>
+        podStats.containersUsage.sortBy(_.name).foreach { contStats =>
           val contKey = s"${contPodKey}.${contStats.name}"
           val contCpuKey = s"${contKey}.cpu"
           val contMemKey = s"${contKey}.mem"
@@ -100,7 +102,7 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
   }
 
   private def nodesUsagesToMetrics(tsms: Long, in: Seq[SMGKubeClient.KubeTopNamedUsage]): Seq[OpenMetricsStat] = {
-    in.flatMap { nu =>
+    in.sortBy(_.name).flatMap { nu =>
       val nodeKey = s"top.node.${nu.name}"
       val nodeCpuKey = s"${nodeKey}.cpu"
       val nodeMemKey = s"${nodeKey}.mem"
@@ -141,10 +143,10 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
 
   private def commandTopNodes(timeoutSec: Int,
                               parentData: Option[ParentCommandData]): CommandResult = {
-    val cli = new SMGKubeClient(log, clusterUid, authConf)
+    val cli = new SMGKubeClient(log, clusterUid, authConf, timeoutSec)
     try {
       val topNodesResult = try {
-        cli.topNodes //TODO obey timeput
+        cli.topNodes
       } catch { case t: Throwable =>
         val errMsg = s"SMGKubeCommands: top-nodes: unexpected error: ${t.getMessage}"
         log.ex(t, errMsg)
@@ -159,10 +161,10 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
 
   private def commandTopPods(timeoutSec: Int,
                              parentData: Option[ParentCommandData]): CommandResult = {
-    val cli = new SMGKubeClient(log, clusterUid, authConf)
+    val cli = new SMGKubeClient(log, clusterUid, authConf, timeoutSec)
     try {
       val topPodsResult = try {
-        cli.topPods //TODO obey timeput
+        cli.topPods
       } catch { case t: Throwable =>
         val errMsg = s"SMGKubeCommands: top-pods: unexpected error: ${t.getMessage}"
         log.ex(t, errMsg)
