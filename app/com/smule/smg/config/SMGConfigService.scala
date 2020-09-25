@@ -81,7 +81,7 @@ trait SMGConfigService {
   * @param msg - the message to send
   */
   def sendPfMsg(msg: SMGDataFeedMsgPf): Unit = {
-    if ((msg.pluginId.isEmpty && config.preFetches.contains(msg.pfId)) ||
+    if ((msg.pluginId.isEmpty && config.findPreFetchCmd(msg.pfId).isDefined) ||
         (msg.pluginId.isDefined && config.pluginPreFetches.getOrElse(msg.pluginId.get, Map()).contains(msg.pfId))) {
       dataFeedListeners.foreach(dfl => Try(dfl.receivePfMsg(msg)))
     } else {
