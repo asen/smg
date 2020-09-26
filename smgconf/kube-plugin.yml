@@ -7,7 +7,9 @@ kube:
 #      kube_conf_file: "/etc/smg/kube-config"
 ##      kube_token_file: "/etc/smg/kube-token"
 ##      kube_url: "https://kubernetes.default.svc"
-#      fetch_command: 'curl -f -sS -k -H "Authorization: Bearer `cat /etc/smg/kube-token`"'
+##      fetch_command: 'curl -f -sS -k -H "Authorization: Bearer `cat /etc/smg/kube-token`"'
+#      fetch_command: ':scrape fetch :tokenf /etc/smg/kube-token'
+#      need_parse: false # set to false if fetch_command returns internally parsed OpenMetricsResultData
 #      fetch_timeout: 10
 #      node_metrcis:
 #        - uid: node

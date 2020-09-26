@@ -3,23 +3,21 @@ package com.smule.smgplugins.scrape
 import com.smule.smg.core._
 import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smg.plugin.SMGPluginLogger
+import com.smule.smgplugins.scrape.SMGScrapeCommands.{FETCH_OPTION_BEARER_TOKEN_FILE, FETCH_OPTION_SECURE_TLS, PARSE_OPTION_LABEL_UIDS}
 
 object SMGScrapeCommands {
-  val VALID_COMMANDS = Set("fetch", "parse", "get")
+  val VALID_COMMANDS = Set("fetch", "http", "parse", "get")
   val PARSE_OPTION_LABEL_UIDS = ":lbluid"
+
+  val FETCH_OPTION_SECURE_TLS = ":secure"
+  val FETCH_OPTION_BEARER_TOKEN_FILE = ":tokenf"
 }
 
 class SMGScrapeCommands(log: SMGPluginLogger) {
 
   private def parseText(inp: String, labelUid: Boolean): CommandResult = {
     val stats  = OpenMetricsStat.parseText(inp, log, labelsInUid = labelUid)
-    val byUid = stats.groupBy(_.smgUid).map { t =>
-      if (t._2.lengthCompare(1) > 0) {
-        log.warn(s"SMGScrapeCommands.parseText: Non unique normalizedUid: ${t._1} (${t._2.size} entries)")
-      }
-      (t._1, t._2.head)
-    }
-    CommandResultCustom(OpenMetricsData(byUid))
+    CommandResultCustom(OpenMetricsResultData(stats))
   }
 
   private def throwOnError(action: String, paramStr: String,
@@ -27,10 +25,59 @@ class SMGScrapeCommands(log: SMGPluginLogger) {
     throw SMGCmdException(s":scrape $action $paramStr", timeoutSec, -1, "", errMsg)
   }
 
-  private def commandFetch(paramStr: String,
+  private val httpClient = new ScrapeHttpClient(log)
+
+  private def commandFetchCommon(paramStr: String,
                            timeoutSec: Int,
-                           parentData: Option[ParentCommandData]): CommandResult = {
-    throw new RuntimeException("Not implemented")
+                           parentData: Option[ParentCommandData]): (String, Boolean) = {
+    var myParamStr = paramStr
+    var secureTls = false
+    var tokenFile: Option[String] = None
+    var labelUids: Boolean = false
+    while (myParamStr.startsWith(":")){
+      val arr = myParamStr.split("\\s+", 2)
+      arr(0) match {
+        case FETCH_OPTION_SECURE_TLS => {
+          secureTls = true
+          myParamStr = arr.lift(1).getOrElse("")
+        }
+        case FETCH_OPTION_BEARER_TOKEN_FILE => {
+          val arr1 = arr.lift(1).getOrElse("").split("\\s+", 2)
+          tokenFile = Some(arr1(0))
+          myParamStr = arr1.lift(1).getOrElse("")
+        }
+        case PARSE_OPTION_LABEL_UIDS => {
+          labelUids = true
+          myParamStr = arr.lift(1).getOrElse("")
+        }
+        case x => throwOnError("fetch", paramStr,
+          timeoutSec, s"Invalid fetch option param: $x")
+      }
+    }
+    val targetUrl = myParamStr.strip()
+    if (targetUrl.isBlank)
+      throwOnError("fetch", paramStr,
+        timeoutSec, s"Invalid fetch url param - blank")
+    (httpClient.getUrl(targetUrl, timeoutSec, secureTls, tokenFile), labelUids)
+  }
+
+  private def commandFetchAndParse(paramStr: String,
+                                   timeoutSec: Int,
+                                   parentData: Option[ParentCommandData]): CommandResult = {
+    val (dataTxt, labelUids) = commandFetchCommon(paramStr, timeoutSec, parentData)
+    try {
+      parseText(dataTxt, labelUids)
+    } catch { case t: Throwable =>
+      throwOnError("parse", paramStr, timeoutSec,
+        s"Unexpected OpenMetrics parse error: ${t.getClass.getName}: ${t.getMessage}")
+    }
+  }
+
+  private def commandFetchOnly(paramStr: String,
+                               timeoutSec: Int,
+                               parentData: Option[ParentCommandData]): CommandResult = {
+    val (dataTxt, labelUids) = commandFetchCommon(paramStr, timeoutSec, parentData)
+    CommandResultCustom(dataTxt)
   }
 
   private def commandParse(paramStr: String,
@@ -67,7 +114,7 @@ class SMGScrapeCommands(log: SMGPluginLogger) {
                         parentData: Option[ParentCommandData]): CommandResult = {
     if (parentData.isEmpty)
       throwOnError("get", paramStr, timeoutSec, "Did not get parsed parentData to get data from")
-    val parsedData = parentData.get.res.data.asInstanceOf[OpenMetricsData]
+    val parsedData = parentData.get.res.data.asInstanceOf[OpenMetricsResultData]
     val keys = paramStr.strip().split("\\s*,\\s*")
     var conflictingTsms = false
     var tsms: Option[Long] = None
@@ -100,7 +147,8 @@ class SMGScrapeCommands(log: SMGPluginLogger) {
     }
     val paramStr = arr.lift(1).getOrElse("")
     action match {
-      case "fetch" => commandFetch(paramStr, timeoutSec, parentData)
+      case "fetch" => commandFetchAndParse(paramStr, timeoutSec, parentData)
+      case "http"  => commandFetchOnly(paramStr, timeoutSec, parentData)
       case "parse" => commandParse(paramStr,timeoutSec, parentData)
       case "get"   => commandGet(paramStr,timeoutSec, parentData)
     }

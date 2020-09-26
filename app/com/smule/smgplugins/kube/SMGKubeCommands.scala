@@ -2,6 +2,7 @@ package com.smule.smgplugins.kube
 
 import com.smule.smg.core.{CommandResult, CommandResultCustom, ParentCommandData, SMGCmdException, SMGFetchException, SMGLoggerApi}
 import com.smule.smg.openmetrics.OpenMetricsStat
+import com.smule.smgplugins.scrape.OpenMetricsResultData
 
 import scala.collection.mutable.ListBuffer
 
@@ -154,7 +155,7 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
         throw new SMGFetchException(errMsg)
       }
       val openMetrics = nodesUsagesToMetrics(System.currentTimeMillis(), topNodesResult.nodesUsage)
-      CommandResultCustom(OpenMetricsStat.dumpStats(openMetrics).mkString("\n") + "\n")
+      CommandResultCustom(OpenMetricsResultData(openMetrics))
     } finally {
       cli.close()
     }
@@ -183,7 +184,7 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
     else {
       topPodsCommon(timeoutSec)
     }
-    CommandResultCustom(OpenMetricsStat.dumpStats(openMetrics.pods).mkString("\n") + "\n")
+    CommandResultCustom(OpenMetricsResultData(openMetrics.pods))
   }
 
   private def commandTopPodsConts(timeoutSec: Int,
@@ -193,7 +194,7 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
     else {
       topPodsCommon(timeoutSec)
     }
-    CommandResultCustom(OpenMetricsStat.dumpStats(openMetrics.conts).mkString("\n") + "\n")
+    CommandResultCustom(OpenMetricsResultData(openMetrics.conts))
   }
 
   def runPluginFetchCommand(cmd: String,

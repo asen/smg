@@ -202,7 +202,7 @@ class SMGScrapeObjectGen(
 
     val idPrefix = scrapeTargetConf.idPrefix.getOrElse("") + scrapeTargetConf.uid + "."
 
-    // one preFetch to get the metrics (TODO can be stripped once scrape plugin supports native "fetch")
+    // one preFetch to get the metrics
     val scrapeFetchPfId = idPrefix + "scrape.fetch"
     val scrapeFetchPf = SMGPreFetchCmd(
       id = scrapeFetchPfId,
@@ -216,23 +216,25 @@ class SMGScrapeObjectGen(
     preFetches += scrapeFetchPf
     preFetchIds = scrapeFetchPf.id :: preFetchIds
 
-    // another prefetch to parse them
-    val labelUidOpt = if (scrapeTargetConf.labelsInUids)
-      " " + SMGScrapeCommands.PARSE_OPTION_LABEL_UIDS
-    else
-      ""
-    val scrapeParsePfId = idPrefix + "scrape.parse"
-    val scrapeParsePf = SMGPreFetchCmd(
-      id = scrapeParsePfId,
-      command = SMGCmd(s":scrape parse$labelUidOpt", scrapeTargetConf.timeoutSec),
-      preFetch = Some(scrapeFetchPfId),
-      ignoreTs = false,
-      childConc = 1,
-      notifyConf = scrapeTargetConf.notifyConf,
-      passData = true
-    )
-    preFetches += scrapeParsePf
-    preFetchIds = scrapeParsePf.id :: preFetchIds
+    if (scrapeTargetConf.needParse) {
+      // another prefetch to parse them
+      val labelUidOpt = if (scrapeTargetConf.labelsInUids)
+        " " + SMGScrapeCommands.PARSE_OPTION_LABEL_UIDS
+      else
+        ""
+      val scrapeParsePfId = idPrefix + "scrape.parse"
+      val scrapeParsePf = SMGPreFetchCmd(
+        id = scrapeParsePfId,
+        command = SMGCmd(s":scrape parse$labelUidOpt", scrapeTargetConf.timeoutSec),
+        preFetch = Some(scrapeFetchPfId),
+        ignoreTs = false,
+        childConc = 1,
+        notifyConf = scrapeTargetConf.notifyConf,
+        passData = true
+      )
+      preFetches += scrapeParsePf
+      preFetchIds = scrapeParsePf.id :: preFetchIds
+    }
 
     // define a top-level index for the stats
     val scrapeAggsIndexId = idPrefix + "scrape." + aggUidStr + "all"

@@ -23,7 +23,8 @@ case class SMGKubeClusterConf(
                                prefixIdsWithClusterId: Boolean,
                                kubectlTopStats: Boolean,
                                rraDefAgg: Option[String],
-                               rraDefDtl: Option[String]
+                               rraDefDtl: Option[String],
+                               needParse: Boolean
                              ) {
   lazy val hnamePrefix: String = if (prefixIdsWithClusterId) humanName.getOrElse(uid) + " " else ""
 

@@ -29,7 +29,8 @@ case class SMGScrapeTargetConf(
                                 labelsInUids: Boolean,
                                 extraLabels: Map[String,String],
                                 rraDefAgg: Option[String],
-                                rraDefDtl: Option[String]
+                                rraDefDtl: Option[String],
+                                needParse: Boolean
                               ) {
    lazy val inspect: String = s"uid=$uid humanName=$humanName interval=$interval command=$command " +
      s"timeout=$timeoutSec confOutput=$confOutput parentPfId=$parentPfId labelsInUids=$labelsInUids " +
@@ -91,6 +92,8 @@ object SMGScrapeTargetConf {
     if (in.rraDefDtl.isDefined){
       ret.put("rra_dtl", in.rraDefDtl.get)
     }
+    if (!in.needParse)
+      ret.put("need_parse", "false")
     ret
   }
 
@@ -135,7 +138,8 @@ object SMGScrapeTargetConf {
           yobjMap(o).map{case (k,v) => (k,v.toString)}.toMap
         }.getOrElse(Map[String,String]()),
         rraDefAgg = ymap.get("rra_agg").map(_.toString),
-        rraDefDtl = ymap.get("rra_dtl").map(_.toString)
+        rraDefDtl = ymap.get("rra_dtl").map(_.toString),
+        needParse = ymap.getOrElse("need_parse", "true").toString != "false"
       )
     )
   }

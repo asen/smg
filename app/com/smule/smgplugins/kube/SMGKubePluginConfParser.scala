@@ -88,7 +88,8 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
         prefixIdsWithClusterId = ymap.get("prefix_ids_with_cluster_id").map(_.toString).getOrElse("false") == "true",
         kubectlTopStats = ymap.get("top_stats").map(_.toString).getOrElse("true") != "false",
         rraDefAgg = ymap.get("rra_agg").map(_.toString),
-        rraDefDtl = ymap.get("rra_dtl").map(_.toString)
+        rraDefDtl = ymap.get("rra_dtl").map(_.toString),
+        needParse = ymap.getOrElse("need_parse", "true").toString != "false"
       )
     )
   }

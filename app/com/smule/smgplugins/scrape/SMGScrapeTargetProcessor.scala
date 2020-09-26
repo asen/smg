@@ -24,7 +24,10 @@ class SMGScrapeTargetProcessor(pluginConf: SMGScrapePluginConf,
   }
 
   private def getYamlText(tgt: SMGScrapeTargetConf, res: CommandResult): String = {
-    val parsed = OpenMetricsStat.parseText(res.asStr, log, tgt.labelsInUids)
+    val parsed = if (tgt.needParse)
+      OpenMetricsStat.parseText(res.asStr, log, tgt.labelsInUids)
+    else
+      res.data.asInstanceOf[OpenMetricsResultData].stats
     val ogen = new SMGScrapeObjectGen(smgConfSvc, tgt, parsed, log)
     val objs = ogen.generateSMGObjects()
     val cgen = SMGYamlConfigGen

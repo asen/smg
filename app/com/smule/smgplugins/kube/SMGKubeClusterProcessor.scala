@@ -7,7 +7,7 @@ import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
 import com.smule.smg.core.{SMGCmd, SMGCmdException, SMGFileUtil, SMGFilter, SMGLoggerApi, SMGPreFetchCmd}
 import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNsObject, KubePort, KubeService, KubeServicePort}
-import com.smule.smgplugins.scrape.SMGScrapeTargetConf
+import com.smule.smgplugins.scrape.{OpenMetricsResultData, SMGScrapeTargetConf}
 import org.yaml.snakeyaml.Yaml
 
 import scala.collection.concurrent.TrieMap
@@ -50,7 +50,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       labelsInUids = cmConf.labelsInUids,
       extraLabels = Map("smg_target_host"-> targetHost, "smg_target_port_path" -> cmConf.portAndPath),
       rraDefAgg = cConf.rraDefAgg,
-      rraDefDtl = cConf.rraDefDtl
+      rraDefDtl = cConf.rraDefDtl,
+      needParse = cConf.needParse
     )
     Some(ret)
   }
@@ -93,17 +94,30 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       return false
     }
     try {
-      val out = smgConfSvc.runFetchCommand(SMGCmd(command, cConf.fetchCommandTimeout), None).asStr
-      if (OpenMetricsStat.parseText(out, log, labelsInUid = false).nonEmpty) {
-        //keep known up services in a cache and not run this every minute -
-        //we only want to know if it is http and has valid /metrics URL, once
-        knownGoodServiceCommands.put(command, System.currentTimeMillis())
-        knownBadServiceCommands.remove(command)
-        true
+      val outObj = smgConfSvc.runFetchCommand(SMGCmd(command, cConf.fetchCommandTimeout), None)
+      if (cConf.needParse) {
+        val out = outObj.asStr
+        if (OpenMetricsStat.parseText(out, log, labelsInUid = false).nonEmpty) {
+          //keep known up services in a cache and not run this every minute -
+          //we only want to know if it is http and has valid /metrics URL, once
+          knownGoodServiceCommands.put(command, System.currentTimeMillis())
+          knownBadServiceCommands.remove(command)
+          true
+        } else {
+          logSkipped(s"command output unparse-able ($command): ${out}")
+          knownBadServiceCommands.put(command, System.currentTimeMillis())
+          false
+        }
       } else {
-        logSkipped(s"command output unparse-able ($command): ${out}")
-        knownBadServiceCommands.put(command, System.currentTimeMillis())
-        false
+        if (outObj.data.asInstanceOf[OpenMetricsResultData].stats.nonEmpty){
+          knownGoodServiceCommands.put(command, System.currentTimeMillis())
+          knownBadServiceCommands.remove(command)
+          true
+        } else {
+          logSkipped(s"command output parsed but empty ($command)")
+          knownBadServiceCommands.put(command, System.currentTimeMillis())
+          false
+        }
       }
     } catch { case t: Throwable => //SMGCmdException =>
       logSkipped(s"command or metrics parse failed: ${t.getMessage}")
@@ -167,7 +181,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           "smg_target_host"-> ipAddr,
           "smg_target_port" -> kubePort.port.toString),
         rraDefAgg = cConf.rraDefAgg,
-        rraDefDtl = cConf.rraDefDtl
+        rraDefDtl = cConf.rraDefDtl,
+        needParse = cConf.needParse
       )
       Some(ret)
     } catch { case t: Throwable =>
@@ -229,7 +244,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       labelsInUids = false,
       extraLabels = Map("smg_target_type"-> "kubectl-top-nodes"),
       rraDefAgg = cConf.rraDefAgg,
-      rraDefDtl = cConf.rraDefDtl
+      rraDefDtl = cConf.rraDefDtl,
+      needParse = cConf.needParse
     )
     val topPodsPfId = cConf.uidPrefix + KUBECTL_TOP_PODS_PF_NAME
 
@@ -250,7 +266,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       labelsInUids = false,
       extraLabels = Map("smg_target_type"-> "kubectl-top-pods"),
       rraDefAgg = cConf.rraDefAgg,
-      rraDefDtl = cConf.rraDefDtl
+      rraDefDtl = cConf.rraDefDtl,
+      needParse = cConf.needParse
     )
     ret += SMGScrapeTargetConf(
       uid = uidPx + "conts",
@@ -269,7 +286,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       labelsInUids = false,
       extraLabels = Map("smg_target_type"-> "kubectl-top-conts"),
       rraDefAgg = cConf.rraDefAgg,
-      rraDefDtl = cConf.rraDefDtl
+      rraDefDtl = cConf.rraDefDtl,
+      needParse = cConf.needParse
     )
     ret.toList
   }
@@ -277,7 +295,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   def getYamlText(cConf: SMGKubeClusterConf): String = {
     val kubeClient = new SMGKubeClient(log, cConf.uid, cConf.authConf, cConf.fetchCommandTimeout)
     try {
-      // TODO generate SMGScrapeTargetConf from topNodes and topPods
+      // generate SMGScrapeTargetConf from topNodes and topPods
       val topStats = processKubectlTopStats(cConf)
 
       // generate metrics confs
