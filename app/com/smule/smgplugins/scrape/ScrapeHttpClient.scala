@@ -38,11 +38,15 @@ class ScrapeHttpClient(log: SMGLoggerApi) {
       throw new SMGFetchException(s"ScrapeHttpClient.getUrl($url) " +
         s"($timeoutSec): Exception: ${t.getMessage}")
     }
-    if (resp.isSuccessful)
-      resp.body().string()
-    else
-      throw new SMGFetchException(s"ScrapeHttpClient.getUrl($url) " +
-        s"($timeoutSec): bad response: ${resp.code()} ${resp.toString}")
+    try {
+      if (resp.isSuccessful)
+        resp.body().string()
+      else
+        throw new SMGFetchException(s"ScrapeHttpClient.getUrl($url) " +
+          s"($timeoutSec): bad response: ${resp.code()} ${resp.toString}")
+    } finally {
+      resp.close()
+    }
   } catch {
     case fe: SMGFetchException => throw fe
     case t: Throwable => throw new SMGFetchException(s"ScrapeHttpClient.getUrl($url) " +
