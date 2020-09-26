@@ -1,57 +1,30 @@
 package com.smule.smgplugins.scrape
 
-import java.net.Socket
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 
 import com.smule.smg.core.{SMGFetchException, SMGFileUtil, SMGLoggerApi}
-import javax.net.ssl.{SSLContext, SSLEngine, X509ExtendedTrustManager}
+import javax.net.ssl.HostnameVerifier
 import okhttp3.{OkHttpClient, Request}
 
 class ScrapeHttpClient(log: SMGLoggerApi) {
   private val okHttp = new OkHttpClient()
-
-
-  private def  getUnsafeTrustManager: X509ExtendedTrustManager = new X509ExtendedTrustManager() {
-    override def checkClientTrusted(chain: Array[X509Certificate],
-                                    authType: String, socket: Socket): Unit = {}
-
-    override def checkServerTrusted(chain: Array[X509Certificate],
-                                    authType: String, socket: Socket): Unit = {}
-
-    override def checkClientTrusted(chain: Array[X509Certificate],
-                                    authType: String, engine: SSLEngine): Unit = {}
-
-    override def checkServerTrusted(chain: Array[X509Certificate],
-                                    authType: String, engine: SSLEngine): Unit = {}
-
-    override def checkClientTrusted(chain: Array[X509Certificate],
-                                    authType: String): Unit = {}
-
-    override def checkServerTrusted(chain: Array[X509Certificate],
-                                    authType: String): Unit = {}
-
-    override def getAcceptedIssuers: Array[X509Certificate] = null
-  }
-
-  private lazy val unsafeTrustManager = getUnsafeTrustManager
-
-  private def getUnsafeSSLContext = {
-    // Create a trust manager that does not validate certificate chains
-    val sc: SSLContext = SSLContext.getInstance("SSL")
-    sc.init(null, Array(unsafeTrustManager), new SecureRandom)
-    sc
-  }
-
-  private lazy val unsafeSSLContext = getUnsafeSSLContext
+  private val unsafeSSLManager = new UnsafeSSLContext()
 
   def getUrl(url: String, timeoutSec: Int,
              secureTls: Boolean, bearerTokenFile: Option[String]): String = try {
     var myClient = okHttp.newBuilder().
       callTimeout(timeoutSec, TimeUnit.SECONDS)
-    if (!secureTls){
-      myClient = myClient.sslSocketFactory(unsafeSSLContext.getSocketFactory, unsafeTrustManager)
+    if (!secureTls) try {
+      val fry = unsafeSSLManager.unsafeSSLContext.getSocketFactory
+      myClient = myClient.sslSocketFactory(fry, unsafeSSLManager. unsafeTrustManager)
+      import javax.net.ssl.SSLSession
+      myClient.hostnameVerifier(new HostnameVerifier {
+        override def verify(hostname: String, session: SSLSession): Boolean = true
+      })
+    } catch { case t: Throwable =>
+      val msg = s"Unable to set sslSocketFactory: ${t.getMessage}"
+      log.ex(t, msg)
+      throw new SMGFetchException(msg)
     }
     var request = new Request.Builder().url(url)
     if (bearerTokenFile.isDefined){

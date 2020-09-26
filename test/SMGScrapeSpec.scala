@@ -1,7 +1,7 @@
 
 import com.smule.smg.core.{SMGFileUtil, SMGLogger}
 import com.smule.smg.openmetrics.OpenMetricsStat
-import com.smule.smgplugins.scrape.{SMGScrapeObjectGen, SMGScrapePluginConfParser, SMGYamlConfigGen}
+import com.smule.smgplugins.scrape.{SMGScrapeCommands, SMGScrapeObjectGen, SMGScrapePluginConfParser, SMGYamlConfigGen}
 import helpers.TestConfigSvc
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
@@ -27,6 +27,16 @@ class SMGScrapeSpec extends Specification {
 //    "work" in {
 //      val parser = new SMGScrapeConfParser("scrape", "smgconf/scrape-plugin.yml", log)
 //      println(parser.conf)
+//      1 equals(1)
+//    }
+//  }
+
+//  "SMGScrapeCommands" should {
+//    "work" in {
+//      val cmd = new SMGScrapeCommands(log)
+//      //
+//      val res = cmd.runPluginFetchCommand("fetch https://localhost:9000", 10, None)
+//      println(res)
 //      1 equals(1)
 //    }
 //  }

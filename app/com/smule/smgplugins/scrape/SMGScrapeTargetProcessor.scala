@@ -1,7 +1,7 @@
 package com.smule.smgplugins.scrape
 
 import java.io.File
-import java.nio.file.{Files, Paths, StandardCopyOption}
+import java.nio.file.{Files, Paths}
 
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core._
@@ -138,10 +138,10 @@ class SMGScrapeTargetProcessor(pluginConf: SMGScrapePluginConf,
     // may consider async processing (via an Actor in the future)
     var needReload: Boolean = false
     pluginConf.targets.foreach { targetConf =>
-      log.debug(s"SMGScrapeTargetProcessor: Processing taget conf: ${targetConf.uid}: conf=$targetConf")
+      log.debug(s"SMGScrapeTargetProcessor: Processing target conf: ${targetConf.uid}: conf=$targetConf")
       val targetReload = processTarget(targetConf)
       if (targetReload) {
-        log.info(s"SMGScrapeTargetProcessor: Done processing taget conf: ${targetConf.uid}: " +
+        log.info(s"SMGScrapeTargetProcessor: Done processing target conf: ${targetConf.uid}: " +
           s"targetReload=$targetReload needReload=$needReload")
         needReload = true
       }

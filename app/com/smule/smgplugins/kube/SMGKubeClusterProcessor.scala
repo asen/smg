@@ -4,9 +4,9 @@ import java.io.File
 import java.nio.file.{Files, Paths}
 
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
-import com.smule.smg.core.{SMGCmd, SMGCmdException, SMGFileUtil, SMGFilter, SMGLoggerApi, SMGPreFetchCmd}
+import com.smule.smg.core._
 import com.smule.smg.openmetrics.OpenMetricsStat
-import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNsObject, KubePort, KubeService, KubeServicePort}
+import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNsObject, KubePort, KubeService}
 import com.smule.smgplugins.scrape.{OpenMetricsResultData, SMGScrapeTargetConf}
 import org.yaml.snakeyaml.Yaml
 

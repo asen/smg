@@ -1,12 +1,10 @@
 package com.smule.smgplugins.kube
 
-import com.smule.smg.config.SMGConfigParser
 import com.smule.smg.core.{SMGFileUtil, SMGLoggerApi}
 import com.smule.smg.openmetrics.OpenMetricsStat
-import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeEndpointPort, KubeEndpointSubset, KubeNode, KubeNsObject, KubePod, KubePodOwner, KubeService, KubeServicePort, KubeTopNamedUsage, KubeTopNodesResult, KubeTopPodUsage, KubeTopPodsResult, KubeTopUsage}
-import io.fabric8.kubernetes.api.model.{Pod, Quantity}
-import io.fabric8.kubernetes.api.model.metrics.v1beta1.{ContainerMetrics, NodeMetrics, PodMetrics}
-import io.fabric8.kubernetes.client.{Config, ConfigBuilder, DefaultKubernetesClient, KubernetesClientException}
+import com.smule.smgplugins.kube.SMGKubeClient._
+import io.fabric8.kubernetes.api.model.Quantity
+import io.fabric8.kubernetes.client.{Config, ConfigBuilder, DefaultKubernetesClient}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

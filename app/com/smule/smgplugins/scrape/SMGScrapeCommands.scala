@@ -2,7 +2,6 @@ package com.smule.smgplugins.scrape
 
 import com.smule.smg.core._
 import com.smule.smg.openmetrics.OpenMetricsStat
-import com.smule.smg.plugin.SMGPluginLogger
 import com.smule.smgplugins.scrape.SMGScrapeCommands.{FETCH_OPTION_BEARER_TOKEN_FILE, FETCH_OPTION_SECURE_TLS, PARSE_OPTION_LABEL_UIDS}
 
 object SMGScrapeCommands {
@@ -13,7 +12,7 @@ object SMGScrapeCommands {
   val FETCH_OPTION_BEARER_TOKEN_FILE = ":tokenf"
 }
 
-class SMGScrapeCommands(log: SMGPluginLogger) {
+class SMGScrapeCommands(log: SMGLoggerApi) {
 
   private def parseText(inp: String, labelUid: Boolean): CommandResult = {
     val stats  = OpenMetricsStat.parseText(inp, log, labelsInUid = labelUid)
