@@ -229,7 +229,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   override def receivePfMsg(msg: SMGDataFeedMsgPf): Unit = {
     log.debug(s"SMGMonitor: receive: SMGDataFeedMsgPf: ${msg.pfId} (${msg.interval}/${msg.pluginId})")
     val pf = if (msg.pluginId.isEmpty)
-      configSvc.config.preFetches.get(msg.pfId)
+      configSvc.config.findPreFetchCmd(msg.pfId).map(_._1)
     else
       configSvc.pluginsById.get(msg.pluginId.get).flatMap(p => p.preFetches.get(msg.pfId))
 
