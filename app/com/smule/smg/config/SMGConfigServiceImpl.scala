@@ -272,14 +272,21 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   private val PLUGIN_COMMAND_PREFIX = ":"
 
   private def runPluginFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
-    val arr = command.str.split("\\s+", 2)
-    val pluginId = arr(0).stripPrefix(PLUGIN_COMMAND_PREFIX)
-    val pluginOpt = pluginsById.get(pluginId)
-    if (pluginOpt.isEmpty){
-      throw new SMGFetchException(s"Command references invalid plugin id: $pluginId, cmd: ${command.str}")
+    try {
+      val arr = command.str.split("\\s+", 2)
+      val pluginId = arr(0).stripPrefix(PLUGIN_COMMAND_PREFIX)
+      val pluginOpt = pluginsById.get(pluginId)
+      if (pluginOpt.isEmpty) {
+        throw SMGCmdException(command.str, command.timeoutSec, -1, "",
+          s"Command references invalid plugin id: $pluginId, cmd: ${command.str}")
+      }
+      val cmdStr = if (arr.length > 1) arr(1) else ""
+      pluginOpt.get.runPluginFetchCommand(cmdStr, command.timeoutSec, parentData)
+    } catch {
+      case c: SMGCmdException => throw c
+      case t: Throwable => throw SMGCmdException(command.str, command.timeoutSec, -1,
+        "Unexpected runPluginFetchCommand exception.", t.getMessage)
     }
-    val cmdStr = if (arr.length > 1) arr(1) else ""
-    pluginOpt.get.runPluginFetchCommand(cmdStr, command.timeoutSec, parentData)
   }
 
   def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
