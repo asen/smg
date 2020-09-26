@@ -24,7 +24,7 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
     throw SMGCmdException(s":scrape $action $paramStr", timeoutSec, -1, "", errMsg)
   }
 
-  private val httpClient = new ScrapeHttpClient(log)
+  private lazy val httpClient = new ScrapeHttpClient(log)
 
   private def commandFetchCommon(paramStr: String,
                            timeoutSec: Int,
