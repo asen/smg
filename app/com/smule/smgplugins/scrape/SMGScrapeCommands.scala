@@ -73,25 +73,28 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
   private def commandFetchAndParse(paramStr: String,
                                    timeoutSec: Int,
                                    parentData: Option[ParentCommandData]): CommandResult = {
-    val (dataTxt, labelUids) = commandFetchCommon(paramStr, timeoutSec, parentData)
     try {
+      val (dataTxt, labelUids) = commandFetchCommon(paramStr, timeoutSec, parentData)
       parseText(dataTxt, labelUids)
     } catch { case t: Throwable =>
-      throwOnError("parse", paramStr, timeoutSec,
-        s"Unexpected OpenMetrics parse error: ${t.getClass.getName}: ${t.getMessage}")
+      throwOnError("parse", paramStr, timeoutSec, s"${t.getMessage}")
     }
   }
 
   private def commandFetchOnly(paramStr: String,
                                timeoutSec: Int,
                                parentData: Option[ParentCommandData]): CommandResult = {
-    val (dataTxt, labelUids) = commandFetchCommon(paramStr, timeoutSec, parentData)
-    CommandResultCustom(dataTxt)
+    try {
+      val (dataTxt, labelUids) = commandFetchCommon(paramStr, timeoutSec, parentData)
+      CommandResultCustom(dataTxt)
+    } catch { case t: Throwable =>
+      throwOnError("http", paramStr, timeoutSec,s"${t.getMessage}")
+    }
   }
 
   private def commandParse(paramStr: String,
-                          timeoutSec: Int,
-                          parentData: Option[ParentCommandData]): CommandResult = {
+                           timeoutSec: Int,
+                           parentData: Option[ParentCommandData]): CommandResult = {
     var myParamStr = paramStr
     var labelUids: Boolean = false
     if (myParamStr.startsWith(SMGScrapeCommands.PARSE_OPTION_LABEL_UIDS)){
