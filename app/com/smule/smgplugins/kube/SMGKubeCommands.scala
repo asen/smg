@@ -32,7 +32,7 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
         if (groupIndex.isDefined) groupIndex = Some(groupIndex.get + 1)
         val podLabels = ownerLabels ++ Seq[(String,String)](
           ("smg_top_pod", podStats.kubePod.name)
-        )
+        ) ++ podStats.kubePod.labels.toSeq
         val podKey = s"pod.${podStats.kubePod.stableUid(groupIndex)}"
         val podCpuKey = s"${podKey}.cpu"
         val podMemKey = s"${podKey}.mem"
@@ -115,7 +115,7 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
           metaType = Some("gauge"),
           metaHelp = Some(s"kubectl top node ${nu.name} cpu"),
           name = nodeCpuKey,
-          labels = Seq(
+          labels = nu.labels.toSeq ++ Seq(
             ("smg_cluster_id", clusterUid),
             ("smg_top_node", nu.name),
             ("smg_top_stat", "cpu")
@@ -130,7 +130,7 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
           metaType = Some("gauge"),
           metaHelp = Some(s"kubectl top node ${nu.name} memory used"),
           name = nodeMemKey,
-          labels = Seq(
+          labels = nu.labels.toSeq ++ Seq(
             ("smg_cluster_id", clusterUid),
             ("smg_top_node", nu.name),
             ("smg_top_stat", "memory")

@@ -49,7 +49,7 @@ object SMGKubeClient {
     }
   }
 
-  case class KubeTopNamedUsage(name: String, usage: KubeTopUsage)
+  case class KubeTopNamedUsage(name: String, usage: KubeTopUsage, labels: Map[String,String])
   case class KubeTopNodesResult(tsms: Long, nodesUsage: List[KubeTopNamedUsage])
 
   case class KubePodOwner(kind: String, name: String)  {
@@ -79,7 +79,8 @@ object SMGKubeClient {
                       name: String,
                       namespace: String,
                       node: String,
-                      owner: Option[KubePodOwner]
+                      owner: Option[KubePodOwner],
+                      labels: Map[String,String]
                     ) extends KubeNsObject {
     def stableUid(groupIndex: Option[Int]): String = namespace + "." +
       owner.map(_.podStableUid(name, groupIndex)).getOrElse(name)
@@ -219,7 +220,8 @@ class SMGKubeClient(log: SMGLoggerApi,
     val nodeMetricList = client.top.nodes.metrics
     val myTsms = System.currentTimeMillis()
     val nodesUsage = nodeMetricList.getItems.asScala.map { nm =>
-      KubeTopNamedUsage(nm.getMetadata.getName, KubeTopUsage(nm.getUsage))
+      KubeTopNamedUsage(nm.getMetadata.getName, KubeTopUsage(nm.getUsage),
+        nm.getMetadata.getLabels.asScala.toMap)
     }
     KubeTopNodesResult(myTsms, nodesUsage.toList)
   }
@@ -240,7 +242,13 @@ class SMGKubeClient(log: SMGLoggerApi,
         }
         owners.headOption
       }
-      KubePod(podName, podNamespace, Option(jpod.getSpec.getNodeName).getOrElse("undefined") , owner)
+      val labels = jpod.getMetadata.getLabels.asScala.toMap
+      KubePod(podName,
+        podNamespace,
+        Option(jpod.getSpec.getNodeName).getOrElse("undefined"),
+        owner,
+        labels
+      )
     }
   }
 
@@ -263,16 +271,18 @@ class SMGKubeClient(log: SMGLoggerApi,
     val podMetrics = client.inAnyNamespace().top.pods.metrics()
     val myTsms = System.currentTimeMillis()
     val podUsages = podMetrics.getItems.asScala.flatMap { pm =>
-      val contUsages = pm.getContainers.asScala.map { cm =>
-        KubeTopNamedUsage(cm.getName, KubeTopUsage(cm.getUsage))
-      }
       val podNamespaceName = namespaceName(pm.getMetadata.getName, Option(pm.getMetadata.getNamespace))
       val podOpt = podsMap.get(podNamespaceName)
       if (podOpt.isEmpty) {
         log.error(s"SMGKubeClient.topPods: Could not find pod info " +
           s"for $podNamespaceName  (podsMap.size=${podsMap.size})")
         None
-      } else Some(KubeTopPodUsage(podOpt.get,contUsages.toList))
+      } else {
+        val contUsages = pm.getContainers.asScala.map { cm =>
+          KubeTopNamedUsage(cm.getName, KubeTopUsage(cm.getUsage), Map())
+        }
+        Some(KubeTopPodUsage(podOpt.get, contUsages.toList))
+      }
     }
     KubeTopPodsResult(myTsms, podUsages.toList)
   }
