@@ -221,7 +221,7 @@ class SMGKubeClient(log: SMGLoggerApi,
     val myTsms = System.currentTimeMillis()
     val nodesUsage = nodeMetricList.getItems.asScala.map { nm =>
       KubeTopNamedUsage(nm.getMetadata.getName, KubeTopUsage(nm.getUsage),
-        nm.getMetadata.getLabels.asScala.toMap)
+        Option(nm.getMetadata.getLabels).map(_.asScala.toMap).getOrElse(Map()))
     }
     KubeTopNodesResult(myTsms, nodesUsage.toList)
   }
@@ -242,7 +242,7 @@ class SMGKubeClient(log: SMGLoggerApi,
         }
         owners.headOption
       }
-      val labels = jpod.getMetadata.getLabels.asScala.toMap
+      val labels = Option(jpod.getMetadata.getLabels).map(_.asScala.toMap).getOrElse(Map())
       KubePod(podName,
         podNamespace,
         Option(jpod.getSpec.getNodeName).getOrElse("undefined"),
