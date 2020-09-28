@@ -67,7 +67,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                             kubePort: KubePort): Boolean = {
     // filter out invalid ports as far as we can tell
     def logSkipped(reason: String): Unit = {
-      log.info(s"SMGKubeClusterProcessor.checkAutoConf(${autoConf.targetType}): ${cConf.uid}" +
+      log.info(s"SMGKubeClusterProcessor.checkAutoConf(${autoConf.targetType}): ${cConf.uid} " +
         s"${kubeNsObject.namespace}.${kubeNsObject.name}: skipped due to $reason")
     }
     val lastGoodRunTs = knownGoodServiceCommands.get(command)
