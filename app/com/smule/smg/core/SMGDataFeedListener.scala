@@ -8,10 +8,9 @@ import com.smule.smg.rrd.SMGRrd
 
 trait SMGDataFeedListener {
 
-  def receiveObjMsg(msg: SMGDataFeedMsgObj): Unit
+  def receiveValuesMsg(msg: SMGDataFeedMsgVals): Unit
 
-  def receivePfMsg(msg: SMGDataFeedMsgPf): Unit
+  def receiveCommandMsg(msg: SMGDataFeedMsgCmd): Unit
 
   def receiveRunMsg(msg: SMGDataFeedMsgRun): Unit
-
 }

@@ -4,6 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import com.smule.smg.core._
 import com.smule.smg.monitor.{SMGMonAlertConfVar, SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifySeverity}
 import com.smule.smg.plugin.SMGPlugin
+import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdateData}
 
 import scala.util.Try
 
@@ -67,9 +68,9 @@ trait SMGConfigService {
   * Send a data feed object message to all registered listeners for processing
   * @param msg - the message to send
   */
-  def sendObjMsg(msg: SMGDataFeedMsgObj): Unit = {
+  def sendValuesMsg(msg: SMGDataFeedMsgVals): Unit = {
     if (config.updateObjectsById.contains(msg.obj.id)) {
-      dataFeedListeners.foreach(dfl => Try(dfl.receiveObjMsg(msg)))
+      dataFeedListeners.foreach(dfl => Try(dfl.receiveValuesMsg(msg)))
     } else {
       log.warn(s"ConfigService.sendObjMsg: ignoring message for no longer existing object: " +
         s"${msg.obj.id}${msg.obj.pluginId.map(plid => s" (plugin=$plid)").getOrElse("")}")
@@ -77,17 +78,12 @@ trait SMGConfigService {
   }
 
   /**
-  * Send a data feed "Pre fetch" command message to all registered listeners for processing
+  * Send a data feed  command message to all registered listeners for processing
   * @param msg - the message to send
   */
-  def sendPfMsg(msg: SMGDataFeedMsgPf): Unit = {
-    if ((msg.pluginId.isEmpty && config.findPreFetchCmd(msg.pfId).isDefined) ||
-        (msg.pluginId.isDefined && config.pluginPreFetches.getOrElse(msg.pluginId.get, Map()).contains(msg.pfId))) {
-      dataFeedListeners.foreach(dfl => Try(dfl.receivePfMsg(msg)))
-    } else {
-      log.warn(s"ConfigService.sendPfMsg: ignoring message for no longer existing preFetch: " +
-        s"${msg.pfId}${msg.pluginId.map(plid => s" (plugin=$plid)").getOrElse("")}")
-    }
+  def sendCommandMsg(msg: SMGDataFeedMsgCmd): Unit = {
+    // TODO: do this async?
+    dataFeedListeners.foreach(dfl => Try(dfl.receiveCommandMsg(msg)))
   }
 
   /**
@@ -131,6 +127,16 @@ trait SMGConfigService {
   def notifyReloadListeners(ctx: String): Unit
 
   def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult
+
+  def fetchAggValues(aggObj: SMGRrdAggObject, confSvc: SMGConfigService): SMGRrdUpdateData = {
+    val cache = aggObj.ous.map(ou => confSvc.getCachedValues(ou, !aggObj.isCounter)).toList
+    val sources = cache.map(_._1)
+    val tssSeq: Seq[Long] = cache.flatMap(_._2.map(_.toLong)) // using long to avoid the sum overflowing 32 its
+    val tss: Option[Int] = if (tssSeq.isEmpty){
+      None
+    } else Some( (tssSeq.sum / tssSeq.size).toInt )
+    SMGRrdUpdateData(SMGRrd.mergeValues(aggObj.aggOp, sources), tss)
+  }
 
   /**
   * Get all applicable to the provided object value (at index vix) AlertConfigs (a.k.a. checks)

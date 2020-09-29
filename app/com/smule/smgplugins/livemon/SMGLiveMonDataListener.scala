@@ -1,7 +1,6 @@
 package com.smule.smgplugins.livemon
 
-import com.smule.smg._
-import com.smule.smg.core.{SMGDataFeedListener, SMGDataFeedMsgObj, SMGDataFeedMsgPf, SMGDataFeedMsgRun}
+import com.smule.smg.core.{SMGDataFeedListener, SMGDataFeedMsgCmd, SMGDataFeedMsgRun, SMGDataFeedMsgVals}
 import com.smule.smg.plugin.SMGPluginLogger
 
 /**
@@ -9,7 +8,7 @@ import com.smule.smg.plugin.SMGPluginLogger
   */
 class SMGLiveMonDataListener(log: SMGPluginLogger) extends SMGDataFeedListener{
 
-  override def receiveObjMsg(msg: SMGDataFeedMsgObj): Unit = {
+  override def receiveValuesMsg(msg: SMGDataFeedMsgVals): Unit = {
     log.info("SMGLiveMonDataListener.receive: " + msg)
   }
 
@@ -17,7 +16,7 @@ class SMGLiveMonDataListener(log: SMGPluginLogger) extends SMGDataFeedListener{
     log.info("SMGLiveMonDataListener.receiveRunMsg: " + msg)
   }
 
-  override def receivePfMsg(msg: SMGDataFeedMsgPf): Unit = {
-    log.info("SMGLiveMonDataListener.receivePfMsg: " + msg)
+  override def receiveCommandMsg(msg: SMGDataFeedMsgCmd): Unit = {
+    log.info("SMGLiveMonDataListener.receiveCommandMsg: " + msg)
   }
 }

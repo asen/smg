@@ -1,5 +1,7 @@
 package com.smule.smg.core
 
+import com.smule.smg.monitor.SMGMonNotifyConf
+
 /**
   * SMG builds a tree of commands to be run for object updates to happen
   * Each object can specify a pre_fetch command which will be run before this
@@ -19,5 +21,7 @@ trait SMGFetchCommand extends SMGTreeNode {
   // these are only meaningful in local/non-rrd obj context, which overrides them
   val ignoreTs = false
   val childConc: Int = 1
-  val passData: Boolean = false
+  val passData: Boolean
+
+  val notifyConf: Option[SMGMonNotifyConf]
 }

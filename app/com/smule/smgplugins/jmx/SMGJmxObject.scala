@@ -1,7 +1,7 @@
 package com.smule.smgplugins.jmx
 
 import com.smule.smg._
-import com.smule.smg.core.{SMGObjectUpdate, SMGObjectView}
+import com.smule.smg.core.{SMGCmd, SMGFetchCommand, SMGObjectUpdate, SMGObjectView}
 import com.smule.smg.monitor.SMGMonNotifyConf
 import com.smule.smg.rrd.SMGRraDef
 
@@ -24,7 +24,7 @@ case class SMGJmxObject(baseId: String,
                         pluginId: Option[String],
                         notifyConf: Option[SMGMonNotifyConf],
                         labels: Map[String,String]
-                       ) extends SMGObjectUpdate with SMGObjectView {
+                       ) extends SMGObjectUpdate with SMGObjectView with SMGFetchCommand {
 
   override val rrdFile: Option[String] = Some(rrdDir + "/" + id + ".rrd")
   override val rraDef: Option[SMGRraDef] = None // TODO
@@ -38,4 +38,7 @@ case class SMGJmxObject(baseId: String,
 
   def attrs: List[String] = vars.map(v => v.getOrElse("attr", "UNDEFINED_ATTR"))
 
+  override val command: SMGCmd = SMGCmd(s"jmx://$hostPort/$id")
+  override val isRrdObj: Boolean = false // TODO ???
+  override val passData: Boolean = true
 }

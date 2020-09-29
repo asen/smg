@@ -25,7 +25,7 @@ case class SMGRrdAggObject(id: String,
                            override val rrdInitSource: Option[String],
                            notifyConf: Option[SMGMonNotifyConf],
                            labels: Map[String, String]
-                          ) extends SMGObjectView with SMGObjectUpdate {
+                          ) extends SMGObjectView with SMGObjectUpdate with SMGFetchCommand {
 
   override val preFetch: Option[String] = None
   override val parentIds: Seq[String] = Seq() // TODO - or all ous parents?
@@ -37,4 +37,8 @@ case class SMGRrdAggObject(id: String,
   override val refObj: Option[SMGObjectUpdate] = Some(this)
 
   override val pluginId: Option[String] = None
+
+  override val command: SMGCmd = SMGCmd(s"+$aggOp: ${ous.size} objs")
+  override val isRrdObj: Boolean = false // TODO??
+  override val passData: Boolean = true
 }

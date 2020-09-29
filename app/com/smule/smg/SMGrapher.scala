@@ -91,7 +91,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       Array(
         SMGRunStageDef(sz, { () =>
           aggObjectUpdates.foreach { obj =>
-            updateActor ! SMGUpdateActor.SMGUpdateObjectMessage(obj, None, updateCounters = true, None)
+            updateActor ! SMGUpdateActor.SMGAggObjectMessage(obj)
           }
           log.info(s"SMGrapher.run(interval=$interval): stage 0 done ($sz objects). " +
             s"Sent messages for $aggsSz aggregate objects")
@@ -110,7 +110,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
     Future {
       commandTrees.foreach { fRoot =>
-        updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(interval, Seq(fRoot), None, 1, updateCounters = true, None)
+        updateActor ! SMGUpdateActor.SMGFetchCommandMessage(interval, Seq(fRoot), None, 1, updateCounters = true, None)
         log.debug(s"SMGrapher.run(interval=$interval): Sent fetch update message for: ${fRoot.node.id}")
       }
       log.info(s"SMGrapher.run(interval=$interval): sent messages for $sz fetch commands")
@@ -139,7 +139,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val topLevel = commandTrees.find(t => t.findTree(cmdId).isDefined)
     if (topLevel.isDefined){
       val root = topLevel.get.findTree(cmdId).get
-      updateActor ! SMGUpdateActor.SMGUpdateFetchMessage(interval, Seq(root), None, root.node.childConc,
+      updateActor ! SMGUpdateActor.SMGFetchCommandMessage(interval, Seq(root), None, root.node.childConc,
         updateCounters = false, None)
       log.info(s"SMGrapher.runCommandsTree(interval=$interval): Sent fetch update message for: " + root.node)
       true
@@ -619,13 +619,13 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     ret += myOpenMetricsStat(
       name = "smg_config_objects",
       help = "SMG configured objects",
-      value = config.rrdObjects.size,
+      value = config.rrdObjectsSize,
       labels = List(("type", "rrd"))
     )
     ret += myOpenMetricsStat(
       name = "smg_config_objects",
       help = "SMG configured objects",
-      value = config.rrdAggObjects.size,
+      value = config.rrdAggObjectsSize,
       labels = List(("type", "agg"))
     )
     ret += myOpenMetricsStat(

@@ -1,8 +1,9 @@
 package com.smule.smgplugins.influxdb
 
 import com.smule.smg.config.SMGConfigService
-import com.smule.smg.core.{SMGDataFeedListener, SMGDataFeedMsgObj, SMGDataFeedMsgPf, SMGDataFeedMsgRun}
+import com.smule.smg.core.{SMGDataFeedListener, SMGDataFeedMsgCmd, SMGDataFeedMsgRun, SMGDataFeedMsgVals}
 import com.smule.smg.plugin.SMGPluginLogger
+import com.smule.smg.rrd.SMGRrd
 
 class SMGDataReceiver(confParser: SMGInfluxDbPluginConfParser,
                       smgConfSvc: SMGConfigService,
@@ -14,7 +15,7 @@ class SMGDataReceiver(confParser: SMGInfluxDbPluginConfParser,
 
   private val GROUP_INDEX_SUFFIX_REGEX = "\\._\\d+$".r
 
-  override def receiveObjMsg(msg: SMGDataFeedMsgObj): Unit = {
+  override def receiveValuesMsg(msg: SMGDataFeedMsgVals): Unit = {
     if (!conf.writesEnabled)
       return
     val uid = if (conf.stripGroupIndexSuffix && msg.obj.labels.nonEmpty &&
@@ -22,12 +23,12 @@ class SMGDataReceiver(confParser: SMGInfluxDbPluginConfParser,
       GROUP_INDEX_SUFFIX_REGEX.replaceAllIn(msg.obj.id, "")
     else
       msg.obj.id
-    val dbRecs: List[InfluxDbRecord] = msg.vals.zip(msg.obj.vars).map { case (value, varMap) =>
+    val dbRecs: List[InfluxDbRecord] = msg.data.values.zip(msg.obj.vars).map { case (value, varMap) =>
       InfluxDbRecord(
         uid = uid,
         tags = (msg.obj.labels ++ varMap).toSeq,
         value = value,
-        ts = msg.ts
+        ts = msg.data.ts.getOrElse(SMGRrd.tssNow).toLong
       )
     }
     InfluxDbWriterActor.addRecords(actorReceiver, dbRecs)
@@ -40,7 +41,7 @@ class SMGDataReceiver(confParser: SMGInfluxDbPluginConfParser,
       flush()
   }
 
-  override def receivePfMsg(msg: SMGDataFeedMsgPf): Unit = {
+  override def receiveCommandMsg(msg: SMGDataFeedMsgCmd): Unit = {
 //    log.info("SMGDataReceiver.receivePfMsg: " + msg)
   }
 

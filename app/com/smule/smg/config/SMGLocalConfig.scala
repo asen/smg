@@ -72,9 +72,15 @@ case class SMGLocalConfig(
     validationErrors += mymsg
   }
 
-  val rrdObjects: Seq[SMGRrdObject] = confViewObjects.filter(_.isInstanceOf[SMGRrdObject]).map(_.asInstanceOf[SMGRrdObject])
+  private val rrdObjects: Seq[SMGRrdObject] = confViewObjects.filter(_.isInstanceOf[SMGRrdObject]).
+    map(_.asInstanceOf[SMGRrdObject])
 
-  val rrdAggObjects: Seq[SMGRrdAggObject] = confViewObjects.filter(_.isInstanceOf[SMGRrdAggObject]).map(_.asInstanceOf[SMGRrdAggObject])
+  lazy val rrdObjectsSize: Int = rrdObjects.size
+
+  private val rrdAggObjects: Seq[SMGRrdAggObject] = confViewObjects.filter(_.isInstanceOf[SMGRrdAggObject]).
+    map(_.asInstanceOf[SMGRrdAggObject])
+
+  lazy val rrdAggObjectsSize: Int = rrdAggObjects.size
 
   val rrdAggObjectsByInterval: Map[Int, Seq[SMGRrdAggObject]] = rrdAggObjects.groupBy(_.interval)
 
@@ -97,6 +103,9 @@ case class SMGLocalConfig(
   val updateObjects: Seq[SMGObjectUpdate] = rrdObjects ++ rrdAggObjects ++ pluginsUpdateObjects
 
   val updateObjectsById: Map[String, SMGObjectUpdate] = updateObjects.groupBy(_.id).map(t => (t._1,t._2.head))
+
+  val commandObjects: Seq[SMGObjectUpdate] = updateObjects.
+    filter(_.isInstanceOf[SMGFetchCommand])
 
   def allRemotes: List[SMGRemote] = SMGRemote.local :: remotes.toList
 
@@ -200,6 +209,7 @@ case class SMGLocalConfig(
     }
   }
 
+
   // build and keep the commands trees (a sequence of trees for each interval)
   private val allPrefetches: Map[String, SMGPreFetchCmd] = {
     val allMaps = pluginPreFetches.values ++ Seq(preFetches).toSeq
@@ -210,6 +220,9 @@ case class SMGLocalConfig(
   private val fetchCommandTrees: Map[Int, Seq[SMGFetchCommandTree]] = rrdObjects.groupBy(_.interval).map { t =>
     (t._1, buildCommandsTree(t._2, allPrefetches))
   }
+
+  val allCommandsById: Map[String, SMGFetchCommand] = allPrefetches ++ commandObjects.map(_.asInstanceOf[SMGFetchCommand]).
+    groupBy(_.id).map(t => (t._1, t._2.head))
 
   /**
     * Get the top-level command trees for given interval
@@ -316,18 +329,18 @@ case class SMGLocalConfig(
       }
   }
 
-  private def buildPf2IntervalsMap: Map[String, Seq[Int]] = {
-    preFetches.map { t =>
-      val pfId = t._1
-      (pfId, getFetchCommandRrdObjects(pfId).map(ou => ou.interval).distinct.sorted)
-    }
-  }
+//  private def buildPf2IntervalsMap: Map[String, Seq[Int]] = {
+//    preFetches.map { t =>
+//      val pfId = t._1
+//      (pfId, getFetchCommandRrdObjects(pfId).map(ou => ou.interval).distinct.sorted)
+//    }
+//  }
 
-  private val pf2IntervalsMap = buildPf2IntervalsMap
-
-  def preFetchCommandIntervals(pfId: String): Seq[Int] = {
-    pf2IntervalsMap.getOrElse(pfId, Seq())
-  }
+//  private val pf2IntervalsMap = buildPf2IntervalsMap
+//
+//  def preFetchCommandIntervals(pfId: String): Seq[Int] = {
+//    pf2IntervalsMap.getOrElse(pfId, Seq())
+//  }
 
   // validate pre_fetch commands - specifying invalid command id would be ignored
   rrdObjects.foreach{ obj =>

@@ -15,7 +15,7 @@ case class SMGPreFetchCmd(id: String,
                           preFetch: Option[String],
                           override val ignoreTs: Boolean,
                           override val childConc: Int,
-                          notifyConf: Option[SMGMonNotifyConf],
+                          override val notifyConf: Option[SMGMonNotifyConf],
                           override val passData: Boolean
                          ) extends SMGFetchCommand {
   val isRrdObj = false
