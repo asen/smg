@@ -66,7 +66,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def receiveValuesMsg(msg: SMGDataFeedMsgVals): Unit = {
-    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgVals: ${msg.obj.id} (${msg.obj.interval}/${msg.obj.pluginId})")
+    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgVals: ${msg.obj.id} (${msg.obj.interval}/${msg.obj.pluginId}): " +
+      s"ts=${msg.data.ts.map(_.toString).getOrElse("None")} vals=${msg.data.values.mkString(",")}")
     msg.data.values.zipWithIndex.foreach { case (v,ix) =>
       val varState = getOrCreateVarState(msg.obj, ix)
       varState.processValue(msg.data.ts.getOrElse(SMGRrd.tssNow), v)
@@ -74,7 +75,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def receiveCommandMsg(msg: SMGDataFeedMsgCmd): Unit = {
-    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgCmd: ${msg.cmdId} (${msg.interval}/${msg.pluginId})")
+    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgCmd: ${msg.cmdId} (${msg.interval}/${msg.pluginId}) " +
+      s"exitCode=${msg.exitCode}")
     val cmd = configSvc.config.allCommandsById.get(msg.cmdId)
     if (cmd.isEmpty) {
       log.warn(s"SMGMonitor.receiveCommandMsg: did not find command for id: ${msg.cmdId}")
@@ -84,10 +86,9 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       // process fetch error
       // failing plugin pre-fetch with failing parent non-plugin prefetch is considered inherited
-      val myIsInherited = if (msg.pluginId.nonEmpty && cmd.get.preFetch.isDefined){
+      val myIsInherited = if (cmd.get.preFetch.isDefined){
         val parentPfState = allMonitorStatesById.get(cmd.get.preFetch.get)
         parentPfState.isDefined &&
-          parentPfState.get.pluginId.isEmpty &&
           (parentPfState.get.currentState.state == SMGState.UNKNOWN)
       } else false
       pfState.processError(msg.ts, msg.exitCode, msg.errors, isInherited = myIsInherited)
@@ -655,7 +656,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
                                   update: Boolean = false): SMGMonInternalCmdState = {
     val stateId = cmd.id
     def createFn(): SMGMonInternalCmdState = {
-      log.debug(s"SMGMonitor: creating new command state for ${cmd.id}")
+//      log.debug(s"SMGMonitor: creating new command state for ${cmd.id}")
       new SMGMonInternalCmdState(cmd, objs, pluginId, configSvc, monLogApi, notifSvc)
     }
     def updateFn(state: SMGMonInternalCmdState): Unit = {
