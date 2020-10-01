@@ -66,7 +66,7 @@ object SMGCmd {
   private def system(cmd: String, timeout: Int,
                               myEnv: Map[String,String], stdin: Option[String]): (Int, List[String], List[String]) = {
     val cmdSeq = Seq(timeoutCommand, timeout.toString) ++ executorCommand ++ Seq(cmd)
-    log.debug("RUN_COMMAND: tms=" + timeout + " : " + cmdSeq)
+//    log.debug("RUN_COMMAND: tms=" + timeout + " : " + cmdSeq)
 
     val qb = Process(cmdSeq, None, myEnv.toSeq:_*)
 

@@ -8,7 +8,7 @@ import com.smule.smg.monitor.SMGMonNotifyConf
 case class SMGFetchCommandView(id: String,
                                command: SMGCmd,
                                preFetch: Option[String],
-                               isRrdObj: Boolean,
+                               override val isUpdateObj: Boolean,
                                passData: Boolean
                               ) extends SMGFetchCommand {
   val notifyConf: Option[SMGMonNotifyConf] = None // TODO ???

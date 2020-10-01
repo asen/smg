@@ -31,7 +31,7 @@ class SMGMonInternalCmdState(
   override def text: String = s"${cmd.id}(intvl${if (intervals.lengthCompare(1) == 0)
     "" else "s"}=${intervals.mkString(",")}): cmd=${cmd.command.str} ; $currentStateDesc"
 
-  override def oid: Option[String] = if (cmd.isRrdObj) Some(cmd.id) else None
+  override def oid: Option[String] = if (cmd.isUpdateObj) Some(cmd.id) else None
 
   override def pfId: Option[String] = Some(cmd.id)
 

@@ -216,7 +216,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "id").read[String].map(id => prefixedId(id)) and
         (JsPath \ "cmd").read[SMGCmd] and
         (JsPath \ "pf").readNullable[String].map(optid => optid.map(id => prefixedId(id))) and
-        (JsPath \ "rro").readNullable[String].map(_.getOrElse("false") == "true") and
+        (JsPath \ "uo").readNullable[String].map(_.getOrElse("false") == "true") and
         (JsPath \ "pd").readNullable[String].map(_.getOrElse("false") == "true")
       ) (SMGFetchCommandView.apply _)
   }
@@ -1063,7 +1063,7 @@ object SMGRemoteClient {
         "cmd" ->  Json.toJson(fc.command)
       )
       if (fc.preFetch.isDefined) mm += ("pf" -> Json.toJson(fc.preFetch.get))
-      if (fc.isRrdObj) mm += ("rro" -> Json.toJson("true"))
+      if (fc.isUpdateObj) mm += ("uo" -> Json.toJson("true"))
       if (fc.passData)  mm += ("pd" -> Json.toJson("true"))
       Json.toJson(mm.toMap)
     }

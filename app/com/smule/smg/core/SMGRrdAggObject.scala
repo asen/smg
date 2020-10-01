@@ -39,6 +39,5 @@ case class SMGRrdAggObject(id: String,
   override val pluginId: Option[String] = None
 
   override val command: SMGCmd = SMGCmd(s"+$aggOp: ${ous.size} objs")
-  override val isRrdObj: Boolean = false // TODO??
   override val passData: Boolean = true
 }

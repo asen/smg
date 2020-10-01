@@ -118,7 +118,10 @@ case class SMGLocalConfig(
   val globalCritNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-crit")
   val globalUnknNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-unkn")
   val globalWarnNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-warn")
-  val globalSpikeNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-spike")
+  val globalAnomNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-anom") ++
+    globalNotifyConf("$notify-spike") // deprecated in favor of notify-anom
+
+  val globalNanAsAnomaly: Boolean = globals.getOrElse("$monitor-nan-anomaly", "false") == "true"
 
   val globalNotifyBackoff: Int = globals.get("$notify-backoff").flatMap{ s =>
     SMGRrd.parsePeriod(s)

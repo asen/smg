@@ -8,14 +8,14 @@ case class SMGMonNotifyConf(src: SMGMonAlertConfSource.Value,
                             crit: Seq[String],
                             unkn: Seq[String],
                             warn: Seq[String],
-                            spike: Seq[String],
+                            anom: Seq[String],
                             notifyBackoff: Option[Int],
                             notifyDisable: Boolean,
                             notifyStrikes: Option[Int]
                            ) {
   def inspect: String = {
     s"SMGMonNotifyConf: src=$src, srcId=$srcId, crit=${crit.mkString(",")}, unkn=${unkn.mkString(",")}, " +
-      s"warn=${warn.mkString(",")}, spike=${spike.mkString(",")}, notifyBackoff=$notifyBackoff, " +
+      s"warn=${warn.mkString(",")}, anom=${anom.mkString(",")}, notifyBackoff=$notifyBackoff, " +
       s"notifyDisable=$notifyDisable, notifyStrikes=$notifyStrikes"
   }
 }

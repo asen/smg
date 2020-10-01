@@ -74,7 +74,7 @@ class SMGMonInternalVarState(var objectUpdate: SMGObjectUpdate,
     }
     val (newVal, nanDesc) = valOpt.get
     val alertConfs = configSvc.objectValueAlertConfs(objectUpdate, vix)
-    val ret: SMGState = if (newVal.isNaN) {
+    val ret: SMGState = if (newVal.isNaN && configSvc.config.globalNanAsAnomaly) {
       SMGState(ts, SMGState.ANOMALY, s"ANOM: value=NaN (${nanDesc.getOrElse("unknown")})")
     } else if (alertConfs.nonEmpty) {
       val allCheckStates = alertConfs.map { alertConf =>

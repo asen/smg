@@ -66,8 +66,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def receiveValuesMsg(msg: SMGDataFeedMsgVals): Unit = {
-    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgVals: ${msg.obj.id} (${msg.obj.interval}/${msg.obj.pluginId}): " +
-      s"ts=${msg.data.ts.map(_.toString).getOrElse("None")} vals=${msg.data.values.mkString(",")}")
+//    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgVals: ${msg.obj.id} (${msg.obj.interval}/${msg.obj.pluginId}): " +
+//      s"ts=${msg.data.ts.map(_.toString).getOrElse("None")} vals=${msg.data.values.mkString(",")}")
     msg.data.values.zipWithIndex.foreach { case (v,ix) =>
       val varState = getOrCreateVarState(msg.obj, ix)
       varState.processValue(msg.data.ts.getOrElse(SMGRrd.tssNow), v)
@@ -75,8 +75,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def receiveCommandMsg(msg: SMGDataFeedMsgCmd): Unit = {
-    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgCmd: ${msg.cmdId} (${msg.interval}/${msg.pluginId}) " +
-      s"exitCode=${msg.exitCode}")
+//    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgCmd: ${msg.cmdId} (${msg.interval}/${msg.pluginId}) " +
+//      s"exitCode=${msg.exitCode}")
     val cmd = configSvc.config.allCommandsById.get(msg.cmdId)
     if (cmd.isEmpty) {
       log.warn(s"SMGMonitor.receiveCommandMsg: did not find command for id: ${msg.cmdId}")
@@ -85,7 +85,6 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val pfState = getOrCreateCmdState(cmd.get, msg.objs, msg.pluginId, update = false) // TODO just lookup insted of create?
     if ((msg.exitCode != 0) || msg.errors.nonEmpty) {
       // process fetch error
-      // failing plugin pre-fetch with failing parent non-plugin prefetch is considered inherited
       val myIsInherited = if (cmd.get.preFetch.isDefined){
         val parentPfState = allMonitorStatesById.get(cmd.get.preFetch.get)
         parentPfState.isDefined &&
@@ -94,8 +93,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       pfState.processError(msg.ts, msg.exitCode, msg.errors, isInherited = myIsInherited)
       //update all children as they are not getting messages
       findTreeWithRootId(pfState.id).foreach { stTree =>
-        //filter only same-plugin prefetches as the plugin ones will get their own PfMsg.
-        stTree.allNodes.tail.filter {ms => ms.pluginId == msg.pluginId}.foreach {st =>
+        stTree.allNodes.tail.foreach {st =>
           st.addState(pfState.currentState, isInherited = true)
         }
       }
@@ -106,7 +104,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   override def receiveRunMsg(msg: SMGDataFeedMsgRun): Unit = {
-    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgRun: ${msg.interval} isOverlap=${msg.isOverlap}")
+//    log.debug(s"SMGMonitor: receive: SMGDataFeedMsgRun: ${msg.interval} isOverlap=${msg.isOverlap}")
     val runState: SMGMonInternalRunState = getOrCreateRunState(msg.interval, msg.pluginId)
     if (msg.isOverlap) {
       runState.processOverlap(msg.ts)

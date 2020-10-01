@@ -24,12 +24,12 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
                               childSeqAborted: Boolean
                              ): Unit = {
     val pf = fRoot.node
-    log.debug(s"SMGUpdateActor.SMGUpdateFetchMessage processing command with " +
-      s"id ${pf.id}, ${fRoot.size} child commands")
+//    log.debug(s"SMGUpdateActor.SMGUpdateFetchMessage processing command with " +
+//      s"id ${pf.id}, ${fRoot.size} child commands")
     val leafObjs = fRoot.leafNodes.map { c => c.asInstanceOf[SMGRrdObject] }
     var myData: Option[ParentCommandData] = None
     try {
-      log.debug(s"SMGUpdateActor: Running fetch command: ${pf.id}: ${pf.command.str}")
+//      log.debug(s"SMGUpdateActor: Running fetch command: ${pf.id}: ${pf.command.str}")
       try {
         var cmdTimeMs: Long = -1L
         val t0 = System.currentTimeMillis()
@@ -43,7 +43,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
 
           val out = configSvc.runFetchCommand(pf.command, parentData)
 
-          if (pf.passData || pf.isRrdObj)
+          if (pf.passData || pf.isUpdateObj)
             myData = Some(ParentCommandData(out, updTss))
           cmdTimeMs = System.currentTimeMillis() - t0
           if (cmdTimeMs > (pf.command.timeoutSec.toLong * 1000) * 0.5) { // more than 50% of timeout time
@@ -59,43 +59,44 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
           interval, leafObjs, 0, List(), None))
         if (updateCounters)
           SMGStagedRunCounter.incIntervalCount(interval)
-        if (fRoot.node.isRrdObj){
+        if (fRoot.node.isUpdateObj){
           // handle unexpected class cast exceptiosn etc
           try {
-            val rrdObj = fRoot.node.asInstanceOf[SMGRrdObject]
+            val rrdObj = fRoot.node.asInstanceOf[SMGObjectUpdate]
             val resData = myData.get.res.asUpdateData(rrdObj.vars.size)
             sendToSelfActor ! SMGObjectDataMessage(rrdObj, updTss, resData)
           } catch { case t: Throwable =>
             throw SMGCmdException(pf.command.str,
-              pf.command.timeoutSec, -1, "", t.getMessage)
+              pf.command.timeoutSec, -1, "", "Unexpected: " + t.getMessage)
           }
         }
-        val (childObjTrees, childPfTrees) = fRoot.children.partition(_.node.isRrdObj)
-        // leaf/rrd objects do not obey child concurrency and are run in parallel
+        val (childObjTrees, childPfTrees) = fRoot.children.partition(_.node.isUpdateObj)
+        // leaf/update objects do not obey child concurrency and are run in parallel
+        // so each gets its own separate message
         if (childObjTrees.nonEmpty) {
           childObjTrees.foreach { rrdObjTree =>
             sendToSelfActor ! SMGFetchCommandMessage(interval, Seq(rrdObjTree), updTss,
               pf.childConc, updateCounters, myData)
           }
-          log.debug(s"SMGUpdateActor.runPrefetched($interval): Sent update messages for " +
-            s"[${pf.id}] object children (${childObjTrees.size})")
+//          log.debug(s"SMGUpdateActor.processTreeRoot($interval): Sent update messages for " +
+//            s"[${pf.id}] object children (${childObjTrees.size})")
         }
         if (childPfTrees.nonEmpty) {
           sendToSelfActor ! SMGFetchCommandMessage(interval, childPfTrees, updTss, pf.childConc,
             updateCounters, myData)
-          log.debug(s"SMGUpdateActor.runPrefetched($interval): Sent update messages for " +
-            s"[${pf.id}] pre_fetch children (${childPfTrees.size})")
+//          log.debug(s"SMGUpdateActor.processTreeRoot($interval): Sent update messages for " +
+//            s"[${pf.id}] pre_fetch children (${childPfTrees.size})")
         }
       } catch {
         case ex: SMGCmdException => {
-          log.error(s"SMGUpdateActor: Failed fetch command [${pf.id}]: ${ex.getMessage}")
+          log.error(s"SMGUpdateActor.processTreeRoot: Failed fetch command [${pf.id}]: ${ex.getMessage}")
           val errTs = SMGRrd.tssNow
           val errLst = List(pf.command.str + s" (${pf.command.timeoutSec})", ex.stdout, ex.stderr)
           configSvc.sendCommandMsg(SMGDataFeedMsgCmd(errTs, pf.id, interval, leafObjs, ex.exitCode, errLst, None))
           if (updateCounters) {
             fRoot.allNodes.foreach { cmd =>
               SMGStagedRunCounter.incIntervalCount(interval)
-              if (cmd.isRrdObj) {
+              if (cmd.isUpdateObj) {
                 configSvc.invalidateCachedValues(cmd.asInstanceOf[SMGObjectUpdate])
               }
             }
@@ -146,15 +147,15 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
     val rootsSize = rootCommands.size
     val chunkSize = (rootsSize / childConc) + (if (rootsSize % childConc == 0) 0 else 1)
     val parallelRoots = rootCommands.grouped(chunkSize)
-    log.debug(s"SMGUpdateActor received SMGUpdateFetchMessage for $rootsSize commands, " +
-      s"processing with $childConc concurrency and $chunkSize chunk size")
+//    log.debug(s"SMGUpdateActor received SMGUpdateFetchMessage for $rootsSize commands, " +
+//      s"processing with $childConc concurrency and $chunkSize chunk size")
     parallelRoots.foreach { fRoots =>
       processTreeSequenceAsync(interval, fRoots, ts, childConc, updateCounters, parentData)
     }
   }
 
   private def processObjectDataMessage(dm: SMGObjectDataMessage): Unit = {
-    log.debug(s"SMGUpdateActor received SMGUpdateObjectMessage for ${dm.obj.id}")
+//    log.debug(s"SMGUpdateActor received SMGUpdateObjectMessage for ${dm.obj.id}")
     Future {
       SMGUpdateActor.processObjectUpdate(dm.obj, configSvc, dm.ts, dm.objectData, log)
     }(ecForInterval(dm.obj.interval))

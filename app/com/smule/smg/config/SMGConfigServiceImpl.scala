@@ -291,7 +291,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
 
   def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
     if (command.str.startsWith(PLUGIN_COMMAND_PREFIX)) {
-      log.debug(s"RUN_COMMAND: tms=${command.timeoutSec} : (plugin) ${command.str}")
+//      log.debug(s"RUN_COMMAND: tms=${command.timeoutSec} : (plugin) ${command.str}")
       runPluginFetchCommand(command, parentData)
     } else {
       CommandResultListString(command.run(parentData.map(_.res.asStr)), parentData.flatMap(_.useTss))

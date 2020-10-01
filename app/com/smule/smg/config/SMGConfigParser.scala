@@ -250,8 +250,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
       if (notifyConf.isDefined){
         val nc = notifyConf.get
         val lb = ListBuffer[String]()
-        if (nc.spike.nonEmpty) {
-          lb += s"spike=${nc.spike.mkString(",")}"
+        if (nc.anom.nonEmpty) {
+          lb += s"anom=${nc.anom.mkString(",")}"
         }
         if (nc.warn.nonEmpty) {
           lb += s"warn=${nc.warn.mkString(",")}"

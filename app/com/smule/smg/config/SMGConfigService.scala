@@ -69,12 +69,8 @@ trait SMGConfigService {
   * @param msg - the message to send
   */
   def sendValuesMsg(msg: SMGDataFeedMsgVals): Unit = {
-    if (config.updateObjectsById.contains(msg.obj.id)) {
-      dataFeedListeners.foreach(dfl => Try(dfl.receiveValuesMsg(msg)))
-    } else {
-      log.warn(s"ConfigService.sendObjMsg: ignoring message for no longer existing object: " +
-        s"${msg.obj.id}${msg.obj.pluginId.map(plid => s" (plugin=$plid)").getOrElse("")}")
-    }
+    // TODO: do this async?
+    dataFeedListeners.foreach(dfl => Try(dfl.receiveValuesMsg(msg)))
   }
 
   /**
@@ -177,7 +173,7 @@ trait SMGConfigService {
       case SMGMonNotifySeverity.CRITICAL => vnc.crit
       case SMGMonNotifySeverity.UNKNOWN => vnc.unkn
       case SMGMonNotifySeverity.WARNING => vnc.warn
-      case SMGMonNotifySeverity.ANOMALY => vnc.spike
+      case SMGMonNotifySeverity.ANOMALY => vnc.anom
       case _ => { // should never happen ???
         SMGLogger.error(s"objectVarNotifyCmdsAndBackoff(${ou.id}, $vixOpt): cmdsForSeverity called with bad severity: $atSeverity")
         Seq()
@@ -228,7 +224,7 @@ trait SMGConfigService {
       case SMGMonNotifySeverity.CRITICAL => config.globalCritNotifyConf
       case SMGMonNotifySeverity.UNKNOWN => config.globalUnknNotifyConf
       case SMGMonNotifySeverity.WARNING => config.globalWarnNotifyConf
-      case SMGMonNotifySeverity.ANOMALY => config.globalSpikeNotifyConf
+      case SMGMonNotifySeverity.ANOMALY => config.globalAnomNotifyConf
       case _ => Seq()
     }
   }

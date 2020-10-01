@@ -39,6 +39,5 @@ case class SMGJmxObject(baseId: String,
   def attrs: List[String] = vars.map(v => v.getOrElse("attr", "UNDEFINED_ATTR"))
 
   override val command: SMGCmd = SMGCmd(s"jmx://$hostPort/$id")
-  override val isRrdObj: Boolean = false // TODO ???
   override val passData: Boolean = true
 }

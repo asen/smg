@@ -14,7 +14,8 @@ trait SMGFetchCommand extends SMGTreeNode {
   //  val id: String // in tree node
   val command: SMGCmd
   val preFetch: Option[String]
-  val isRrdObj: Boolean
+
+  val isUpdateObj: Boolean = this.isInstanceOf[SMGObjectUpdate]
 
   override def parentId: Option[String] = preFetch
 

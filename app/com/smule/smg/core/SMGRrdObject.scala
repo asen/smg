@@ -51,8 +51,6 @@ case class SMGRrdObject(id: String,
 
   override val refObj: Option[SMGObjectUpdate] = Some(this)
 
-  override val isRrdObj = true
-
   override val pluginId: Option[String] = None
 
   override val passData = true
