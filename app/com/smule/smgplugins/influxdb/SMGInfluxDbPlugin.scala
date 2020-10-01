@@ -9,7 +9,7 @@ class SMGInfluxDbPlugin(val pluginId: String,
                         val interval: Int,
                         val pluginConfFile: String,
                         val smgConfSvc: SMGConfigService
-                             ) extends SMGPlugin  {
+                       ) extends SMGPlugin  {
 
   private val myEc: ExecutionContext = smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.plugins-shared")
 
@@ -19,6 +19,8 @@ class SMGInfluxDbPlugin(val pluginId: String,
   private val dataReceiver = new SMGDataReceiver(confParser, smgConfSvc, log)
 
   smgConfSvc.registerDataFeedListener(dataReceiver)
+
+  override def showInMenu: Boolean = confParser.conf.writesEnabled
 
   override def onConfigReloaded(): Unit = {
      confParser.reload()

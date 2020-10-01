@@ -27,6 +27,8 @@ class SMGKubePlugin(
     confParser.reload()
   }
 
+  override def showInMenu: Boolean = confParser.conf.clusterConfs.nonEmpty
+
   override def indexes: Seq[SMGConfIndex] = targetProcessor.indexes
 
   override def preFetches: Map[String, SMGPreFetchCmd] = targetProcessor.preFetches.
