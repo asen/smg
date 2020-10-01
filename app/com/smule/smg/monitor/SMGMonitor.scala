@@ -560,14 +560,82 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     muteUnmuteCommon(remoteId, notifSvc.unmuteAll _, remotes.monitorUnmute)
   }
 
-  override def localHeatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int],
-                            offset: Option[Int], limit: Option[Int]): SMGMonHeatmap = ???
-
-  override def heatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[Seq[(SMGRemote, SMGMonHeatmap)]] = ???
+  private def condenseHeatmapStates(allStates: Seq[SMGMonInternalState], maxSize: Int): (List[SMGMonState], Int) = {
+    val chunkSize = (allStates.size / maxSize) + (if (allStates.size % maxSize == 0) 0 else 1)
+    val lst = allStates.grouped(chunkSize).map { chunk =>
+      val stateIds = chunk.flatMap(_.ouids)
+      val agStateId = stateIds.mkString(",")
+      SMGMonStateAgg(agStateId, chunk, SMGMonStateAgg.objectsUrlFilter(stateIds))
+    }
+    (lst.toList, chunkSize)
+  }
   
-  override def inspectObject(ov: SMGObjectView): Option[String] = ???
+  override def localHeatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): SMGMonHeatmap = {
+    // TODO include global/run issues?
+    val objList = smg.getFilteredObjects(flt.asLocalFilter, Seq(ix).flatten)
+    val objsSlice = objList.slice(offset.getOrElse(0), offset.getOrElse(0) + limit.getOrElse(objList.size))
+    val allStates = objsSlice.flatMap( ov => localNonAgObjectStates(ov))
+    val ct = if (maxSize.isDefined && allStates.nonEmpty) condenseHeatmapStates(allStates, maxSize.get) else (allStates.toList, 1)
+    SMGMonHeatmap(ct._1, ct._2)
+  }
 
-  override def inspectPf(pfId: String): Option[String] = ???
+  override def heatmap(flt: SMGFilter, ix: Option[SMGIndex], maxSize: Option[Int], offset: Option[Int], limit: Option[Int]): Future[Seq[(SMGRemote, SMGMonHeatmap)]] = {
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
+    val myRemotes = if (flt.remotes.isEmpty) {
+      Seq(SMGRemote.local)
+    } else if (flt.remotes.contains(SMGRemote.wildcard.id)) {
+      configSvc.config.allRemotes
+    } else {
+      val fltSet = flt.remotes.toSet
+      configSvc.config.allRemotes.filter(r => fltSet.contains(r.id))
+    }
+    val futs = myRemotes.map { rmt =>
+      if (rmt == SMGRemote.local)
+        Future {
+          (rmt, localHeatmap(flt, ix, maxSize, offset, limit))
+        }
+      else
+        remotes.heatmap(rmt.id, flt, ix, maxSize, offset, limit).map(mh => (rmt, mh))
+    }
+    Future.sequence(futs)
+  }
+
+  def inspectStateTree(stateId: String): Option[String] = {
+    allMonitorStateTreesById.get(stateId).map { mst =>
+      mst.allNodes.map(n => n.getClass.toString + ": " + n.inspect).mkString("\n")
+    }
+  }
+
+  override  def inspectObject(oview:SMGObjectView): Option[String] = {
+    val expandedOvs = expandOv(oview)
+    val strSeq = expandedOvs.map { ov =>
+      if (ov.refObj.isEmpty)
+        None
+      else {
+        val ou = ov.refObj.get
+        val stateId = ou.id
+        inspectStateTree(stateId) match {
+          case Some(x) => Some(x)
+          case None => {
+            //not in tree
+            val objState = allMonitorStatesById.get(stateId)
+            if (objState.isDefined) {
+              val varStates = localNonAgObjectStates(ov)
+              val retStr = (Seq("(Not in tree)" + objState.get) ++ varStates).mkString("\n")
+              Some(retStr)
+            } else None
+          }
+        }
+      }
+    }.collect { case Some(x) => x }
+    if (strSeq.isEmpty) {
+      None
+    } else Some(strSeq.mkString("\n"))
+  }
+
+  override def inspectPf(pfId: String): Option[String] = {
+    allMonitorStatesById.get(pfId).map(_.serialize.toString())
+  }
 
   private def localStickySilences: Seq[SMGMonStickySilence] = {
     myStickySilencesSyncObj.synchronized {
