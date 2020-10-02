@@ -21,9 +21,7 @@ object SMGMonState {
   def textColor(severity: Double): String = SMGState.stateTextColor(severity.round.toInt)
 
   def oidFilter(oid: String): String = {
-    val arr = SMGRemote.localId(oid).split("\\.")
-    val optDot = if (arr.length > 1) "." else ""
-    s"px=${arr.dropRight(1).mkString(".") + optDot}&sx=${optDot + arr.lastOption.getOrElse("")}"
+    s"rx=^${SMGRemote.localId(oid)}$$"
   }
 }
 
