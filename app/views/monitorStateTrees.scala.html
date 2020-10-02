@@ -48,7 +48,9 @@
     <input type="button" value="Refresh" onclick="mySubmitOnChange(this);">
   </form>
 </div>
-
+@if(rootId.isDefined){
+<h4><label class="manualsubmit-lbl">Filtering within root id:</label> @{rootId.get}</h4>
+}
 <hr/>
 
 <div><h4>Displaying @{trees.size} out of @total matching state trees.
