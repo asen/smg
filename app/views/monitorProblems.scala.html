@@ -23,7 +23,7 @@
   <label class="autosubmit-lbl">Minimal Severity filter:</label>
   <select name="ms" onchange="mySubmitOnChange(this);" >
     @for( sid <- availStates) {
-    <option value='@sid' @if(sid == flt.minState.map(_.toString).getOrElse("ANOMALY")){ selected } >@sid</option>
+    <option value='@sid' @if(sid == flt.minState.map(_.toString).getOrElse("WARNING")){ selected } >@sid</option>
     }
   </select>
 
