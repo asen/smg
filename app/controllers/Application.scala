@@ -798,12 +798,12 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val myRemotes = if (remote.isEmpty) {
       Seq(SMGRemote.wildcard.id)
     } else remote
-    val minSev = ms.map{ s => SMGState.fromName(s) }.getOrElse(SMGState.ANOMALY)
+    val minSev = Try(SMGState.fromName(ms.getOrElse(configSvc.config.globalMonitorProblemsMinSeverity))).toOption
     val inclSoft = soft.getOrElse("off") == "on"
     val inclSlnc = slncd.getOrElse("off") == "on"
     //val inclAck = ackd.getOrElse("off") == "on"
     val inclAck = inclSlnc
-    val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(minSev),
+    val flt = SMGMonFilter(rx = None, rxx = None, minState = minSev,
       includeSoft = inclSoft, includeAcked = inclAck, includeSilenced = inclSlnc)
     val availStates = (SMGState.values - SMGState.OK).toSeq.sorted.map(_.toString)
     monitorApi.states(myRemotes, flt).map { msr =>

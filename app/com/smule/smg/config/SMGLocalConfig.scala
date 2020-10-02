@@ -122,6 +122,7 @@ case class SMGLocalConfig(
     globalNotifyConf("$notify-spike") // deprecated in favor of notify-anom
 
   val globalNanAsAnomaly: Boolean = globals.getOrElse("$monitor-nan-anomaly", "false") == "true"
+  val globalMonitorProblemsMinSeverity: String = globals.getOrElse("$monitor-poroblems-severity", "WARNING")
 
   val globalNotifyBackoff: Int = globals.get("$notify-backoff").flatMap{ s =>
     SMGRrd.parsePeriod(s)
