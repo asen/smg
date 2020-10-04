@@ -1,0 +1,78 @@
+@import com.smule.smg.config.SMGConfigService
+@import com.smule.smg.monitor.SMGMonAlertCondsSummary
+@import com.smule.smg.remote.SMGRemote
+@import java.net.URLEncoder
+@(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String], aConfs: SMGMonAlertCondsSummary)(implicit flash: Flash)
+
+@main("SMG - Alert conditions", cfSvc, 0) {
+
+@monitorMenu("alertconds")
+
+<h3>Alert conditions</h3>
+@if(aConfs.errMsg.isDefined) {
+<div><font color="red">Error: @{aConfs.errMsg}</font></div>
+}
+
+<div>
+  <form id="alertCondsFilterForm" method="GET">
+    @if(availRemotes.nonEmpty){
+    <label class="autosubmit-lbl">Remote select:</label>
+    <select name="remote" class="select-remote" onchange="remoteChanged(this);" >
+      @for( rid <- availRemotes ) {
+      <option value='@rid' @if(rid == rmtId){ selected } >@if(rid == SMGRemote.local.id){@{SMGRemote.localName}}else{@rid}</option>
+      }
+    </select>
+    }
+    <input style="display: none" id="btn_GET" type="submit" value="Filter">
+  </form>
+</div>
+
+<!-- strip empty params from the form so that urls are less cluttered -->
+<script language="JavaScript">
+
+    function remoteChanged(elem) {
+      mySubmitOnChange(elem);
+    }
+
+    function disableEmptyInputs() {
+        $(':input', this).each(function() {
+           this.disabled = !($(this).val())
+        });
+    };
+
+    function realSubmit() {
+        setTimeout(0, $('#btn_GET').click());
+    }
+
+    function mySubmitOnChange(elem) {
+        disableEmptyInputs();
+        realSubmit();
+    }
+
+    $('form#alertCondsFilterForm').submit(disableEmptyInputs);
+</script>
+<h4>Alert conditions defined via index configuration</h4>
+<ul>
+@for(t <- aConfs.indexConfs) {
+  <li>
+    <b>@if(t.isHidden){ (Hidden) } Index: @{t.indexId} (Filter: @{t.fltDesc}) : @{t.threshDesc} :
+      @{t.numOids} object(s) (@{t.numVars} var(s))</b><br/>
+    @{t.sampleOids.mkString(", ")}
+  </li>
+}
+</ul>
+
+<h4>Alert conditions defined via objects configuration</h4>
+<ul>
+  @for(t <- aConfs.objectConfs) {
+  <li>
+    <b>Object level conf:  @{t.threshDesc} :
+      @{t.numOids} object(s) (@{t.numVars} var(s))</b><br/>
+    @{t.sampleOids.mkString(", ")}
+  </li>
+  }
+</ul>
+
+<hr />
+
+}

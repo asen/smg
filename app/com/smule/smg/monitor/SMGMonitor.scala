@@ -6,6 +6,7 @@ import com.smule.smg.GrapherApi
 import com.smule.smg.config.{SMGConfigReloadListener, SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core.{SMGDataFeedListener, SMGDataFeedMsgCmd, SMGDataFeedMsgRun, SMGDataFeedMsgVals, SMGFetchCommand, SMGFilter, SMGIndex, SMGLogger, SMGObjectUpdate, SMGObjectView, SMGPreFetchCmd, SMGTree}
 import com.smule.smg.grapher.SMGAggObjectView
+import com.smule.smg.monitor.SMGMonAlertCondsSummary.{IndexAlertCondSummary, ObjectAlertCondSummary}
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.SMGRrd
 import javax.inject.{Inject, Singleton}
@@ -934,6 +935,71 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     } catch {
       case x:Throwable => log.ex(x, "SMGMonitor.loadStateFromDisk ERROR")
     }
+  }
+
+  override def alertCondsSummary: SMGMonAlertCondsSummary = {
+    val conf = configSvc.config
+    // get a flat list of all configured value alert thresholds
+    // and separate by source - object def vs index/hidden index def
+    val seqs = conf.objectAlertConfs.flatMap { case (oid, aco) =>
+      aco.varConfs.flatMap { case (vix, varConfSeq) =>
+        varConfSeq.map { varConf =>
+          (varConf, oid, vix)
+        }
+      }
+    }.partition(t => t._1.src == SMGMonAlertConfSource.OBJ)
+
+    val obsSeq = seqs._1.flatMap { t3 =>
+      conf.updateObjectsById.get(t3._2).flatMap { ou =>
+        def numFmt(d: Double) = {
+          ou.numFmt(d, t3._3)
+        }
+        ou.vars.lift(t3._3).map { vmap =>
+          val threshDesc = t3._1.threshDesc(numFmt)
+          val myGbKey = Seq(
+            vmap.get("label").map(x => ("label", x)),
+            vmap.get("mu").map(x => ("mu", x)),
+            Some(("vix", t3._3.toString)),
+            Some(("conf", threshDesc))
+          ).flatten.map {t => s"${t._1}=${t._2}"}.mkString(" ")
+          (myGbKey, t3._2)
+        }
+      }
+    }.groupBy(_._1).map{ x =>
+      val allVarOids = x._2.map(_._2).toSeq
+      val allObjOids = allVarOids.distinct
+      ObjectAlertCondSummary(
+        threshDesc = x._1,
+        numOids = allObjOids.size,
+        numVars = allVarOids.size,
+        sampleOids = allObjOids.take(10)
+      )
+    }
+ 
+    val indexSeq = seqs._2.groupBy { t => t._1 }.map { tt =>
+      val allVarOids = tt._2.map(_._2).toSeq
+      val allObjOids = allVarOids.distinct
+      val isHidden = tt._1.src == SMGMonAlertConfSource.HINDEX
+      val idxId = tt._1.srcId
+      val fltDesc = (if (!isHidden)
+        conf.indexesById
+      else
+        conf.hiddenIndexes).get(idxId).map(_.flt.humanText).getOrElse("undefined")
+      IndexAlertCondSummary(
+        isHidden = isHidden,
+        indexId = idxId,
+        fltDesc = fltDesc,
+        threshDesc = tt._1.threshDesc((x: Double) => x.toString),
+        numOids = allObjOids.size,
+        numVars = allVarOids.size,
+        sampleOids = allObjOids.take(10)
+      )
+    }
+    SMGMonAlertCondsSummary(
+      remoteId = None, // only set on deserialiozation from remote
+      indexSeq.toSeq,
+      obsSeq.toSeq
+    )
   }
 
   lifecycle.addStopHook { () =>

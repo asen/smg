@@ -224,6 +224,7 @@ trait SMGRemotesApi {
     */
   def silenceList(remoteId: String, ids: Seq[String], slunt: Int): Future[Boolean]
 
+  def monitorAlertConds(remoteId: String): Future[SMGMonAlertCondsSummary]
 }
 
 

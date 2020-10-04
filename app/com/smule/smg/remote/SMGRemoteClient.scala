@@ -10,6 +10,7 @@ import akka.util.Timeout
 import com.smule.smg.config.{SMGConfIndex, SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._
 import com.smule.smg.grapher._
+import com.smule.smg.monitor.SMGMonAlertCondsSummary.{IndexAlertCondSummary, ObjectAlertCondSummary}
 import com.smule.smg.monitor._
 import com.smule.smg.rrd.{SMGRraDef, SMGRrd, SMGRrdFetchParams, SMGRrdRow}
 import play.api.libs.functional.syntax._
@@ -261,6 +262,35 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       )(SMGMonitorStatesResponse.apply _)
   }
 
+  implicit val indexAlertConfSummaryReads: Reads[IndexAlertCondSummary] = {
+    (
+      (JsPath \ "ish").read[Boolean] and
+        (JsPath \ "ix").read[String].map(prefixedId) and
+        (JsPath \ "fltd").read[String] and
+        (JsPath \ "thd").read[String] and
+        (JsPath \ "nobja").read[Int] and
+        (JsPath \ "nvars").read[Int] and
+        (JsPath \ "oids").read[Seq[String]].map(lst => lst.map(prefixedId))
+      )(IndexAlertCondSummary.apply _)
+  }
+
+  implicit val objectAlertConfSummaryReads: Reads[ObjectAlertCondSummary] = {
+    (
+      (JsPath \ "thd").read[String] and
+        (JsPath \ "nobja").read[Int] and
+        (JsPath \ "nvars").read[Int] and
+        (JsPath \ "oids").read[Seq[String]].map(lst => lst.map(prefixedId))
+      )(ObjectAlertCondSummary.apply _)
+  }
+
+  implicit val alertConfSummaryReads: Reads[SMGMonAlertCondsSummary] = {
+    (
+    (JsPath \ "remote").readNullable[String].map(x => Some(remote.id)) and
+      (JsPath \ "ixes").read[Seq[IndexAlertCondSummary]] and
+      (JsPath \ "objs").read[Seq[ObjectAlertCondSummary]] and
+      (JsPath \ "err").readNullable[String]
+      )(SMGMonAlertCondsSummary.apply _)
+  }
 
   /**
     * Asynchronous call to /api/config to retrieve the configuration of the remote instance
@@ -831,6 +861,28 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       Map()
     }
   }
+
+  def monitorAlertConds(): Future[SMGMonAlertCondsSummary] = {
+    def errRet(msg: String) = SMGMonAlertCondsSummary(Some(remote.id), Seq(), Seq(), Some(msg))
+    ws.url(remote.url + API_PREFIX + "monitor/alertconds").
+      withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
+      Try {
+        Json.parse(resp.body).as[SMGMonAlertCondsSummary]
+      }.recover {
+        case x => {
+          val msg = "remote monitor/alertconds parse error: " + remote.id
+          log.ex(x, msg)
+          errRet(msg + " exception: " + x.getMessage)
+        }
+      }.get
+    }.recover {
+      case x => {
+        val msg = "remote monitor/alertconds fetch error: " + remote.id
+        log.ex(x, msg)
+        errRet(msg + " exception: " + x.getMessage)
+      }
+    }
+  }
 }
 
 /**
@@ -1132,4 +1184,37 @@ object SMGRemoteClient {
     }
   }
 
+  implicit val indexAlertConfSummaryWrites = new Writes[IndexAlertCondSummary] {
+    def writes(c: IndexAlertCondSummary) = {
+      Json.toJson(Map(
+        "ish" -> Json.toJson(c.isHidden),
+        "ix" -> Json.toJson(c.indexId),
+        "fltd" -> Json.toJson(c.fltDesc),
+        "thd" -> Json.toJson(c.threshDesc),
+        "nobjs" -> Json.toJson(c.numOids),
+        "nvars" -> Json.toJson(c.numVars),
+        "oids" -> Json.toJson(c.sampleOids)
+      ))
+    }
+  }
+
+  implicit val objectAlertConfSummaryWrites = new Writes[ObjectAlertCondSummary] {
+    def writes(c: ObjectAlertCondSummary) = {
+      Json.toJson(Map(
+        "thd" -> Json.toJson(c.threshDesc),
+        "nobjs" -> Json.toJson(c.numOids),
+        "nvars" -> Json.toJson(c.numVars),
+        "oids" -> Json.toJson(c.sampleOids)
+      ))
+    }
+  }
+
+  implicit val alertConfSummaryWrites = new Writes[SMGMonAlertCondsSummary] {
+    def writes(c: SMGMonAlertCondsSummary) = {
+      Json.toJson(Map(
+        "ixes" -> Json.toJson(c.indexConfs),
+        "objs" -> Json.toJson(c.objectConfs)
+      ))
+    }
+  }
 }

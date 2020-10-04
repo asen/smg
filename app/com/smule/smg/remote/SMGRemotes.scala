@@ -394,4 +394,11 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
       clientForId(remoteId).get.silenceList(ids, slunt)
     else Future { false }
   }
+
+  override def monitorAlertConds(remoteId: String): Future[SMGMonAlertCondsSummary] = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monitorAlertConds()
+    else Future { SMGMonAlertCondsSummary(Some(remoteId), Seq(), Seq(),
+      Some("Invalid remoteId - client does not exist")) }
+  }
 }

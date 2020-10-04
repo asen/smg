@@ -10,15 +10,14 @@ case class SMGMonAlertConfVar(src: SMGMonAlertConfSource.Value,
                               warn: Option[SMGMonAlertThresh],
                               pluginChecks: Seq[SMGMonCheckConf]
                              ) {
+
   def inspect: String = {
-    s"SMGMonAlertConfVar: src=$src, srcId=$srcId, crit=$crit, warn=$warn, " +
+    s"AlertConf: src=$src, srcId=$srcId, crit=$crit, warn=$warn, " +
       s"pluginChecks=[${pluginChecks.map(pc => pc.ckId + ":" + pc.conf).mkString(", ")}]"
   }
 
   def checkValue(ou: SMGObjectUpdate, vix: Int, ts: Int, newVal: Double): SMGState = {
     var curRet: Option[SMGState] = None
-    val warnThreshVal = warn.map(_.value).getOrElse(Double.NaN)
-    val critThreshVal = crit.map(_.value).getOrElse(Double.NaN)
     def numFmt(d: Double) = {
       ou.numFmt(d, vix)
     }

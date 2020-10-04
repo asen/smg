@@ -500,4 +500,9 @@ class Api  @Inject() (actorSystem: ActorSystem,
     notifyApi.unmuteAll()
     Ok("OK")
   }
+
+  def monitorAlertConds(): Action[AnyContent] = Action {
+    val ret = monitorApi.alertCondsSummary
+    Ok(Json.toJson(ret))
+  }
 }

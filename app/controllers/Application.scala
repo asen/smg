@@ -907,6 +907,18 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def monitorAlertConds(remote: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+    val remoteIds = SMGRemote.local.id :: configSvc.config.remotes.map(_.id).toList
+    val retFut = if (remote.getOrElse(SMGRemote.local.id) == SMGRemote.local.id)
+      Future { monitorApi.alertCondsSummary }
+    else
+      remotes.monitorAlertConds(remote.get)
+    retFut.map { ret =>
+      Ok(views.html.monitorAlertConds(configSvc,
+        remote.getOrElse(SMGRemote.local.id), remoteIds, ret))
+    }
+  }
+
   def monitorSilenced(): Action[AnyContent] = Action.async { implicit request =>
     if (request.method == "POST") {
       val params = request.body.asFormUrlEncoded.getOrElse(Map())

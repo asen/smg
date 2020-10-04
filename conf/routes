@@ -29,6 +29,7 @@ GET     /monitor/trees       controllers.Application.monitorTrees(remote: Seq[St
 GET     /monitor/heatmap     controllers.Application.monitorHeatmap
 GET     /monitor/log         controllers.Application.monitorLog(remote: Seq[String], p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String], slncd: Option[String], rx: Option[String], rxx: Option[String])
 GET     /monitor/runtree     controllers.Application.monitorRunTree(remote: Option[String], root: Option[String], lvls: Option[Int])
+GET     /monitor/alertconds  controllers.Application.monitorAlertConds(remote: Option[String])
 
 # Used by JS
 POST    /monitor/details     controllers.Application.monStatesDetailsHtml()
@@ -116,6 +117,8 @@ POST    /api/monitor/statesd    controllers.Api.statesDetails()
 
 GET     /api/monitor/mute       controllers.Api.monitorMute()
 GET     /api/monitor/unmute     controllers.Api.monitorUnmute()
+
+GET     /api/monitor/alertconds controllers.Api.monitorAlertConds()
 
 GET     /api/plugin/:pluginId  controllers.Api.pluginData(pluginId: String)
 

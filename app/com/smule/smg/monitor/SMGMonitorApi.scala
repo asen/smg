@@ -175,6 +175,7 @@ trait SMGMonitorApi {
     */
   val monLogApi: SMGMonitorLogApi
 
+  def alertCondsSummary: SMGMonAlertCondsSummary
 
   def inspectObject(ov:SMGObjectView): Option[String]
   def inspectPf(pfId: String): Option[String]
