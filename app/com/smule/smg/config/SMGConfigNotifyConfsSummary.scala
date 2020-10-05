@@ -254,9 +254,13 @@ object SMGConfigNotifyConfsSummary {
             sampleOids = t3Objs.take(10)
           )
         } else {
+          val addDesc = if (t3Objs.lengthCompare(1) > 0)
+            SMGStringUtils.commonPxSxAddDesc(t3Objs) + ", "
+          else
+            "Single object, "
           varsObjsSeq += VarsNotifyObjectConfSummary(
             atSeverity = nd.atSeverity,
-            varDesc = SMGStringUtils.commonPxSxAddDesc(t3Objs) + ", " + nd.varDesc,
+            varDesc =  addDesc + nd.varDesc,
             notifyCmds = nd.notifyCmds,
             notifyBackoff = nd.notifyBackoff,
             notifyDisable = nd.notifyDisable,
