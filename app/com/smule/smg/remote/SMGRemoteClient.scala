@@ -1420,7 +1420,7 @@ object SMGRemoteClient {
         "fcdef" -> Json.toJson(c.cmdsDefault),
         "fcixes" -> Json.toJson(c.cmdsIdxSeq),
         "fccmds" -> Json.toJson(c.cmdsObjSeq),
-        "vbs" -> Json.toJson(c.varsBySeverity)
+        "vbs" -> Json.toJson(c.varsBySeverity.map{ case (k,v) => (k.toString, Json.toJson(v))}.toMap)
       ))
     }
   }
