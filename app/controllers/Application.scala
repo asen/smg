@@ -910,11 +910,23 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorAlertConds(remote: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     val remoteIds = SMGRemote.local.id :: configSvc.config.remotes.map(_.id).toList
     val retFut = if (remote.getOrElse(SMGRemote.local.id) == SMGRemote.local.id)
-      Future { monitorApi.alertCondsSummary }
+      Future { configSvc.config.alertCondsSummary }
     else
       remotes.monitorAlertConds(remote.get)
     retFut.map { ret =>
       Ok(views.html.monitorAlertConds(configSvc,
+        remote.getOrElse(SMGRemote.local.id), remoteIds, ret))
+    }
+  }
+
+  def monitorNotifyCmds(remote: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+    val remoteIds = SMGRemote.local.id :: configSvc.config.remotes.map(_.id).toList
+    val retFut = if (remote.getOrElse(SMGRemote.local.id) == SMGRemote.local.id)
+      Future { configSvc.config.notifyCmdsSummary }
+    else
+      remotes.monitorNotifyConfs(remote.get)
+    retFut.map { ret =>
+      Ok(views.html.monitorNotifyCmds(configSvc,
         remote.getOrElse(SMGRemote.local.id), remoteIds, ret))
     }
   }

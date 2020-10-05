@@ -3,12 +3,14 @@ package com.smule.smg.remote
 import java.io.File
 
 import com.smule.smg._
-import com.smule.smg.config.SMGConfigService
+import com.smule.smg.config.SMGConfigNotifyConfsSummary.CommandsNotifyObjectConfSummary
+import com.smule.smg.config.{SMGConfigAlertCondsSummary, SMGConfigNotifyConfsSummary, SMGConfigService}
 import com.smule.smg.core._
 import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView}
 import com.smule.smg.monitor._
 import com.smule.smg.rrd.{SMGRrdFetchParams, SMGRrdRow}
 import javax.inject.{Inject, Singleton}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.ws.WSClient
 
@@ -395,10 +397,19 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     else Future { false }
   }
 
-  override def monitorAlertConds(remoteId: String): Future[SMGMonAlertCondsSummary] = {
+  override def monitorAlertConds(remoteId: String): Future[SMGConfigAlertCondsSummary] = {
     if (clientForId(remoteId).nonEmpty)
       clientForId(remoteId).get.monitorAlertConds()
-    else Future { SMGMonAlertCondsSummary(Some(remoteId), Seq(), Seq(),
+    else Future { SMGConfigAlertCondsSummary(Some(remoteId), Seq(), Seq(),
       Some("Invalid remoteId - client does not exist")) }
+  }
+
+  override def monitorNotifyConfs(remoteId: String): Future[SMGConfigNotifyConfsSummary] = {
+    if (clientForId(remoteId).nonEmpty)
+      clientForId(remoteId).get.monitorNotifyConfs()
+    else Future { SMGConfigNotifyConfsSummary(
+      remoteId = Some(remoteId), Seq(),
+      CommandsNotifyObjectConfSummary(Seq(), None, false, None, 0, Seq()),
+      Seq(), Seq(), Map(), Some("Invalid remoteId - client does not exist")) }
   }
 }

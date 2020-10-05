@@ -1,0 +1,16 @@
+@import com.smule.smg.config.SMGConfigNotifyConfsSummary.NotifyDef
+
+@(ndef: NotifyDef)
+
+@if(ndef.notifyCmds.nonEmpty){
+<li>Notification command(s): <b>@{ndef.notifyCmds.mkString(", ")}</b></li>
+}
+@if(ndef.notifyDisable){
+<li>Disabled: <b>@{ndef.notifyDisable}</b></li>
+}
+@if(ndef.notifyBackoff.isDefined){
+<li>Notify backoff: <b>@{ndef.notifyBackoff.get} (seconds)</b></li>
+}
+@if(ndef.notifyStrikes.isDefined){
+<li>Notify strikes: <b>@{ndef.notifyStrikes.get}</b></li>
+}

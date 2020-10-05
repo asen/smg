@@ -355,6 +355,9 @@ case class SMGLocalConfig(
 
   val allErrors: List[String] = configErrors ++ validationErrors.toList
 
+  val alertCondsSummary: SMGConfigAlertCondsSummary = SMGConfigAlertCondsSummary.build(this)
+  val notifyCmdsSummary: SMGConfigNotifyConfsSummary = SMGConfigNotifyConfsSummary.build( this)
+
   def humanDesc: String = {
     val objus = updateObjects.size
     val rrdObjs = rrdObjects.size

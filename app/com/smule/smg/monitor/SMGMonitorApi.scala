@@ -2,6 +2,7 @@ package com.smule.smg.monitor
 
 import scala.concurrent.Future
 import com.smule.smg._
+import com.smule.smg.config.{SMGConfigAlertCondsSummary, SMGConfigNotifyConfsSummary}
 import com.smule.smg.core.{SMGFilter, SMGIndex, SMGObjectView, SMGTree}
 import com.smule.smg.remote.SMGRemote
 
@@ -174,8 +175,6 @@ trait SMGMonitorApi {
     * a convenience reference to the SMGMonitorLogApi
     */
   val monLogApi: SMGMonitorLogApi
-
-  def alertCondsSummary: SMGMonAlertCondsSummary
 
   def inspectObject(ov:SMGObjectView): Option[String]
   def inspectPf(pfId: String): Option[String]

@@ -1,5 +1,6 @@
 package com.smule.smg.remote
 
+import com.smule.smg.config.{SMGConfigAlertCondsSummary, SMGConfigNotifyConfsSummary}
 import com.smule.smg.core._
 import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView}
 import com.smule.smg.monitor._
@@ -224,7 +225,9 @@ trait SMGRemotesApi {
     */
   def silenceList(remoteId: String, ids: Seq[String], slunt: Int): Future[Boolean]
 
-  def monitorAlertConds(remoteId: String): Future[SMGMonAlertCondsSummary]
+  def monitorAlertConds(remoteId: String): Future[SMGConfigAlertCondsSummary]
+
+  def monitorNotifyConfs(remoteId: String): Future[SMGConfigNotifyConfsSummary]
 }
 
 

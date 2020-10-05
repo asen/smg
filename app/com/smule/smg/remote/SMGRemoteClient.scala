@@ -7,11 +7,12 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import akka.util.Timeout
-import com.smule.smg.config.{SMGConfIndex, SMGConfigService, SMGLocalConfig}
+import com.smule.smg.config.SMGConfigAlertCondsSummary.{IndexAlertCondSummary, ObjectAlertCondSummary}
+import com.smule.smg.config.SMGConfigNotifyConfsSummary._
+import com.smule.smg.config._
 import com.smule.smg.core._
 import com.smule.smg.grapher._
-import com.smule.smg.monitor.SMGMonAlertCondsSummary.{IndexAlertCondSummary, ObjectAlertCondSummary}
-import com.smule.smg.monitor._
+import com.smule.smg.monitor.{SMGMonNotifyCmd, _}
 import com.smule.smg.rrd.{SMGRraDef, SMGRrd, SMGRrdFetchParams, SMGRrdRow}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -283,13 +284,97 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       )(ObjectAlertCondSummary.apply _)
   }
 
-  implicit val alertConfSummaryReads: Reads[SMGMonAlertCondsSummary] = {
+  implicit val alertConfSummaryReads: Reads[SMGConfigAlertCondsSummary] = {
     (
     (JsPath \ "remote").readNullable[String].map(x => Some(remote.id)) and
       (JsPath \ "ixes").read[Seq[IndexAlertCondSummary]] and
       (JsPath \ "objs").read[Seq[ObjectAlertCondSummary]] and
       (JsPath \ "err").readNullable[String]
-      )(SMGMonAlertCondsSummary.apply _)
+      )(SMGConfigAlertCondsSummary.apply _)
+  }
+
+  implicit val commandsNotifyIndexConfSummaryReads: Reads[CommandsNotifyIndexConfSummary] = {
+    (
+      (JsPath \ "ish").read[Boolean] and
+        (JsPath \ "ix").read[String].map(prefixedId) and
+        (JsPath \ "ncmds").read[Seq[String]] and
+        (JsPath \ "nb").readNullable[Int] and
+        (JsPath \ "nd").readNullable[Boolean].map(_.getOrElse(false)) and
+        (JsPath \ "ns").readNullable[Int] and
+        (JsPath \ "numc").read[Int] and
+        (JsPath \ "oids").read[Seq[String]].map(lst => lst.map(prefixedId))
+      )(CommandsNotifyIndexConfSummary.apply _)
+  }
+
+  implicit val commandsNotifyObjectConfSummaryReads: Reads[CommandsNotifyObjectConfSummary] = {
+    (
+      (JsPath \ "ncmds").read[Seq[String]] and
+        (JsPath \ "nb").readNullable[Int] and
+        (JsPath \ "nd").readNullable[Boolean].map(_.getOrElse(false)) and
+        (JsPath \ "ns").readNullable[Int] and
+        (JsPath \ "numc").read[Int] and
+        (JsPath \ "oids").read[Seq[String]].map(lst => lst.map(prefixedId))
+    )(CommandsNotifyObjectConfSummary.apply _)
+  }
+
+  implicit val varsNotifyIndexConfSummaryReads: Reads[VarsNotifyIndexConfSummary] = {
+    (
+      (JsPath \ "ish").read[Boolean] and
+        (JsPath \ "ix").read[String].map(prefixedId) and
+        (JsPath \ "as").read[String].map(SMGState.fromName) and
+        (JsPath \ "vd").read[String] and
+        (JsPath \ "ncmds").read[Seq[String]] and
+        (JsPath \ "nb").readNullable[Int] and
+        (JsPath \ "nd").readNullable[Boolean].map(_.getOrElse(false)) and
+        (JsPath \ "ns").readNullable[Int] and
+        (JsPath \ "numv").read[Int] and
+        (JsPath \ "numo").read[Int] and
+        (JsPath \ "oids").read[Seq[String]].map(lst => lst.map(prefixedId))
+      )(VarsNotifyIndexConfSummary.apply _)
+  }
+
+  implicit val varsNotifyObjectConfSummaryReads: Reads[VarsNotifyObjectConfSummary] = {
+    (
+      (JsPath \ "as").read[String].map(SMGState.fromName) and
+        (JsPath \ "vd").read[String] and
+        (JsPath \ "ncmds").read[Seq[String]] and
+        (JsPath \ "nb").readNullable[Int] and
+        (JsPath \ "nd").readNullable[Boolean].map(_.getOrElse(false)) and
+        (JsPath \ "ns").readNullable[Int] and
+        (JsPath \ "numv").read[Int] and
+        (JsPath \ "numo").read[Int] and
+        (JsPath \ "oids").read[Seq[String]].map(lst => lst.map(prefixedId))
+      )(VarsNotifyObjectConfSummary.apply _)
+  }
+
+  implicit val varsNotifySeverityConfSummaryReads: Reads[VarsNotifySeverityConfSummary] = {
+    (
+      (JsPath \ "as").read[String].map(SMGState.fromName) and
+        (JsPath \ "def").read[VarsNotifyObjectConfSummary] and
+        (JsPath \ "iseq").read[Seq[VarsNotifyIndexConfSummary]] and
+        (JsPath \ "oseq").read[Seq[VarsNotifyObjectConfSummary]]
+    )(VarsNotifySeverityConfSummary.apply _)
+  }
+
+  implicit val smgMonNotifyCmdReads : Reads[SMGMonNotifyCmd] = {
+    (
+      (JsPath \ "id").read[String]  and
+        (JsPath \ "c").read[String]  and
+        (JsPath \ "t").read[Int]
+      )(SMGMonNotifyCmd.apply _)
+  }
+
+  implicit val notifyConfsSummaryReads: Reads[SMGConfigNotifyConfsSummary] = {
+  (
+    (JsPath \ "remote").readNullable[String].map(x => Some(remote.id)) and
+      (JsPath \ "ancs").read[Seq[SMGMonNotifyCmd]] and
+      (JsPath \ "fcdef").read[CommandsNotifyObjectConfSummary] and
+      (JsPath \ "fcixes").read[Seq[CommandsNotifyIndexConfSummary]] and
+      (JsPath \ "fccmds").read[Seq[CommandsNotifyObjectConfSummary]] and
+      (JsPath \ "vbs").read[Map[String, VarsNotifySeverityConfSummary]].
+        map{ m => m.map(t => (SMGState.fromName(t._1), t._2)) } and
+      (JsPath \ "err").readNullable[String]
+    )(SMGConfigNotifyConfsSummary.apply _)
   }
 
   /**
@@ -862,12 +947,12 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
-  def monitorAlertConds(): Future[SMGMonAlertCondsSummary] = {
-    def errRet(msg: String) = SMGMonAlertCondsSummary(Some(remote.id), Seq(), Seq(), Some(msg))
+  def monitorAlertConds(): Future[SMGConfigAlertCondsSummary] = {
+    def errRet(msg: String) = SMGConfigAlertCondsSummary(Some(remote.id), Seq(), Seq(), Some(msg))
     ws.url(remote.url + API_PREFIX + "monitor/alertconds").
-      withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
+      withRequestTimeout(graphTimeoutMs).get().map { resp =>
       Try {
-        Json.parse(resp.body).as[SMGMonAlertCondsSummary]
+        Json.parse(resp.body).as[SMGConfigAlertCondsSummary]
       }.recover {
         case x => {
           val msg = "remote monitor/alertconds parse error: " + remote.id
@@ -883,6 +968,33 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       }
     }
   }
+
+  def monitorNotifyConfs(): Future[SMGConfigNotifyConfsSummary] = {
+    def errRet(msg: String) = SMGConfigNotifyConfsSummary(
+      remoteId = Some(remote.id), Seq(),
+      CommandsNotifyObjectConfSummary(Seq(), None, false, None, 0, Seq()),
+      Seq(), Seq(), Map(), Some(msg))
+    ws.url(remote.url + API_PREFIX + "monitor/notifycmds").
+      withRequestTimeout(graphTimeoutMs).get().map { resp =>
+      Try {
+        Json.parse(resp.body).as[SMGConfigNotifyConfsSummary]
+      }.recover {
+        case x => {
+          val msg = "remote monitor/notifycmds parse error: " + remote.id
+          log.ex(x, msg)
+          errRet(msg + " exception: " + x.getMessage)
+        }
+      }.get
+    }.recover {
+      case x => {
+        val msg = "remote monitor/notifycmds fetch error: " + remote.id
+        log.ex(x, msg)
+        errRet(msg + " exception: " + x.getMessage)
+      }
+    }
+  }
+
+
 }
 
 /**
@@ -1209,12 +1321,108 @@ object SMGRemoteClient {
     }
   }
 
-  implicit val alertConfSummaryWrites = new Writes[SMGMonAlertCondsSummary] {
-    def writes(c: SMGMonAlertCondsSummary) = {
+  implicit val alertConfSummaryWrites = new Writes[SMGConfigAlertCondsSummary] {
+    def writes(c: SMGConfigAlertCondsSummary) = {
       Json.toJson(Map(
         "ixes" -> Json.toJson(c.indexConfs),
         "objs" -> Json.toJson(c.objectConfs)
       ))
     }
   }
+
+  implicit val commandsNotifyIndexConfSummaryWrites = new Writes[CommandsNotifyIndexConfSummary] {
+    def writes(c: CommandsNotifyIndexConfSummary) = {
+      Json.toJson(Map(
+        "ish" -> Json.toJson(c.isHidden),
+        "ix" -> Json.toJson(c.srcId),
+        "ncmds" -> Json.toJson(c.notifyCmds),
+        "nb" -> Json.toJson(c.notifyBackoff),
+        "nd" -> Json.toJson(c.notifyDisable),
+        "ns" -> Json.toJson(c.notifyStrikes),
+        "numc" -> Json.toJson(c.numCmds),
+        "oids" -> Json.toJson(c.sampleCmdIds)
+      ))
+    }
+  }
+
+  implicit val commandsNotifyObjectConfSummaryWrites = new Writes[CommandsNotifyObjectConfSummary] {
+    def writes(c: CommandsNotifyObjectConfSummary) = {
+      Json.toJson(Map(
+        "ncmds" -> Json.toJson(c.notifyCmds),
+        "nb" -> Json.toJson(c.notifyBackoff),
+        "nd" -> Json.toJson(c.notifyDisable),
+        "ns" -> Json.toJson(c.notifyStrikes),
+        "numc" -> Json.toJson(c.numCmds),
+        "oids" -> Json.toJson(c.sampleCmdIds)
+      ))
+    }
+  }
+
+  implicit val varsNotifyIndexConfSummaryWrites = new Writes[VarsNotifyIndexConfSummary] {
+    def writes(c: VarsNotifyIndexConfSummary) = {
+      Json.toJson(Map(
+        "ish" -> Json.toJson(c.isHidden),
+        "ix" -> Json.toJson(c.srcId),
+        "as" -> Json.toJson(c.atSeverity.toString),
+        "vd" -> Json.toJson(c.varDesc),
+        "ncmds" -> Json.toJson(c.notifyCmds),
+        "nb" -> Json.toJson(c.notifyBackoff),
+        "nd" -> Json.toJson(c.notifyDisable),
+        "ns" -> Json.toJson(c.notifyStrikes),
+        "numv" -> Json.toJson(c.numVars),
+        "numo" -> Json.toJson(c.numObjs),
+        "oids" -> Json.toJson(c.sampleOids)
+      ))
+    }
+  }
+
+  implicit val varsNotifyObjectConfSummaryWrites = new Writes[VarsNotifyObjectConfSummary] {
+    def writes(c: VarsNotifyObjectConfSummary) = {
+      Json.toJson(Map(
+        "as" -> Json.toJson(c.atSeverity.toString),
+        "vd" -> Json.toJson(c.varDesc),
+        "ncmds" -> Json.toJson(c.notifyCmds),
+        "nb" -> Json.toJson(c.notifyBackoff),
+        "nd" -> Json.toJson(c.notifyDisable),
+        "ns" -> Json.toJson(c.notifyStrikes),
+        "numv" -> Json.toJson(c.numVars),
+        "numo" -> Json.toJson(c.numObjs),
+        "oids" -> Json.toJson(c.sampleOids)
+      ))
+    }
+  }
+
+  implicit val varsNotifySeverityConfSummaryWrites = new Writes[VarsNotifySeverityConfSummary] {
+    def writes(c: VarsNotifySeverityConfSummary) = {
+      Json.toJson(Map(
+        "as" -> Json.toJson(c.atSeverity.toString),
+        "def" -> Json.toJson(c.varsDefault),
+        "iseq" -> Json.toJson(c.varsIdxSeq),
+        "oseq" -> Json.toJson(c.varsObjsSeq)
+      ))
+    }
+  }
+
+  implicit val smgMonNotifyCmdWrites = new Writes[SMGMonNotifyCmd] {
+    def writes(c: SMGMonNotifyCmd) = {
+      Json.toJson(Map(
+        "id" -> Json.toJson(c.id),
+        "c" -> Json.toJson(c.command),
+        "t" -> Json.toJson(c.timeoutSec)
+      ))
+    }
+  }
+
+  implicit val notifyConfsSummaryWrites = new Writes[SMGConfigNotifyConfsSummary] {
+    def writes(c: SMGConfigNotifyConfsSummary) = {
+      Json.toJson(Map(
+        "ancs" -> Json.toJson(c.allNotifyCmds),
+        "fcdef" -> Json.toJson(c.cmdsDefault),
+        "fcixes" -> Json.toJson(c.cmdsIdxSeq),
+        "fccmds" -> Json.toJson(c.cmdsObjSeq),
+        "vbs" -> Json.toJson(c.varsBySeverity)
+      ))
+    }
+  }
+
 }

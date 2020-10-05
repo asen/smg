@@ -1,14 +1,14 @@
 @import com.smule.smg.config.SMGConfigService
-@import com.smule.smg.monitor.SMGMonAlertCondsSummary
+@import com.smule.smg.config.SMGConfigAlertCondsSummary
 @import com.smule.smg.remote.SMGRemote
 @import java.net.URLEncoder
-@(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String], aConfs: SMGMonAlertCondsSummary)(implicit flash: Flash)
+@(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String], aConfs: SMGConfigAlertCondsSummary)(implicit flash: Flash)
 
 @main("SMG - Alert conditions", cfSvc, 0) {
 
 @monitorMenu("alertconds")
 
-<h3>Alert conditions</h3>
+<h3>Alert conditions (Beta)</h3>
 @if(aConfs.errMsg.isDefined) {
 <div><font color="red">Error: @{aConfs.errMsg}</font></div>
 }

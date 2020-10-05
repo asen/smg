@@ -502,7 +502,12 @@ class Api  @Inject() (actorSystem: ActorSystem,
   }
 
   def monitorAlertConds(): Action[AnyContent] = Action {
-    val ret = monitorApi.alertCondsSummary
+    val ret = configSvc.config.alertCondsSummary
+    Ok(Json.toJson(ret))
+  }
+
+  def monitorNotifyCmds(): Action[AnyContent] = Action {
+    val ret = configSvc.config.notifyCmdsSummary
     Ok(Json.toJson(ret))
   }
 }

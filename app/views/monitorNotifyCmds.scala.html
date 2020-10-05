@@ -1,0 +1,180 @@
+@import com.smule.smg.config.SMGConfigService
+@import com.smule.smg.config.SMGConfigNotifyConfsSummary
+@import com.smule.smg.remote.SMGRemote
+@import java.net.URLEncoder
+@(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String], nConfs: SMGConfigNotifyConfsSummary)(implicit flash: Flash)
+
+@main("SMG - Notification commands", cfSvc, 0) {
+
+@monitorMenu("notifycmds")
+
+<h3>Notification commands (Beta)</h3>
+@if(nConfs.errMsg.isDefined) {
+<div><font color="red">Error: @{nConfs.errMsg}</font></div>
+}
+
+<div>
+  <form id="notifyConfsFilterForm" method="GET">
+    @if(availRemotes.nonEmpty){
+    <label class="autosubmit-lbl">Remote select:</label>
+    <select name="remote" class="select-remote" onchange="remoteChanged(this);" >
+      @for( rid <- availRemotes ) {
+      <option value='@rid' @if(rid == rmtId){ selected } >@if(rid == SMGRemote.local.id){@{SMGRemote.localName}}else{@rid}</option>
+      }
+    </select>
+    }
+    <input style="display: none" id="btn_GET" type="submit" value="Filter">
+  </form>
+</div>
+
+<!-- strip empty params from the form so that urls are less cluttered -->
+<script language="JavaScript">
+
+    function remoteChanged(elem) {
+      mySubmitOnChange(elem);
+    }
+
+    function disableEmptyInputs() {
+        $(':input', this).each(function() {
+           this.disabled = !($(this).val())
+        });
+    };
+
+    function realSubmit() {
+        setTimeout(0, $('#btn_GET').click());
+    }
+
+    function mySubmitOnChange(elem) {
+        disableEmptyInputs();
+        realSubmit();
+    }
+
+    $('form#notifyConfsFilterForm').submit(disableEmptyInputs);
+</script>
+
+<h4>All configured notification commands (recipients)</h4>
+@if(nConfs.allNotifyCmds.isEmpty){
+(no commands configured)
+} else {
+<ul>
+  @for(nc <- nConfs.allNotifyCmds){
+  <li><b>@{nc.id}</b>: (timeout=@{nc.timeoutSec}s) @{nc.command}</li>
+  }
+</ul>
+}
+
+<h4>Notifications commands (recipients) for failed fetch commands (UNKNOWN state)</h4>
+
+<h5>Default (global) config</h5>
+@defining(nConfs.cmdsDefault) { cmdNocs =>
+<ul>
+  @monitorNotifyCmdsNotifyDef(cmdNocs)
+  @if(cmdNocs.numCmds > 0){
+  <li>Num fetch commands: <b>@{cmdNocs.numCmds}</b></li>
+  }
+</ul>
+}
+
+@if(nConfs.cmdsIdxSeq.nonEmpty){
+<h5>Index defined configs</h5>
+<ul>
+  @for(c <- nConfs.cmdsIdxSeq){
+  <li> Source: <b>@if(c.isHidden){(Hidden)} Index - @{c.srcId}</b>:
+    <ul>
+      @monitorNotifyCmdsNotifyDef(c)
+      @if(c.numCmds > 0){
+      <li>Num fetch commands: <b>@{c.numCmds}</b></li>
+      }
+      @if(c.sampleCmdIds.nonEmpty){
+      <li>Example fetch commands: <b>@{c.sampleCmdIds.mkString(", ")}</b></li>
+      }
+    </ul>
+  </li>
+  }
+</ul>
+}
+
+@if(nConfs.cmdsObjSeq.nonEmpty){
+<h5>Objects defined configs</h5>
+<ul>
+  @for(c <- nConfs.cmdsObjSeq){
+  <li> Source: <b>Object definitions</b>
+    <ul>
+      @monitorNotifyCmdsNotifyDef(c)
+      @if(c.numCmds > 0){
+      <li>Num fetch commands: <b>@{c.numCmds}</b></li>
+      }
+      @if(c.sampleCmdIds.nonEmpty){
+      <li>Example fetch commands: <b>@{c.sampleCmdIds.mkString(", ")}</b></li>
+      }
+    </ul>
+  </li>
+  }
+</ul>
+}
+
+@for( (sev, sevConf) <- nConfs.varsBySeverityOrdered){
+  <h4>Notification commands for severity: @{sev}</h4>
+  <h5>Default (global) config</h5>
+  <ul>
+    @monitorNotifyCmdsNotifyDef(sevConf.varsDefault)
+    @if(sevConf.varsDefault.numVars > 0){
+    <li>Num variables: <b>@{sevConf.varsDefault.numVars}</b></li>
+    }
+    @if(sevConf.varsDefault.numObjs > 0){
+    <li>Num objects: <b>@{sevConf.varsDefault.numObjs}</b></li>
+    }
+    @if(sevConf.varsDefault.sampleOids.nonEmpty){
+    <li>Example objects: <b>@{sevConf.varsDefault.sampleOids.mkString(", ")}</b></li>
+    }
+  </ul>
+
+  @if(sevConf.varsIdxSeq.nonEmpty){
+  <h5>Index defined configs</h5>
+  <ul>
+    @for(c <- sevConf.varsIdxSeq){
+    <li> Source: <b>@if(c.isHidden){(Hidden)} Index - @{c.srcId}</b>
+      <ul>
+        <li>Var desc: <b>@{c.varDesc}</b></li>
+        @monitorNotifyCmdsNotifyDef(c)
+        @if(c.numVars > 0){
+        <li>Num variables: <b>@{c.numVars}</b></li>
+        }
+        @if(c.numObjs > 0){
+        <li>Num objects: <b>@{c.numObjs}</b></li>
+        }
+        @if(c.sampleOids.nonEmpty){
+        <li>Example objects: <b>@{c.sampleOids.mkString(", ")}</b></li>
+        }
+      </ul>
+    </li>
+    }
+  </ul>
+  }
+  @if(sevConf.varsObjsSeq.nonEmpty){
+  <h5>Object defined configs</h5>
+  <ul>
+    @for(c <- sevConf.varsObjsSeq){
+    <li> Source: <b>Object definitions</b>
+      <ul>
+        <li>Var desc: <b>@{c.varDesc}</b></li>
+        @monitorNotifyCmdsNotifyDef(c)
+        @if(c.numVars > 0){
+        <li>Num variables: <b>@{c.numVars}</b></li>
+        }
+        @if(c.numObjs > 0){
+        <li>Num objects: <b>@{c.numObjs}</b></li>
+        }
+        @if(c.sampleOids.nonEmpty){
+        <li>Example objects: <b>@{c.sampleOids.mkString(", ")}</b></li>
+        }
+      </ul>
+    </li>
+    }
+  </ul>
+  }
+}
+
+<hr />
+
+}
