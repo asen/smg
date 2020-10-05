@@ -269,7 +269,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
         (JsPath \ "ix").read[String].map(prefixedId) and
         (JsPath \ "fltd").read[String] and
         (JsPath \ "thd").read[String] and
-        (JsPath \ "nobja").read[Int] and
+        (JsPath \ "nobjs").read[Int] and
         (JsPath \ "nvars").read[Int] and
         (JsPath \ "oids").read[Seq[String]].map(lst => lst.map(prefixedId))
       )(IndexAlertCondSummary.apply _)
@@ -278,7 +278,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   implicit val objectAlertConfSummaryReads: Reads[ObjectAlertCondSummary] = {
     (
       (JsPath \ "thd").read[String] and
-        (JsPath \ "nobja").read[Int] and
+        (JsPath \ "nobjs").read[Int] and
         (JsPath \ "nvars").read[Int] and
         (JsPath \ "oids").read[Seq[String]].map(lst => lst.map(prefixedId))
       )(ObjectAlertCondSummary.apply _)
