@@ -56,6 +56,7 @@ object SMGConfigNotifyConfsSummary {
                                            ) extends NotifyDef
 
   case class CommandsNotifyObjectConfSummary(
+                                              objsDesc: Option[String],
                                               notifyCmds: Seq[String],
                                               notifyBackoff: Option[Int],
                                               notifyDisable: Boolean,
@@ -153,17 +154,22 @@ object SMGConfigNotifyConfsSummary {
         (x.unkn, x.notifyBackoff, x.notifyDisable, x.notifyStrikes)
       }.get
     }.map { case (gbKey, cmdSeq) =>
+      val cmdIds = cmdSeq.map(_.id)
       CommandsNotifyObjectConfSummary(
+        objsDesc = if(cmdIds.lengthCompare(1) > 0)
+          Some(SMGStringUtils.commonPxSxAddDesc(cmdIds))
+        else None,
         notifyCmds = gbKey._1,
         notifyBackoff = gbKey._2,
         notifyDisable = gbKey._3,
         notifyStrikes = gbKey._4,
         numCmds = cmdSeq.size,
-        sampleCmdIds = cmdSeq.take(10).map(_.id)
+        sampleCmdIds = cmdIds.take(10)
       )
     }.toSeq
 
     val defaultCmd = CommandsNotifyObjectConfSummary(
+      objsDesc = None,
       notifyCmds = conf.globalUnknNotifyConf.map(_.id),
       notifyBackoff = Some(conf.globalNotifyBackoff),
       notifyDisable = false,
@@ -250,7 +256,7 @@ object SMGConfigNotifyConfsSummary {
         } else {
           varsObjsSeq += VarsNotifyObjectConfSummary(
             atSeverity = nd.atSeverity,
-            varDesc = nd.varDesc,
+            varDesc = SMGStringUtils.commonPxSxAddDesc(t3Objs) + ", " + nd.varDesc,
             notifyCmds = nd.notifyCmds,
             notifyBackoff = nd.notifyBackoff,
             notifyDisable = nd.notifyDisable,

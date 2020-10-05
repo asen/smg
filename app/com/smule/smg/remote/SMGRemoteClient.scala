@@ -308,7 +308,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
 
   implicit val commandsNotifyObjectConfSummaryReads: Reads[CommandsNotifyObjectConfSummary] = {
     (
-      (JsPath \ "ncmds").read[Seq[String]] and
+      (JsPath \ "ods").readNullable[String] and
+        (JsPath \ "ncmds").read[Seq[String]] and
         (JsPath \ "nb").readNullable[Int] and
         (JsPath \ "nd").readNullable[Boolean].map(_.getOrElse(false)) and
         (JsPath \ "ns").readNullable[Int] and
@@ -972,7 +973,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   def monitorNotifyConfs(): Future[SMGConfigNotifyConfsSummary] = {
     def errRet(msg: String) = SMGConfigNotifyConfsSummary(
       remoteId = Some(remote.id), Seq(),
-      CommandsNotifyObjectConfSummary(Seq(), None, false, None, 0, Seq()),
+      CommandsNotifyObjectConfSummary(None, Seq(), None, false, None, 0, Seq()),
       Seq(), Seq(), Map(), Some(msg))
     ws.url(remote.url + API_PREFIX + "monitor/notifycmds").
       withRequestTimeout(graphTimeoutMs).get().map { resp =>
@@ -1348,6 +1349,7 @@ object SMGRemoteClient {
   implicit val commandsNotifyObjectConfSummaryWrites = new Writes[CommandsNotifyObjectConfSummary] {
     def writes(c: CommandsNotifyObjectConfSummary) = {
       Json.toJson(Map(
+        "ods" -> Json.toJson(c.objsDesc),
         "ncmds" -> Json.toJson(c.notifyCmds),
         "nb" -> Json.toJson(c.notifyBackoff),
         "nd" -> Json.toJson(c.notifyDisable),

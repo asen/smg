@@ -409,7 +409,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
       clientForId(remoteId).get.monitorNotifyConfs()
     else Future { SMGConfigNotifyConfsSummary(
       remoteId = Some(remoteId), Seq(),
-      CommandsNotifyObjectConfSummary(Seq(), None, false, None, 0, Seq()),
+      CommandsNotifyObjectConfSummary(None, Seq(), None, false, None, 0, Seq()),
       Seq(), Seq(), Map(), Some("Invalid remoteId - client does not exist")) }
   }
 }

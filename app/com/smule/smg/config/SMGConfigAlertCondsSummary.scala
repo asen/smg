@@ -73,7 +73,7 @@ object SMGConfigAlertCondsSummary {
       val allVarOids = x._2.map(_._2).toSeq
       val allObjOids = allVarOids.distinct
       ObjectAlertCondSummary(
-        threshDesc = x._1,
+        threshDesc = SMGStringUtils.commonPxSxAddDesc(allObjOids) + ", " + x._1,
         numOids = allObjOids.size,
         numVars = allVarOids.size,
         sampleOids = allObjOids.take(10)

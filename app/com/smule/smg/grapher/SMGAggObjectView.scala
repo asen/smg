@@ -1,5 +1,6 @@
 package com.smule.smg.grapher
 
+import com.smule.smg.config.SMGStringUtils
 import com.smule.smg.core.{SMGAggGroupBy, SMGObjectView}
 import com.smule.smg.rrd.SMGRraDef
 import com.smule.smg.remote.SMGRemote
@@ -116,43 +117,6 @@ object SMGAggObjectView {
     remotePx + md.digest().map("%02x".format(_)).mkString + "-" + op
   }
 
-  private def getLcp(x: List[String], y:List[String]): List[String] = {
-    if (x.isEmpty || y.isEmpty|| (x.head != y.head)) {
-      List()
-    } else {
-      x.head :: getLcp(x.tail, y.tail)
-    }
-  }
-
-
-  private def commonPrefix(sep: Char, s: String, t: String, out: String = ""): String = {
-    val sl = s.split(sep)
-    val tl = t.split(sep)
-    getLcp(sl.toList, tl.toList).mkString(sep.toString)
-  }
-
-  @tailrec
-  private def commonListPrefix(sep: Char, lst: Seq[String], soFar: Option[String] = None): String = {
-    if (lst.isEmpty) soFar.getOrElse("")
-    else {
-      val cp = commonPrefix(sep, soFar.getOrElse(lst.head), lst.head)
-      commonListPrefix(sep, lst.tail, Some(cp))
-    }
-  }
-
-  private def commonSuffix(sep: Char, s: String, t: String, out: String = ""): String = {
-    commonPrefix(sep, s.reverse, t.reverse).reverse
-  }
-
-  @tailrec
-  private def commonListSuffix(sep: Char, lst: Seq[String], soFar: Option[String] = None): String = {
-    if (lst.isEmpty) soFar.getOrElse("")
-    else {
-      val cp = commonSuffix(sep, soFar.getOrElse(lst.head), lst.head)
-      commonListSuffix(sep, lst.tail, Some(cp))
-    }
-  }
-
   /**
     * A helper to strip common for all in the list prefix and suffix from each string in the list
     * Useful to get unique object title portions to combine in a single object title.
@@ -161,9 +125,9 @@ object SMGAggObjectView {
     * @return - a new list containing stripped versions of the input strings
     */
   def stripCommonStuff(sep: Char, lst: Seq[String]): Seq[String] = {
-    val cp = commonListPrefix(sep, lst)
+    val cp = SMGStringUtils.commonListPrefix(sep, lst)
     val strippedPrefixes = lst.map(s => s.substring(cp.length))
-    val cs = commonListSuffix(sep, strippedPrefixes)
+    val cs = SMGStringUtils.commonListSuffix(sep, strippedPrefixes)
     strippedPrefixes.map(s => s.substring(0, s.length - cs.length)).map {
       s => if (s.nonEmpty) {
         var six = if (s.charAt(0) == sep) 1 else 0
@@ -174,8 +138,8 @@ object SMGAggObjectView {
   }
 
   private def buildTitle(lst: Seq[String]) : String = {
-    val cp = commonListPrefix(' ', lst)
-    val cs = commonListSuffix(' ', lst)
+    val cp = SMGStringUtils.commonListPrefix(' ', lst)
+    val cs = SMGStringUtils.commonListSuffix(' ', lst)
     val uncommon = stripCommonStuff(' ', lst)
     (if (cp == "") "" else cp + " ") +
       uncommon.mkString(", ") +

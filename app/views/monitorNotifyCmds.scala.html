@@ -98,7 +98,7 @@
 <h5>Objects defined configs</h5>
 <ul>
   @for(c <- nConfs.cmdsObjSeq){
-  <li> Source: <b>Object definitions</b>
+  <li> Source: <b>Object definition@if(c.objsDesc.isDefined){s: @{c.objsDesc.get}}</b>
     <ul>
       @monitorNotifyCmdsNotifyDef(c)
       @if(c.numCmds > 0){
