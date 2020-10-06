@@ -28,8 +28,11 @@ class SMGMonInternalCmdState(
     pfMaxHardErrorCount(configSvc, cmd.notifyConf, objs)
   }
 
-  override def text: String = s"${cmd.id}(intvl${if (intervals.lengthCompare(1) == 0)
-    "" else "s"}=${intervals.mkString(",")}): cmd=${cmd.command.str} ; $currentStateDesc"
+  override def text: String = {
+    val desc = if (cmd.commandDesc.isDefined) s"desc=`${cmd.commandDesc.get}` " else ""
+    s"${cmd.id}(intvl${if (intervals.lengthCompare(1) == 0)
+      "" else "s"}=${intervals.mkString(",")}): ${desc}cmd=${cmd.command.str} ; $currentStateDesc"
+  }
 
   override def oid: Option[String] = if (cmd.isUpdateObj) Some(cmd.id) else None
 

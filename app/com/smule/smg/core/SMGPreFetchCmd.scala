@@ -12,11 +12,12 @@ import com.smule.smg.monitor.SMGMonNotifyConf
   */
 case class SMGPreFetchCmd(id: String,
                           command: SMGCmd,
+                          desc: Option[String],
                           preFetch: Option[String],
                           override val ignoreTs: Boolean,
                           override val childConc: Int,
                           override val notifyConf: Option[SMGMonNotifyConf],
                           override val passData: Boolean
                          ) extends SMGFetchCommand {
-  val isRrdObj = false
+  override val commandDesc: Option[String] = desc
 }

@@ -40,4 +40,6 @@ case class SMGRrdAggObject(id: String,
 
   override val command: SMGCmd = SMGCmd(s"+$aggOp: ${ous.size} objs")
   override val passData: Boolean = true
+
+  val commandDesc: Option[String] = Some(title)
 }

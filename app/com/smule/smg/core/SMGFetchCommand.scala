@@ -13,6 +13,7 @@ import com.smule.smg.monitor.SMGMonNotifyConf
 trait SMGFetchCommand extends SMGTreeNode {
   //  val id: String // in tree node
   val command: SMGCmd
+  val commandDesc: Option[String]
   val preFetch: Option[String]
 
   val isUpdateObj: Boolean = this.isInstanceOf[SMGObjectUpdate]

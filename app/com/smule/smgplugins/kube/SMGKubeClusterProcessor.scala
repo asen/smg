@@ -374,6 +374,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         SMGPreFetchCmd(
           id = cConf.uidPrefix + KUBECTL_TOP_PODS_PF_NAME,
           command = SMGCmd(s":kube ${cConf.uid} top-pods-pf", timeoutSec = cConf.fetchCommandTimeout),
+          desc = Some("Call kubectl top pods API"),
           preFetch = cConf.parentPfId,
           ignoreTs = false,
           childConc = 2,

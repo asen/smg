@@ -105,7 +105,7 @@ class TestConfigSvc() extends SMGConfigService {
       urlPrefix = "",
       intervals = Set(60),
       preFetches = Map("test.prefetch" ->
-        SMGPreFetchCmd("test.prefetch", SMGCmd("echo 0"), None,
+        SMGPreFetchCmd("test.prefetch", SMGCmd("echo 0"), None, None,
           ignoreTs = false, 1, None, passData = false)),
       remotes = Seq(),
       remoteMasters = Seq(),

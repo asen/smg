@@ -64,6 +64,9 @@ object SMGYamlConfigGen {
     ret.put("type", "pre_fetch")
     ret.put("id", obj.id)
     ret.put("command", obj.command.str)
+    if (obj.desc.isDefined){
+      ret.put("desc", obj.desc.get)
+    }
     ret.put("timeout", Integer.valueOf(obj.command.timeoutSec))
     if (obj.preFetch.isDefined)
       ret.put("pre_fetch", obj.preFetch.get)

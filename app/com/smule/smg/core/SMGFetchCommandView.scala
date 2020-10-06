@@ -7,6 +7,7 @@ import com.smule.smg.monitor.SMGMonNotifyConf
   */
 case class SMGFetchCommandView(id: String,
                                command: SMGCmd,
+                               commandDesc: Option[String],
                                preFetch: Option[String],
                                override val isUpdateObj: Boolean,
                                passData: Boolean

@@ -77,7 +77,8 @@ class SMGJmxConfigParser(val pluginId: String, val configSvc: SMGConfigService, 
     val parentState = if (ymap.contains("parentState")) { Some(ymap("parentState").toString) } else None
     val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, pfId,
       ymap.toMap.map(kv => (kv._1, kv._2.toString)))
-    val pf = SMGPreFetchCmd(pfId, SMGCmd(s"jmx://$hostPort"), parentState, ignoreTs = true,
+    val pf = SMGPreFetchCmd(pfId, SMGCmd(s"jmx://$hostPort"),
+                            Some(s"JMX Connection to $hostPort"), parentState, ignoreTs = true,
                             childConc = 1, notifyConf, passData = false)
     val parentIds = Seq(Some(pfId), parentState).flatten
     var ret = ListBuffer[SMGJmxObject]()

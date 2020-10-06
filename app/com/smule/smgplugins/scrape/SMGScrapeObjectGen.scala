@@ -207,6 +207,7 @@ class SMGScrapeObjectGen(
     val scrapeFetchPf = SMGPreFetchCmd(
       id = scrapeFetchPfId,
       command = SMGCmd(scrapeTargetConf.command, scrapeTargetConf.timeoutSec),
+      desc = Some(s"Scrape metrics for $idPrefix"),
       preFetch = scrapeTargetConf.parentPfId,
       ignoreTs = false,
       childConc = 1,
@@ -226,6 +227,7 @@ class SMGScrapeObjectGen(
       val scrapeParsePf = SMGPreFetchCmd(
         id = scrapeParsePfId,
         command = SMGCmd(s":scrape parse$labelUidOpt", scrapeTargetConf.timeoutSec),
+        desc = Some(s"Parse metrics for $idPrefix"),
         preFetch = Some(scrapeFetchPfId),
         ignoreTs = false,
         childConc = 1,

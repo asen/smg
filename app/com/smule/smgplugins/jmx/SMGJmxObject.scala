@@ -40,4 +40,6 @@ case class SMGJmxObject(baseId: String,
 
   override val command: SMGCmd = SMGCmd(s"jmx://$hostPort/$id")
   override val passData: Boolean = true
+
+  val commandDesc: Option[String] = Some(title)
 }

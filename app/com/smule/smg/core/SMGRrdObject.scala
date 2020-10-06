@@ -54,4 +54,6 @@ case class SMGRrdObject(id: String,
   override val pluginId: Option[String] = None
 
   override val passData = true
+
+  val commandDesc: Option[String] = Some(title)
 }
