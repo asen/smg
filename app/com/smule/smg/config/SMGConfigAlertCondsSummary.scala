@@ -72,8 +72,12 @@ object SMGConfigAlertCondsSummary {
     }.groupBy(_._1).map{ x =>
       val allVarOids = x._2.map(_._2).toSeq
       val allObjOids = allVarOids.distinct
+      val addDesc = if (allObjOids.lengthCompare(1) > 0)
+        SMGStringUtils.commonPxSxAddDesc(allObjOids) + ", "
+      else
+        "Single object, "
       ObjectAlertCondSummary(
-        threshDesc = SMGStringUtils.commonPxSxAddDesc(allObjOids) + ", " + x._1,
+        threshDesc = addDesc + x._1,
         numOids = allObjOids.size,
         numVars = allVarOids.size,
         sampleOids = allObjOids.take(10)
