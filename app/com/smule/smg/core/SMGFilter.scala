@@ -173,7 +173,14 @@ object SMGFilter {
     )
 
   def fromPrefixWithRemote(px:String, remoteIds: Seq[String]): SMGFilter =
-    SMGFilter(Some(px), None, None, None, None, None, None, remoteIds, GraphOptions.default )
+    SMGFilter(px = Some(px), sx = None, rx = None, rxx = None, prx = None, trx = None, lbls = None, remotes = remoteIds, gopts = GraphOptions.default )
+
+  def fromParentId(parentId:String): SMGFilter = {
+    val remote = SMGRemote.remoteId(parentId)
+    val localId = SMGRemote.localId(parentId)
+    SMGFilter(px = None, sx = None, rx = None, rxx = None, prx = Some(s"^${localId}$$"),
+      trx = None, lbls = None, remotes = Seq(remote), gopts = GraphOptions.default )
+  }
 
   def fromPrefixLocal(px:String): SMGFilter = fromPrefixWithRemote(px, Seq(SMGRemote.local.id))
 

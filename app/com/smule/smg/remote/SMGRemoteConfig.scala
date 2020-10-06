@@ -1,7 +1,7 @@
 package com.smule.smg.remote
 
 import com.smule.smg.config.{SMGConfIndex, SMGConfig}
-import com.smule.smg.core.SMGObjectView
+import com.smule.smg.core.{SMGFetchCommand, SMGObjectView}
 
 /**
   * Created by asen on 11/19/15.
@@ -17,6 +17,7 @@ case class SMGRemoteConfig(
                             globals: Map[String,String],
                             viewObjects: Seq[SMGObjectView],
                             indexes: Seq[SMGConfIndex],
+                            allPreFetches: Seq[SMGFetchCommand],
                             remote: SMGRemote
                           ) extends SMGConfig {
 

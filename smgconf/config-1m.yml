@@ -12,6 +12,7 @@
 - $pre_fetch:
   id: host_localhost_up
   command: "ping -c 1 localhost >/dev/null"
+  desc: "Check that localhost is UP"
   ignorets: true
   child_conc: 2
   notify-unkn: mail-asen

@@ -2,7 +2,7 @@ package com.smule.smg.search
 
 import com.smule.smg._
 import com.smule.smg.config.SMGConfigService
-import com.smule.smg.core.{SMGFetchCommandTree, SMGIndex, SMGLogger, SMGObjectView}
+import com.smule.smg.core.{SMGFetchCommand, SMGFetchCommandTree, SMGIndex, SMGLogger, SMGObjectView}
 import com.smule.smg.grapher.SMGAggObjectView
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import javax.inject.{Inject, Singleton}
@@ -26,6 +26,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   case class SMGSearchCacheData(
                                  allIndexes: Seq[SMGIndex],
                                  allViewObjects: Seq[SMGObjectView],
+                                 allPreFetches: Seq[SMGFetchCommand],
                                  pxesByRemote: Map[String, Array[Seq[String]]],
                                  sxesByRemote: Map[String, Array[Seq[String]]],
                                  tknsByRemote: Map[String, Array[Seq[String]]],
@@ -36,6 +37,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   private var cache: SMGSearchCacheData = SMGSearchCacheData(
     allIndexes = Seq(),
     allViewObjects = Seq(),
+    allPreFetches = Seq(),
     pxesByRemote = Map(),
     sxesByRemote = Map(),
     tknsByRemote = Map(),
@@ -163,6 +165,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     reloadCmdTokensAsync()
     var maxMaxLevels = 0
     val newIndexes = getAllIndexes
+    val newPrefetchCommands = getAllCommandsByRemote
     val byRemote = getAllViewObjectsByRemote
     val pxesByRemote = mutable.Map[String, Array[Seq[String]]]()
     val sxesByRemote = mutable.Map[String, Array[Seq[String]]]()
@@ -204,6 +207,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     cache = SMGSearchCacheData(
       allIndexes = newIndexes,
       allViewObjects = byRemote.flatMap(_._2),
+      allPreFetches = getAllCommandsByRemote.flatMap(_._2),
       pxesByRemote = pxesByRemote.toMap,
       sxesByRemote = sxesByRemote.toMap,
       tknsByRemote = tknsByRemote.toMap,
@@ -245,6 +249,13 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
       remotesApi.byId(rmt.id).map(_.indexes).getOrElse(Seq())
     }
 
+  private def getAllCommandsByRemote: Seq[(String,Seq[SMGFetchCommand])] = {
+    Seq((SMGRemote.local.id, configSvc.config.allPreFetches)) ++
+    configSvc.config.remotes.map { rmt => // preserving order
+      (rmt.id, remotesApi.byId(rmt.id).map(_.allPreFetches).getOrElse(Seq()))
+    }
+  }
+
   private def getAllViewObjectsByRemote: Seq[(String,Seq[SMGObjectView])] = Seq((SMGRemote.local.id, configSvc.config.viewObjects)) ++
     configSvc.config.remotes.map { rmt => // preserving order
       (rmt.id, remotesApi.byId(rmt.id).map(_.viewObjects).getOrElse(Seq()))
@@ -263,6 +274,12 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
       for (ix <- cache.allIndexes; if cnt < maxResults; if sq.indexMatches(ix)) {
         ret += SMGSearchResultIndex(ix, Seq()) // TODO get matching objects
         cnt += 1
+      }
+      if (cnt < maxResults) {
+        for (pf <- cache.allPreFetches; if cnt < maxResults; if sq.preFetchMatches(pf)) {
+          ret += SMGSearchResultCommand(pf)
+          cnt += 1
+        }
       }
       if (cnt < maxResults) {
         for (ov <- cache.allViewObjects; if cnt < maxResults; if sq.objectMatches(ov)) {

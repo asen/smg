@@ -1,6 +1,6 @@
 package com.smule.smg.config
 
-import com.smule.smg.core.SMGObjectView
+import com.smule.smg.core.{SMGFetchCommand, SMGObjectView}
 import com.smule.smg.remote.SMGRemote
 
 /**
@@ -27,6 +27,8 @@ trait SMGConfig {
     */
   val indexes: Seq[SMGConfIndex]
 
+  // exposed for search
+  val allPreFetches: Seq[SMGFetchCommand]
    /**
     * Helper maps to lookup indexes by id/local id
     */

@@ -396,11 +396,16 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
           log.ex(t, "SMGRemoteClient.fetchConfig: Unexpected exception while building subtree (ignored)")
         }
       }
+      val pfCmdsJsv = (jsval \ "preFetches")
+      val pfCmds = if (pfCmdsJsv.isDefined) {
+        pfCmdsJsv.as[Seq[SMGFetchCommand]]
+      } else Seq()
       try {
         val ret = SMGRemoteConfig(
           (jsval \ "globals").as[Map[String, String]],
           (jsval \ "objects").as[Seq[SMGObjectView]],
           indexes,
+          pfCmds,
           remote
         )
         Some(ret)
@@ -1119,6 +1124,7 @@ object SMGRemoteClient {
       "globals" -> conf.globals,
       "objects" -> Json.toJson(conf.viewObjects),
       "indexes" -> Json.toJson(conf.indexes),
+      "preFetches" -> Json.toJson(conf.allPreFetches),
       "urlPrefix" -> conf.urlPrefix
     )
   }
@@ -1221,8 +1227,8 @@ object SMGRemoteClient {
     }
   }
 
-  implicit val smgFetchCommandWrites = new Writes[SMGFetchCommand] {
-    def writes(fc: SMGFetchCommand) = {
+  implicit val smgFetchCommandWrites: Writes[SMGFetchCommand] = new Writes[SMGFetchCommand] {
+    def writes(fc: SMGFetchCommand): JsValue = {
       //  case class SMGMonHeatmap(lst: List[SMGMonState], statesPerSquare: Int)
       val mm = mutable.Map(
         "id" ->  Json.toJson(fc.id),
