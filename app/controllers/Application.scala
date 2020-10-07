@@ -724,7 +724,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
         val nc  = configSvc.config.objectNotifyConfs.get(ou.get.id)
         val ncmdsByVar = ou.get.vars.indices.map { vix =>
           val bySev = Seq(SMGMonNotifySeverity.ANOMALY, SMGMonNotifySeverity.WARNING,
-            SMGMonNotifySeverity.UNKNOWN, SMGMonNotifySeverity.CRITICAL).map { sev =>
+            SMGMonNotifySeverity.FAILED, SMGMonNotifySeverity.CRITICAL).map { sev =>
             val cmdBackoff = configSvc.objectVarNotifyCmdsAndBackoff(ou.get, Some(vix), sev)
             (sev, cmdBackoff._1, cmdBackoff._2)
           }.toList

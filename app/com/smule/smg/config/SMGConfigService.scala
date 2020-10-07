@@ -171,7 +171,7 @@ trait SMGConfigService {
 
     def cmdsForSeverity(vnc: SMGMonNotifyConf) = atSeverity match {
       case SMGMonNotifySeverity.CRITICAL => vnc.crit
-      case SMGMonNotifySeverity.UNKNOWN => vnc.unkn
+      case SMGMonNotifySeverity.FAILED => vnc.unkn
       case SMGMonNotifySeverity.WARNING => vnc.warn
       case SMGMonNotifySeverity.ANOMALY => vnc.anom
       case _ => { // should never happen ???
@@ -188,7 +188,7 @@ trait SMGConfigService {
         val oncCmdIds: Seq[String] = if (vixOpt.isDefined){
           oncOpt.get.varConf(vixOpt.get).flatMap( vnc => cmdsForSeverity(vnc))
         } else { //"Object level" notify comds, should only happen for unknown state??
-          if (atSeverity != SMGMonNotifySeverity.UNKNOWN) {
+          if (atSeverity != SMGMonNotifySeverity.FAILED) {
             SMGLogger.error(s"objectVarNotifyCmdsAndBackoff${ou.id}, $vixOpt) called for object with bad severity: $atSeverity")
           }
           ou.vars.indices.flatMap { vix =>
@@ -222,7 +222,7 @@ trait SMGConfigService {
     atSeverity match {
       case SMGMonNotifySeverity.SMGERR => config.globalSmgerrNotifyConf
       case SMGMonNotifySeverity.CRITICAL => config.globalCritNotifyConf
-      case SMGMonNotifySeverity.UNKNOWN => config.globalUnknNotifyConf
+      case SMGMonNotifySeverity.FAILED => config.globalUnknNotifyConf
       case SMGMonNotifySeverity.WARNING => config.globalWarnNotifyConf
       case SMGMonNotifySeverity.ANOMALY => config.globalAnomNotifyConf
       case _ => Seq()

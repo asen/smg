@@ -62,14 +62,14 @@ case class SMGMonitorLogMsg(ts: Int,
 
 object SMGMonitorLogMsg extends Enumeration {
   type SMGMonitorLogMsg = Value
-  val RECOVERY, ANOMALY, WARNING, UNKNOWN, CRITICAL, OVERLAP, SMGERR = Value
+  val RECOVERY, ANOMALY, WARNING, FAILED, CRITICAL, OVERLAP, SMGERR = Value
 
   def fromObjectState(os: SMGState.Value) = {
     os match {
       case SMGState.OK => this.RECOVERY
       case SMGState.ANOMALY => this.ANOMALY
       case SMGState.WARNING => this.WARNING
-      case SMGState.UNKNOWN => this.UNKNOWN
+      case SMGState.FAILED => this.FAILED
       case SMGState.CRITICAL => this.CRITICAL
       case _ => this.SMGERR
     }

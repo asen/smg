@@ -808,7 +808,7 @@ in the RRD.
 - **WARNING** - A retrieved value matched against some defined 
 "warning" threshold. 
 
-- **UNKNOWN** - A data retrieval failed - the external command 
+- **FAILED** - A data retrieval failed - the external command 
 (pre-)fetching data failed. This can happen for various reasons 
 including target host or service down. 
 
@@ -1332,7 +1332,7 @@ them:
 set by SMG in the child process environment:
 
 > - $SMG\_ALERT\_SEVERITY - one of  RECOVERY, ACKNOWLEDGEMENT, ANOMALY,
-  WARNING, UNKNOWN, CRITICAL, SMGERR, THROTTLED, UNTHROTTLED
+  WARNING, FAILED, CRITICAL, SMGERR, THROTTLED, UNTHROTTLED
 
 > - $SMG\_ALERT\_KEY - the affected object/var, pre-fetch or global issue
     identification string.

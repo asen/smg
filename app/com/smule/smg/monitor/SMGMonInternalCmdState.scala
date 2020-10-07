@@ -44,7 +44,7 @@ class SMGMonInternalCmdState(
 
   def processError(ts: Int, exitCode :Int, errors: List[String], isInherited: Boolean): Unit = {
     val errorMsg = s"Fetch error: exit=$exitCode, OUTPUT: " + errors.mkString("\n")
-    addState(SMGState(ts, SMGState.UNKNOWN, errorMsg), isInherited)
+    addState(SMGState(ts, SMGState.FAILED, errorMsg), isInherited)
   }
 
   def processSuccess(ts: Int, isInherited: Boolean): Unit = {
@@ -64,7 +64,7 @@ class SMGMonInternalCmdState(
       (ncmds, backoff)
     } else {
       val tuples = ous.
-        map(ou => myConfigSvc.objectVarNotifyCmdsAndBackoff(ou, None, SMGMonNotifySeverity.UNKNOWN))
+        map(ou => myConfigSvc.objectVarNotifyCmdsAndBackoff(ou, None, SMGMonNotifySeverity.FAILED))
       val backoff = tuples.map(_._2).max
       val ncmds = tuples.flatMap(_._1).distinct
       (ncmds, backoff)

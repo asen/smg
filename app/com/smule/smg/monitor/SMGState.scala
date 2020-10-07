@@ -11,7 +11,7 @@ import com.smule.smg.rrd.SMGRrd
 object SMGState extends Enumeration {
 
   // Sorted by severity
-  val OK, ANOMALY, WARNING, UNKNOWN, CRITICAL, SMGERR = Value
+  val OK, ANOMALY, WARNING, FAILED, CRITICAL, SMGERR = Value
 
   val hmsTimeFormat = new SimpleDateFormat("HH:mm:ss")
 
@@ -33,7 +33,8 @@ object SMGState extends Enumeration {
     nm match {
       case "E_ANOMALY" => this.ANOMALY
       case "E_VAL_WARN" => this.WARNING
-      case "E_FETCH" => this.UNKNOWN
+      case "E_FETCH" => this.FAILED
+      case "UNKNOWN" => this.FAILED
       case "E_VAL_CRIT" => this.CRITICAL
       case "E_SMGERR" => this.SMGERR
       case _ => this.withName(nm)
@@ -94,7 +95,7 @@ object SMGState extends Enumeration {
     0 -> "",   // OK
     1 -> "~",  // ANOMALY
     2 -> "^",  // WARNING
-    3 -> "?",  // UNKNOWN
+    3 -> "?",  // FAILED
     4 -> "!",  // CRITICAL
     5 -> "e"   // SMGERR
   )
@@ -103,7 +104,7 @@ object SMGState extends Enumeration {
     0 -> "white",  // OK
     1 -> "black",  // ANOMALY
     2 -> "black",  // WARNING
-    3 -> "white",  // UNKNOWN
+    3 -> "white",  // FAILED
     4 -> "white",  // CRITICAL
     5 -> "white"   // SMGERR
   )

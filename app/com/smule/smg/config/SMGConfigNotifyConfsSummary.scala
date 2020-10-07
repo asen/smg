@@ -106,7 +106,7 @@ object SMGConfigNotifyConfsSummary {
     val ncmds = sev match {
       case SMGState.ANOMALY => conf.globalAnomNotifyConf
       case SMGState.WARNING => conf.globalWarnNotifyConf
-      case SMGState.UNKNOWN => conf.globalUnknNotifyConf
+      case SMGState.FAILED => conf.globalUnknNotifyConf
       case SMGState.CRITICAL => conf.globalCritNotifyConf
     }
     VarsNotifyObjectConfSummary(
@@ -123,7 +123,7 @@ object SMGConfigNotifyConfsSummary {
   }
 
   private def notifyCommandsFetchErrorsSummary(conf: SMGLocalConfig) = {
-    // group all fetch cmd UNKNOWN state recipients
+    // group all fetch cmd FAILED state recipients
     val indexDefinedCmds = ListBuffer[SMGFetchCommand]()
     val objectDefinedCmds = ListBuffer[SMGFetchCommand]()
     val defaultCmds = ListBuffer[SMGFetchCommand]()

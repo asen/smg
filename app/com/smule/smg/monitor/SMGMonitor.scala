@@ -89,7 +89,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       val myIsInherited = if (cmd.get.preFetch.isDefined){
         val parentPfState = allMonitorStatesById.get(cmd.get.preFetch.get)
         parentPfState.isDefined &&
-          (parentPfState.get.currentState.state == SMGState.UNKNOWN)
+          (parentPfState.get.currentState.state == SMGState.FAILED)
       } else false
       pfState.processError(msg.ts, msg.exitCode, msg.errors, isInherited = myIsInherited)
       //update all children as they are not getting messages
