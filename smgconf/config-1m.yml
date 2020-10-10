@@ -15,7 +15,7 @@
   desc: "Check that localhost is UP"
   ignorets: true
   child_conc: 2
-  notify-unkn: mail-asen
+  notify-fail: mail-asen
 
 - $pre_fetch:
   id: fail_randomly

@@ -23,5 +23,5 @@ scrape:
 #      pre_fetch: host_localhost_up
 #      parent_index: localhost
 #      id_prefix: scrape-test.
-#      notify-unkn: "mail-asen"
+#      notify-fail: "mail-asen"
     - include: "/etc/smg/scrape-targets.d/*.{yml,yaml}"

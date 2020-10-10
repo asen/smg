@@ -9,7 +9,7 @@
 
 - $notify-global: mail-asen
 - $notify-crit: mail-asen
-- $notify-unkn: mail-asen
+- $notify-fail: mail-asen
 - $notify-warn: mail-asen
 #,pd
 - $notify-anom: mail-asen
@@ -28,7 +28,7 @@
 #  rows: 50
 #  sx: ""
 #  rx: ""
-  notify-unkn: mail-asen.lazarov
+  notify-fail: mail-asen.lazarov
   alerts:
    - label: val32
 #    label: 2

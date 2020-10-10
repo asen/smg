@@ -116,7 +116,8 @@ case class SMGLocalConfig(
 
   val globalSmgerrNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-global")
   val globalCritNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-crit")
-  val globalUnknNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-unkn")
+  val globalUnknNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-fail") ++
+    globalNotifyConf("$notify-unkn") // deprecated in favor of notify-fail
   val globalWarnNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-warn")
   val globalAnomNotifyConf: Seq[SMGMonNotifyCmd] = globalNotifyConf("$notify-anom") ++
     globalNotifyConf("$notify-spike") // deprecated in favor of notify-anom

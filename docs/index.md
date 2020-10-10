@@ -350,7 +350,9 @@ commands do not need to go to the target server but can use the cached
 local data. For example we use a pre\_fetch command to get all SNMP 
 values we care about from a given host in a single shot (about sysload, 
 cpu usage, i/o, mem etc). Then we update many RRD objects from the 
-pre-fetched data.
+pre-fetched data. Since recently pre\_fetch also supports passing the command
+stdout directly to the child command stdin without the need to use temp
+files.
  
 In addition pre\_fetch itself can specify another pre\_fetch command
 to be its parent. That way one can define a hierarchical command tree 
@@ -361,7 +363,7 @@ _ping -c 1 ip.addr_ pre\_fetch command for given host and then all
 other pre\_fetches (or actual rrd objects) for that host can have the 
 ping pre\_fetch defined as parent and will not run  at all if e.g. the 
 host is down (not ping-able). Having such setup will also make SMG only
-send a single "unknown" alert if a host is down (vs alerts for each 
+send a single "failed" alert if a host is down (vs alerts for each 
 individual command).
 
 An important note is that SMG will execute child pre-fetch commands in sequence (but 
@@ -463,6 +465,20 @@ regular expressions will be matched by the filter.
 
 - when set, only object ids NOT matching the 
 specified regular expressions will be matched by the filter. 
+
+<a name="flt-prx" />
+
+##### Parent Regex filter
+
+- when set, only objects whose parent ids match the specified
+regular expressions will be matched by the filter. 
+
+<a name="flt-labels" />
+
+##### Labels filter
+
+- when set, only objects whitch match the corresponding labels
+expression will be matched by the filter. 
 
 <a name="flt-index" />
 
@@ -584,7 +600,8 @@ The current workaround to that limitation is to set a high-enough
 *rows* parameter so you get all the graphs you want to sort on one page
 which you can sort after.
 
-This feature is subject to future improvements too.
+A special case of sorting is group by (with value of x-sort=-1). In this
+case graphs will be grouped for display based on the Group By drop down value.
 
 <a name="concepts-aggregate-functions" />
 
@@ -618,7 +635,6 @@ aggregation by selecting the respective check-box, before clicking
 on the aggregate function button. This works by downloading the 
 remote rrd files locally and then producing an image from them
 so it is expected to be somewhat slower.
-
 
 <a name="concepts-view-objects" />
 
@@ -762,6 +778,21 @@ what the SMG JMX plugins provides. Documentation TBD
 of value checks - anomaly detection and period-over-period check. Plugin checks
 are configured using the special alert-p-<pluginId>-<checkId>: "<conf>" config
 attribute.
+
+- rrdchk - being able to check and fix rrd files for cinsistency with configuration
+
+- scrape - a "Prometheus replacement" plugin which can generate SMG objects/configs
+from "scrape targets" wich are http end-points exposing metrics in specifc
+(OpenMetrics) format, usually at /metrics URL. Note that SMG itself exposes such
+/metrics end-point and the scrape plugin is enabled to process localhost:9000/metrcis
+by default. TODO - config reference doc.
+
+- kube - a (work-in-progress) Kubernetes monitoring plugin. It is able to auto-discover
+K8s nodes, end-points, services etc an dmetrics from that (in similar way Prometheus does
+that). TODO - config reference doc
+
+- influxdb - plugin to forward all data writes to an influxdb end-point (in batches)
+in format compatible with the Prometheus influxdb adapter.
 
 <a name="concepts-monitoring" />
 
@@ -1159,7 +1190,7 @@ and use the first child timestamp which doesn't have that property. In addition
 pre\_fetch can have a **child\_conc** property (default 1 if not specified)
 which determines how many threads can execute this pre-fetch child pre-fetches
 (but not object commands which are always parallelized). Pre fetch also
-supports **notify-unkn** - to override alert recipients for failure (check
+supports **notify-fail** - to override alert recipients for failure (check
 [monitoring config](#monitoring) for details). Here are two example pre_fetch
 definitions, one referencing the other as a parent:
 
@@ -1167,9 +1198,10 @@ definitions, one referencing the other as a parent:
 <pre>
 
     - $pre_fetch:
+      desc: "check if localhost is up"
       id: host.host1.up
       command: "ping -c 1 host1 >/dev/null"
-      notify-unkn: mail-asen, notif-pd
+      notify-fail: mail-asen, notif-pd
       child_conc: 2
       ignorets: true
       timeout: 5
@@ -1349,8 +1381,8 @@ ids, to be executed on any global SMG errors (usually - overlaps)
 - **$notify-crit**: a comma separated list of list of $notify-command
 ids, to be executed on any (global or object-specific) critical errors
 
-- **$notify-unkn**: a comma separated list of list of $notify-command
-ids, to be executed on any (global or object-specific) "unknown" (i.e.
+- **$notify-fail**: a comma separated list of list of $notify-command
+ids, to be executed on any (global or object-specific) "failed" (i.e.
 fetch command failure) errors
 
 - **$notify-warn**: a comma separated list of list of $notify-command
@@ -1408,7 +1440,7 @@ which could look like this:
   rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
   pre_fetch: some_pf_id                                 # optional - specify pre_fetch command id.
-  notify-unkn: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
+  notify-fail: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
   vars:                                                 # mandatory list of all variables to graph
     - label: sl1min                                     # the variable label.
       min: 0                                            # optional - min accepted rrd value, default 0
@@ -1548,7 +1580,7 @@ for this object. By default SMG will pick one based on object interval.
 
 - **notify-xxx**: - these are multiple properties which define
 monitoring alert notifications. Check [monitoring config](#monitoring)
-for details. Note that from the per-leve specifiers only notify-unkn
+for details. Note that from the per-leve specifiers only notify-fail
 is relevant at this level.
 
 <a name="rrd-agg-objects" />
@@ -1575,7 +1607,7 @@ aggregation functions. An aggrgegate RRD object is defined by prepending a
   rrd_type: GAUGE                                       # optional - if not set, the rrd_type of the first object will be used
   rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
-  notify-unkn: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
+  notify-fail: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
   vars:                                                 # optional list of all variables to graph. If not set the first object vars list will be used.
     - label: sl1min                                     # the variable label.
       min: 0                                            # optional - min accepted rrd value, default 0
@@ -2093,7 +2125,7 @@ consecutive error states to be considered a hard error and in turn -
 trigger alert notifications.
 
     notify-crit: notify-cmd-id-1,notify-cmd-id-2,...
-    notify-unkn: notify-cmd-id-1,notify-cmd-id-2,...
+    notify-fail: notify-cmd-id-1,notify-cmd-id-2,...
     notify-warn: notify-cmd-id-1,notify-cmd-id-2,...
     notify-anom: notify-cmd-id-1,notify-cmd-id-2,...
     notify-disable: true

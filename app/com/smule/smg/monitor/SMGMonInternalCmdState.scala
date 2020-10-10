@@ -59,7 +59,7 @@ class SMGMonInternalCmdState(
       val ncmds = if (myNotifyConf.get.notifyDisable)
         Seq()
       else
-        myNotifyConf.get.unkn.map(s => myConfigSvc.config.notifyCommands.get(s)).filter(_.isDefined).map(_.get)
+        myNotifyConf.get.fail.map(s => myConfigSvc.config.notifyCommands.get(s)).filter(_.isDefined).map(_.get)
       val backoff = myNotifyConf.get.notifyBackoff.getOrElse(myConfigSvc.config.globalNotifyBackoff)
       (ncmds, backoff)
     } else {

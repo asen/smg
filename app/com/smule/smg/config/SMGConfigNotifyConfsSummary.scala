@@ -140,7 +140,7 @@ object SMGConfigNotifyConfsSummary {
       CommandsNotifyIndexConfSummary(
         isHidden = nc.src == SMGMonAlertConfSource.HINDEX,
         srcId = nc.srcId,
-        notifyCmds = nc.unkn,
+        notifyCmds = nc.fail,
         notifyBackoff = nc.notifyBackoff,
         notifyDisable = nc.notifyDisable,
         notifyStrikes = nc.notifyStrikes,
@@ -151,7 +151,7 @@ object SMGConfigNotifyConfsSummary {
 
     val objsCmds = objectDefinedCmds.groupBy { cmd =>
       cmd.notifyConf.map{ x =>
-        (x.unkn, x.notifyBackoff, x.notifyDisable, x.notifyStrikes)
+        (x.fail, x.notifyBackoff, x.notifyDisable, x.notifyStrikes)
       }.get
     }.map { case (gbKey, cmdSeq) =>
       val cmdIds = cmdSeq.map(_.id)

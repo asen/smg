@@ -171,7 +171,7 @@ trait SMGConfigService {
 
     def cmdsForSeverity(vnc: SMGMonNotifyConf) = atSeverity match {
       case SMGMonNotifySeverity.CRITICAL => vnc.crit
-      case SMGMonNotifySeverity.FAILED => vnc.unkn
+      case SMGMonNotifySeverity.FAILED => vnc.fail
       case SMGMonNotifySeverity.WARNING => vnc.warn
       case SMGMonNotifySeverity.ANOMALY => vnc.anom
       case _ => { // should never happen ???
