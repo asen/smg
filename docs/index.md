@@ -1176,61 +1176,6 @@ size. Only draw back is that the resulting URLs will not be shareable. This
 needs to be set to around 2000 for IE support, and can be raised to 32k if
 one does not care about Android and IE.
 
-<a name="pre_fetch" />
-
-- **$pre\_fetch**: pre\_fetch is special and it is not a simple name ->
-value pair. A $pre\_fetch defines an unique **id** and a **command** to
-execute, together with an optional **timeout** for the command
-(30 seconds by default) and an optional "parent" pre\_fetch id. If
-a **pass\_data** property is defined and is set to true the stdout of the
-command will be passed to all child commands as stdin. By default
-SMG will use the timestamp of the top-level pre-fetch for RRD updates. One
-can set the **ignorets** property to ignore the timstamp of the pre-fetch
-and use the first child timestamp which doesn't have that property. In addition
-pre\_fetch can have a **child\_conc** property (default 1 if not specified)
-which determines how many threads can execute this pre-fetch child pre-fetches
-(but not object commands which are always parallelized). Pre fetch also
-supports **notify-fail** - to override alert recipients for failure (check
-[monitoring config](#monitoring) for details). Here are two example pre_fetch
-definitions, one referencing the other as a parent:
-
-<blockquote>
-<pre>
-
-    - $pre_fetch:
-      desc: "check if localhost is up"
-      id: host.host1.up
-      command: "ping -c 1 host1 >/dev/null"
-      notify-fail: mail-asen, notif-pd
-      child_conc: 2
-      ignorets: true
-      timeout: 5
-
-    - $pre_fetch:
-      id: host.host1.snmp.vals
-      command: "snmp_get.sh o1 laLoad.1 laLoad.2 ssCpuRawUser.0 ssCpuRawNice.0 ..."
-      pre_fetch: host.host1.up
-      pass_data: true
-      timeout: 30
-
-</pre>
-</blockquote>
-
-> As explained in the [concepts overview](#concepts-pre_fetch) SMG
-RRD objects can specify a pre\_fetch command to execute before their
-own command gets executed (for the current interval run). That way
-multiple objects can be updated from given source (e.g. host/service)
-while hitting it only once per interval. Pre\_fetch itself can have
-another pre\_fetch defined as a parent and one can form command trees
-to be run top-to-bottom (stopping on failure).
-
-> Note that the "run tree" defined in this way must not have cycles
-which can be created in theory by circularly pointing pre\_fetch parents
-to each other (possibly via other ones). Currently SMG will reject
-the config update if circular parent depenencies in the run-tree are
-detected (detection is simply having a hard limit of max 10 parent
-levels when constructing the run trees).
-
 <a name="remote" />
 
 - **$remote**: similar to $pre\_fetch $remote is special and is not
@@ -1419,6 +1364,79 @@ be considered a hard error and in turn - trigger alert notifications.
 - **$cdash**: Defining a custom dashboard. Check for details
 [below](#cdash)
 
+<a name="pre_fetch" />
+
+- **$pre\_fetch**: pre\_fetch is special and it is not a simple name ->
+value pair. A $pre\_fetch defines an unique **id** and a **command** to
+execute, together with an optional **timeout** for the command
+(30 seconds by default) and an optional "parent" pre\_fetch id. If
+a **pass\_data** property is defined and is set to true the stdout of the
+command will be passed to all child commands as stdin. By default
+SMG will use the timestamp of the top-level pre-fetch for RRD updates. One
+can set the **ignorets** property to ignore the timstamp of the pre-fetch
+and use the first child timestamp which doesn't have that property. In addition
+pre\_fetch can have a **child\_conc** property (default 1 if not specified)
+which determines how many threads can execute this pre-fetch child pre-fetches
+(but not object commands which are always parallelized). Pre fetch also
+supports **notify-fail** - to override alert recipients for failure (check
+[monitoring config](#monitoring) for details). Here are two example pre_fetch
+definitions, one referencing the other as a parent:
+
+<blockquote>
+<pre>
+
+    - $pre_fetch:
+      desc: "check if localhost is up"
+      id: host.host1.up
+      command: "ping -c 1 host1 >/dev/null"
+      notify-fail: mail-asen, notif-pd
+      child_conc: 2
+      ignorets: true
+      timeout: 5
+
+    - $pre_fetch:
+      id: host.host1.snmp.vals
+      command: "snmp_get.sh o1 laLoad.1 laLoad.2 ssCpuRawUser.0 ssCpuRawNice.0 ..."
+      pre_fetch: host.host1.up
+      pass_data: true
+      timeout: 30
+
+Alternate (new) syntax:
+
+    - type: pre_fetch
+      desc: "check if localhost is up"
+      id: host.host1.up
+      command: "ping -c 1 host1 >/dev/null"
+      notify-fail: mail-asen, notif-pd
+      child_conc: 2
+      ignorets: true
+      timeout: 5
+
+    - type pre_fetch
+      id: host.host1.snmp.vals
+      command: "snmp_get.sh o1 laLoad.1 laLoad.2 ssCpuRawUser.0 ssCpuRawNice.0 ..."
+      pre_fetch: host.host1.up
+      pass_data: true
+      timeout: 30
+
+</pre>
+</blockquote>
+
+> As explained in the [concepts overview](#concepts-pre_fetch) SMG
+RRD objects can specify a pre\_fetch command to execute before their
+own command gets executed (for the current interval run). That way
+multiple objects can be updated from given source (e.g. host/service)
+while hitting it only once per interval. Pre\_fetch itself can have
+another pre\_fetch defined as a parent and one can form command trees
+to be run top-to-bottom (stopping on failure).
+
+> Note that the "run tree" defined in this way must not have cycles
+which can be created in theory by circularly pointing pre\_fetch parents
+to each other (possibly via other ones). Currently SMG will reject
+the config update if circular parent depenencies in the run-tree are
+detected (detection is simply having a hard limit of max 10 parent
+levels when constructing the run trees).
+
 <a name="rrd-objects" />
 
 ### RRD objects
@@ -1430,7 +1448,7 @@ values to update. A rrd object is represented by a yaml structure
 which could look like this:
 
 <pre>
-- host.localhost.sysload:                               # rrd object id
+- id: host.localhost.sysload                            # rrd object id
   command: "smgscripts/mac_localhost_sysload.sh"        # mandatory command outputting values
   timeout: 30                                           # optional - fetch command timeout, default 30
   title: "Localhost sysload (1/5/15 min)"               # optional title - object id will be used if no title is present
@@ -1441,6 +1459,8 @@ which could look like this:
   stack: false                                          # optional - stack graph lines if true, default - false
   pre_fetch: some_pf_id                                 # optional - specify pre_fetch command id.
   notify-fail: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
+  labels:                                               # optional - arbitrary map of key/valu labels, useful for filtering
+    foo: bar                                            #            and grouping by
   vars:                                                 # mandatory list of all variables to graph
     - label: sl1min                                     # the variable label.
       min: 0                                            # optional - min accepted rrd value, default 0
@@ -1455,8 +1475,9 @@ which could look like this:
 
 Most properties are optional except:
 
-- the **object id**: (the key after the dash defining the start of the
-object, *host.localhost.sysload* in the example) must be unique for the
+- **object id** - in the old syntax that would be the key after the dash
+defining the start of the object, *host.localhost.sysload* in the example.
+The new syntax explicitly sets the id key/value. It must be unique for the
 local SMG instance and consist only of alpha-numeric characters
 and the '\_', '-' and '.' symbols. By convention, ids should be defined
 like **&lt;class>.&lt;subclass>\[.&lt;subclass>\...].&lt;object>**,
@@ -1583,6 +1604,9 @@ monitoring alert notifications. Check [monitoring config](#monitoring)
 for details. Note that from the per-leve specifiers only notify-fail
 is relevant at this level.
 
+- **labels**: (default - empty map) - a map of key/vaule pairs useful for
+filtering and grouping by.
+
 <a name="rrd-agg-objects" />
 
 ### Aggrgegate RRD objects
@@ -1597,7 +1621,7 @@ aggregation functions. An aggrgegate RRD object is defined by prepending a
 '+' to the object id. Example:
 
 <pre>
-- +agg.hosts.sysload:                                   # aggregate rrd object id
+- id: +agg.hosts.sysload                                # aggregate rrd object id, must start with + char
   op: AVG                                               # mandatory aggregate function to apply
   ids:                                                  # mandatory list of object ids
     - host.host1.sysload                                # regular rrd object id, currently must be defined before this object in the config
@@ -1608,6 +1632,8 @@ aggregation functions. An aggrgegate RRD object is defined by prepending a
   rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
   notify-fail: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
+  labels:                                               # optional - arbitrary map of key/valu labels, useful for filtering
+    foo: bar                                            #            and grouping by
   vars:                                                 # optional list of all variables to graph. If not set the first object vars list will be used.
     - label: sl1min                                     # the variable label.
       min: 0                                            # optional - min accepted rrd value, default 0
@@ -1746,7 +1772,7 @@ objects and their object ids start with the _'^'_ special  symbol.
 Here is an example Index definition:
 
 <pre>
-    - ^hosts.localhost:                # index id
+    - id: ^hosts.localhost       # index id, must start with a ^ char
       title: "localhost graphs"  # optional - id (sans the ^ char) will be used if not specified
       cols: 6                    # optional (default - the value of $dash-default-cols) how many coulmns of graph images to display
       rows: 10                   # optional (default - the value of $dash-default-rows) how many rows (max) to display. excess rows are paginated
@@ -1846,6 +1872,10 @@ A filter (and its graph options) is configured as part of an
 index definition using the following properties (along with the rest
 index properties):
 
+- **trx** (Text Regex) - when set, only objects with titles, object ids,
+graph labels or measurement units matching the specified regular
+expressions will be matched by the filter.
+
 - **px** (Prefix) - when set, only object ids having the specified
 prefix string (starting with it) will be matched by the filter.
 Note that this is not a regexp but a direct string comparison.
@@ -1860,9 +1890,34 @@ regular expressions will be matched by the filter.
 - **rxx** (Regex Exclude) - when set, only object ids NOT matching the
 specified regular expressions will be matched by the filter.
 
-- **trx** (Text Regex) - when set, only objects with titles, object ids,
-graph labels or measurement units matching the specified regular
-expressions will be matched by the filter.
+- **prx** (Parent regex filter) - when set, only object with parent/pre\_fetch
+ids matching the specified regular expressions will be matched by the filter.
+
+- **lbls** (Labels expression filter) - when set, only objects which have
+object labels matching the provided label expression will be matched by the filter.
+Note that object labels are a new feature (and separate from object vars
+graph display labels).
+
+    Label expressions can consist of:
+    - just a label name - in which case object labels having that label name will
+match regardless of their label value
+    
+    - label-name=label-value - both the name and the value must mutch
+    
+    - label-name!=label-value - object must have label with the specified name but
+    value must be different than label-value
+    
+    - label-name=~label-value - label value is treated as regex and object's value
+    for the same label must match that.
+    
+    - label-name!=~label-value - label value is treated as regex and object's value
+    for the same label must NOT match that.
+
+    All of these can be prepended with an ! to inverse their effect (i.e. whetehr to
+include or exclude matching objects). The labels filter supports multiple
+expressions sepaarted by space. This means that spaces in label value filters are
+not currently supported (as a workaround - use regex and \s). 
+  
 
 - **remote** (Remote instance, by default - None, meaning local).
 This should be either set to "\*" (quoted in the yaml as the asterisk
