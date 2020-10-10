@@ -7,6 +7,9 @@ RUN yum install -y gcc make cairo-devel pango-devel libxml2-devel freetype-devel
     java-11-openjdk-devel socat
 RUN yum install -y rrdtool
 
+# needed to be able to send e-mail alerts
+RUN yum install -y mailx
+
 # optional tools, helpful to have in the container (none of these is required by SMG)
 RUN yum install -y diffutils nmap-ncat
 # install some clients for common services. note that we don't need the services, just their clients

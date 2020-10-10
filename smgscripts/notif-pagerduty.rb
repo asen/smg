@@ -43,7 +43,7 @@ hash = {
 
 proxy_host = nil
 proxy_port = nil
-proxy_str= ENV["https_proxy"] || ENV["http_proxy"]
+proxy_str= ENV["https_proxy"] || ENV["HTTPS_PROXY"]
 if proxy_str
   proxy_str=proxy_str.gsub(/https?:\/\//,"")
   if proxy_str != ""
