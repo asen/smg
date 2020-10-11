@@ -1,6 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  - 00-rbac.yaml
   - 00-volume.yaml
   - 01-config.yaml
   - 02-deploy.yaml

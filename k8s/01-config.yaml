@@ -1,20 +1,84 @@
+# Base for config, will likely want to edit
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: smg-configmap
 data:
   000-rrdcached.yml: |
+    # set this only once and before any objects are defined. never change.
+    - $rrd_dir_levels: "1:1"
     # /opt/rrdtool/bin/rrdcached -g -l unix:/var/rrdtool/rrdcached/rrdcached.sock -m 664 -b /var/rrdtool/rrdcached
     ## path to rrdcached socket, if used. sync this with the deploy yaml if changing
     - $rrd_socket: /var/rrdtool/rrdcached/rrdcached.sock
 
     ## set $rrdcached_update_batch_size to more than 1 to enable batched updates via socat and rrdcached protocol
     ## the following properties set the external socat command to use and whether to flush writes at the end of
-    ## every run or before every read. Check teh docs for more details
-    - $rrdcached_update_batch_size: 10
+    ## every run or before every read. Check the docs for more details
+    - $rrdcached_update_batch_size: 1000
     #- $rrdcached_socat_command: "socat"
     #- $rrdcached_flush_all_on_run: false
     #- $rrdcached_flush_on_read: true
+    # some RRA defs suitable for kube/scrape plugins and every 15sec intervals
+    - $rra_def:
+      id: kube_dtl_15s
+      rra:
+        - "RRA:AVERAGE:0.5:1:5760"  # 15 sec - 1 day
+        - "RRA:AVERAGE:0.5:20:4320"  # 5M - 15d
+        - "RRA:AVERAGE:0.5:120:2880"  # 30M - 60d
+    - $rra_def:
+      id: kube_agg_15s
+      rra:
+        - "RRA:AVERAGE:0.5:1:5760"  # 15 sec - 1 day
+        - "RRA:AVERAGE:0.5:20:4320"  # 5M - 15d
+        - "RRA:AVERAGE:0.5:120:2880"  # 30M - 60d
+        - "RRA:AVERAGE:0.5:1440:3000"  # 6h - 750d
+
   custom.yml: |
+    # Uncomment and edit to enable InfluxDb writes
+    # - $influxdb_write_host_port: "influxdb:8086"
+    # - $influxdb_write_url_path: "/api/v2/write?bucket=smg_db&precision=s"
+    # - $influxdb_write_url_proto: "http"
+    # - $influxdb_write_batch_size: 100
+    # - $influxdb_write_timeout_ms: 30000
+    # - $influxdb_strip_group_index: true
+
     # TODO add your stuff here
     - $dummy_global: value
+
+---
+# enable K8s cluster monitoring via the Kube plugin-define our target (this below assumes running in the cluster)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smg-kube-configmap
+data:
+  skube.yml: |
+    - uid: skube
+      name: skube
+      # kube_conf_file: "/etc/smg/kube-config"
+      kube_token_file: "/etc/smg/kube-token/token"
+      # kube_url: "https://kubernetes.default.svc"
+      # fetch_command: 'curl -f -sS -k -H "Authorization: Bearer `cat /etc/smg/kube-token/token`"'
+      fetch_command: ':scrape fetch :tokenf /etc/smg/kube-token/token'
+      need_parse: false
+      interval: 15
+      fetch_timeout: 8
+      rra_dtl: kube_dtl_15s
+      rra_agg: kube_agg_15s
+      node_metrcis:
+        - uid: node
+          proto: http
+          port_path: ":9100/metrics"
+        - uid: kubelet
+          proto: https
+          port_path: ":10250/metrics"
+        - uid: cadvisor
+          proto: https
+          port_path: ":10250/metrics/cadvisor"
+      # service:
+      #   enabled: true
+      endpoint:
+        enabled: true
+        filter:
+          # not really metrics
+          rxx: kube-state-metrics.http-metrics
