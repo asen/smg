@@ -30,17 +30,6 @@ Binary releases available here: https://github.com/asen/smg/releases
 
 Docker image: docker.pkg.github.com/asen/smg/smg-1.1:latest
 
-## Build
-
-```
-    $ git clone git@github.com:asen/smg.git
-    $ cd smg
-    $ git checkout release # recommended, to get on a stable branch
-    $ ./build-smg.sh
-    ...
-    *** Done. Output in target/universal/smg-1.0.tgz
-```
-
 ## Run in container
 
 * mkdir -p /opt/smg/data /etc/smg/conf.d
@@ -56,7 +45,7 @@ Docker image: docker.pkg.github.com/asen/smg/smg-1.1:latest
 
 ## Run in k8s
 
-Check the k8s/ for example deployment yamls, including in-cluster monitoring
+Check the k8s/ dir for example deployment yamls, including in-cluster monitoring
 with auto-discovery (similar to Prometheus)
 
 ## Install and configure in classic mode
@@ -134,6 +123,18 @@ stop SMG.
 * Point your browser to localhost:9000 (localhost:9000/assets/docs/index.html 
 for documentation, replace localhost with the host where SMG was 
 installed if different).
+
+## Build drom source
+
+```
+    $ git clone git@github.com:asen/smg.git
+    $ cd smg
+    $ git checkout release # recommended, to get on a stable branch
+    $ ./build-smg.sh
+    ...
+    *** Done. Output in target/universal/smg-1.1.tgz
+```
+
 
 ## Development setup (Mac)
 
