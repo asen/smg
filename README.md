@@ -28,6 +28,8 @@ Docs on github: https://github.com/asen/smg/blob/master/docs/index.md
 
 Binary releases available here: https://github.com/asen/smg/releases
 
+Docker image: docker.pkg.github.com/asen/smg/smg-1.1:latest
+
 ## Build
 
 ```
@@ -39,7 +41,25 @@ Binary releases available here: https://github.com/asen/smg/releases
     *** Done. Output in target/universal/smg-1.0.tgz
 ```
 
-## Install and configure
+## Run in container
+
+* mkdir -p /opt/smg/data /etc/smg/conf.d
+
+* docker run -d --name smg -p 9000:9000 -v /opt/smg/data -v /etc/smg/conf.d/ \
+    docker.pkg.github.com/asen/smg/smg-1.1:latest
+
+* Point your browser to http://$DOCKER_HOST:9000
+
+* Then add stuff under /etc/smg/conf.d and to reload conig use one of:
+  * docker exec smg /opt/smg/inst/smg/smgscripts/reload-conf.sh
+  * curl -X POST http://$DOCKER_HOST:9000/reload
+
+## Run in k8s
+
+Check the k8s/ for example deployment yamls, including in-cluster monitoring
+with auto-discovery (similar to Prometheus)
+
+## Install and configure in classic mode
 
 * Install prerequisites (e.g on linux):
 

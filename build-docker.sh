@@ -9,9 +9,13 @@ if [ "$1" == "--push" ] ; then
     shift
 fi
 
-IMAGE_VERSION=${IMAGE_VERSION:-0.1}
-IMAGE_NAME=${IMAGE_NAME:-asen/smg}
 export VERSION=${VERSION:-1.1}
+
+IMAGE_VERSION=${IMAGE_VERSION:-0.1}
+IMAGE_NAME=${IMAGE_NAME:-docker.pkg.github.com/asen/smg/smg-$VERSION}
+
+
+echo "Using VERSION=$VERSION IMAGE_NAME=$IMAGE_NAME IMAGE_VERSION=$IMAGE_VERSION"
 
 ./build-smg.sh --no-pkg
 
