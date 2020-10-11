@@ -16,6 +16,9 @@ RUN yum install -y diffutils nmap-ncat
 # also some scripting languages and tools to make writing fetch commands easy
 RUN yum install -y mysql redis net-snmp-utils ruby python36 jq perl-XML-XPath bind-utils
 
+RUN yum -y install python3-pip
+RUN pip3 install awscli
+
 RUN echo '#!/bin/bash' > /usr/bin/tail-log ; \
     echo "tail -n2000 -f /opt/smg/inst/smg/logs/application.log" >> /usr/bin/tail-log ; \
     chmod +x /usr/bin/tail-log
