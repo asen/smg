@@ -69,20 +69,22 @@ object SMGKubeClient {
       case "DaemonSet" => 1            //"-xxxxx"
       case "ReplicaSet" => 2            //"-xxxxxxxxxx-xxxxx"
       case "StatefulSet" => 2           //"-xxxxxxxxxx-xxxxx" ??? TODO
-      case "Job" => 2                   //"-<timestamp>-xxxxx"
+      case "Job" => 1                   //"-<timestamp>-xxxxx"
       case "ReplicationController" => 1 //"-xxxxx"
       case "Node" => 0                  //drop nothing
       case _ => 0
     }
 
     def podStableUid(podName: String, groupIndex: Option[Int]): String = {
-      val stableName = if (stripSuffixTokens > 0){
+      var stableName = if (stripSuffixTokens > 0){
         val ret = podName.split("-").dropRight(stripSuffixTokens).mkString("-")
         if (ret.isBlank)
           podName
         else
           ret
       } else podName
+      if (kind == "Job" && kind.matches("-\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d$"))
+        stableName = stableName.split("-").dropRight(1).mkString("-")
       OpenMetricsStat.groupIndexUid(stableName, groupIndex)
     }
   }
@@ -258,7 +260,9 @@ class SMGKubeClient(log: SMGLoggerApi,
         }
         owners.headOption
       }
-      val labels = Option(jpod.getMetadata.getLabels).map(_.asScala.toMap).getOrElse(Map())
+      val podNodeName = Option(jpod.getSpec.getNodeName).getOrElse("undefined")
+      val labels = Option(jpod.getMetadata.getLabels).map(_.asScala.toMap).getOrElse(Map()) ++
+        Map("smg_pod_node" -> podNodeName)
       val ports = jpod.getSpec.getContainers.asScala.flatMap{ c => c.getPorts.asScala }.map { cp =>
         KubeEndpointPort(port = cp.getContainerPort,
           protocol = Option(cp.getProtocol).getOrElse("None"),
@@ -266,7 +270,7 @@ class SMGKubeClient(log: SMGLoggerApi,
       }
       KubePod(podName,
         podNamespace,
-        Option(jpod.getSpec.getNodeName).getOrElse("undefined"),
+        podNodeName,
         owner,
         labels,
         Option(jpod.getStatus.getPodIP),
