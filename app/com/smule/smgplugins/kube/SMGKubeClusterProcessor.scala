@@ -463,6 +463,12 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           idxPrefix + "endpoint.",
           myParentIndexId
         )
+      if (cConf.podPortsConf.enabled) // top level podPorts metrics index
+        ret += myIndexDef(cConf.podPortsIndexId.get,
+          s"Kubernetes cluster ${cConf.uid} - auto discovered metrics from pod listen ports",
+          idxPrefix + "pod_port.",
+          myParentIndexId
+        )
       ret.toList
     } else Seq()
   }
