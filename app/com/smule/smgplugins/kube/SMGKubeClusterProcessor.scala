@@ -6,7 +6,7 @@ import java.nio.file.{Files, Paths}
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
 import com.smule.smg.core._
 import com.smule.smg.openmetrics.OpenMetricsStat
-import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNsObject, KubePort, KubeService, KubePod}
+import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNamedObject, KubeNsObject, KubePod, KubePort, KubeService}
 import com.smule.smgplugins.scrape.{OpenMetricsResultData, SMGScrapeTargetConf}
 import org.yaml.snakeyaml.Yaml
 
@@ -179,7 +179,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         labelsInUids = false,
         extraLabels = Map("smg_target_type"-> autoConf.targetType,
           "smg_target_host"-> ipAddr,
-          "smg_target_port" -> kubePort.port.toString),
+          "smg_target_port" -> kubePort.port.toString) ++ nsObject.labels,
         rraDefAgg = cConf.rraDefAgg,
         rraDefDtl = cConf.rraDefDtl,
         needParse = cConf.needParse
@@ -217,14 +217,26 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
-  def processPodPortConf(cConf: SMGKubeClusterConf, kubePod: KubePod) : Seq[SMGScrapeTargetConf] = {
-    if (kubePod.podIp.isEmpty) {
-      log.info(s"SMGKubeClusterProcessor.processPodPortConf(${cConf.uid}): processPodPortConf ${kubePod.name} has no IP")
-      return Seq()
-    }
-    kubePod.ports.flatMap { podPort =>
-      processAutoPortConf(cConf, cConf.podPortsConf, kubePod,
-        kubePod.podIp.get, podPort, None, cConf.podPortsIndexId)
+  def processPodsPortConfs(cConf: SMGKubeClusterConf, pods: Seq[KubePod]) : Seq[SMGScrapeTargetConf] = {
+    pods.groupBy { p =>
+      p.owner.map { ow =>
+        (ow.kind, ow.name, p.stableUid(None))
+      }
+    }.toSeq.sortBy(_._1).flatMap { case (gbKeyOpt, podSeq) =>
+      var idx: Option[Int] = if (podSeq.size > 1)  Some(0) else None
+      podSeq.flatMap { pod =>
+        if (pod.podIp.isEmpty){
+          log.debug(s"SMGKubeClusterProcessor.processPodPortConf(${cConf.uid}): processPodPortConf ${pod.name} has no IP")
+          Seq()
+        } else {
+          if (idx.isDefined) idx = Some(idx.get + 1)
+          val nobj = KubeNamedObject(pod.stableUid(idx), pod.namespace, pod.labels)
+          pod.ports.flatMap { podPort =>
+            processAutoPortConf(cConf, cConf.podPortsConf, nobj,
+              pod.podIp.get, podPort, None, cConf.podPortsIndexId)
+          }
+        }
+      }
     }
   }
 
@@ -327,9 +339,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         }
       } else Seq()
       val podPortsMetricsConfs: Seq[SMGScrapeTargetConf] = if (cConf.podPortsConf.enabled){
-        kubeClient.listPods.flatMap { pod =>
-          processPodPortConf(cConf, pod)
-        }
+        processPodsPortConfs(cConf, kubeClient.listPods)
       } else Seq()
       // dump
       val objsLst = new java.util.ArrayList[Object]()

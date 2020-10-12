@@ -22,18 +22,30 @@ object SMGKubeClient {
   trait KubeNsObject {
     val name: String
     val namespace: String
+    val labels: Map[String, String]
   }
+
+  case class KubeNamedObject(
+                              name: String,
+                              namespace: String,
+                              labels: Map[String, String]
+                            ) extends KubeNsObject
 
   case class KubeServicePort(port: Int, protocol: String,
                              name: Option[String], nodePort: Option[Int],
                              targetPort: Option[String]) extends KubePort
   case class KubeService(name: String, namespace: String, svcType: String,
-                         clusterIp: String, ports: Seq[KubeServicePort]) extends KubeNsObject
+                         clusterIp: String,
+                         ports: Seq[KubeServicePort],
+                         labels: Map[String, String]
+                        ) extends KubeNsObject
 
   case class KubeEndpointPort(port: Int, protocol: String, name: Option[String]) extends KubePort
   case class KubeEndpointSubset(addresses: Seq[String], ports: Seq[KubeEndpointPort])
   case class KubeEndpoint(name: String, namespace: String,
-                          subsets: Seq[KubeEndpointSubset]) extends KubeNsObject
+                          subsets: Seq[KubeEndpointSubset],
+                          labels: Map[String, String]
+                         ) extends KubeNsObject
 
   case class KubeTopUsage(map: Map[String, Double]) {
     lazy val cpu: Double = map.getOrElse("cpu", 0.0)
@@ -179,20 +191,21 @@ class SMGKubeClient(log: SMGLoggerApi,
   def listServices(): Seq[KubeService] = {
     client.services().inAnyNamespace().list().getItems.asScala.map { svc =>
       KubeService(
-      name = Option(svc.getMetadata.getName).getOrElse("UNDEFINED_NAME"),
-      namespace = Option(svc.getMetadata.getNamespace).getOrElse("default"),
-      svcType = Option(svc.getSpec.getType).getOrElse("ClusterIP"),
-      clusterIp = Option(svc.getSpec.getClusterIP).getOrElse("UNDEFINED_CLUSTER_IP"),
-      ports = Option(svc.getSpec.getPorts).map(_.asScala).getOrElse(Seq()).map { svcPort =>
-        KubeServicePort(
-          port = Option(svcPort.getPort).map(_.toInt)
-           getOrElse(0), // TODO this is error condition
-          protocol = Option(svcPort.getProtocol).getOrElse("TCP"),
-          name = Option(svcPort.getName),
-          nodePort = Option(svcPort.getNodePort).map(_.toInt),
-          targetPort = Option(svcPort.getTargetPort).map(_.toString)
-        )
-      }
+        name = Option(svc.getMetadata.getName).getOrElse("UNDEFINED_NAME"),
+        namespace = Option(svc.getMetadata.getNamespace).getOrElse("default"),
+        svcType = Option(svc.getSpec.getType).getOrElse("ClusterIP"),
+        clusterIp = Option(svc.getSpec.getClusterIP).getOrElse("UNDEFINED_CLUSTER_IP"),
+        ports = Option(svc.getSpec.getPorts).map(_.asScala).getOrElse(Seq()).map { svcPort =>
+          KubeServicePort(
+            port = Option(svcPort.getPort).map(_.toInt)
+             getOrElse(0), // TODO this is error condition
+            protocol = Option(svcPort.getProtocol).getOrElse("TCP"),
+            name = Option(svcPort.getName),
+            nodePort = Option(svcPort.getNodePort).map(_.toInt),
+            targetPort = Option(svcPort.getTargetPort).map(_.toString)
+          )
+        },
+        labels = Option(svc.getMetadata.getLabels).map(_.asScala.toMap).getOrElse(Map())
       )
     }
   }
@@ -213,7 +226,8 @@ class SMGKubeClient(log: SMGLoggerApi,
               )
             }
           )
-        }
+        },
+        labels = Option(ep.getMetadata.getLabels).map(_.asScala.toMap).getOrElse(Map())
       )
     }
   }
