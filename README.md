@@ -135,6 +135,13 @@ installed if different).
     *** Done. Output in target/universal/smg-1.1.tgz
 ```
 
+## Build a custom Docker image
+
+Start your Dockerfile with
+
+    FROM docker.pkg.github.com/asen/smg/smg-1.1:latest
+
+Or check the Dockerfile and build-docker.sh files in the root project dir to build your own from scratch.
 
 ## Development setup (Mac)
 
