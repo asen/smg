@@ -684,7 +684,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 interval = objs.head.interval,
                 dataDelay = myDataDelay,
                 stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
-                rrdFile = Some(rrdDir + "/" + oid + ".rrd"),
+                rrdFile = Some(SMGConfigParser.getRrdFile(rrdDir, oid, levelsDef)),
                 rraDef = myRraDef,
                 rrdInitSource = if (ymap.contains("rrd_init_source")) Some(ymap("rrd_init_source").toString) else None,
                 notifyConf = notifyConf,
