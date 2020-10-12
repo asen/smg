@@ -218,12 +218,14 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   }
 
   def processPodPortConf(cConf: SMGKubeClusterConf, kubePod: KubePod) : Seq[SMGScrapeTargetConf] = {
-    if (kubePod.podIp.isEmpty)
-    kubePod.ports.map { podPort =>
+    if (kubePod.podIp.isEmpty) {
+      log.info(s"SMGKubeClusterProcessor.processPodPortConf(${cConf.uid}): processPodPortConf ${kubePod.name} has no IP")
+      return Seq()
+    }
+    kubePod.ports.flatMap { podPort =>
       processAutoPortConf(cConf, cConf.podPortsConf, kubePod,
         kubePod.podIp.get, podPort, None, cConf.podPortsIndexId)
     }
-    Seq()
   }
 
   private def processKubectlTopStats(cConf: SMGKubeClusterConf): Seq[SMGScrapeTargetConf] = {
