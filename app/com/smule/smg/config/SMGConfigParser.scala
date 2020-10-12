@@ -935,8 +935,10 @@ class SMGConfigParser(log: SMGLoggerApi) {
         }
       }
       indexObjectLevelNotifyConfs.foreach { t2 =>
-        ou.vars.indices.foreach{ ix =>
-          addNotifyConf(ou.id, ix, t2._2)
+        if (t2._1.flt.matches(ou)) {
+          ou.vars.indices.foreach { ix =>
+            addNotifyConf(ou.id, ix, t2._2)
+          }
         }
       }
     }

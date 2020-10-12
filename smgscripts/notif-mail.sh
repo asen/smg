@@ -6,11 +6,5 @@ ALERT_KEY=$SMG_ALERT_KEY #$3
 SUBJ=$SMG_ALERT_SUBJECT #$4
 BODY=$SMG_ALERT_BODY #$5
 
-
-#echo "Would be sending e-mail to $RCPTS"
-#echo "Subject: $SEVERITY $SUBJ"
-#echo
-#echo $BODY
-
-echo "$BODY" | mail -s "[SMG] $SUBJ" "$@"
-
+MYTIME=`date +%H:%M:%S`
+echo "$BODY" | mail -s "[SMG] $SUBJ ($MYTIME)" "$@"
