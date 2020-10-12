@@ -60,9 +60,19 @@ case class SMGFilter(px: Option[String],
   def matches(ob: SMGObjectBase) : Boolean = {
     matchesRemotes(ob.id) &&
       matchesId(ob.id) &&
-      matchesText(ob) &&
+      matchesText(ob.searchText) &&
       matchesParentId(ob) &&
       matchesLabels(ob)
+  }
+
+  def matchesCommand(cmd: SMGFetchCommand): Boolean = {
+    matchesRemotes(cmd.id) &&
+      matchesId(cmd.id) &&
+      matchesText(cmd.cmdSearchText)
+    // TODO?
+    //    &&
+    //      matchesParentId(ob) &&
+    //      matchesLabels(ob)
   }
 
   private def matchesRemotes(oid: String): Boolean = {
@@ -82,9 +92,9 @@ case class SMGFilter(px: Option[String],
     ret
   }
 
-  private def matchesText(ob: SMGObjectBase): Boolean = {
+  private def matchesText(txt: String): Boolean = {
     ciTrxs.isEmpty || {
-      ciTrxs.forall( rx => rx.findFirstIn(ob.searchText).nonEmpty)
+      ciTrxs.forall( rx => rx.findFirstIn(txt).nonEmpty)
     }
   }
 

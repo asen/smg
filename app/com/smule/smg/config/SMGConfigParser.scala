@@ -190,6 +190,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     val objectUpdateIds = mutable.Map[String, SMGObjectUpdate]()
     val indexAlertConfs = ListBuffer[(SMGConfIndex, String, SMGMonAlertConfVar)]()
     val indexNotifyConfs = ListBuffer[(SMGConfIndex, String, SMGMonNotifyConf)]()
+    val indexObjectLevelNotifyConfs = ListBuffer[(SMGConfIndex, SMGMonNotifyConf)]()
     var indexConfs = ListBuffer[SMGConfIndex]()
     val indexIds = mutable.Set[String]()
     val indexMap = mutable.Map[String,ListBuffer[String]]()
@@ -432,11 +433,15 @@ class SMGConfigParser(log: SMGLoggerApi) {
             }
           }
           // process alert/notify confs
+          // notify- applied at the index level map applies to fetch commands (including update objects)
+          val src = if (isHidden) SMGMonAlertConfSource.HINDEX else SMGMonAlertConfSource.INDEX
+          val commandNotifyConf = SMGMonNotifyConf.fromVarMap(src, idx.id, ymap.map(t => (t._1,t._2.toString)).toMap)
+          if (commandNotifyConf.isDefined)
+            indexObjectLevelNotifyConfs += Tuple2(idx, commandNotifyConf.get)
           if (ymap.contains("alerts")){
             val alertsLst = ymap("alerts").asInstanceOf[java.util.ArrayList[java.util.Map[String, Object]]].asScala
             alertsLst.foreach { m =>
               val sm = m.asScala.map(t => (t._1, t._2.toString)).toMap
-              val src = if (isHidden) SMGMonAlertConfSource.HINDEX else SMGMonAlertConfSource.INDEX
               val ac = SMGMonAlertConfVar.fromVarMap(src, idx.id, sm, pluginChecks)
               if (ac.isDefined) indexAlertConfs += Tuple3(idx, sm.getOrElse("label","ds" + idx), ac.get)
               val nc = SMGMonNotifyConf.fromVarMap(src, idx.id, sm)
@@ -852,6 +857,45 @@ class SMGConfigParser(log: SMGLoggerApi) {
 
     SMGConfIndex.buildChildrenSubtree(indexConfsWithChildIds)
 
+    //rebuild all preFetches with notifyConfs
+    val preFetchesWithNc = preFetches.map { case (id, pfc) =>
+      val matching = indexObjectLevelNotifyConfs.filter { case (idx, nconf) =>
+        idx.flt.matchesCommand(pfc)
+      }
+      if (matching.isEmpty)
+        (id,pfc)
+      else {
+        val (src, srcId) = if (pfc.notifyConf.isDefined)
+          (SMGMonAlertConfSource.OBJ, pfc.id)
+        else (matching.head._2.src, matching.head._2.srcId)
+        val allConfs: Seq[SMGMonNotifyConf] = Seq(pfc.notifyConf).flatten ++ matching.map(_._2)
+        val allBackoffs = allConfs.flatMap(_.notifyBackoff)
+        val allNotifyStrikes = allConfs.flatMap(_.notifyStrikes)
+        val mergedNc = SMGMonNotifyConf(
+          src = src,
+          srcId = srcId,
+          crit = allConfs.flatMap(_.crit),
+          fail = allConfs.flatMap(_.fail),
+          warn = allConfs.flatMap(_.warn),
+          anom = allConfs.flatMap(_.anom),
+          notifyBackoff = if (allBackoffs.isEmpty) None else Some(allBackoffs.min),
+          notifyDisable = allConfs.exists(_.notifyDisable),
+          notifyStrikes = if (allNotifyStrikes.isEmpty) None else Some(allNotifyStrikes.min)
+        )
+        val newPfc = SMGPreFetchCmd(
+          id = pfc.id,
+          command = pfc.command,
+          desc = pfc.desc,
+          preFetch = pfc.preFetch,
+          ignoreTs = pfc.ignoreTs,
+          childConc = pfc.childConc,
+          notifyConf = Some(mergedNc),
+          passData = pfc.passData
+        )
+        (id, newPfc)
+      }
+    }
+
     // Process Index alert/notify configs, after all objects and indexes are defined
     // first get all plugin ObjectUpdates - filtering objects which has refObj defined and then using the
     // unique refObjs (._head after grouping by refObj id)
@@ -890,7 +934,11 @@ class SMGConfigParser(log: SMGLoggerApi) {
           }
         }
       }
-
+      indexObjectLevelNotifyConfs.foreach { t2 =>
+        ou.vars.indices.foreach{ ix =>
+          addNotifyConf(ou.id, ix, t2._2)
+        }
+      }
     }
 
     val objectAlertConfs = objectAlertConfMaps.map { t =>
@@ -919,7 +967,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       imgDir = if (globalConf.contains("$img_dir")) globalConf("$img_dir") else imgDir,
       urlPrefix = if (globalConf.contains("$url_prefix")) globalConf("$url_prefix") else urlPrefix,
       intervals = intervals.toSet,
-      preFetches = preFetches.toMap,
+      preFetches = preFetchesWithNc.toMap,
       remotes = remotes.toList,
       remoteMasters = remoteMasters.toList,
       pluginObjects = pluginObjectsMaps,
