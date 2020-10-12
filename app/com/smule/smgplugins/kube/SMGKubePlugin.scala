@@ -93,9 +93,14 @@ class SMGKubePlugin(
         {confParser.conf.clusterConfs.map { cconf =>
         <li>
           <h5>{cconf.inspect}</h5>
+          <p>Auto discovered commands:</p>
+          <ul>
+            {targetProcessor.listAutoDiscoveredCommands.map( adcs =>
+            <li>{adcs.inspect}</li>
+            )}
+          </ul>
         </li>
       }}
       </ul>
-
   }.mkString
 }

@@ -2,6 +2,7 @@ package com.smule.smgplugins.kube
 
 import java.io.File
 import java.nio.file.{Files, Paths}
+import java.util.Date
 
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
 import com.smule.smg.core._
@@ -56,9 +57,30 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     Some(ret)
   }
 
-  // command -> last executed (good or bad)
-  private val knownGoodServiceCommands = TrieMap[String,Long]()
-  private val knownBadServiceCommands = TrieMap[String,Long]()
+  // command -> (nsobj, last executed (good or bad), desc for bad)
+  private val knownGoodServiceCommands = TrieMap[String,(KubeNsObject, Long)]()
+  private val knownBadServiceCommands = TrieMap[String,(KubeNsObject, Long, String)]()
+
+  case class AutoDiscoveredCommandStatus(nsObj: KubeNsObject, tsms: Long,
+                                         command: String, reason: Option[String]){
+    def tsStr: String = new Date(tsms).toString
+    private def reasonOrOk = reason.map("ERROR: " + _).getOrElse("OK")
+    def inspect: String = s"${nsObj.namespace}/${nsObj.name}: $command (ts=$tsStr) status=$reasonOrOk"
+  }
+
+  def listAutoDiscoveredCommands: Seq[AutoDiscoveredCommandStatus] = {
+    val good = knownGoodServiceCommands.toSeq.sortBy { x =>
+      (x._2._1.namespace, x._2._1.name)
+    }.map { x =>
+      AutoDiscoveredCommandStatus(nsObj = x._2._1, tsms = x._2._2, command = x._1, reason = None)
+    }
+    val bad = knownBadServiceCommands.toSeq.sortBy { x =>
+      (x._2._1.namespace, x._2._1.name)
+    }.map { x =>
+      AutoDiscoveredCommandStatus(nsObj = x._2._1, tsms = x._2._2, command = x._1, reason = Some(x._2._3))
+    }
+    good ++ bad
+  }
 
   private def checkAutoConfCommand(command: String,
                             cConf: SMGKubeClusterConf,
@@ -70,14 +92,14 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       log.info(s"SMGKubeClusterProcessor.checkAutoConf(${autoConf.targetType}): ${cConf.uid} " +
         s"${kubeNsObject.namespace}.${kubeNsObject.name}: skipped due to $reason")
     }
-    val lastGoodRunTs = knownGoodServiceCommands.get(command)
+    val lastGoodRunTs = knownGoodServiceCommands.get(command).map(_._2)
     if (lastGoodRunTs.isDefined) {
       // re-check occasionally?
       // TODO: right now - once good, its good until SMG restart
       // note that removed services will not even get here and will disappear automatically
       return true
     }
-    val lastBadRunTs = knownBadServiceCommands.get(command)
+    val lastBadRunTs = knownBadServiceCommands.get(command).map(_._2)
     if (lastBadRunTs.isDefined){
       val randomizedBackoff = autoConf.reCheckBackoff +
         Random.nextInt(autoConf.reCheckBackoff.toInt).toLong
@@ -89,8 +111,9 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 
     // actual checks below
     if (kubePort.protocol != "TCP") {
-      logSkipped(s"protocol=${kubePort.protocol} (not TCP)")
-      knownBadServiceCommands.put(command, System.currentTimeMillis())
+      val reason = s"protocol=${kubePort.protocol} (not TCP)"
+      logSkipped(reason)
+      knownBadServiceCommands.put(command, (kubeNsObject, System.currentTimeMillis(), reason))
       return false
     }
     try {
@@ -100,28 +123,31 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         if (OpenMetricsStat.parseText(out, log, labelsInUid = false).nonEmpty) {
           //keep known up services in a cache and not run this every minute -
           //we only want to know if it is http and has valid /metrics URL, once
-          knownGoodServiceCommands.put(command, System.currentTimeMillis())
+          knownGoodServiceCommands.put(command, (kubeNsObject, System.currentTimeMillis()))
           knownBadServiceCommands.remove(command)
           true
         } else {
-          logSkipped(s"command output unparse-able ($command): ${out}")
-          knownBadServiceCommands.put(command, System.currentTimeMillis())
+          val reason = s"command output unparse-able ($command): ${out}"
+          logSkipped(reason)
+          knownBadServiceCommands.put(command, (kubeNsObject, System.currentTimeMillis(), reason))
           false
         }
       } else {
         if (outObj.data.asInstanceOf[OpenMetricsResultData].stats.nonEmpty){
-          knownGoodServiceCommands.put(command, System.currentTimeMillis())
+          knownGoodServiceCommands.put(command,  (kubeNsObject, System.currentTimeMillis()))
           knownBadServiceCommands.remove(command)
           true
         } else {
-          logSkipped(s"command output parsed but empty ($command)")
-          knownBadServiceCommands.put(command, System.currentTimeMillis())
+          val reason = s"command output parsed but empty ($command)"
+          logSkipped(reason)
+          knownBadServiceCommands.put(command,  (kubeNsObject, System.currentTimeMillis(), reason))
           false
         }
       }
     } catch { case t: Throwable => //SMGCmdException =>
-      logSkipped(s"command or metrics parse failed: ${t.getMessage}")
-      knownBadServiceCommands.put(command, System.currentTimeMillis())
+      val reason = s"command or metrics parse failed: ${t.getMessage}"
+      logSkipped(reason)
+      knownBadServiceCommands.put(command, (kubeNsObject, System.currentTimeMillis(), reason))
       false
     }
   }
