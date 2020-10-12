@@ -3,6 +3,7 @@ import com.smule.smgplugins.kube.{SMGKubeClient, SMGKubeClusterAuthConf}
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
+import scala.collection.JavaConverters._
 
 @RunWith(classOf[JUnitRunner])
 class SMGKubeClientSpec extends Specification {
@@ -14,15 +15,19 @@ class SMGKubeClientSpec extends Specification {
 //        Some("https://kubernetes.default.svc:6443"))
       val authConf = SMGKubeClusterAuthConf.fromConfFile("/etc/smg/kube-config")
       val cli = new SMGKubeClient(log, "test", authConf, 10)
-      cli.topNodes.nodesUsage.foreach { s =>
-        log.info(s"TOP NODE: ${s}")
-      }
+//      cli.topNodes.nodesUsage.foreach { s =>
+//        log.info(s"TOP NODE: ${s}")
+//      }
+//
+//      log.info("===========================")
+//
+//      cli.topPods.podsUsage.foreach { s =>
+//        log.info(s"TOP POD: ${s}")
+//      }
 
-      log.info("===========================")
-
-      cli.topPods.podsUsage.foreach { s =>
-        log.info(s"TOP POD: ${s}")
-      }
+        cli.listPods.foreach { s =>
+          log.info(s"POD: ${s}")
+        }
 
       cli.close()
       1 equals(1)

@@ -80,7 +80,9 @@ object SMGKubeClient {
                       namespace: String,
                       node: String,
                       owner: Option[KubePodOwner],
-                      labels: Map[String,String]
+                      labels: Map[String,String],
+                      podIp: Option[String],
+                      ports: Seq[KubeEndpointPort]
                     ) extends KubeNsObject {
     def stableUid(groupIndex: Option[Int]): String = namespace + "." +
       owner.map(_.podStableUid(name, groupIndex)).getOrElse(name)
@@ -226,7 +228,7 @@ class SMGKubeClient(log: SMGLoggerApi,
     KubeTopNodesResult(myTsms, nodesUsage.toList)
   }
 
-  private def listPods: Seq[KubePod] = {
+  def listPods: Seq[KubePod] = {
     client.pods.inAnyNamespace().list.getItems.asScala.map { jpod =>
       val podName = jpod.getMetadata.getName
       val podNamespace = Option(jpod.getMetadata.getNamespace).getOrElse("default")
@@ -243,11 +245,18 @@ class SMGKubeClient(log: SMGLoggerApi,
         owners.headOption
       }
       val labels = Option(jpod.getMetadata.getLabels).map(_.asScala.toMap).getOrElse(Map())
+      val ports = jpod.getSpec.getContainers.asScala.flatMap{ c => c.getPorts.asScala }.map { cp =>
+        KubeEndpointPort(port = cp.getContainerPort,
+          protocol = Option(cp.getProtocol).getOrElse("None"),
+          name = Option(cp.getName))
+      }
       KubePod(podName,
         podNamespace,
         Option(jpod.getSpec.getNodeName).getOrElse("undefined"),
         owner,
-        labels
+        labels,
+        Option(jpod.getStatus.getPodIP),
+        ports
       )
     }
   }

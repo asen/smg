@@ -16,6 +16,7 @@ case class SMGKubeClusterConf(
                                nodeMetrics: Seq[SMGKubeClusterMetricsConf],
                                svcConf: SMGKubeClusterAutoConf,
                                endpointsConf: SMGKubeClusterAutoConf,
+                               podPortsConf: SMGKubeClusterAutoConf,
                                parentPfId: Option[String],
                                parentIndexId: Option[String],
                                notifyConf: Option[SMGMonNotifyConf],
@@ -38,5 +39,6 @@ case class SMGKubeClusterConf(
   lazy val nodesIndexId: Option[String] = clusterIndexId.map(_ + ".node")
   lazy val endpointsIndexId: Option[String] = clusterIndexId.map(_ + ".endpoint")
   lazy val servicesIndexId: Option[String] = clusterIndexId.map(_ + ".service")
-  lazy val kubectlTopIndexId: Option[String] = clusterIndexId.map(_ + "kubectl.top")
+  lazy val podPortsIndexId: Option[String] = clusterIndexId.map(_ + ".pod_port")
+  lazy val kubectlTopIndexId: Option[String] = clusterIndexId.map(_ + ".kubectl.top")
 }

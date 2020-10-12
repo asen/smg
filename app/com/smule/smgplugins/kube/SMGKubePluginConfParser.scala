@@ -81,6 +81,7 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
         nodeMetrics = nodeMetrics,
         svcConf = SMGKubeClusterAutoConf.fromYamlMap(ymap, "service"),
         endpointsConf = SMGKubeClusterAutoConf.fromYamlMap(ymap, "endpoint"),
+        podPortsConf = SMGKubeClusterAutoConf.fromYamlMap(ymap, "pod_port"),
         parentPfId  = ymap.get("pre_fetch").map(_.toString),
         parentIndexId = ymap.get("parent_index").map(_.toString),
         notifyConf = notifyConf,

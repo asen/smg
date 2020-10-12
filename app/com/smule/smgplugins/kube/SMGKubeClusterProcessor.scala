@@ -6,7 +6,7 @@ import java.nio.file.{Files, Paths}
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
 import com.smule.smg.core._
 import com.smule.smg.openmetrics.OpenMetricsStat
-import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNsObject, KubePort, KubeService}
+import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNsObject, KubePort, KubeService, KubePod}
 import com.smule.smgplugins.scrape.{OpenMetricsResultData, SMGScrapeTargetConf}
 import org.yaml.snakeyaml.Yaml
 
@@ -217,6 +217,15 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
+  def processPodPortConf(cConf: SMGKubeClusterConf, kubePod: KubePod) : Seq[SMGScrapeTargetConf] = {
+    if (kubePod.podIp.isEmpty)
+    kubePod.ports.map { podPort =>
+      processAutoPortConf(cConf, cConf.podPortsConf, kubePod,
+        kubePod.podIp.get, podPort, None, cConf.podPortsIndexId)
+    }
+    Seq()
+  }
+
   private def processKubectlTopStats(cConf: SMGKubeClusterConf): Seq[SMGScrapeTargetConf] = {
     if (!cConf.kubectlTopStats) {
       log.debug("SMGKubeClusterProcessor.processKubectlTopStats: kubectlTopStats is disabled in conf")
@@ -315,11 +324,16 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           processEndpointConf(cConf, kendp)
         }
       } else Seq()
-
+      val podPortsMetricsConfs: Seq[SMGScrapeTargetConf] = if (cConf.podPortsConf.enabled){
+        kubeClient.listPods.flatMap { pod =>
+          processPodPortConf(cConf, pod)
+        }
+      } else Seq()
       // dump
       val objsLst = new java.util.ArrayList[Object]()
       // TODO need to insert indexes ?
-      (topStats ++ nodeMetricsConfs ++ serviceMetricsConfs ++ endpointsMetricsConfs).foreach { stConf =>
+      (topStats ++ nodeMetricsConfs ++ serviceMetricsConfs ++
+        endpointsMetricsConfs ++ podPortsMetricsConfs).foreach { stConf =>
         objsLst.add(SMGScrapeTargetConf.dumpYamlObj(stConf))
       }
       val out = new StringBuilder()
