@@ -9,7 +9,6 @@ case class SMGMonNotifyCmd(id:String, command: String, timeoutSec: Int) {
   }
 
   def alert(severity: SMGMonNotifySeverity.Value, alertKey: String, subjStr: String, bodyStr: String): Unit = {
-    // TODO obsolete passing alert props via cmd line and use env instead
     val myEnv = Map(
       "SMG_ALERT_SEVERITY" -> severity.toString,
       "SMG_ALERT_KEY" -> alertKey,
