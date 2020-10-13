@@ -32,7 +32,7 @@ trait SMGConfigService {
   /**
     * reload config.yml
     */
-  def reload(): Unit
+  def reloadLocal(): Unit
 
   /**
     * Whether SMG is using its internal Akka scheduler or external (e.g. cron-driven) scheduler.

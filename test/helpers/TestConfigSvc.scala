@@ -157,7 +157,7 @@ class TestConfigSvc() extends SMGConfigService {
   /**
     * reload config.yml
     */
-  override def reload(): Unit = {}
+  override def reloadLocal(): Unit = {}
 
   override val useInternalScheduler: Boolean = true
   override val plugins: Seq[SMGPlugin] = Seq()

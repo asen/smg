@@ -228,7 +228,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   /**
     * @inheritdoc
     */
-  override def reload(): Unit = {
+  override def reloadLocal(): Unit = {
     if (!reloadIsRunning.getAndSet(true)) {
       val t0 = System.currentTimeMillis()
       log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)

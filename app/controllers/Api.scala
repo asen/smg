@@ -39,7 +39,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     * @return
     */
   def reloadLocal = Action {
-    configSvc.reload()
+    configSvc.reloadLocal()
     remotes.fetchConfigs()
     Ok("OK")
   }

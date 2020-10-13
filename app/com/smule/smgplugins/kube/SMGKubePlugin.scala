@@ -39,7 +39,7 @@ class SMGKubePlugin(
     if (scrapePlugin.isEmpty){
       log.error("Could not find the scrape plugin instance, this is unlikely to work as expected. " +
         "Trying ConfigService reload")
-      smgConfSvc.reload()
+      smgConfSvc.reloadLocal()
     } else {
       try {
         scrapePlugin.get.reloadConf()

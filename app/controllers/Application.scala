@@ -638,7 +638,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     * @return
     */
   def reloadConf: Action[AnyContent] = Action {
-    configSvc.reload()
+    configSvc.reloadLocal()
     remotes.notifyMasters()
     if (configSvc.config.reloadSlaveRemotes) {
       remotes.notifySlaves()

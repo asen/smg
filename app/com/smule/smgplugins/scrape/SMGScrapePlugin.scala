@@ -41,8 +41,9 @@ class SMGScrapePlugin (
         log.debug("SMGScrapePlugin.run - processing in async thread")
         val targetProcessor = new SMGScrapeTargetProcessor(confParser.conf, smgConfSvc, log)
         if (targetProcessor.run()){
-            log.info("SMGScrapePlugin.run - reloading SMG conf due to changed configs")
-            smgConfSvc.reload()
+          log.info("SMGScrapePlugin.run - reloading SMG conf due to changed configs")
+          smgConfSvc.reloadLocal()
+          smg.remotes.notifyMasters()
         }
         log.debug("SMGScrapePlugin.run - done processing in async thread")
       } catch { case t: Throwable =>
