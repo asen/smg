@@ -41,7 +41,7 @@
       $(':input', this).each(function() {
          this.disabled = ((this.name != "remote") && !($(this).val())) ||
            ((this.name == "remote") && ($(this).val() == "*")) ||
-           ((this.name == "ms") && ($(this).val() == "ANOMALY")) ;
+           ((this.name == "ms") && ($(this).val() == "WARNING")) ;
       });
   };
 
