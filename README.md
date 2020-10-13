@@ -37,7 +37,8 @@ Docker image: docker.pkg.github.com/asen/smg/smg-1.1:latest
 * docker run -d --name smg -p 9000:9000 -v /opt/smg/data -v /etc/smg/conf.d/ \
     docker.pkg.github.com/asen/smg/smg-1.1:latest
 
-* Point your browser to http://$DOCKER_HOST:9000
+* Point your browser to http://$DOCKER_HOST:9000 (the local metrics stats should
+show up in a minute or two)
 
 * Then add stuff under /etc/smg/conf.d and to reload conig use one of:
   * docker exec smg /opt/smg/inst/smg/smgscripts/reload-conf.sh
