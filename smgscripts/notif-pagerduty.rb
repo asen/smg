@@ -25,8 +25,8 @@ event_type = case SMG_SEVERITY
       "trigger"
   end
 
-link_line = SMG_BODY.split("\n").find {|ln| /LINK:\s+/ =~ ln }
-client_url = link_line.nil? ? "UNKNOWN" : link_line.gsub(/.*LINK:\s+/, "").gsub(/\s+.*$/,"")
+link_line = SMG_BODY.split("\n").find {|ln| /link:\s+/ =~ ln }
+client_url = link_line.nil? ? "UNKNOWN" : link_line.gsub(/.*link:\s+/, "").gsub(/\s+.*$/,"")
 
 
 hash = {
