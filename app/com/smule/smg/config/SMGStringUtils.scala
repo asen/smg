@@ -54,4 +54,8 @@ object SMGStringUtils {
       addDesc += "No common prefix/suffix"
     addDesc.mkString(", ")
   }
+
+  def ellipsifyAt(s: String, ellipsifyAt: Int): String = if (s.length > ellipsifyAt) {
+    s.take(ellipsifyAt - 3) + "..."
+  } else s
 }
