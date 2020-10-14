@@ -21,7 +21,7 @@ object SMGMonState {
   def textColor(severity: Double): String = SMGState.stateTextColor(severity.round.toInt)
 
   def oidFilter(oid: String): String = {
-    s"rx=^${SMGRemote.localId(oid)}$$"
+    "rx=" + java.net.URLEncoder.encode(s"^${SMGRemote.localId(oid)}$$", "UTF-8")
   }
 }
 
