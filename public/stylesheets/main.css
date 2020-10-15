@@ -115,7 +115,12 @@
   color: #e6e600;
 }
 
+# UNKNOWN replaced bt FAILED
 .ml-type-UNKNOWN {
+  color: #ff9900;
+}
+
+.ml-type-FAILED {
   color: #ff9900;
 }
 
