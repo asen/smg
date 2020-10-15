@@ -8,8 +8,14 @@ spec:
   selector:
     app: smg
   ports:
-    - name: "http"
+    - name: "nginx"
       protocol: "TCP"
-      port: 9000
-      targetPort: 9000
+      port: 9080
+      targetPort: 9080
       nodePort: 30077
+#    # direct access to the SMG Play HTTP server port - not really needed as its proxied by nginx
+#    - name: "smg"
+#      protocol: "TCP"
+#      port: 9000
+#      targetPort: 9000
+#      nodePort: 30078

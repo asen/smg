@@ -84,3 +84,42 @@ data:
         filter:
           # not really metrics
           rxx: kube-state-metrics.http-metrics
+---
+# config for the nginx reverse proxy
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smg-nginx-configmap
+data:
+  nginx.conf: |
+    ## Default - nobody
+    user       nginx nginx;
+    ## Default - 1
+    worker_processes  2;
+    events {
+      worker_connections  1024;
+    }
+    http {
+      include    mime.types;
+      port_in_redirect off;
+      absolute_redirect off;
+      server { # simple reverse-proxy
+        listen       9080;
+        server_name  localhost;
+
+        location /metrics {
+          stub_status on;
+          access_log off;
+        }
+        # serve static files
+        location ~ ^/assets/smg/(.*)  {
+          alias    /usr/share/nginx/html/smgimages/$1;
+          autoindex on;
+          # expires 10s;
+        }
+        # pass requests for dynamic content to smg
+        location / {
+          proxy_pass      http://127.0.0.1:9000;
+        }
+      }
+    }
