@@ -4,7 +4,6 @@
 @import com.smule.smg.monitor.SMGState
 @import com.smule.smg.monitor.SMGMonFilter
 @import com.smule.smg.monitor.SMGMonitorStatesResponse
-@import com.smule.smg.config.SMGStringUtils
 
 @(cfSvc: SMGConfigService, availRemotes:Seq[String], availStates:Seq[String], selectedRemotes: Seq[String],
   monitorStates: Seq[SMGMonitorStatesResponse], flt:SMGMonFilter, curUrl: String)(implicit flash: Flash)
@@ -76,8 +75,7 @@
     @for((ms,ix) <- msr.states.zipWithIndex) {
     <li>
       <span style="background-color: @ms.severityColor;">@{ms.currentStateVal}</span>
-      <a href="@ms.showUrl"
-         @if(ms.text.lengthCompare(300) > 0){title="@{ms.text}"}>@{SMGStringUtils.ellipsifyAt(ms.text, 300)}</a>
+      [<a href="@ms.showUrl"><b>Link/Graphs</b></a>] @ellipsifyText(ms.text, 1600)
       [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ]
 
       @monStateActions(ms, Some(curUrl))

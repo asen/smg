@@ -1,0 +1,14 @@
+@import com.smule.smg.config.SMGStringUtils
+
+@(txt: String, ellipsifyAt: Int, uid: Option[String] = None)
+@if(txt.lengthCompare(ellipsifyAt) > 0){
+@defining(if (uid.isDefined) uid else java.util.UUID.randomUUID.toString){ guid =>
+<span id="et-ellipsified-@guid">@{SMGStringUtils.ellipsifyAt(txt, ellipsifyAt)}
+  <button
+      onclick="document.getElementById('et-ellipsified-@guid').style.display='none'; document.getElementById('et-full-@guid').style.display='inline';"
+  >Show full</button></span>
+<span id="et-full-@guid" style="display: none">@txt</span>
+}
+} else {
+<span>@txt</span>
+}
