@@ -1189,11 +1189,13 @@ Here is an example remote definition:
   id: another-dc
   url: "http://smg.dc2.company.com:9080"
 # slave_id: dc1
+# graph_timeout_ms: 30000
+# config_fetch_timeout_ms: 600000
 </pre>
 </blockquote>
 
-> If the optional **slave_id** parameter is provided it indicates that
-this instance is a "slave" in the context of that remote. Its value must
+> If the optional **slave\_id** parameter is provided it indicates that
+this instance is a "worker" in the context of that remote. Its value must
 be the id under this instance is configured on the "master". A slave
 instance will not load and display the relevant remote instance config
 and graphs but will only notify it on its own config changes.
@@ -1201,15 +1203,27 @@ and graphs but will only notify it on its own config changes.
 > One can run a setup where the "main" instance (can be two of them,
 for redundancy) has multiple remotes configured where the remote
 instances only have  the "main" one as configured (for them) remote
-(with slave_id set). With such setup one only needs a  single "beefy"
+(with slave\_id set). With such setup one only needs a  single "beefy"
 (more mem) "main" instance which will hold all available across the
 remotes objects and the other ones will only keep theirs.
+
+> The **graph\_timeout\_ms** and **config\_fetch\_timeout\_ms** values
+allow one to override the global timeouts for garph/monitor state API
+calls and config fetch (which can be much slower)
+
+- **$remote-graph-timeout-ms**: 30000 (30 sec) - default timeout when 
+requesting graphs (and monitor states) from remote instances. Can be
+overridon in each remote definition.
+
+- **$remote-config-fetch-timeout-ms**: 600000 (10 min) - default imeout
+when fetching remote config. These can be big so normally thats much
+higher than the graph timeout value.
 
 - **$reload-slave-remotes**: _"false"_ - By default SMG will only
 notify "master" remote instances (ones defined with slave_id property).
 One can override this behavior and make it notify slave instances too
 by setting this to "true".
-
+ 
 - **$proxy-disable**: _"false"_ - by default SMG will link to remote
 images via its /proxy/\<remote-id>/\<path-to-image>.png URL which in
 turn will proxy the request to the actual remote SMG instance. This
