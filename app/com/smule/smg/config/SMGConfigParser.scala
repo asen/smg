@@ -317,11 +317,12 @@ class SMGConfigParser(log: SMGLoggerApi) {
 
     def processRemote(t: (String,Object), confFile: String ): Unit = {
       val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
-      if (yamlMap.contains("id") && yamlMap.contains("url")) {
-        if (yamlMap.contains("slave_id")) {
-          remoteMasters += SMGRemote(yamlMap("id").toString, yamlMap("url").toString, Some(yamlMap("slave_id").toString))
+      val rmtOpt = SMGRemote.fromYamlMap(yamlMap)
+      if (rmtOpt.isDefined) {
+        if (rmtOpt.get.slaveId.isDefined) {
+          remoteMasters += rmtOpt.get
         } else
-          remotes += SMGRemote(yamlMap("id").toString, yamlMap("url").toString)
+          remotes += rmtOpt.get
       } else {
         processConfigError(confFile, "processRemote: $remote yamlMap does not have id and url: " + yamlMap.toString)
       }

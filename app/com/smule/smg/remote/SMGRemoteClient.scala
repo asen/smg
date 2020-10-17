@@ -22,6 +22,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 import scala.language.postfixOps
 import scala.util.Try
 
@@ -49,10 +50,16 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     s"/proxy/${remote.id}$urlPath"
 
 
-  // TODO configure these per remote
-  private val shortTimeoutMs = Timeout(30000L, TimeUnit.MILLISECONDS).duration
-  private val graphTimeoutMs = Timeout(60000L, TimeUnit.MILLISECONDS).duration
-  private val configFetchTimeoutMs = Timeout(600000L, TimeUnit.MILLISECONDS).duration
+  private def graphTimeoutMs: FiniteDuration = Timeout(
+    remote.graphTimeoutMs.getOrElse(configSvc.config.remoteGraphTimeoutMs),
+    TimeUnit.MILLISECONDS).duration
+
+  // TODO separate config for this?
+  private def shortTimeoutMs: FiniteDuration = graphTimeoutMs
+
+  private def configFetchTimeoutMs: FiniteDuration = Timeout(
+    remote.configFetchTimeoutMs.getOrElse(configSvc.config.remoteConfigFetchTimeoutMs),
+    TimeUnit.MILLISECONDS).duration
 
 
   // Object deserializers (reads) used by API client below

@@ -1,5 +1,7 @@
 package com.smule.smg.remote
 
+import scala.collection.mutable
+
 /**
   * Created by asen on 11/19/15.
   */
@@ -9,7 +11,10 @@ package com.smule.smg.remote
   * @param id - unique remote id
   * @param url - HTTP URL where the remote is accessible
   */
-case class SMGRemote(id: String, url:String, slaveId: Option[String] = None) {
+case class SMGRemote(id: String, url:String, slaveId: Option[String] = None,
+                     graphTimeoutMs: Option[Long] = None,
+                     configFetchTimeoutMs: Option[Long] = None
+                    ) {
   lazy val name: String = if (id == SMGRemote.local.id) SMGRemote.localName else id
 }
 
@@ -42,4 +47,19 @@ object SMGRemote {
   } else id
 
   def prefixedId(rid: String, id: String): String = if (rid == SMGRemote.local.id) id else "@" + rid + "." + id
+
+  def fromYamlMap(yamlMap: mutable.Map[String, Object]): Option[SMGRemote] = {
+    if (yamlMap.contains("id") && yamlMap.contains("url"))
+      None
+    else Some(
+      SMGRemote(
+        id = yamlMap("id").toString,
+        url = yamlMap("url").toString,
+        slaveId = yamlMap.get("slave_id").map(_.toString),
+        graphTimeoutMs = yamlMap.get("graph_timeout_ms").map(_.toString.toLong), //XXX ugly ...
+        configFetchTimeoutMs = yamlMap.get("config_fetch_timeout_ms").map(_.toString.toLong) //XXX ugly ...
+      )
+    )
+  }
+
 }
