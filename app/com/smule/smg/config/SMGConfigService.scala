@@ -160,49 +160,44 @@ trait SMGConfigService {
     * recipients and backoff will be used.
     *
     * @param ou
-    * @param vixOpt
+    * @param vix
     * @param atSeverity
     * @return
     */
-  def objectVarNotifyCmdsAndBackoff(ou: SMGObjectUpdate, vixOpt: Option[Int],
+  def objectVarNotifyCmdsAndBackoff(ou: SMGObjectUpdate, vix: Int,
                                     atSeverity: SMGMonNotifySeverity.Value): (Seq[SMGMonNotifyCmd], Int) = {
     val oncOpt = config.objectNotifyConfs.get(ou.id)
-    val isDisabledAndBackoffOpt = oncOpt.map(_.getIsDisabledAndBackoff(vixOpt))
+    val isDisabledAndBackoffOpt = oncOpt.map(_.getIsDisabledAndBackoff(vix))
 
     def cmdsForSeverity(vnc: SMGMonNotifyConf) = atSeverity match {
       case SMGMonNotifySeverity.CRITICAL => vnc.crit
-      case SMGMonNotifySeverity.FAILED => vnc.fail
+      case SMGMonNotifySeverity.FAILED => { // this should only happen at command level
+        SMGLogger.error(s"objectVarNotifyCmdsAndBackoff(${ou.id}, $vix): " +
+          s"cmdsForSeverity called with unexpected severity: $atSeverity")
+        vnc.fail
+      }
       case SMGMonNotifySeverity.WARNING => vnc.warn
       case SMGMonNotifySeverity.ANOMALY => vnc.anom
       case _ => { // should never happen ???
-        SMGLogger.error(s"objectVarNotifyCmdsAndBackoff(${ou.id}, $vixOpt): cmdsForSeverity called with bad severity: $atSeverity")
+        SMGLogger.error(s"objectVarNotifyCmdsAndBackoff(${ou.id}, $vix): cmdsForSeverity called with bad severity: $atSeverity")
         Seq()
       }
     }
 
     val retCmds = if (isDisabledAndBackoffOpt.exists(_._1)) {
-      SMGLogger.debug(s"objectVarNotifyCmdsAndBackoff${ou.id}, $vixOpt) notificattions are disabled ($atSeverity)")
+      SMGLogger.debug(s"objectVarNotifyCmdsAndBackoff${ou.id}, $vix) notificattions are disabled ($atSeverity)")
       Seq() // there is a conf and it says disabled
     } else {
       val notifCmds = if (oncOpt.isDefined) {
-        val oncCmdIds: Seq[String] = if (vixOpt.isDefined){
-          oncOpt.get.varConf(vixOpt.get).flatMap( vnc => cmdsForSeverity(vnc))
-        } else { //"Object level" notify comds, should only happen for unknown state??
-          if (atSeverity != SMGMonNotifySeverity.FAILED) {
-            SMGLogger.error(s"objectVarNotifyCmdsAndBackoff${ou.id}, $vixOpt) called for object with bad severity: $atSeverity")
-          }
-          ou.vars.indices.flatMap { vix =>
-            oncOpt.get.varConf(vix).flatMap { vnc => cmdsForSeverity(vnc) }
-          }
-        }.distinct
+        val oncCmdIds: Seq[String] = oncOpt.get.varConf(vix).flatMap(vnc => cmdsForSeverity(vnc)).distinct
         if (oncCmdIds.nonEmpty)
-          oncCmdIds.map { s =>
+          oncCmdIds.flatMap { s =>
             val opt = config.notifyCommands.get(s)
             if (opt.isEmpty){
               SMGLogger.error(s"objectVarNotifyCmdsAndBackoff: ${ou.id}: config specifies non-existing notify command: $s")
             }
             opt
-          }.filter(_.isDefined).map(_.get)
+          }
         else
           globalNotifyCmds(atSeverity)
       } else
@@ -222,26 +217,47 @@ trait SMGConfigService {
     atSeverity match {
       case SMGMonNotifySeverity.SMGERR => config.globalSmgerrNotifyConf
       case SMGMonNotifySeverity.CRITICAL => config.globalCritNotifyConf
-      case SMGMonNotifySeverity.FAILED => config.globalUnknNotifyConf
+      case SMGMonNotifySeverity.FAILED => config.globalFailNotifyConf
       case SMGMonNotifySeverity.WARNING => config.globalWarnNotifyConf
       case SMGMonNotifySeverity.ANOMALY => config.globalAnomNotifyConf
       case _ => Seq()
     }
   }
 
-  def objectVarNotifyStrikes(ou: SMGObjectUpdate, vixOpt: Option[Int]): Int = {
+  def objectVarNotifyStrikes(ou: SMGObjectUpdate, vix: Int): Int = {
     val oncOpt = config.objectNotifyConfs.get(ou.id)
-    val vixes = if (vixOpt.isDefined) Seq(vixOpt.get) else ou.vars.indices
-    val ret = vixes.map { vix =>
-      oncOpt.map{ onc =>
+    oncOpt.map{ onc =>
         val seq = onc.varConf(vix)
         if (seq.isEmpty)
           config.globalNotifyStrikes
         else
           seq.map(_.notifyStrikes.getOrElse(config.globalNotifyStrikes)).min
-      }.getOrElse(config.globalNotifyStrikes)
-    }.min
-    Math.max(ret,1)
+    }.getOrElse(config.globalNotifyStrikes)
+  }
+
+  def fetchComandNotifyCmdsAndBackoff(cmd: SMGFetchCommand): (Seq[SMGMonNotifyCmd], Int) = {
+    val myNotifyConf: Option[SMGMonNotifyConf] = cmd.notifyConf
+    if (myNotifyConf.isDefined) {
+      val ncmds = if (myNotifyConf.get.notifyDisable)
+        Seq()
+      else if (myNotifyConf.get.fail.nonEmpty)
+        myNotifyConf.get.fail.map(s => config.notifyCommands.get(s)).filter(_.isDefined).map(_.get)
+      else
+        config.globalFailNotifyConf
+      val backoff = myNotifyConf.get.notifyBackoff.getOrElse(config.globalNotifyBackoff)
+      (ncmds, backoff)
+    } else {
+      (config.globalFailNotifyConf, config.globalNotifyBackoff)
+    }
+  }
+
+  def fetchComandNotifyStrikes(cmd: SMGFetchCommand): Int = {
+    val myNotifyConf: Option[SMGMonNotifyConf] = cmd.notifyConf
+    if (myNotifyConf.isDefined) {
+      myNotifyConf.get.notifyStrikes.getOrElse(config.globalNotifyStrikes)
+    } else {
+      config.globalNotifyStrikes
+    }
   }
 
   private val ellipsifyAt = 80

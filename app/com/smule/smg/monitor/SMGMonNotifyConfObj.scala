@@ -10,8 +10,8 @@ case class SMGMonNotifyConfObj(varConfs: Map[Int, Seq[SMGMonNotifyConf]]) {
 
   def varConf(ix: Int): Seq[SMGMonNotifyConf] = varConfs.getOrElse(ix, Seq())
 
-  def getIsDisabledAndBackoff(ix: Option[Int]):(Boolean, Option[Int]) = {
-    val confs = if (ix.isDefined) varConf(ix.get) else varConfs.values.flatten
+  def getIsDisabledAndBackoff(ix: Int):(Boolean, Option[Int]) = {
+    val confs = varConf(ix)
     val isDisabled = confs.nonEmpty && confs.forall(_.notifyDisable) // TODO or use exists?
     val backoffs = confs.map(_.notifyBackoff)
     if (confs.nonEmpty)

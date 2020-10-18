@@ -97,11 +97,11 @@ class SMGMonInternalVarState(var objectUpdate: SMGObjectUpdate,
 
   override protected def notifyCmdsAndBackoff: (Seq[SMGMonNotifyCmd], Int) = {
     lazy val mntype = SMGMonNotifySeverity.fromStateValue(currentStateVal)
-    configSvc.objectVarNotifyCmdsAndBackoff(objectUpdate, Some(vix), mntype)
+    configSvc.objectVarNotifyCmdsAndBackoff(objectUpdate, vix, mntype)
   }
 
   override protected def getMaxHardErrorCount: Int = {
-    configSvc.objectVarNotifyStrikes(objectUpdate, Some(vix))
+    configSvc.objectVarNotifyStrikes(objectUpdate, vix)
   }
 
   override def inspect: String = {

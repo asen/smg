@@ -106,7 +106,7 @@ object SMGConfigNotifyConfsSummary {
     val ncmds = sev match {
       case SMGState.ANOMALY => conf.globalAnomNotifyConf
       case SMGState.WARNING => conf.globalWarnNotifyConf
-      case SMGState.FAILED => conf.globalUnknNotifyConf
+      case SMGState.FAILED => conf.globalFailNotifyConf
       case SMGState.CRITICAL => conf.globalCritNotifyConf
     }
     VarsNotifyObjectConfSummary(
@@ -170,7 +170,7 @@ object SMGConfigNotifyConfsSummary {
 
     val defaultCmd = CommandsNotifyObjectConfSummary(
       objsDesc = None,
-      notifyCmds = conf.globalUnknNotifyConf.map(_.id),
+      notifyCmds = conf.globalFailNotifyConf.map(_.id),
       notifyBackoff = Some(conf.globalNotifyBackoff),
       notifyDisable = false,
       notifyStrikes = Some(conf.globalNotifyStrikes),

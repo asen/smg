@@ -49,6 +49,7 @@ trait SMGObjectUpdate extends SMGObjectBase with SMGTreeNode {
     "preFetch" -> preFetch,
     "rrdFile" -> rrdFile,
     "rraDef" -> rraDef,
+    "notifyConf" -> notifyConf.map(nc => s"(${nc.inspect})").getOrElse("None"),
     "cachedValues" -> cfSvc.getCachedValues(this, true)
   ).map { case (k,v) => s"$k=$v"}.mkString(", ")
 }

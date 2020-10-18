@@ -35,7 +35,7 @@ case class SMGRrdObject(id: String,
                         labels: Map[String,String]
                        ) extends SMGObjectView with SMGObjectUpdate with SMGFetchCommand {
 
-  private val log = SMGLogger
+//  private val log = SMGLogger
 
 //  private val nanList: List[Double] = vars.map(v => Double.NaN)
 
