@@ -2206,7 +2206,9 @@ set "_notify-disable: true_" at the object level. Pre-fetch commands support
 notify-disable too.
 
 > When multiple conflicting notify-strikes values apply, SMG will
-use the minimal from these.
+use the minimal from these. When multiple conflicting notify-backoff
+values apply, SMG will use the maximal from these. Any applicable
+notify-disable set to true will result in disabled notifications.
 
 Currently there are two ways to apply alert/notify configs to any given
 object variable:

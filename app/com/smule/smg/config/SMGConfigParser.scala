@@ -879,7 +879,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
           fail = allConfs.flatMap(_.fail),
           warn = allConfs.flatMap(_.warn),
           anom = allConfs.flatMap(_.anom),
-          notifyBackoff = if (allBackoffs.isEmpty) None else Some(allBackoffs.min),
+          notifyBackoff = if (allBackoffs.isEmpty) None else Some(allBackoffs.max),
           notifyDisable = allConfs.exists(_.notifyDisable),
           notifyStrikes = if (allNotifyStrikes.isEmpty) None else Some(allNotifyStrikes.min)
         )
