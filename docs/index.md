@@ -2194,7 +2194,7 @@ consecutive error states to be considered a hard error and in turn -
 trigger alert notifications.
 
     notify-crit: notify-cmd-id-1,notify-cmd-id-2,...
-    notify-fail: notify-cmd-id-1,notify-cmd-id-2,...
+    # (Not relevant for var states) notify-fail: notify-cmd-id-1,notify-cmd-id-2,...
     notify-warn: notify-cmd-id-1,notify-cmd-id-2,...
     notify-anom: notify-cmd-id-1,notify-cmd-id-2,...
     notify-disable: true
@@ -2206,10 +2206,7 @@ set "_notify-disable: true_" at the object level. Pre-fetch commands support
 notify-disable too.
 
 > When multiple conflicting notify-strikes values apply, SMG will
-use the minimal from these. For fetch errors (applicable to object and
-pre-fecth command failures) this means the minimal value (but never
-less than 1) applicable to any of the "children" graph vars (ones
-depending on the failed command).
+use the minimal from these.
 
 Currently there are two ways to apply alert/notify configs to any given
 object variable:
@@ -2240,6 +2237,8 @@ alerts property. Examples:
 
 <pre>
   ...
+  notify-fail: ...
+  notify-strikes: 5
   alerts:
    - label: sl1min   # any objects matching the index filter and also matching the sl1min label
      alert-warn-gt: 3
