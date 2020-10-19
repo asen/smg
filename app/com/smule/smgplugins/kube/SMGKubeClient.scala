@@ -16,7 +16,10 @@ object SMGKubeClient {
     val port: Int
     val protocol: String
     val name: Option[String]
-    lazy val portName: String = name.getOrElse(port.toString)
+    def portName(forcePortNum: Boolean = false): String = if (forcePortNum)
+      name.map(_ + "-").getOrElse("") + port.toString
+    else
+      name.getOrElse(port.toString)
   }
 
   trait KubeNsObject {

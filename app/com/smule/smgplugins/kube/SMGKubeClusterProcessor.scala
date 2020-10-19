@@ -172,7 +172,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                           ipAddr: String,
                           kubePort: KubePort,
                           idxId: Option[Int],
-                          parentIndexId: Option[String]
+                          parentIndexId: Option[String],
+                          forcePortNums: Boolean
                          ): Option[SMGScrapeTargetConf] = {
     try {
       def myCommand(proto: String)  = cConf.fetchCommand + " " + proto + "://" + ipAddr + s":${kubePort.port}/metrics"
@@ -183,9 +184,9 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         return None
       val command = commands(workingCommandIdx.get)
       val uid = cConf.uidPrefix + autoConf.targetType + "." + nsObject.namespace +
-        "." + nsObject.name + "." + kubePort.portName + idxId.map(x => s"._$x").getOrElse("")
+        "." + nsObject.name + "." + kubePort.portName(forcePortNums) + idxId.map(x => s"._$x").getOrElse("")
       val title = s"${cConf.hnamePrefix}${autoConf.targetType} " +
-        s"${nsObject.namespace}.${nsObject.name}:${kubePort.portName}${idxId.map(x => s" ($x)").getOrElse("")}"
+        s"${nsObject.namespace}.${nsObject.name}:${kubePort.portName(forcePortNums)}${idxId.map(x => s" ($x)").getOrElse("")}"
       val confOutput = s"${cConf.uid}-${autoConf.targetType}-${nsObject.namespace}-" +
         s"${nsObject.name}-${kubePort.port}${idxId.map(x => s"-$x").getOrElse("")}.yml"
       val ret = SMGScrapeTargetConf(
@@ -220,9 +221,10 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 
   def processServiceConf(cConf: SMGKubeClusterConf, kubeService: KubeService): Seq[SMGScrapeTargetConf] = {
     // TODO check eligibility based on labels?
+    val hasDupPortNames = kubeService.ports.map(_.portName(false)).distinct.size != kubeService.ports.size
     kubeService.ports.flatMap { svcPort =>
       processAutoPortConf(cConf, cConf.svcConf, kubeService, kubeService.clusterIp, svcPort,
-        None, cConf.servicesIndexId)
+        None, cConf.servicesIndexId, hasDupPortNames)
     }
   }
 
@@ -236,8 +238,10 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         idx = Some(0)
       subs.addresses.flatMap { addr =>
         if (idx.isDefined) idx = Some(idx.get + 1)
+        val hasDupPortNames = subs.ports.map(_.portName(false)).distinct.size != subs.ports.size
         subs.ports.flatMap { prt =>
-           processAutoPortConf(cConf, cConf.endpointsConf, kubeEndpoint, addr, prt, idx, cConf.endpointsIndexId)
+           processAutoPortConf(cConf, cConf.endpointsConf, kubeEndpoint, addr, prt, idx,
+             cConf.endpointsIndexId, hasDupPortNames)
         }
       }
     }
@@ -257,9 +261,12 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         } else {
           if (idx.isDefined) idx = Some(idx.get + 1)
           val nobj = KubeNamedObject(pod.stableUid(idx), pod.namespace, pod.labels)
+          // check for dup port names
+          val hasDupPortNames =
+            pod.ports.map(_.portName(false)).distinct.lengthCompare(pod.ports.size) != 0
           pod.ports.flatMap { podPort =>
             processAutoPortConf(cConf, cConf.podPortsConf, nobj,
-              pod.podIp.get, podPort, None, cConf.podPortsIndexId)
+              pod.podIp.get, podPort, None, cConf.podPortsIndexId, hasDupPortNames)
           }
         }
       }
