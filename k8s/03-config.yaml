@@ -3,6 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: smg-configmap
+  namespace: smg
 data:
   000-rrdcached.yml: |
     # set this only once and before any objects are defined. never change.
@@ -51,6 +52,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: smg-kube-configmap
+  namespace: smg
 data:
   skube.yml: |
     - uid: skube
@@ -90,6 +92,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: smg-nginx-configmap
+  namespace: smg
 data:
   nginx.conf: |
     ## Default - nobody
@@ -107,9 +110,13 @@ data:
         listen       9080;
         server_name  localhost;
 
-        location /metrics {
+        location /stats {
           stub_status on;
           access_log off;
+        }
+        location /metrics {
+          access_log off;
+          return 404;
         }
         # serve static files
         location ~ ^/assets/smg/(.*)  {

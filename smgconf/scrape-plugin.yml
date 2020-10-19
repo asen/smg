@@ -1,7 +1,7 @@
 
 scrape:
   # this dir needs to be included by /etc/smg/config.yml for this to work
-  conf_output_dir: "/etc/smg/scrape-private.d"
+  conf_output_dir: "/opt/smg/data/conf/scrape-private.d"
   conf_output_dir_owned: true
   targets:
     - uid: smg-metrics
@@ -25,3 +25,4 @@ scrape:
 #      id_prefix: scrape-test.
 #      notify-fail: "mail-asen"
     - include: "/etc/smg/scrape-targets.d/*.{yml,yaml}"
+    - include: "/opt/smg/data/conf/scrape-targets.d/*.{yml,yaml}"

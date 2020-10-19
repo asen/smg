@@ -1,0 +1,33 @@
+# A pertsistence volume whete to store state, use cloud-provisioned one for HA instead (and if available)
+# On premises: mkdir -p /opt/smg/data/ first and make sure SMG runs on a Node which has the volume (e.g. using labels)
+
+# The "base" data volume
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: smg-data-vol1
+#   namespace: smg
+#   labels:
+#     type: local
+# spec:
+#   storageClassName: manual
+#   capacity:
+#     storage: 100Gi
+#   accessModes:
+#     - ReadWriteOnce
+#   hostPath:
+#     path: "/opt/smg/data"
+# ---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: smg-data-vol1-claim
+  namespace: smg
+spec:
+  accessModes:
+    - ReadWriteOnce
+#  storageClassName: "manual"
+  resources:
+    requests:
+      storage: 50Gi

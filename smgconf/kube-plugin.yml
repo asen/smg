@@ -1,6 +1,6 @@
 
 kube:
-  scrape_targets_d: "/etc/smg/scrape-targets.d"
+  scrape_targets_d: "/opt/smg/data/conf/scrape-targets.d"
   clusters:
 #    - uid: skube-int
 ##      name: skube-int
@@ -35,3 +35,4 @@ kube:
 #      endpoint:
 #      prefix_ids_with_cluster_id: false
     - include: "/etc/smg/kube-clusters.d/*.{yml,yaml}"
+    - include: "/opt/smg/data/conf/kube-clusters.d/*.{yml,yaml}"

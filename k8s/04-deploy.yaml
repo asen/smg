@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: smg
+  namespace: smg
 spec:
   replicas: 1
   strategy:
@@ -17,7 +18,7 @@ spec:
       containers:
         # The SMG container
         - name: smg
-          image: "docker.pkg.github.com/asen/smg/smg-1.1:latest"
+          image: "gcr.io/asen-smg/smg-1.1:latest"
           ports:
             - containerPort: 9000
             - containerPort: 9001
@@ -28,10 +29,10 @@ spec:
               mountPath: /etc/smg/kube-clusters.d
             - name: smg-data-volume
               mountPath: /opt/smg/data
-            - name: smg-scrape-targets-volume
-              mountPath: /etc/smg/scrape-targets.d
-            - name: smg-scrape-private-volume
-              mountPath: /etc/smg/scrape-private.d
+            # - name: smg-scrape-targets-volume
+            #   mountPath: /etc/smg/scrape-targets.d
+            # - name: smg-scrape-private-volume
+            #   mountPath: /etc/smg/scrape-private.d
             - name: rrdcached-sock-volume
               mountPath: /var/rrdtool/rrdcached
             - name: smg-sa-token-volume
@@ -40,7 +41,7 @@ spec:
               mountPath: /opt/smg/inst/smg/public/smg
         # a rrdcached container (same image but runs rrdcached)
         - name: rrdcached
-          image: "docker.pkg.github.com/asen/smg/smg-1.1:latest"
+          image: "gcr.io/asen-smg/smg-1.1:latest"
           command: [ "/usr/bin/rrdcached" ]
           args: ["-g", "-l", "unix:/var/rrdtool/rrdcached/rrdcached.sock", "-m", "664", "-b", "/var/rrdtool/rrdcached"]
           volumeMounts:
@@ -79,12 +80,12 @@ spec:
         - name: smg-data-volume
           persistentVolumeClaim:
             claimName: smg-data-vol1-claim
-        - name: smg-scrape-targets-volume
-          persistentVolumeClaim:
-            claimName: smg-conf-scrape-targets-vol1-claim
-        - name: smg-scrape-private-volume
-          persistentVolumeClaim:
-            claimName: smg-conf-scrape-private-vol1-claim
+        # - name: smg-scrape-targets-volume
+        #   persistentVolumeClaim:
+        #     claimName: smg-conf-scrape-targets-vol1-claim
+        # - name: smg-scrape-private-volume
+        #   persistentVolumeClaim:
+        #     claimName: smg-conf-scrape-private-vol1-claim
         - name: rrdcached-sock-volume
           emptyDir: {}
         - name: smg-sa-token-volume

@@ -123,7 +123,7 @@ class SMGScrapeObjectGen(
       } // valid oid
     }
 
-    val nonAggIndexId = idPrefix + nonAggUidStr + metaKey.get
+    val nonAggIndexId = idPrefix + nonAggUidStr + metaKey.getOrElse("")
     val aggOp = "SUMN" // TODO ?? may be depend on type
     val metaKeyReplaced = processRegexReplaces(metaKey.getOrElse(""), scrapeTargetConf.regexReplaces)
     val aggOuid = idPrefix + aggUidStr + metaKeyReplaced

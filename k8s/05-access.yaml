@@ -1,8 +1,10 @@
+# gcloud compute firewall-rules create test-node-port --allow tcp:30077
 # or configure ingress controller
 apiVersion: v1
 kind: Service
 metadata:
   name: smg
+  namespace: smg
 spec:
   type: NodePort
   selector:
