@@ -50,16 +50,17 @@ object SMGRemote {
 
   def fromYamlMap(yamlMap: mutable.Map[String, Object]): Option[SMGRemote] = {
     if (yamlMap.contains("id") && yamlMap.contains("url"))
-      None
-    else Some(
-      SMGRemote(
-        id = yamlMap("id").toString,
-        url = yamlMap("url").toString,
-        slaveId = yamlMap.get("slave_id").map(_.toString),
-        graphTimeoutMs = yamlMap.get("graph_timeout_ms").map(_.toString.toLong), //XXX ugly ...
-        configFetchTimeoutMs = yamlMap.get("config_fetch_timeout_ms").map(_.toString.toLong) //XXX ugly ...
+      Some(
+        SMGRemote(
+          id = yamlMap("id").toString,
+          url = yamlMap("url").toString,
+          slaveId = yamlMap.get("slave_id").map(_.toString),
+          graphTimeoutMs = yamlMap.get("graph_timeout_ms").map(_.toString.toLong), //XXX ugly ...
+          configFetchTimeoutMs = yamlMap.get("config_fetch_timeout_ms").map(_.toString.toLong) //XXX ugly ...
+        )
       )
-    )
+    else
+     None
   }
 
 }
