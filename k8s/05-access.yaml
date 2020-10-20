@@ -21,3 +21,19 @@ spec:
 #      port: 9000
 #      targetPort: 9000
 #      nodePort: 30078
+
+# Uncomment this to apply in GKE and expose to the world over http
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: smg-lb
+#   namespace: smg
+# spec:
+#   type: LoadBalancer
+#   selector:
+#     app: smg
+#   ports:
+#   - protocol: TCP
+#     port: 80
+#     targetPort: 9080

@@ -24,6 +24,8 @@ Live demo: http://smg1.ace-tek.net/
 
 Live demo configs: http://smg1.ace-tek.net/etc/smg/
 
+Live demo on k8s in GKE: http://smg2.ace-tek.net/
+
 Docs on github: https://github.com/asen/smg/blob/master/docs/index.md
 
 Binary releases available here: https://github.com/asen/smg/releases
