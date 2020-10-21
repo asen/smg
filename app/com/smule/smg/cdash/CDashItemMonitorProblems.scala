@@ -1,6 +1,6 @@
 package com.smule.smg.cdash
 
-import com.smule.smg.core.SMGIndex
+import com.smule.smg.config.SMGStringUtils
 import com.smule.smg.monitor.{SMGMonFilter, SMGMonState, SMGMonitorStatesResponse}
 
 case class CDashItemMonitorProblems(conf: CDashConfigItem,
@@ -16,7 +16,7 @@ case class CDashItemMonitorProblems(conf: CDashConfigItem,
     {
       <span>[<b>{ms.remote.name}</b>]
       <span style={ s"background-color: ${ms.severityColor;}" }> {ms.currentStateVal}</span>
-        <a href={ ms.showUrl}>{ms.text}</a>
+        <a href={ms.showUrl}>{SMGStringUtils.ellipsifyAt(ms.text, 160)}</a>
         [ { if(ms.isHard) { <strong>HARD</strong> } else { "SOFT" } }]
       </span>
     }.mkString
