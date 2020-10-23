@@ -57,8 +57,6 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
         //this is reached only on successfull pre-fetch
         configSvc.sendCommandMsg(SMGDataFeedMsgCmd(updTss.getOrElse(SMGRrd.tssNow), pf.id,
           interval, leafObjs, 0, List(), None))
-        if (updateCounters)
-          SMGStagedRunCounter.incIntervalCount(interval)
         if (fRoot.node.isUpdateObj){
           // handle unexpected class cast exceptiosn etc
           try {
@@ -70,6 +68,8 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
               pf.command.timeoutSec, -1, "", "Unexpected: " + t.getMessage)
           }
         }
+        if (updateCounters)
+          SMGStagedRunCounter.incIntervalCount(interval)
         val (childObjTrees, childPfTrees) = fRoot.children.partition(_.node.isUpdateObj)
         // leaf/update objects do not obey child concurrency and are run in parallel
         // so each gets its own separate message
