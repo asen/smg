@@ -34,40 +34,47 @@ class SMGJmxUpdateActor(
   }
 
   override def receive: Receive = {
-
     case SMGJmxUpdateMessage(hostPort: String, objs: List[SMGJmxObject]) => {
       log.debug(s"SMGUpdateActor received SMGJmxUpdateMessage for ${objs.map(_.id)}")
       Future {
-        val errOpt = jmxClient.checkJmxConnection(hostPort)
-        lazy val pfId = objs.headOption.map(_.baseId).getOrElse("unexpected.jmx.missing.objects")
-        if (errOpt.isDefined) {
-          smgConfSvc.sendCommandMsg(SMGDataFeedMsgCmd(SMGState.tssNow,
-            pfId, plugin.interval, objs, -1,
-            List(errOpt.get), Some(plugin.pluginId)))
-          objs.foreach { obj => incrementCounter() }
-        } else {
-          smgConfSvc.sendCommandMsg(SMGDataFeedMsgCmd(SMGState.tssNow,
-            pfId, plugin.interval, objs, 0,
-            List(), Some(plugin.pluginId)))
-          objs.foreach { obj =>
-            try{
-              val lst = try {
-                Some(jmxClient.fetchJmxValues(hostPort, obj.jmxName, obj.attrs))
-              } catch {
-                case t: Throwable =>
-                  smgConfSvc.invalidateCachedValues(obj)
-                  log.error(s"SMGJmxUpdateActor: Fetch exception from  [${obj.id}]: ${t.getMessage}")
-                  smgConfSvc.sendCommandMsg(SMGDataFeedMsgCmd(SMGRrd.tssNow, obj.id, obj.interval,
-                    Seq(obj), -1, List("fetch_error", t.getMessage), Some(plugin.pluginId)))
-                  None
+        try {
+          val errOpt = jmxClient.checkJmxConnection(hostPort)
+          lazy val pfId = objs.head.baseId
+          if (errOpt.isDefined) {
+            smgConfSvc.sendCommandMsg(SMGDataFeedMsgCmd(SMGState.tssNow,
+              pfId, plugin.interval, objs, -1,
+              List(errOpt.get), Some(plugin.pluginId)))
+            objs.foreach { obj => incrementCounter() }
+          } else {
+            smgConfSvc.sendCommandMsg(SMGDataFeedMsgCmd(SMGState.tssNow,
+              pfId, plugin.interval, objs, 0,
+              List(), Some(plugin.pluginId)))
+            objs.foreach { obj =>
+              try {
+                val lst = try {
+                  Some(jmxClient.fetchJmxValues(hostPort, obj.jmxName, obj.attrs))
+                } catch {
+                  case t: Throwable =>
+                    smgConfSvc.invalidateCachedValues(obj)
+                    log.error(s"SMGJmxUpdateActor: Fetch exception from  [${obj.id}]: ${t.getMessage}")
+                    smgConfSvc.sendCommandMsg(SMGDataFeedMsgCmd(SMGRrd.tssNow, obj.id, obj.interval,
+                      Seq(obj), -1, List("fetch_error", t.getMessage), Some(plugin.pluginId)))
+                    None
+                }
+                if (lst.isDefined) {
+                  smgConfSvc.sendCommandMsg(SMGDataFeedMsgCmd(SMGState.tssNow,
+                    obj.id, plugin.interval, objs, 0,
+                    List(), Some(plugin.pluginId)))
+                  SMGUpdateActor.processObjectUpdate(obj, smgConfSvc, None,
+                    SMGRrdUpdateData(lst.get, Some(SMGRrd.tssNow)), log)
+                }
+              } finally {
+                incrementCounter()
               }
-              if (lst.isDefined)
-                SMGUpdateActor.processObjectUpdate(obj, smgConfSvc, None,
-                  SMGRrdUpdateData(lst.get, Some(SMGRrd.tssNow)), log)
-            } finally {
-              incrementCounter()
             }
           }
+        } catch { case t: Throwable =>
+          log.ex(t, s"Unexpected exception in SMGJmxUpdateActor.receive Future: ${t.getMessage}")
         }
       }(myUpdateEc)
     }
