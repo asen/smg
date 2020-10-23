@@ -7,6 +7,7 @@ import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdate, SMGRrdUpdateData}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap[String, Long]) extends Actor  {
 
@@ -65,7 +66,8 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
             sendToSelfActor ! SMGObjectDataMessage(rrdObj, updTss, resData)
           } catch { case t: Throwable =>
             throw SMGCmdException(pf.command.str,
-              pf.command.timeoutSec, -1, "", "Unexpected: " + t.getMessage)
+              pf.command.timeoutSec, -1, Try(myData.get.res.asStr).getOrElse(""),
+              s"Invalid command result: (${t.getMessage})")
           }
         }
         if (updateCounters)
