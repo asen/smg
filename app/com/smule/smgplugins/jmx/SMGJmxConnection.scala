@@ -11,8 +11,7 @@ import scala.collection.JavaConverters._
 /**
   * Created by asen on 4/12/17.
   */
-class SMGJmxConnection(hostPort: String, log: SMGPluginLogger) {
-
+class SMGJmxConnection(hostPort: String, log: SMGPluginLogger, var lastActiveTsms: Long) {
 
   private var jmxConnection: Option[JMXConnector] = None
 
@@ -52,13 +51,13 @@ class SMGJmxConnection(hostPort: String, log: SMGPluginLogger) {
     } catch {
       case x: Throwable => {
         closeJmxMbeanConnection()
-        log.ex(x, s"checkJmxMbeanConnection: error checking $hostPort")
+        log.ex(x, s"checkJmxMbeanConnection: error checking $hostPort: " + x.getMessage)
         Some(s"checkJmxMbeanConnection: $hostPort: " + x.getMessage)
       }
     }
   }
 
-  def fetchJmxValues(objName: String, attrNames: List[String]): List[Double] = {
+  def fetchJmxValues(objName: String, attrNames: Seq[String]): List[Double] = {
     try {
       realFetchJmxValues(objName, attrNames)
     } catch {
@@ -69,7 +68,7 @@ class SMGJmxConnection(hostPort: String, log: SMGPluginLogger) {
     }
   }
 
-  private def realFetchJmxValues(objName: String, attrNames: List[String]): List[Double] = {
+  private def realFetchJmxValues(objName: String, attrNames: Seq[String]): List[Double] = {
     val connection = getJmxMbeanConnection
     val on = new ObjectName(objName)
     val attrs = connection.synchronized {
@@ -102,12 +101,13 @@ object SMGJmxConnection {
 
   class SMGJmxRMISocketFactory extends RMISocketFactory {
 
-    var timeoutMillis = DEFAULT_RMI_SOCKET_TIMEOUT_MS
+    var timeoutMillis: Int = DEFAULT_RMI_SOCKET_TIMEOUT_MS
 
     override def createSocket(host: String, port: Int): Socket = {
       log.debug(s"Creating RMI socket to $host:$port with timeout $timeoutMillis")
       val socket = new Socket
       socket.setSoTimeout(timeoutMillis)
+      socket.setTcpNoDelay(true)
       socket.setSoLinger(false, 0)
       socket.connect(new InetSocketAddress(host, port), timeoutMillis)
       socket
@@ -115,9 +115,7 @@ object SMGJmxConnection {
 
     override def createServerSocket(port: Int) = new ServerSocket(port)
   }
-
-  // For how long to keep unused RMI connections.
-
+  
   // The default of 90 seconds is tuned for every-minute updates to
   // avoid establishing new connection every minute.
   private val CONNECTION_UNUSED_TIMEOUT_MS = 90000

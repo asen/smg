@@ -46,6 +46,7 @@
 ## Other includes as needed
 #- $include: "smgconf/templ-linux-naive.yml"
 #- $include: "smgconf/config-alerts.yml"
+- $include: "smgconf/localhost-jmx.yml"
 
 # drop-in dir to add more confs - create a yml there and run smgscripts/reload-conf.sh.
 - $include: "/etc/smg/cust/*.yml"

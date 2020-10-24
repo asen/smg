@@ -1,0 +1,44 @@
+
+- $pre_fetch:
+  id: host.localhost.jmx.smg.jvm
+  command: :jmx con 127.0.0.1:9001
+  #pre_fetch: host.localhost.up
+
+- host.localhost.jmx.smg.jvm.heapMem:
+  title: "localhost SMG heapMem usage"
+  pre_fetch: host.localhost.jmx.smg.jvm
+  command: :jmx get 127.0.0.1:9001 java.lang:type=Memory HeapMemoryUsage:used HeapMemoryUsage:committed
+  rrd_type: GAUGE
+  vars:
+    - label: used
+      mu: B
+    - label: committed
+      mu: B
+
+- host.localhost.jmx.smg.jvm.threadCount:
+  title: "localhost SMG threads counte"
+  pre_fetch: host.localhost.jmx.smg.jvm
+  command: :jmx get 127.0.0.1:9001 java.lang:type=Threading ThreadCount DaemonThreadCount
+  rrd_type: GAUGE
+  vars:
+    - label: thread cnt
+    - label: daemon thread cnt
+
+- host.localhost.jmx.smg.jvm.nioBufferPoolDirect:
+  title: "localhost SMG nio direct BufferPool mem used"
+  pre_fetch: host.localhost.jmx.smg.jvm
+  command: :jmx get 127.0.0.1:9001 java.nio:type=BufferPool,name=direct  MemoryUsed TotalCapacity
+  rrd_type: GAUGE
+  vars:
+    - label: mem used
+      mu: B
+    - label: tl cap
+      mu: B
+
+- host.localhost.jmx.smg.jvm.nioBufferPoolDirectCnt:
+  title: "localhost SMG nio direct BufferPool count"
+  pre_fetch: host.localhost.jmx.smg.jvm
+  command: :jmx get 127.0.0.1:9001 java.nio:type=BufferPool,name=direct  Count
+  rrd_type: GAUGE
+  vars:
+    - label: count
