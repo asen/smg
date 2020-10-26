@@ -210,6 +210,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     val rraDefs = mutable.Map[String, SMGRraDef]()
     val cDashboardConfigs = ListBuffer[CDashboardConfig]()
     val configErrors = ListBuffer[String]()
+    val intervalConfs = mutable.Map[Int, IntervalThreadsConfig]()
 
     val pluginChecks = plugins.flatMap(p => p.valueChecks.map { t => (p.pluginId + "-" + t._1, t._2)}).toMap
 
@@ -728,6 +729,27 @@ class SMGConfigParser(log: SMGLoggerApi) {
       }
     }
 
+    def processIntervalConf( t: (String,Object), confFile: String ): Unit = {
+      val ymap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
+      val intvl = Try(ymap("interval").asInstanceOf[Int]).toOption
+      if (intvl.isEmpty){
+        processConfigError(confFile,
+          s"processIntervalConf: skipping interval_def with invalid interval: $ymap")
+      }
+      val conf = IntervalThreadsConfig(
+        interval = intvl.get,
+        numThreads = ymap.get("threads").map(_.asInstanceOf[Int]).
+          getOrElse(IntervalThreadsConfig.DEFAULT_NUM_THREADS),
+        poolType =  ymap.get("pool").map(x => IntervalThreadsConfig.poolTypeFromStr(x.toString)).
+          getOrElse(IntervalThreadsConfig.DEFAULT_POOL_TYPE)
+      )
+      if (intervalConfs.contains(conf.interval)){
+        processConfigError(confFile, s"processIntervalConf: duplicate interval_defs: " +
+          s"old=${intervalConfs(conf.interval).inspect} new=${conf.inspect}", isWarn = true)
+      }
+      intervalConfs(conf.interval) = conf
+    }
+
     def parseConf(confFile: String): Unit = {
       val t0 = System.currentTimeMillis()
       log.debug("SMGConfigServiceImpl.parseConf(" + confFile + "): Starting at " + t0)
@@ -755,6 +777,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 processRraDef(t, confFile)
               } else if (t._1 == "$cdash"){
                 processCustomDashboard(t, confFile)
+              } else if (t._1 == "$interval_def"){
+                processIntervalConf(t, confFile)
               } else if (t._1.startsWith("$")) { // a global def
                 processGlobal(t, confFile)
               } // type: auto below
@@ -960,6 +984,10 @@ class SMGConfigParser(log: SMGLoggerApi) {
       allViewObjectsById.contains(oid)
     }.map(oid => allViewObjectsById(oid))
 
+    val finalIntervalConfs = intervals.toSeq.map { intvl =>
+      (intvl, intervalConfs.getOrElse(intvl, IntervalThreadsConfig.defaultConf(intvl)))
+    }.toMap
+
     val ret = SMGLocalConfig(
       globals = globalConf.toMap,
       confViewObjects = allViewObjectsConf.toList,
@@ -969,7 +997,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       rrdDirLevelsDef = levelsDef,
       imgDir = if (globalConf.contains("$img_dir")) globalConf("$img_dir") else imgDir,
       urlPrefix = if (globalConf.contains("$url_prefix")) globalConf("$url_prefix") else urlPrefix,
-      intervals = intervals.toSet,
+      intervalConfs = finalIntervalConfs,
       preFetches = preFetchesWithNc.toMap,
       remotes = remotes.toList,
       remoteMasters = remoteMasters.toList,

@@ -11,7 +11,5 @@ trait ExecutionContexts {
   def rrdGraphCtx: ExecutionContext
   def monitorCtx: ExecutionContext
   def ctxForInterval(interval: Int): ExecutionContext
-  def initializeUpdateContexts(intervals: Seq[Int],
-                               threadsPerIntervalMap: Map[Int,Int],
-                               defaultThreadsPerInterval: Int): Unit
+  def initializeUpdateContexts(intervals: Map[Int,IntervalThreadsConfig]): Unit
 }

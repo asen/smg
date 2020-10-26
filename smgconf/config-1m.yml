@@ -1,3 +1,10 @@
+
+- $interval_def:
+  interval: 60
+#  threads: 0 # will use num cores
+  threads: 8
+  pool: WORK_STEALING
+
 - ^localhost:
   title: "localhost graphs"
   px: "localhost."

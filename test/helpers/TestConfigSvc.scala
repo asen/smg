@@ -103,7 +103,7 @@ class TestConfigSvc() extends SMGConfigService {
       rrdDirLevelsDef = None,
       imgDir = "test-out",
       urlPrefix = "",
-      intervals = Set(60),
+      intervalConfs = Map(60-> IntervalThreadsConfig.defaultConf(60)),
       preFetches = Map("test.prefetch" ->
         SMGPreFetchCmd("test.prefetch", SMGCmd("echo 0"), None, None,
           ignoreTs = false, 1, None, passData = false)),

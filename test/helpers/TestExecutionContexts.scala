@@ -1,6 +1,6 @@
 package helpers
 
-import com.smule.smg.core.ExecutionContexts
+import com.smule.smg.core.{ExecutionContexts, IntervalThreadsConfig}
 
 import scala.concurrent.ExecutionContext
 
@@ -14,7 +14,5 @@ class TestExecutionContexts extends ExecutionContexts {
 
   override def ctxForInterval(interval: Int): ExecutionContext = ExecutionContext.global
 
-  override def initializeUpdateContexts(intervals: Seq[Int],
-                                        threadsPerIntervalMap: Map[Int, Int],
-                                        defaultThreadsPerInterval: Int): Unit = {}
+  override def initializeUpdateContexts(intervals: Map[Int,IntervalThreadsConfig]): Unit = {}
 }

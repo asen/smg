@@ -185,13 +185,8 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     valuesCache.purgeObsoleteObjs(newConf.updateObjects)
   }
 
-  private def initExecutionContexts(intervals: Set[Int]): Unit = {
-    val defaultThreadsPerInterval: Int = if (configuration.has("smg.defaultThreadsPerInterval"))
-      configuration.get[Int]("smg.defaultThreadsPerInterval") else 4
-    val myConf = configuration.get[Configuration]("smg.threadsPerIntervalMap")
-    val threadsPerIntervalMap: Map[Int, Int] = (for (i <- intervals.toList; if myConf.has("interval_" + i))
-      yield (i, myConf.get[Int]("interval_" + i))).toMap
-    executionContexts.initializeUpdateContexts(intervals.toSeq, threadsPerIntervalMap, defaultThreadsPerInterval)
+  private def initExecutionContexts(intervals: Map[Int, IntervalThreadsConfig]): Unit = {
+    executionContexts.initializeUpdateContexts(intervals)
   }
 
   private val topLevelConfigFile: String = if (configuration.has("smg.config"))
@@ -215,7 +210,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
 
   private var currentConfig = configParser.getNewConfig(plugins, topLevelConfigFile)
   createNonExistingRrds(currentConfig)
-  initExecutionContexts(currentConfig.intervals)
+  initExecutionContexts(currentConfig.intervalConfs)
   plugins.foreach(_.onConfigReloaded())
 
   /**
@@ -235,7 +230,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       try {
         val newConf = configParser.getNewConfig(plugins, topLevelConfigFile)
         createNonExistingRrds(newConf)
-        initExecutionContexts(newConf.intervals)
+        initExecutionContexts(newConf.intervalConfs)
         currentConfig.synchronized {  // not really needed ...
           currentConfig = newConf
         }

@@ -42,7 +42,7 @@ case class SMGLocalConfig(
                            defaultRrdDir: String,
                            rrdDirLevelsDef: Option[DirLevelsDef],
                            urlPrefix: String,
-                           intervals: Set[Int],
+                           intervalConfs: Map[Int, IntervalThreadsConfig],
                            preFetches: Map[String, SMGPreFetchCmd],
                            remotes: Seq[SMGRemote],
                            remoteMasters: Seq[SMGRemote],
@@ -56,6 +56,8 @@ case class SMGLocalConfig(
                            rraDefs: Map[String, SMGRraDef],
                            private val configErrors: List[String] // use allErrors at the bottom instead
                     ) extends SMGConfig {
+
+  val intervals: Set[Int] = intervalConfs.keySet
 
   private val validationErrors = ListBuffer[String]()
 
@@ -369,7 +371,7 @@ case class SMGLocalConfig(
     val rrdObjs = rrdObjects.size
     val rrdAggObjs = rrdAggObjects.size
     val othObjs = objus - (rrdObjs + rrdAggObjs)
-    val intvls = intervals.toList.sorted.mkString(",")
+    val intvls = intervalConfs.toList.sortBy(_._1).map(_._2.inspect).mkString(",")
     s"intervals=$intvls localUpdateObjects=$objus (rrd=$rrdObjs, " +
       s"rrdAgg=$rrdAggObjs, plugins=$othObjs) " +
       s"localViewObjects=${viewObjects.size} remotes=${remotes.size}"
