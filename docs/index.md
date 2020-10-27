@@ -15,6 +15,17 @@
     1. [Concepts TOC](#concepts-toc)
 1. [Configuration Reference](#config)
     1. [Configuration Reference TOC](#config-toc)
+    1. [Globals](#globals)
+        1. [Pre-fetch](#pre_fetch)
+        1. [Interval thread pools](#interval_def)
+    1. [RRD objects](#rrd-objects)
+    1. [Aggregate RRD objects](#rrd-agg-objects)
+    1. [View objects](#view-objects)
+    1. [Indexes](#indexes)
+    1. [Hidden Indexes](#hindexes)
+    1. [Custom dashboards configuration](#cdash)
+    1. [Monitoring configuration](#monitoring)
+
 1. [Running and troubleshooting](#running)
     1. Frontend http server
     1. Tweaking SMG for performance
@@ -311,7 +322,8 @@ pre\_fetch and run trees). All per-interval runs execute in
 their own separate thread pool, so that e.g. slow hourly commands do
 not interfere too much with fast every-minute commands. Aggregate RRD
 object updates happen after all regular rrd objects have been updated,
-at the end of the interval run.
+at the end of the interval run. Thread pools are configurable via the 
+$interval\_def global.
 
 By default SMG will use its internal scheduler to trigger the 
 regular runs. Without getting into too much detail here (check 
@@ -1004,6 +1016,7 @@ objects were defined.
 
 1. [Globals](#globals)
     1. [Pre-fetch](#pre_fetch)
+    1. [Interval thread pools](#interval_def)
 1. [RRD objects](#rrd-objects)
 1. [Aggregate RRD objects](#rrd-agg-objects)
 1. [View objects](#view-objects)
@@ -1452,6 +1465,44 @@ detected (detection is simply having a hard limit of max 10 parent
 levels when constructing the run trees).
 
 <a name="rrd-objects" />
+
+<a name="interval_def" />
+
+- **$interval\_def**: similar to pre\_fetch  interval\_def is special and
+it is not a simple name -> value pair. It has a mandatory **interval** property
+specifying the interval (in seconds) for which this applies and optional
+**threads** property specifying max number of threads (default is 4 and if set to 0
+it will be dynamically set to the number of cpu cores available) and and a **pool**
+property specifying the type of thread pool - one of FIXED (default) and
+WORK_STEALING. Examples:
+
+<blockquote>
+<pre>
+
+    - $interval_def:
+      interval: 60
+      threads: 20
+      pool: FIXED
+
+    - $interval_def:
+      interval: 200
+      threads: 4
+      pool: WORK_STEALING
+
+Alternate (new) syntax:
+
+    - type: interval_def:
+      interval: 60
+      threads: 20
+      pool: FIXED
+
+    - type: interval_def:
+      interval: 200
+      threads: 0 # will use num cpu cores
+      pool: WORK_STEALING
+
+</pre>
+</blockquote>
 
 ### RRD objects
 
@@ -2292,6 +2343,7 @@ TODO
 
 ### Reverse proxy
 
+- see the k8s/ deployment with nginx in front of the Play app
 - example apache Reverse proxy conf
 
 <pre>
@@ -2310,10 +2362,6 @@ TODO
             ProxyPass  /assets/smg !
             Alias /assets/smg /opt/smg/public/smg
 
-            # same for some plugin static data, as needed
-            ProxyPass  /spiker_hist !
-            Alias /spiker_hist /var/www/html/spiker_hist
-
             # the actual proxy to SMG
             ProxyPass        /  http://localhost:9000/
             ProxyPassReverse /  http://localhost:9000/
@@ -2322,7 +2370,7 @@ TODO
 
 
 - application.conf
-    - thread pools and performance
+
 - logs
 
 
