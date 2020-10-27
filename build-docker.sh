@@ -17,7 +17,7 @@ IMAGE_NAME=${IMAGE_NAME:-gcr.io/asen-smg/smg-$VERSION}
 
 echo "Using VERSION=$VERSION IMAGE_NAME=$IMAGE_NAME IMAGE_VERSION=$IMAGE_VERSION"
 
-./build-smg.sh --no-pkg
+./build-smg.sh "$@"
 
 echo "Done with SMG build, proceeding with container building"
 
