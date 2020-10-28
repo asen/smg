@@ -1,14 +1,15 @@
-v 0.6+
+v 1.2+
 
 == Short term plan ==
 
+* stable release
 * handle kube-state-metrics in Kube plugin (not really metrics)
 * per-recipient throttling of alerts
-* stable release
+* retry individual failed notifications commands not only when all fail
 
 == Documentation ==
 
-* document JMX plugin config
+* document JMX plugin commands
 * document event log and UI
 * documnet kube and scrape plugins
 * document label filters
@@ -37,7 +38,5 @@ from external sources posting the data via some API. Probably a plugin.
 * configurator (plugin?)
 
 * filter to hide empty graphs (?)
-
-* support "tags" (?) - be able to filter by tag.
 
 * Silencing indexes so that newly added objects will be treated as silenced (already covered by sticky silence?)
