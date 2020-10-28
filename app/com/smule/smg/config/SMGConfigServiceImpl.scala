@@ -265,6 +265,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   override def isDevMode: Boolean = environment.mode() == Mode.DEV
 
   private val PLUGIN_COMMAND_PREFIX = ":"
+  private val CAT_COMMAND = "-"
 
   private def runPluginFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
     try {
@@ -285,7 +286,12 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   }
 
   def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
-    if (command.str.startsWith(PLUGIN_COMMAND_PREFIX)) {
+    if (command.str == CAT_COMMAND){
+      if (parentData.isEmpty)
+        throw SMGCmdException(command.str, command.timeoutSec, 1, "",
+          "Internal CAT (-) command requires parent to pass data")
+      parentData.get.res
+    } else if (command.str.startsWith(PLUGIN_COMMAND_PREFIX)) {
 //      log.debug(s"RUN_COMMAND: tms=${command.timeoutSec} : (plugin) ${command.str}")
       runPluginFetchCommand(command, parentData)
     } else {
