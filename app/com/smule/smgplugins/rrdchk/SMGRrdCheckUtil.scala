@@ -66,6 +66,7 @@ object SMGRrdCheckUtil {
       rrdType = ou.rrdType,
       interval = ou.interval,
       dataDelay = ou.dataDelay,
+      delay = 0.0,
       stack = false,
       preFetch = ou.preFetch,
       rrdFile = Some(newRrdFile),

@@ -110,7 +110,9 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
     Future {
       commandTrees.foreach { fRoot =>
-        updateActor ! SMGUpdateActor.SMGFetchCommandMessage(interval, Seq(fRoot), None, 1, updateCounters = true, None)
+        SMGUpdateActor.sendSMGFetchCommandMessage(actorSystem, updateActor,
+          configSvc.executionContexts.ctxForInterval(interval),
+            interval, Seq(fRoot), None, 1, updateCounters = true, None, log)
         log.debug(s"SMGrapher.run(interval=$interval): Sent fetch update message for: ${fRoot.node.id}")
       }
       log.info(s"SMGrapher.run(interval=$interval): sent messages for $sz fetch commands")
@@ -139,8 +141,9 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     val topLevel = commandTrees.find(t => t.findTree(cmdId).isDefined)
     if (topLevel.isDefined){
       val root = topLevel.get.findTree(cmdId).get
-      updateActor ! SMGUpdateActor.SMGFetchCommandMessage(interval, Seq(root), None, root.node.childConc,
-        updateCounters = false, None)
+      SMGUpdateActor.sendSMGFetchCommandMessage(actorSystem, updateActor,
+        configSvc.executionContexts.ctxForInterval(interval),
+        interval, Seq(root), None, root.node.childConc, updateCounters = false, None, log)
       log.info(s"SMGrapher.runCommandsTree(interval=$interval): Sent fetch update message for: " + root.node)
       true
     } else {

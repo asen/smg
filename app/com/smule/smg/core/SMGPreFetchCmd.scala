@@ -17,11 +17,12 @@ case class SMGPreFetchCmd(id: String,
                           override val ignoreTs: Boolean,
                           override val childConc: Int,
                           override val notifyConf: Option[SMGMonNotifyConf],
-                          override val passData: Boolean
+                          override val passData: Boolean,
+                          override val delay: Double
                          ) extends SMGFetchCommand {
   override val commandDesc: Option[String] = desc
 
   lazy val inspect: String = s"SMGPreFetchCmd: id=$id command=$command desc=${desc.getOrElse("None")} " +
     s"pre_fetch=${preFetch.getOrElse("None")} ignoreTs=$ignoreTs childConc=$childConc passData=$passData " +
-    s"notifyConf=${notifyConf.map(_.inspect).getOrElse("None")}"
+    s"delay=$delay notifyConf=${notifyConf.map(_.inspect).getOrElse("None")}"
 }

@@ -1,18 +1,22 @@
 package com.smule.smg.core
 
-import akka.actor.Actor
+import java.util.concurrent.TimeUnit
+
+import akka.actor.{Actor, ActorRef, ActorSystem}
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core.SMGUpdateActor.{SMGAggObjectMessage, SMGFetchCommandMessage, SMGObjectDataMessage}
 import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdate, SMGRrdUpdateData}
 
 import scala.collection.concurrent.TrieMap
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Random, Try}
 
 class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap[String, Long]) extends Actor  {
 
   private val log = SMGLogger
   private val sendToSelfActor = context.actorOf(SendToSelfActor.props(self))
+  private val actorSystem = context.system
 
   private def ecForInterval(interval: Int): ExecutionContext =
     configSvc.executionContexts.ctxForInterval(interval)
@@ -77,15 +81,17 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
         // so each gets its own separate message
         if (childObjTrees.nonEmpty) {
           childObjTrees.foreach { rrdObjTree =>
-            sendToSelfActor ! SMGFetchCommandMessage(interval, Seq(rrdObjTree), updTss,
-              pf.childConc, updateCounters, myData)
+            SMGUpdateActor.sendSMGFetchCommandMessage(actorSystem, sendToSelfActor,
+              ecForInterval(interval), interval, Seq(rrdObjTree), updTss,
+              pf.childConc, updateCounters, myData, log)
           }
 //          log.debug(s"SMGUpdateActor.processTreeRoot($interval): Sent update messages for " +
 //            s"[${pf.id}] object children (${childObjTrees.size})")
         }
         if (childPfTrees.nonEmpty) {
-          sendToSelfActor ! SMGFetchCommandMessage(interval, childPfTrees, updTss, pf.childConc,
-            updateCounters, myData)
+          SMGUpdateActor.sendSMGFetchCommandMessage(actorSystem, sendToSelfActor,
+            ecForInterval(interval), interval, childPfTrees, updTss,
+            pf.childConc, updateCounters, myData, log)
 //          log.debug(s"SMGUpdateActor.processTreeRoot($interval): Sent update messages for " +
 //            s"[${pf.id}] pre_fetch children (${childPfTrees.size})")
         }
@@ -220,6 +226,41 @@ object SMGUpdateActor {
   case class SMGAggObjectMessage(obj: SMGRrdAggObject)
 
 
+  def sendSMGFetchCommandMessage(
+                                  system: ActorSystem,
+                                  targetActor: ActorRef,
+                                  ec: ExecutionContext,
+                                  interval:Int,
+                                  rootCommands:Seq[SMGFetchCommandTree],
+                                  ts: Option[Int],
+                                  childConc: Int,
+                                  updateCounters: Boolean,
+                                  parentData: Option[ParentCommandData],
+                                  log: SMGLoggerApi
+                                ) : Unit = {
+    val byDelay = rootCommands.groupBy(_.node.delay)
+    byDelay.foreach { case (delay, seq) =>
+      val msg = SMGFetchCommandMessage(interval, seq, ts, childConc,
+        updateCounters, parentData)
+      if (delay == 0.0){
+        targetActor ! msg
+      } else {
+        var actualDelayMs: Long = if (delay > 0)
+          (delay * 1000).toInt
+        else {
+          // negative delay means random value between 0 and interval - abs(delay)
+          Random.nextInt(((interval.toDouble + delay) * 1000).toInt)
+        }
+        if ((actualDelayMs < 0) || (actualDelayMs >= (interval * 1000))){
+          log.warn(s"SMGUpdateActor.sendSMGFetchCommandMessage: invalid delay value ($actualDelayMs), " +
+            s"resetting to 1. Commands: ${seq.map(_.node.id).mkString(",")}")
+          actualDelayMs = 1
+        }
+        val dur = FiniteDuration(actualDelayMs, TimeUnit.MILLISECONDS)
+        system.scheduler.scheduleOnce(dur, targetActor, msg)(ec)
+      }
+    }
+  }
 
   /**
     * Use this to do rrd updates, store successful values in the cache and send appropriate object monitoring messages.
@@ -324,7 +365,7 @@ object SMGUpdateActor {
     }
   }
 
-  // This is useful for blugins which do multiple updates to the same object in one shot
+  // This is useful for plugins which do multiple updates to the same object in one shot
   def processRrdBatchUpdate(rrd: SMGRrdUpdate,
                             smgConfSvc: SMGConfigService,
                             batch: Seq[SMGRrdUpdateData],

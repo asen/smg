@@ -27,6 +27,7 @@ class TestConfigSvc() extends SMGConfigService {
     rrdType = "GAUGE",
     interval = 60,
     dataDelay = 0,
+    delay = 0.0,
     stack = false,
     preFetch = pfId,
     rrdFile = Some(s"test-out/$oid.rrd"),
@@ -106,7 +107,7 @@ class TestConfigSvc() extends SMGConfigService {
       intervalConfs = Map(60-> IntervalThreadsConfig.defaultConf(60)),
       preFetches = Map("test.prefetch" ->
         SMGPreFetchCmd("test.prefetch", SMGCmd("echo 0"), None, None,
-          ignoreTs = false, 1, None, passData = false)),
+          ignoreTs = false, 1, None, passData = false, delay = 0.0)),
       remotes = Seq(),
       remoteMasters = Seq(),
       pluginObjects = Map(),

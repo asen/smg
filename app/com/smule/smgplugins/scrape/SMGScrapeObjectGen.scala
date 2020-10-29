@@ -110,6 +110,7 @@ class SMGScrapeObjectGen(
           rrdType = rrdType,
           interval = scrapeTargetConf.interval,
           dataDelay = 0,
+          delay = 0.0,
           stack = false,
           preFetch = parentPfIds.headOption,
           rrdFile = None, //TODO ?
@@ -212,7 +213,8 @@ class SMGScrapeObjectGen(
       ignoreTs = false,
       childConc = 1,
       notifyConf = scrapeTargetConf.notifyConf,
-      passData = true
+      passData = true,
+      delay = 0.0
     )
     preFetches += scrapeFetchPf
     preFetchIds = scrapeFetchPf.id :: preFetchIds
@@ -232,7 +234,8 @@ class SMGScrapeObjectGen(
         ignoreTs = false,
         childConc = 1,
         notifyConf = scrapeTargetConf.notifyConf,
-        passData = true
+        passData = true ,
+        delay = 0.0
       )
       preFetches += scrapeParsePf
       preFetchIds = scrapeParsePf.id :: preFetchIds

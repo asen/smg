@@ -80,6 +80,8 @@ object SMGYamlConfigGen {
       val notifyConf = notifyConfToYamlMap(obj.notifyConf.get)
       notifyConf.asScala.foreach { case (k,v) => ret.put(k,v) }
     }
+    if (obj.delay != 0.0)
+      ret.put("delay", Double.box(obj.delay))
     ret
   }
 
@@ -132,6 +134,8 @@ object SMGYamlConfigGen {
       }
       ret.put("labels", jlabels)
     }
+    if (obj.delay != 0.0)
+      ret.put("delay", Double.box(obj.delay))
     ret
   }
 

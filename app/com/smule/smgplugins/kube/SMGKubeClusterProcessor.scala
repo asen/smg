@@ -438,7 +438,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           ignoreTs = false,
           childConc = 2,
           notifyConf = cConf.notifyConf,
-          passData = true
+          passData = true,
+          delay = 0.0
         )
       )
     } else {

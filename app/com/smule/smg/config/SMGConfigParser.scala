@@ -268,6 +268,11 @@ class SMGConfigParser(log: SMGLoggerApi) {
       }
     }
 
+    def getDelay(yamlMap: mutable.Map[String, Object]): Double = {
+      yamlMap.get("delay").map(x =>
+        Try(x.toString.toDouble).getOrElse(0.0)).getOrElse(0.0)
+    }
+
     def processPrefetch(t: (String,Object), confFile: String ): Unit = {
       val yamlMap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
       if (yamlMap.contains("id") && yamlMap.contains("command")) {
@@ -294,7 +299,9 @@ class SMGConfigParser(log: SMGLoggerApi) {
             ignoreTs = ignoreTs,
             childConc = Math.max(1, childConc),
             notifyConf = notifyConf,
-            passData = passData)
+            passData = passData,
+            delay = getDelay(yamlMap)
+          )
         }
       } else {
         processConfigError(confFile, "processPrefetch: $pre_fetch yamlMap does not have command and id: " + yamlMap.toString)
@@ -597,6 +604,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 rrdType = myRrdType,
                 interval = confInterval,
                 dataDelay = ymap.getOrElse("dataDelay", 0).asInstanceOf[Int],
+                delay = getDelay(ymap),
                 stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
                 preFetch = parentIds.headOption,
                 rrdFile = Some(SMGConfigParser.getRrdFile(rrdDir, oid, levelsDef)),
@@ -915,7 +923,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
           ignoreTs = pfc.ignoreTs,
           childConc = pfc.childConc,
           notifyConf = Some(mergedNc),
-          passData = pfc.passData
+          passData = pfc.passData,
+          delay = pfc.delay
         )
         (id, newPfc)
       }

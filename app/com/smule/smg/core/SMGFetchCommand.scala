@@ -20,6 +20,8 @@ trait SMGFetchCommand extends SMGTreeNode {
 
   override def parentId: Option[String] = preFetch
 
+  val delay: Double
+
   // these are only meaningful in local/non-rrd obj context, which overrides them
   val ignoreTs = false
   val childConc: Int = 1

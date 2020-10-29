@@ -42,4 +42,5 @@ case class SMGRrdAggObject(id: String,
   override val passData: Boolean = true
 
   val commandDesc: Option[String] = Some(title)
+  override val delay: Double = 0.0
 }
