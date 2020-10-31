@@ -12,7 +12,7 @@ if [ "$1" == "--no-pkg" ] ; then
     NOPKG=true
 fi
 
-VERSION=${VERSION:-1.1}
+VERSION=${VERSION:-1.2}
 
 echo "*** Building docs"
 
