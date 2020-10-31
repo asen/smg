@@ -1,0 +1,30 @@
+@import com.smule.smg.monitor.SMGMonitorStatesResponse
+
+@(msr: SMGMonitorStatesResponse, curUrl: String)
+
+@monitorMuteUnmute(msr.remote.id, msr.isMuted, curUrl)
+
+<div>
+  @if(msr.states.isEmpty) {
+  <span style="color: green">No issues</span>
+  } else {
+  <ul>
+    @for((ms,ix) <- msr.states.zipWithIndex) {
+    <li>
+      <span style="background-color: @ms.severityColor;">@{ms.currentStateVal}</span>
+      [<a href="@ms.showUrl"><b>Link/Graphs</b></a>] @ellipsifyText(ms.text, 1600)
+      [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ]
+
+      @monStateActions(ms, Some(curUrl))
+
+      @if(msr.activeAlerts.contains(ms.alertKey)) {
+      @defining(msr.activeAlerts(ms.alertKey)) { aa =>
+      <br/>
+      <strong>Active alert:</strong> @{aa.text}
+      }
+      }
+    </li>
+    }
+  </ul>
+  }
+</div>

@@ -788,17 +788,47 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def monitorProblemsRemoteSect(
+                                 remote: Option[String],
+                                 ms: Option[String],
+                                 soft: Option[String],
+                                 //ackd: Option[String],
+                                 slncd: Option[String],
+                                 uri: Option[String]
+                               ): Action[AnyContent] = Action.async { implicit request =>
+    val rmtId = remote.getOrElse(SMGRemote.local.id)
+    val minSev = Try(SMGState.fromName(ms.getOrElse(configSvc.config.globalMonitorProblemsMinSeverity))).toOption
+    val inclSoft = soft.getOrElse("off") == "on"
+    val inclSlnc = slncd.getOrElse("off") == "on"
+    //val inclAck = ackd.getOrElse("off") == "on"
+    val inclAck = inclSlnc
+    val flt = SMGMonFilter(rx = None, rxx = None, minState = minSev,
+      includeSoft = inclSoft, includeAcked = inclAck, includeSilenced = inclSlnc)
+    monitorApi.states(Seq(rmtId), flt).map { msrs =>
+      Ok(views.html.monitorProblemsResponse(msrs.head, uri.getOrElse(request.uri)))
+    }
+  }
 
   def monitorProblems(remote: Seq[String],
                       ms: Option[String],
                       soft: Option[String],
                       //ackd: Option[String],
-                      slncd: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+                      slncd: Option[String]): Action[AnyContent] = Action { implicit request =>
     // get the list of remotes to display in the filter form drop down
     val availRemotes = availableRemotes(configSvc.config)
     val myRemotes = if (remote.isEmpty) {
       Seq(SMGRemote.wildcard.id)
     } else remote
+    val fetchRemotes = if (remote.isEmpty || remote.contains(SMGRemote.wildcard.id))
+      Seq(SMGRemote.local) ++ availRemotes.drop(2) // dropping the wildcard remote avoiding dup local
+    else {
+      remote.flatMap { rmtId =>
+        if (rmtId == SMGRemote.local.id)
+          Some(SMGRemote.local)
+        else
+          configSvc.config.remotes.find(_.id == rmtId)
+      }
+    }
     val minSev = Try(SMGState.fromName(ms.getOrElse(configSvc.config.globalMonitorProblemsMinSeverity))).toOption
     val inclSoft = soft.getOrElse("off") == "on"
     val inclSlnc = slncd.getOrElse("off") == "on"
@@ -807,11 +837,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val flt = SMGMonFilter(rx = None, rxx = None, minState = minSev,
       includeSoft = inclSoft, includeAcked = inclAck, includeSilenced = inclSlnc)
     val availStates = (SMGState.values - SMGState.OK).toSeq.sorted.map(_.toString)
-    monitorApi.states(myRemotes, flt).map { msr =>
-      Ok(views.html.monitorProblems(configSvc, availRemotes.map(_.id), availStates, myRemotes,
-        msr, flt, request.uri))
-    }
-
+    Ok(views.html.monitorProblemsAsync(configSvc, availRemotes.map(_.id), availStates, myRemotes,
+      fetchRemotes, flt, request.uri))
   }
 
   val DEFAULT_HEATMAP_MAX_SIZE = 1800
