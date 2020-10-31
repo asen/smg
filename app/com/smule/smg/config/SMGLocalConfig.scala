@@ -160,7 +160,7 @@ case class SMGLocalConfig(
   val maxUrlSize: Int = globals.getOrElse("$max-url-size", "8000").toInt
 
   val remoteGraphTimeoutMs: Long = globals.getOrElse("$remote-graph-timeout-ms", "30000").toLong
-  val remoteConfigFetchTimeoutMs: Long = globals.getOrElse("$remote-config-fetch-timeout-ms", "600000").toLong
+  val remoteConfigFetchTimeoutMs: Long = globals.getOrElse("$remote-config-fetch-timeout-ms", "300000").toLong
 
   val MAX_RUNTREE_LEVELS = 10
 

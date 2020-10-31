@@ -25,4 +25,6 @@ case class SMGPreFetchCmd(id: String,
   lazy val inspect: String = s"SMGPreFetchCmd: id=$id command=$command desc=${desc.getOrElse("None")} " +
     s"pre_fetch=${preFetch.getOrElse("None")} ignoreTs=$ignoreTs childConc=$childConc passData=$passData " +
     s"delay=$delay notifyConf=${notifyConf.map(_.inspect).getOrElse("None")}"
+
+  override val cmdSearchText: String = super.cmdSearchText
 }

@@ -51,7 +51,7 @@ trait SMGObjectBase {
   private def searchRemoteIdSeq: Seq[String] =
     if (SMGRemote.isRemoteObj(id)) Seq(SMGRemote.remoteId(id)) else Seq(SMGRemote.localName)
 
-  lazy val searchText: String = (
+  def searchText: String = (
     Seq(SMGRemote.localId(id)) ++ searchRemoteIdSeq ++ parentIds ++ Seq(title,
       searchVars.map(v => v.getOrElse("label","") + " " + v.getOrElse("mu", "") ).mkString(" ")
       ) ++ labels.keys.toSeq.sorted.map{k => s"$k=${labels(k)}"}

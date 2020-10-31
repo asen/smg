@@ -43,4 +43,7 @@ case class SMGRrdAggObject(id: String,
 
   val commandDesc: Option[String] = Some(title)
   override val delay: Double = 0.0
+
+  override val searchText: String = (Seq(super.searchText, cmdSearchText) ++
+    ous.map(_.searchText)).mkString(" ")
 }

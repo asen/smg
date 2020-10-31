@@ -12,10 +12,12 @@ case class SMGRemoteAggObjectView(
                                    vars: List[Map[String, String]],
                                    cdefVars: List[Map[String, String]],
                                    graphVarsIndexes: Seq[Int],
-                                   title: String
+                                   title: String,
+                                   searchTextOpt: Option[String]
                                  ) extends SMGAggObjectView {
   override val refObj: Option[SMGObjectUpdate] = None
   override val parentIds: Seq[String] = Seq() // TODO??
   override lazy val rrdType: String = objs.map(_.rrdType).distinct.mkString(",")
+  override def searchText: String = if (searchTextOpt.isDefined) searchTextOpt.get else super.searchText
 }
 

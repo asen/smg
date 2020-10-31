@@ -27,7 +27,7 @@ trait SMGFetchCommand extends SMGTreeNode {
   val childConc: Int = 1
   val passData: Boolean
 
-  lazy val cmdSearchText: String = (Seq(id, command.str) ++ Seq(commandDesc, preFetch).flatten).mkString(" ")
+  def cmdSearchText: String = (Seq(id, command.str) ++ Seq(commandDesc, preFetch).flatten).mkString(" ")
 
   val notifyConf: Option[SMGMonNotifyConf]
 }

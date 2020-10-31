@@ -25,4 +25,6 @@ case class SMGraphObject(
   override val parentIds: Seq[String] = refObj.map(_.parentIds).getOrElse(Seq())
 
   override val rraDef: Option[SMGRraDef] = refObj.flatMap(_.rraDef)
+
+  override val searchText: String = super.searchText + " " + refObj.map(_.searchText).getOrElse("")
 }

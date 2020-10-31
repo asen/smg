@@ -22,9 +22,12 @@ case class SMGRemoteObject(
                             stack: Boolean,
                             rrdType: String,
                             rraDef: Option[SMGRraDef],
-                            labels: Map[String,String]
+                            labels: Map[String,String],
+                            searchTextOpt: Option[String]
                           ) extends SMGObjectView {
 
   override val rrdFile: Option[String] = None
   override val refObj: Option[SMGObjectUpdate] = None
+
+  override def searchText: String = if (searchTextOpt.isDefined) searchTextOpt.get else super.searchText
 }

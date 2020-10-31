@@ -78,7 +78,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     (JsPath \ "stack").read[Boolean] and
     (JsPath \ "rrdType").readNullable[String].map(_.getOrElse("UNKNOWN")) and
     (JsPath \ "rrad").readNullable[SMGRraDef] and
-    (JsPath \ "labels").readNullable[Map[String,String]].map(mopt => mopt.getOrElse(Map[String,String]()))
+    (JsPath \ "labels").readNullable[Map[String,String]].map(mopt => mopt.getOrElse(Map[String,String]())) and
+    (JsPath \ "st").readNullable[String]
 
   val nonAggObjectReads = nonAggObjectBuilder.apply(SMGRemoteObject.apply _)
 
@@ -93,7 +94,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "vars").read[List[Map[String, String]]] and
       (JsPath \ "cdefVars").readNullable[List[Map[String, String]]].map(ol => ol.getOrElse(List())) and
       (JsPath \ "graphVarsIndexes").readNullable[List[Int]].map(ol => ol.getOrElse(List())) and
-      (JsPath \ "title").read[String].map(title => "(" + remote.id + ") " + title)
+      (JsPath \ "title").read[String].map(title => "(" + remote.id + ") " + title) and
+      (JsPath \ "st").readNullable[String]
   }
 
   val aggObjectReads = aggObjectBuilder.apply(SMGRemoteAggObjectView.apply _)
@@ -732,7 +734,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       isMuted = false, Map())
 
     ws.url(remote.url + API_PREFIX + "monitor/states" + params).
-      withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
       Try {
         Json.parse(resp.body).as[SMGMonitorStatesResponse]
       }.recover {
@@ -754,7 +756,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     lazy val errRet = (Seq(SMGMonStateGlobal("Remote data unavailable", remote.id,
       SMGState(SMGState.tssNow, SMGState.SMGERR, "data unavailable"))), Seq())
     ws.url(remote.url + API_PREFIX + "monitor/silenced").
-      withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
       Try {
         val jsval = Json.parse(resp.body).as[Map[String,JsValue]]
         val monStates = jsval("sts").as[Seq[SMGMonState]]
@@ -782,7 +784,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     if (rootId.isDefined) paramsBuf += s"rid=${SMGRemote.localId(rootId.get)}"
     val params = s"?" + paramsBuf.mkString("&")
     ws.url(remote.url + API_PREFIX + "monitor/trees" + params).
-      withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
       Try {
         val jsval = Json.parse(resp.body).as[Map[String, JsValue]]
         val seq = jsval("seq").as[Seq[SMGTree[SMGMonState]]]
@@ -814,7 +816,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
     val params = s"?" + paramsBuf.mkString("&")
     ws.url(remote.url + API_PREFIX + "monitor/slncall" + params).
-      withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
+      withRequestTimeout(shortTimeoutMs).get().map { resp =>
       resp.status == 200
     }.recover {
       case x => {
@@ -1038,7 +1040,8 @@ object SMGRemoteClient {
     "stack" -> obj.stack,
     "rrdType" -> obj.rrdType,
     "rrad" -> obj.rraDef,
-    "labels" -> obj.labels
+    "labels" -> obj.labels,
+    "st" -> obj.searchText
   )
 
   def writeAggObject(obj: SMGAggObjectView) = {
@@ -1059,7 +1062,8 @@ object SMGRemoteClient {
       "title" -> obj.title,
       "stack" -> obj.stack,
       "rrdType" -> obj.rrdType,
-      "is_agg" -> true
+      "is_agg" -> true,
+      "st" -> obj.searchText
     )
   }
 

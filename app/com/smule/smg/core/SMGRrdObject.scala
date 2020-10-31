@@ -57,4 +57,6 @@ case class SMGRrdObject(id: String,
   override val passData = true
 
   val commandDesc: Option[String] = Some(title)
+
+  override val searchText: String = super.searchText + " " + cmdSearchText
 }
