@@ -1088,7 +1088,7 @@ Here is an example remote definition:
   url: "http://smg.dc2.company.com:9080"
 # slave_id: dc1
 # graph_timeout_ms: 30000
-# config_fetch_timeout_ms: 600000
+# config_fetch_timeout_ms: 300000
 </pre>
 </blockquote>
 
@@ -1113,7 +1113,7 @@ calls and config fetch (which can be much slower)
 requesting graphs (and monitor states) from remote instances. Can be
 overridon in each remote definition.
 
-- **$remote-config-fetch-timeout-ms**: 600000 (10 min) - default imeout
+- **$remote-config-fetch-timeout-ms**: 300000 (5 min) - default imeout
 when fetching remote config. These can be big so normally thats much
 higher than the graph timeout value.
 
