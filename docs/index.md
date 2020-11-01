@@ -7,9 +7,6 @@
 1. [Introduction](#introduction)
     1. [What is it](#what-is-it)
 1. [Install](#install)
-    1. [Pre requisites](#pre-reqs)
-    1. [Installation from .tgz bundle](#install-tgz)
-        1. [Installation from sources](#install-src)
 1. [UI orientation](#ui-orient)
 1. [Concepts overview](#concepts)
     1. [Concepts TOC](#concepts-toc)
@@ -27,6 +24,9 @@
     1. [Monitoring configuration](#monitoring)
 
 1. [Running and troubleshooting](#running)
+    1. [Pre requisites](#pre-reqs)
+    1. [Installation from .tgz bundle](#install-tgz)
+        1. [Installation from sources](#install-src)
     1. Frontend http server
     1. Tweaking SMG for performance
 1. [Developer documentation](dev/index.md)
@@ -83,126 +83,11 @@ See concepts overview below for more details.
 
 ## Install
 
-SMG can be installed for a pre-built .tgz or run directly from sources.
+SMG can be installed and run from a Docker image, a pre-built .tgz or run
+directly from sources.
 
-<a name="pre-reqs" />
-
-### Pre-requisites
-
-SMG needs the following software to run.
-
-- SMG needs **bash** and **gnu timeout** to work out of the box. Bash is
-available on pretty much any unix installation and gnu timeout may
-have to be installed (on e.g. Mac). It should be possible to run under
-Windows using cygwin but never tried.
-
-> Note: The "bash" and "timeout" commands are actually
-configurable in application.conf and can be replaced with other
-commands with similar functionality. E.g. in theory it should be
-possible to replace bash with cmd.exe.
-
-- **rrdtool** - [rrdtool](http://oss.oetiker.ch/rrdtool/index.en.html)
-is available as a package on most linux distributions. It comes with
-**rrdcached** - a "caching" daemon which can be used for more
-efficient updates (rrdtool will not write directly to files but will
-send updates to rrdcached for batch updates). Although using rrdcached
-is optional (check the [$rrd\_socket global config option](#rrd_socket))
-it is highly recommended if you plan to do tens of thousands of
-updates every minute.
-
-- **Java 8+** - SMG is written in Scala and needs a JVM (Java 8+) to
-run. One must set the **JAVA_HOME** environment variable pointed to that
-before launching SMG.
-
-- **httpd** (optional) - SMG comes with its own embedded http server
-however since images are served as files from the filesystem it is
-more efficient to use a native http server to serve these (e.g. Apache
-or Nginx). For this to work one would setup the http server as a
-reverse proxy to the SMG instance but bypassing SMG when serving
-images. Here is an example apache conf file to enable httpd listening
-on port 9080 (in this case SMG is told to output its images in the
-/var/www/html/smgimages dir via the [$img\_dir config
-option](#img_dir)):
-
-<pre>
-    Listen 9080
-    &lt;VirtualHost *:9080>
-        ProxyPass  /assets/smg !
-        ProxyPass        /  http://localhost:9000/
-        ProxyPassReverse /  http://localhost:9000/
-        Alias /assets/smg /var/www/html/smgimages
-    &lt;/VirtualHost>
-</pre>
-
-<a name="install-tgz" />
-
-### Installation from .tgz bundle
-
-SMG comes as a pre-built tgz archive named like _smg-$VERSION.tgz_
-(e.g. smg-0.3.tgz). You can unpack that anywhere which will be
-the SMG installation dir. Here are example commands to unpack SMG in
-/opt/smg:
-
-<pre>
-# cd /opt
-# wget sfw:8080/sfw/smg-0.3.tgz
-# tar -xf smg-0.3.tgz
-# mv smg-0.3 smg
-</pre>
-
-SMG comes with start and stop and scripts which in the above example
-would be available as:
-
-- **/opt/smg/start-smg.sh**  - use this to start SMG as a daemon
-process. It requires JAVA_HOME to be pointed to a Java 8 installation.
-
-- **/opt/smg/stop-smg.sh**  - use this to gracefully stop the running
-as a daemon SMG process.
-
-Before you start SMG you need to create a basic
-**/etc/smg/config.yml** file and likely define at least a few RRD
-objects. One can use the smgconf/config.yml file inside the
-installation dir as example and should check the [configuration
-reference](#config) for more details. Note that SMG will happily
-start with empty objects list (not that this is much useful
-beyond the ability to access this documentation when setting up).
-
-Once you start SMG you can access it by pointing your
-browser at port 9000 (this is the default listen port). If using the
-httpd.conf example above, that would be port 9080.
-
-Of course one would likely to define many objects before using SMG for
-real. Check the [configuration reference](#config) for more details.
-We at Smule use chef to manage our servers and also to genereate most
-of our SMG configuration (based on hosts/services templates).
-Describing this in detail is beyond the scope of this documentation -
-use your imagination.
-
-One important note is that whenever you update the yaml config file
-you need to tell the running SMG to reload its cofniguration (without
-actually restarting SMG). This is done via a http POST request like
-this:
-
-<pre>
-    curl -X POST http://localhost:9000/reload
-</pre>
-
-Or use the bundled with SMG bash wrapper around that command available
-as **smgscripts/reload-conf.sh** (relative to the install dir)
-
-In addition, SMG is highly tunable via its Play framework's
-application.conf. Check the [Running and troubleshooting](#running)
-section for more details.
-
-
-<a name="install-src" />
-
-#### Installation from sources
-
-- This is mostly meant for development purposes - check [the
-developer documentation](../dev/index.md#dev-setup) for setup
-instructions.
-
+See the [README.md](https://github.com/asen/smg/blob/master/README.md) in
+the source tree for most up to date install instructions
 
 <a name="ui-orient" />
 
@@ -1404,10 +1289,15 @@ can set the **ignorets** property to ignore the timstamp of the pre-fetch
 and use the first child timestamp which doesn't have that property. In addition
 pre\_fetch can have a **child\_conc** property (default 1 if not specified)
 which determines how many threads can execute this pre-fetch child pre-fetches
-(but not object commands which are always parallelized). Pre fetch also
-supports **notify-fail** - to override alert recipients for failure (check
-[monitoring config](#monitoring) for details). Here are two example pre_fetch
-definitions, one referencing the other as a parent:
+(but not object commands which are always parallelized). One can also specify a 
+**delay** expressed as a floating point value in seconds. This will cause the
+command (and it children) to be executed with a delay according to the specified
+number of seconds. If a negative delay is specified the command will be run 
+with a random delay between 0 and (interval - abs(delay)) seconds. Pre fetch also
+supports **notify-fail** - to override alert recipients for failure and also
+**notify-disable**, **notify-backoff** etc. (check [monitoring config](#monitoring)
+for details). Here are two example pre_fetch definitions, one referencing the
+other as a parent:
 
 <blockquote>
 <pre>
@@ -1427,6 +1317,7 @@ definitions, one referencing the other as a parent:
       pre_fetch: host.host1.up
       pass_data: true
       timeout: 30
+      delay: 5.5
 
 Alternate (new) syntax:
 
@@ -1445,6 +1336,7 @@ Alternate (new) syntax:
       pre_fetch: host.host1.up
       pass_data: true
       timeout: 30
+      delay: 5.5
 
 </pre>
 </blockquote>
@@ -1455,7 +1347,7 @@ own command gets executed (for the current interval run). That way
 multiple objects can be updated from given source (e.g. host/service)
 while hitting it only once per interval. Pre\_fetch itself can have
 another pre\_fetch defined as a parent and one can form command trees
-to be run top-to-bottom (stopping on failure).
+(or DAGs) to be run top-to-bottom (stopping on failure).
 
 > Note that the "run tree" defined in this way must not have cycles
 which can be created in theory by circularly pointing pre\_fetch parents
@@ -1519,6 +1411,7 @@ which could look like this:
   title: "Localhost sysload (1/5/15 min)"               # optional title - object id will be used if no title is present
   interval: 60                                          # optional - default is 60
   dataDelay: 0                                          # optional - default 0
+  delay: 0.0                                            # optional - default 0.0
   rrd_type: GAUGE                                       # optional - default is GAUGE. Can be COUNTER etc (check rrdtool docs)
   rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
@@ -1634,6 +1527,11 @@ their data with certain delay (e.g. a CDN API may report the traffic
 used with 15 min delay). Set that value to the number of seconds data is
 delayed with and on update SMG will subtract that many seconds from the
 fetch/update timestamp.
+
+- **delay** - (default - _0.0_ seconds) - If an object has a delay specified
+its fetch command will not run immediately when its turn comes but after the
+specified amount of seconds. If a negative delay is specified the command
+will be run with a random delay between 0 and (interval - abs(delay)) seconds.
 
 - **title**: - free form text description of the object. If not
 specified, the object id will be used as a title.
@@ -2339,7 +2237,125 @@ objects with more than 8 vars):
 
 ## Running and troubleshooting
 
-TODO
+<a name="pre-reqs" />
+
+### Pre-requisites
+
+SMG needs the following software to run.
+
+- SMG needs **bash** and **gnu timeout** to work out of the box. Bash is
+available on pretty much any unix installation and gnu timeout may
+have to be installed (on e.g. Mac). It should be possible to run under
+Windows using cygwin but never tried.
+
+> Note: The "bash" and "timeout" commands are actually
+configurable in application.conf and can be replaced with other
+commands with similar functionality. E.g. in theory it should be
+possible to replace bash with cmd.exe.
+
+- **rrdtool** - [rrdtool](http://oss.oetiker.ch/rrdtool/index.en.html)
+is available as a package on most linux distributions. It comes with
+**rrdcached** - a "caching" daemon which can be used for more
+efficient updates (rrdtool will not write directly to files but will
+send updates to rrdcached for batch updates). Although using rrdcached
+is optional (check the [$rrd\_socket global config option](#rrd_socket))
+it is highly recommended if you plan to do tens of thousands of
+updates every minute.
+
+- **Java 8+** - SMG is written in Scala and needs a JVM (Java 8+) to
+run. One must set the **JAVA_HOME** environment variable pointed to that
+before launching SMG.
+
+- **httpd** (optional) - SMG comes with its own embedded http server
+however since images are served as files from the filesystem it is
+more efficient to use a native http server to serve these (e.g. Apache
+or Nginx). For this to work one would setup the http server as a
+reverse proxy to the SMG instance but bypassing SMG when serving
+images. Here is an example apache conf file to enable httpd listening
+on port 9080 (in this case SMG is told to output its images in the
+/var/www/html/smgimages dir via the [$img\_dir config
+option](#img_dir)):
+
+<pre>
+    Listen 9080
+    &lt;VirtualHost *:9080>
+        ProxyPass  /assets/smg !
+        ProxyPass        /  http://localhost:9000/
+        ProxyPassReverse /  http://localhost:9000/
+        Alias /assets/smg /var/www/html/smgimages
+    &lt;/VirtualHost>
+</pre>
+
+<a name="install-tgz" />
+
+### Installation from .tgz bundle
+
+SMG comes as a pre-built tgz archive named like _smg-$VERSION.tgz_
+(e.g. smg-0.3.tgz). You can unpack that anywhere which will be
+the SMG installation dir. Here are example commands to unpack SMG in
+/opt/smg:
+
+<pre>
+# cd /opt
+# wget sfw:8080/sfw/smg-0.3.tgz
+# tar -xf smg-0.3.tgz
+# mv smg-0.3 smg
+</pre>
+
+SMG comes with start and stop and scripts which in the above example
+would be available as:
+
+- **/opt/smg/start-smg.sh**  - use this to start SMG as a daemon
+process. It requires JAVA_HOME to be pointed to a Java 8 installation.
+
+- **/opt/smg/stop-smg.sh**  - use this to gracefully stop the running
+as a daemon SMG process.
+
+Before you start SMG you need to create a basic
+**/etc/smg/config.yml** file and likely define at least a few RRD
+objects. One can use the smgconf/config.yml file inside the
+installation dir as example and should check the [configuration
+reference](#config) for more details. Note that SMG will happily
+start with empty objects list (not that this is much useful
+beyond the ability to access this documentation when setting up).
+
+Once you start SMG you can access it by pointing your
+browser at port 9000 (this is the default listen port). If using the
+httpd.conf example above, that would be port 9080.
+
+Of course one would likely to define many objects before using SMG for
+real. Check the [configuration reference](#config) for more details.
+We at Smule use chef to manage our servers and also to genereate most
+of our SMG configuration (based on hosts/services templates).
+Describing this in detail is beyond the scope of this documentation -
+use your imagination.
+
+One important note is that whenever you update the yaml config file
+you need to tell the running SMG to reload its cofniguration (without
+actually restarting SMG). This is done via a http POST request like
+this:
+
+<pre>
+    curl -X POST http://localhost:9000/reload
+</pre>
+
+Or use the bundled with SMG bash wrapper around that command available
+as **smgscripts/reload-conf.sh** (relative to the install dir)
+
+In addition, SMG is highly tunable via its Play framework's
+application.conf. Check the [Running and troubleshooting](#running)
+section for more details.
+
+
+<a name="install-src" />
+
+#### Installation from sources
+
+- This is mostly meant for development purposes - check [the
+developer documentation](../dev/index.md#dev-setup) for setup
+instructions.
+
+
 
 ### Reverse proxy
 

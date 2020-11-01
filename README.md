@@ -127,7 +127,7 @@ stop SMG.
 for documentation, replace localhost with the host where SMG was 
 installed if different).
 
-## Build drom source
+## Build from source
 
 ```
     $ git clone git@github.com:asen/smg.git
@@ -148,7 +148,7 @@ Or check the Dockerfile and build-docker.sh files in the root project dir to bui
 
 ## Development setup (Mac)
 
-* Install JDK 8+.
+* Install JDK 11+.
 
 * Install rrdtool and coreutils (for gtimeout) from brew:
 
@@ -179,5 +179,5 @@ smgconf/config-example.yml as examples.
 * Run:
     ```
     $ cd smg
-    $ JAVA_HOME=$(/usr/libexec/java_home -v 1.8) ./run-dev.sh
+    $ JAVA_HOME=$(/usr/libexec/java_home -v 11) ./run-dev.sh
     ```
