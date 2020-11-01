@@ -920,6 +920,23 @@ name is prefixed with '$' sign. Here is the list of supported global
 variables, together with their default values (all of these are
 optional):
 
+- **$rrd\_dir**: _"smgrrd"_ - directory where to store your rrd files.
+You probably want to change this on any production installation
+(for more demanding setups, may want to put that dir on an SSD drive).
+That dir must be writabe by the SMG user. This must be defined before
+object definitions in the config.
+
+- **$rrd\_dir\_levels**: _None_ - if set, it has to be a list of numbers 
+separated with ':' symbol (e.g. "1:1"). In that case SMG will create and 
+use sub-dir levels under rrd\_dir (one level per list item) using the MD5
+hash value of the object id and respective number of bytes (for each level) 
+from that hash as hex strings. Useful if want to keep track of hundreds of 
+thousands of rrds where having them all in one dir could be a problem on
+some systems. Only set this once (attempt to set it second time in the config
+will be ignored). WARNING: Never change the value once you have rrds created,
+you will lose the data if you do so.
+
+
 - **$dash-default-cols**: _6_ - How many "columns" of graphs to display on
 the dashboard by default. SMG will insert a new line between graphs at that
 "column".
@@ -934,23 +951,6 @@ default or via the UI). Set to 0 to completely disable auto-refresh.
 
 - **$default-auto-refresh**: _true_ - whether by default dashboard pages will
 reload automatically. This can be toggled on per page basis in the UI.
-
-- **$rrd\_dir**: _"smgrrd"_ - directory where to store your rrd files.
-You probably want to change this on any production installation
-(for more demanding setups, may want to put that dir on an SSD drive).
-That dir must be writabe by the SMG user. This must be defined before
-object definitions in the config (and one can specify it multiple
-times, changing the location for subequently defined objects)
-
-- **$rrd\_dir\_levels**: _None_ - if set, it has to be a list of numbers 
-separated with ':' symbol (e.g. "1:1"). In that case SMG will create and 
-use sub-dir levels under rrd\_dir (one level per list item) using the MD5
-hash value of the object id and respective number of bytes (for each level) 
-from that hash as hex strings. Useful if want to keep track of hundreds of 
-thousands of rrds where having them all in one dir could be a problem on
-some systems. Only set this once (attempt to set it second time in the config
-will be ignored). WARNING: Never change the value once you have rrds created
-you will lose the data if you do so.
 
 - **$default-interval** - _60_ - default update interval for objects
 not specifying it. This must be defined in the config before object
