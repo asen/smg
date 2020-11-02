@@ -3,9 +3,10 @@
 @import com.smule.smg.monitor.SMGMonState
 @import com.smule.smg.monitor.SMGState
 @import com.smule.smg.monitor.SMGMonFilter
+@import com.smule.smg.monitor.SMGMonitorStatesResponse
 
 @(cfSvc: SMGConfigService, availRemotes:Seq[String], availStates:Seq[String], selectedRemotes: Seq[String],
-  fetchRemotes: Seq[SMGRemote], flt:SMGMonFilter, curUrl: String)(implicit flash: Flash)
+  localResponse: Option[SMGMonitorStatesResponse], fetchRemotes: Seq[SMGRemote], flt:SMGMonFilter, curUrl: String)(implicit flash: Flash)
 
 @main("SMG - Monitor problems", cfSvc, 60) {
 
@@ -62,6 +63,14 @@
   </div>
 </div>
 <hr/>
+
+@if(localResponse.isDefined){
+@remoteDisplay(SMGRemote.local)
+<div id="msResponse-local">
+  @monitorProblemsResponse(localResponse.get, curUrl)
+</div>
+}
+
 @for(remote <- fetchRemotes) {
 
 @remoteDisplay(remote)

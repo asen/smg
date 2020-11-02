@@ -813,21 +813,24 @@ class Application  @Inject() (actorSystem: ActorSystem,
                       ms: Option[String],
                       soft: Option[String],
                       //ackd: Option[String],
-                      slncd: Option[String]): Action[AnyContent] = Action { implicit request =>
+                      slncd: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     // get the list of remotes to display in the filter form drop down
     val availRemotes = availableRemotes(configSvc.config)
     val myRemotes = if (remote.isEmpty) {
       Seq(SMGRemote.wildcard.id)
     } else remote
-    val fetchRemotes = if (remote.isEmpty || remote.contains(SMGRemote.wildcard.id))
-      Seq(SMGRemote.local) ++ availRemotes.drop(2) // dropping the wildcard remote avoiding dup local
+    val (needLocal, fetchRemotes) = if (remote.isEmpty || remote.contains(SMGRemote.wildcard.id))
+      (true, availRemotes.drop(2)) // dropping the wildcard and local remotes
     else {
-      remote.flatMap { rmtId =>
-        if (rmtId == SMGRemote.local.id)
-          Some(SMGRemote.local)
-        else
+      var needLocalRet = false
+      val ret = remote.flatMap { rmtId =>
+        if (rmtId == SMGRemote.local.id) {
+          needLocalRet = true
+          None
+        } else
           configSvc.config.remotes.find(_.id == rmtId)
       }
+      (needLocalRet, ret)
     }
     val minSev = Try(SMGState.fromName(ms.getOrElse(configSvc.config.globalMonitorProblemsMinSeverity))).toOption
     val inclSoft = soft.getOrElse("off") == "on"
@@ -837,8 +840,13 @@ class Application  @Inject() (actorSystem: ActorSystem,
     val flt = SMGMonFilter(rx = None, rxx = None, minState = minSev,
       includeSoft = inclSoft, includeAcked = inclAck, includeSilenced = inclSlnc)
     val availStates = (SMGState.values - SMGState.OK).toSeq.sorted.map(_.toString)
-    Ok(views.html.monitorProblemsAsync(configSvc, availRemotes.map(_.id), availStates, myRemotes,
-      fetchRemotes, flt, request.uri))
+    val localRespFut = if (needLocal){
+      monitorApi.states(Seq(SMGRemote.local.id), flt)
+    } else Future { Seq() }
+    localRespFut.map { seq =>
+      Ok(views.html.monitorProblemsAsync(configSvc, availRemotes.map(_.id), availStates, myRemotes,
+        seq.headOption, fetchRemotes, flt, request.uri))
+    }
   }
 
   val DEFAULT_HEATMAP_MAX_SIZE = 1800
