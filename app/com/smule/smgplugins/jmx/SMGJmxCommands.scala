@@ -16,7 +16,11 @@ class SMGJmxCommands(log: SMGLoggerApi, client: SMGJmxClient) {
 
   def commandConnect(str: String, timeoutSec: Int, parentData: Option[ParentCommandData]): CommandResult = {
     val hostPort = str.split("\\s+")(0)
-    val err = client.checkJmxConnection(hostPort)
+    val err = try {
+      client.checkJmxConnection(hostPort)
+    } catch { case t: Throwable =>
+      throwOnError("con", str, timeoutSec, t.getMessage)
+    }
     if (err.nonEmpty)
       throwOnError("con", str, timeoutSec, err.get)
     CommandResultCustom(s"JMX connection to $hostPort successfull")
