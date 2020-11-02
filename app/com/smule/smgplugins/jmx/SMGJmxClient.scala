@@ -40,12 +40,7 @@ class SMGJmxClient(val log: SMGPluginLogger) {
 
   def checkJmxConnection(hostPort: String): Option[String] = {
     val conn = getJmxConnection(hostPort)
-    try {
-      conn.checkJmxMbeanConnection
-    } catch { case t: Throwable =>
-      conn.closeJmxMbeanConnection()
-      conn.checkJmxMbeanConnection
-    }
+    conn.checkJmxMbeanConnection
   }
 
   /**

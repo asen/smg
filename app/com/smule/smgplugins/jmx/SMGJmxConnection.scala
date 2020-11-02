@@ -46,22 +46,24 @@ class SMGJmxConnection(hostPort: String, log: SMGPluginLogger, var lastActiveTsm
   def checkJmxMbeanConnection: Option[String] = {
     try {
       val c = getJmxMbeanConnection
-      c.getMBeanCount >= 0
+      try {
+        c.getMBeanCount >= 0
+      } catch { case t: Throwable =>
+        log.warn(s"checkJmxMbeanConnection: error checking $hostPort (retrying): " + t.getMessage)
+        closeJmxMbeanConnection()
+        getJmxMbeanConnection.getMBeanCount >= 0
+      }
       None
     } catch {
       case x: Throwable => {
         closeJmxMbeanConnection()
-        log.ex(x, s"checkJmxMbeanConnection: error checking $hostPort: " + x.getMessage)
+        log.error(s"checkJmxMbeanConnection: error checking $hostPort: " + x.getMessage)
         Some(s"checkJmxMbeanConnection: $hostPort: " + x.getMessage)
       }
     }
   }
 
   def fetchJmxValues(objName: String, attrNames: Seq[String]): List[Double] = {
-    realFetchJmxValues(objName, attrNames)
-  }
-
-  private def realFetchJmxValues(objName: String, attrNames: Seq[String]): List[Double] = {
     val connection = getJmxMbeanConnection
     val on = new ObjectName(objName)
     val attrs = connection.synchronized {
