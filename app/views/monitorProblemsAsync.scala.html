@@ -84,9 +84,9 @@ $(document).ready(function() {
  '/monitor/rmtsect?remote=@{
  java.net.URLEncoder.encode(remote.id, "UTF-8")
  }&soft=@{
- flt.includeSoft
+ if (flt.includeSoft) "on" else "off"
  }&slncd=@{
- flt.includeSilenced
+ if (flt.includeSilenced) "on" else "off"
  }&ms=@{
  flt.minState.map(_.toString).getOrElse("WARNING")
  }&uri=@{
