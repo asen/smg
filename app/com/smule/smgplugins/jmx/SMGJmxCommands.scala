@@ -35,7 +35,11 @@ class SMGJmxCommands(log: SMGLoggerApi, client: SMGJmxClient) {
     val hostPort = tokens(0)
     val jmxObj = tokens(1)
     val jmxAttrs = tokens.drop(2)
-    val ret = client.fetchJmxValues(hostPort, jmxObj, jmxAttrs)
+    val ret = try {
+      client.fetchJmxValues(hostPort, jmxObj, jmxAttrs)
+    } catch { case t: Throwable =>
+      throwOnError("get", str, timeoutSec, t.getMessage)
+    }
     CommandResultListDouble(ret, Some(SMGRrd.tssNow))
   }
 

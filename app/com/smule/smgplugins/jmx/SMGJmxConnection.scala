@@ -58,14 +58,7 @@ class SMGJmxConnection(hostPort: String, log: SMGPluginLogger, var lastActiveTsm
   }
 
   def fetchJmxValues(objName: String, attrNames: Seq[String]): List[Double] = {
-    try {
-      realFetchJmxValues(objName, attrNames)
-    } catch {
-      case ex: Throwable => {
-        closeJmxMbeanConnection()
-        throw ex
-      }
-    }
+    realFetchJmxValues(objName, attrNames)
   }
 
   private def realFetchJmxValues(objName: String, attrNames: Seq[String]): List[Double] = {
