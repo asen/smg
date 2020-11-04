@@ -1100,7 +1100,7 @@ object SMGRemoteClient {
       if (flt.sx.isDefined) mm += ("sx" -> Json.toJson(flt.sx.get))
       if (flt.rx.isDefined) mm += ("rx" -> Json.toJson(flt.rx.get))
       if (flt.rxx.isDefined) mm += ("rxx" -> Json.toJson(flt.rxx.get))
-      if (flt.prx.isDefined) mm += ("prx" -> Json.toJson(flt.trx.get))
+      if (flt.prx.isDefined) mm += ("prx" -> Json.toJson(flt.prx.get))
       if (flt.trx.isDefined) mm += ("trx" -> Json.toJson(flt.trx.get))
       if (flt.lbls.isDefined) mm += ("trx" -> Json.toJson(flt.lbls.get))
       if (flt.remotes.nonEmpty) mm += ("remote" -> Json.toJson(flt.remotes.mkString(",")))
