@@ -120,8 +120,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "sx").readNullable[String] and
       (JsPath \ "rx").readNullable[String] and
       (JsPath \ "rxx").readNullable[String] and
-      (JsPath \ "trx").readNullable[String] and
       (JsPath \ "prx").readNullable[String] and
+      (JsPath \ "trx").readNullable[String] and
       (JsPath \ "lbls").readNullable[String] and
       (JsPath \ "remote").readNullable[String].map { remoteIds =>
         if (remoteIds.isDefined) {
