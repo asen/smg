@@ -1,0 +1,84 @@
+
+- type: $pre_fetch
+  id: haproxy.fetch.localhost.stats
+  desc: "Fetch haproxy stats CSV from localhost"
+  command: curl -f 'http://localhost_port/haproxy?stats;csv'
+  pass_data: true
+
+- type: $pre_fetch
+  id: haproxy.parse.localhost.stats
+  pre_fetch: haproxy.fetch.localhost.stats
+  command: :cc csv parse
+  pass_data: true
+
+
+- ^hap.localhost.host.http_proxy:
+  title: "localhost Haproxy stats - http_proxy, FRONTEND"
+  px: "hap.localhost.host.http_proxy"
+  cols: 8
+
+- hap.localhost.host.http_proxy.rate:
+  command: ":cc csv get -e0 '# pxname'=http_proxy svname=FRONTEND rate"
+  title: localhost http_proxy Rate
+  pre_fetch: haproxy.parse.localhost.stats
+  vars:
+    - label: consec
+
+- hap.localhost.host.http_proxy.stot:
+  command: ":cc csv get -e0 '# pxname'=http_proxy svname=FRONTEND stot"
+  title: localhost http_proxy Sessions/sec
+  rrd_type: DERIVE
+  pre_fetch: haproxy.parse.localhost.stats
+  vars:
+    - label: stot
+      mu: sess/sec
+
+- hap.localhost.host.http_proxy.scur:
+  command: ":cc csv get -e0 '# pxname'=http_proxy svname=FRONTEND scur"
+  title: localhost http_proxy Sess (scur)
+  pre_fetch: haproxy.parse.localhost.stats
+  vars:
+    - label: conns
+
+- hap.localhost.host.http_proxy.qcur:
+  command: ":cc csv get -e0 '# pxname'=http_proxy svname=FRONTEND qcur"
+  title: localhost http_proxy Queue (qcur)
+  pre_fetch: haproxy.parse.localhost.stats
+  vars:
+    - label: queued conns
+
+- hap.localhost.host.http_proxy.rate_max:
+  command: ":cc csv get -e0 '# pxname'=http_proxy svname=FRONTEND rate_max"
+  title: localhost http_proxy Rate max
+  pre_fetch: haproxy.parse.localhost.stats
+  vars:
+    - label: max consec
+
+- hap.localhost.host.http_proxy.scur_max:
+  command: ":cc csv get -e0 '# pxname'=http_proxy svname=FRONTEND smax"
+  title: localhost http_proxy Sess (scur) max
+  pre_fetch: haproxy.parse.localhost.stats
+  vars:
+    - label: max conns
+
+- hap.localhost.host.http_proxy.qcur_max:
+  command: ":cc csv get -e0 '# pxname'=http_proxy svname=FRONTEND qmax"
+  title: localhost http_proxy Queue (qcur) max
+  pre_fetch: haproxy.parse.localhost.stats
+  vars:
+    - label: max queued conns
+
+- hap.localhost.host.http_proxy.netio:
+  command: ":cc csv get -e0 '# pxname'=http_proxy svname=FRONTEND bin bout"
+  title: localhost http_proxy In/Out traffic b/s
+  pre_fetch: haproxy.parse.localhost.stats
+  rrd_type: DERIVE
+  vars:
+    - label: in
+      mu: "b/s"
+      cdef: "$ds,8,*"
+      max: 1250000000
+    - label: out
+      mu: "b/s"
+      cdef: "$ds,8,*"
+      max: 1250000000
