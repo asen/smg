@@ -4,7 +4,9 @@ import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core.{CommandResult, ParentCommandData, SMGCmdException}
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 import com.smule.smgplugins.cc.csv.SMGCsvCommands
-import com.smule.smgplugins.cc.ln.SMGLineCommands
+import com.smule.smgplugins.cc.ln.SMGLineCommand
+import com.smule.smgplugins.cc.map.SMGMapCommand
+import com.smule.smgplugins.cc.rpn.SMGRpnCommand
 import com.smule.smgplugins.cc.rx.SMGRegexCommands
 
 class SMGCommonCommandsPlugin(val pluginId: String,
@@ -22,8 +24,10 @@ class SMGCommonCommandsPlugin(val pluginId: String,
   private val log = new SMGPluginLogger(pluginId)
 
   private val regexCommandRunner = new SMGRegexCommands(log)
-  private val lineCommandRunner = new SMGLineCommands(log)
+  private val lineCommandRunner = new SMGLineCommand(log)
+  private val mapCommandRunner = new SMGMapCommand(log)
   private val csvCommandRunner = new SMGCsvCommands(log)
+  private val rpnCommandRunner = new SMGRpnCommand(log)
 
   override def runPluginFetchCommand(cmd: String, timeoutSec: Int,
                                      parentData: Option[ParentCommandData]): CommandResult = {
@@ -34,8 +38,12 @@ class SMGCommonCommandsPlugin(val pluginId: String,
       regexCommandRunner.rxCommand(action, paramStr, timeoutSec, parentData)
     else if (action.startsWith("ln"))
       lineCommandRunner.lnCommand(action, paramStr, timeoutSec, parentData)
+    else if (action.startsWith("map"))
+      mapCommandRunner.mapCommand(action, paramStr, timeoutSec, parentData)
     else if (action.startsWith("csv"))
       csvCommandRunner.csvCommand(action, paramStr, timeoutSec, parentData)
+    else if (action.startsWith("rpn"))
+      rpnCommandRunner.rpnCommand(action, paramStr, timeoutSec, parentData)
     else
       throw SMGCmdException(cmd, timeoutSec, -1, "", s"SMGCommonCommandsPlugin: Invalid command: $cmd")
   }

@@ -82,3 +82,31 @@
       mu: "b/s"
       cdef: "$ds,8,*"
       max: 1250000000
+
+- type: $pre_fetch
+  id: hap.localhost.host.http_proxy.updown.parse
+  pre_fetch: haproxy.parse.localhost.stats
+  command: ":cc csv get -e0 '# pxname'=http_proxy svname=FRONTEND status"
+  pass_data: true
+
+- hap.localhost.host.http_proxy.updown:
+  pre_fetch: hap.localhost.host.http_proxy.updown.parse
+  command: ":cc map OPEN=1 UP=1 0"
+  title: localhost http_proxy UP/Down
+  vars:
+    - label: up/down
+
+- type: $pre_fetch
+  id: hap.localhost.host.http_proxy.scurlimitperc.parse
+  pre_fetch: haproxy.parse.localhost.stats
+  command: ":cc csv get -e0 '# pxname'=http_proxy svname=FRONTEND scur slim"
+  pass_data: true
+
+- hap.localhost.host.http_proxy.scurlimitperc:
+  title: localhost http_proxy Cur/Limit %
+  # ($ds0 * 100) / $ds1
+  command: ":cc rpn $ds0,100,*,$ds1,/"
+  pre_fetch: hap.localhost.host.http_proxy.scurlimitperc.parse
+  vars:
+    - label: cur/limit perc
+      mu: "%"

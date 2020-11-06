@@ -3,7 +3,7 @@ package com.smule.smgplugins.cc.ln
 import com.smule.smg.core._
 import com.smule.smgplugins.cc.rx.SMGRegexCommands
 
-class SMGLineCommands(log: SMGLoggerApi) {
+class SMGLineCommand(log: SMGLoggerApi) {
 
   private def throwOnError(action: String, paramStr: String,
                            timeoutSec: Int, errMsg: String) = {
@@ -14,7 +14,7 @@ class SMGLineCommands(log: SMGLoggerApi) {
   def lnCommand(action: String, paramStr: String, timeoutSec: Int,
                 parentData: Option[ParentCommandData]): CommandResult = {
     if (parentData.isEmpty) {
-      throwOnError(action, paramStr, timeoutSec, s"Line command expect parent data")
+      throwOnError(action, paramStr, timeoutSec, s"Line command expects parent data")
     }
     var sepStr = " "
     var rem = paramStr.stripLeading()

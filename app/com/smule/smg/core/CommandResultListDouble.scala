@@ -9,5 +9,5 @@ case class CommandResultListDouble(lst: List[Double], tss: Option[Int]) extends 
   override val data: Object = lst
   override val asStr: String = lst.mkString("\n")
   def asUpdateData(limit: Int): SMGRrdUpdateData =
-    SMGRrdUpdateData(lst.take(limit), tss)
+    SMGRrdUpdateData(if (limit <= 0) lst else lst.take(limit), tss)
 }

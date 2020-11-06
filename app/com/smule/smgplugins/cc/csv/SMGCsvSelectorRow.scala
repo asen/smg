@@ -1,5 +1,7 @@
 package com.smule.smgplugins.cc.csv
 
+import com.smule.smgplugins.cc.shared.CCStringUtil
+
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
@@ -30,7 +32,7 @@ case class SMGCsvSelectorRow(
 object SMGCsvSelectorRow {
 //  private val log = SMGLogger
 
-  private def quotedVal(inp: String): Option[(String, String)] = SMGCsvSelector.quotedVal(inp)
+  private def quotedVal(inp: String): Option[(String, String)] = CCStringUtil.quotedVal(inp)
 
   def parseOne(inp: String): (Option[SMGCsvSelectorRow], String) = {
     lazy val emptyRet = (None, inp)

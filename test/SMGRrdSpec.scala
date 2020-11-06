@@ -94,5 +94,13 @@ class SMGRrdSpec extends Specification  {
       val computed = SMGRrd.computeRpnValue(rpn, vals)
       computed shouldEqual 0.0
     }
+
+    "work for percentage" in {
+      // ($ds0 * 100) / $ds1
+      val rpn = "$ds0,100.0,*,$ds1,/"
+      val vals = List(10.0, 50000.0)
+      val computed = SMGRrd.computeRpnValue(rpn, vals)
+      computed shouldEqual 0.02
+    }
   }
 }

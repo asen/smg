@@ -1,5 +1,5 @@
 import com.smule.smg.core.{CommandResultListString, ParentCommandData, SMGLogger}
-import com.smule.smgplugins.cc.ln.SMGLineCommands
+import com.smule.smgplugins.cc.ln.SMGLineCommand
 import com.smule.smgplugins.cc.rx.SMGRegexCommands
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
@@ -36,7 +36,7 @@ class SMGRegexCommandsSpec extends Specification {
 
   "SMGLineCommands" should {
     "work" in {
-      val rc = new SMGLineCommands(log)
+      val rc = new SMGLineCommand(log)
       val inp = CommandResultListString(List(
         "this is a test",
         "output a from parent command"

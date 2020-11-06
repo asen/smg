@@ -1,5 +1,7 @@
 package com.smule.smgplugins.cc.csv
 
+import com.smule.smgplugins.cc.shared.CCStringUtil
+
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
@@ -14,7 +16,7 @@ object SMGCsvSelectorCol {
       return (None, inp)
     var rem = inp.stripLeading()
     var quoted = false
-    val qt = SMGCsvSelector.quotedVal(rem)
+    val qt = CCStringUtil.quotedVal(rem)
     val colNameIdx = if (qt.isDefined){
       quoted = true
       rem = qt.get._2

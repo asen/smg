@@ -11,7 +11,8 @@ case class CommandResultListString(lst: List[String], tss: Option[Int]) extends 
     // timestamps will be ignored if more than one and different
     var conflictingTsms = false
     var tsms: Option[Long] = None
-    val doubles = lst.take(limit).map{ s =>
+    val myLst = if (limit <= 0) lst else lst.take(limit)
+    val doubles = myLst.map{ s =>
       val arr = s.split("\\s+")
       val newTsms = arr.lift(1).map(_.toLong)
       if (tsms.isEmpty && !conflictingTsms)
