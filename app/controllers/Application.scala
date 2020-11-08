@@ -925,7 +925,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
     if (mySlncUntil.isDefined && curl.isDefined) {
       val stickyB = sticky.getOrElse("off") == "on"
       monitorApi.silenceAllTrees(myRemotes, flt, rid, mySlncUntil.get, stickyB, stickyDesc).map { ret =>
-        Redirect(curl.get).flashing(if (ret) {
+        val redirectTarget = if (curl.get.isBlank) "/" else curl.get
+        Redirect(redirectTarget).flashing(if (ret) {
               "success" -> "Successfull silencing action"
             } else {
               "error" -> "Some error(s) occured. Check application log for more details."
@@ -970,7 +971,8 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorSilenced(): Action[AnyContent] = Action.async { implicit request =>
     if (request.method == "POST") {
       val params = request.body.asFormUrlEncoded.getOrElse(Map())
-      val redirUrl = params.get("curl").map(_.head).getOrElse("")
+      var redirUrl = params.get("curl").map(_.head).getOrElse("")
+      if (redirUrl.isBlank) redirUrl = "/"
       val uuid = params.get("uid").map(_.head)
       if (uuid.isDefined) {
         monitorApi.removeStickySilence(uuid.get).map { b =>
@@ -1020,8 +1022,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   def monitorAck(id: String, curl: String): Action[AnyContent] = Action.async {
+    val redirectUrl = if (curl.isBlank) "/" else curl
     monitorApi.acknowledge(id).map { ret =>
-      Redirect(curl).flashing( if (ret) {
+      Redirect(redirectUrl).flashing( if (ret) {
         "success" -> s"Acknowledged $id problem(s)"
       } else {
         "error" -> s"Some unexpected error occured while acknowledging $id problem(s)"
@@ -1030,8 +1033,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   def monitorUnack(id: String, curl: String): Action[AnyContent] = Action.async {
+    val redirectUrl = if (curl.isBlank) "/" else curl
     monitorApi.unacknowledge(id).map { ret =>
-      Redirect(curl).flashing( if (ret) {
+      Redirect(redirectUrl).flashing( if (ret) {
         "success" -> s"Removed acknowledgement for $id problem(s)"
       } else {
         "error" -> s"Some unexpected error occured while removing acknowledgement for $id problem(s)"
@@ -1040,9 +1044,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   def monitorSilence(id: String, slunt: String, curl: String): Action[AnyContent] = Action.async {
+    val redirectUrl = if (curl.isBlank) "/" else curl
     val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
     monitorApi.silence(id, untilTss).map { ret =>
-      Redirect(curl).flashing( if (ret) {
+      Redirect(redirectUrl).flashing( if (ret) {
         "success" -> s"Silenced $id until ${SMGState.formatTss(untilTss)}"
       } else {
         "error" -> s"Some unexpected error occured while silencing $id"
@@ -1051,8 +1056,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   def monitorUnsilence(id: String, curl: String): Action[AnyContent] = Action.async {
+    val redirectUrl = if (curl.isBlank) "/" else curl
     monitorApi.unsilence(id).map { ret =>
-      Redirect(curl).flashing( if (ret) {
+      Redirect(redirectUrl).flashing( if (ret) {
         "success" -> s"Unsilenced $id"
       } else {
         "error" -> s"Some unexpected error occured while unsilencing $id"
@@ -1063,9 +1069,10 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorAckList(): Action[AnyContent] = Action.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val ids = params("ids").head.split(",")
-    val curl = params("curl").head
+    val curl = params("curl").headOption.getOrElse("")
+    val redirectUrl = if (curl.isBlank) "/" else curl
     monitorApi.acknowledgeList(ids).map { ret =>
-      Redirect(curl).flashing( if (ret) {
+      Redirect(redirectUrl).flashing( if (ret) {
         "success" -> s"Acknowledged ${ids.length} objects problems"
       } else {
         "error" -> s"Some unexpected error occured while acknowledging ${ids.length} objects problem"
@@ -1076,11 +1083,12 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorSilenceList(): Action[AnyContent] = Action.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val ids = params("ids").head.split(",")
-    val curl = params("curl").head
+    val curl = params("curl").headOption.getOrElse("")
+    val redirectUrl = if (curl.isBlank) "/" else curl
     val slunt = params("slunt").head
     val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
     monitorApi.silenceList(ids, untilTss).map { ret =>
-      Redirect(curl).flashing( if (ret) {
+      Redirect(redirectUrl).flashing( if (ret) {
         "success" -> s"Silenced ${ids.length} objects until ${SMGState.formatTss(untilTss)}"
       } else {
         "error" -> s"Some unexpected error occured while silencing ${ids.length} objects"
@@ -1091,10 +1099,11 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorSilenceIdx(ix: String, slunt: String, curl: String): Action[AnyContent] = Action.async { request =>
     val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
     val idx = smg.getIndexById(ix)
+    val redirectUrl = if (curl.isBlank) "/" else curl
     if (idx.isDefined) {
       val objs = smg.getFilteredObjects(idx.get.flt, Seq())
       monitorApi.silenceList(objs.map(_.id), untilTss).map { ret =>
-        Redirect(curl).flashing( if (ret) {
+        Redirect(redirectUrl).flashing( if (ret) {
           "success" -> s"Silenced all objects matching index: ${idx.get.title} (${idx.get.id})"
         } else {
           "error" -> s"Some unexpected error occured while silencing objects matching index: ${idx.get.title} (${idx.get.id})"
@@ -1102,7 +1111,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
       }
     } else {
       Future {
-        Redirect(curl).flashing(
+        Redirect(redirectUrl).flashing(
           "error" -> s"Index with id $ix not found"
         )
       }
@@ -1120,8 +1129,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
 
   def monitorMute(remote: String, curl: String): Action[AnyContent] = Action.async {
+    val redirectUrl = if (curl.isBlank) "/" else curl
     monitorApi.mute(remote).map { ret =>
-      Redirect(curl).flashing( if (ret) {
+      Redirect(redirectUrl).flashing( if (ret) {
         "success" -> s"Mute successful - notfications disabled${remoteFlashSuffix(remote)}"
       } else {
         "error" -> s"Mute failed - some unexpected error occured while disabling notifications${remoteFlashSuffix(remote)}"
@@ -1130,8 +1140,9 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   def monitorUnmute(remote: String, curl: String): Action[AnyContent] = Action.async {
+    val redirectUrl = if (curl.isBlank) "/" else curl
     monitorApi.unmute(remote).map { ret =>
-      Redirect(curl).flashing( if (ret) {
+      Redirect(redirectUrl).flashing( if (ret) {
         "success" -> s"Unmute successful - notfiications enabled${remoteFlashSuffix(remote)}"
       } else {
         "error" -> s"Unmute failed - some unexpected error occured while enabling notifications${remoteFlashSuffix(remote)}"
