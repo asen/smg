@@ -1,6 +1,7 @@
 package com.smule.smg.monitor
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core.{SMGFetchCommand, SMGObjectUpdate}
+import com.smule.smg.notify.{SMGMonNotifyApi, SMGMonNotifyCmd}
 
 class SMGMonInternalCmdState(
                             var cmd: SMGFetchCommand,

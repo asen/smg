@@ -8,6 +8,8 @@ import com.smule.smg.cdash.{CDashConfigItem, CDashboardConfig}
 import com.smule.smg.core._
 import com.smule.smg.grapher.SMGraphObject
 import com.smule.smg.monitor._
+import com.smule.smg.notify._
+import com.smule.smg.notify.{SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifyConfObj}
 import com.smule.smg.plugin.SMGPlugin
 import com.smule.smg.remote.SMGRemote
 import com.smule.smg.rrd.{SMGRraDef, SMGRrdConfig}

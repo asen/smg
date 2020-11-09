@@ -7,7 +7,8 @@ import java.util
 import com.smule.smg.config.SMGConfigParser
 import com.smule.smg.config.SMGConfigParser.{yobjList, yobjMap}
 import com.smule.smg.core.SMGFilter
-import com.smule.smg.monitor.{SMGMonAlertConfSource, SMGMonNotifyConf}
+import com.smule.smg.monitor.SMGMonAlertConfSource
+import com.smule.smg.notify.SMGMonNotifyConf
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

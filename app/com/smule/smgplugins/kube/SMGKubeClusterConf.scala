@@ -1,7 +1,7 @@
 package com.smule.smgplugins.kube
 
 import com.smule.smg.core.SMGFilter
-import com.smule.smg.monitor.SMGMonNotifyConf
+import com.smule.smg.notify.SMGMonNotifyConf
 import com.smule.smgplugins.scrape.RegexReplaceConf
 
 case class SMGKubeClusterConf(

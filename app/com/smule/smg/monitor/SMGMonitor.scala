@@ -2,11 +2,11 @@ package com.smule.smg.monitor
 
 import java.io.{File, FileWriter}
 
-import com.smule.smg.{GrapherApi, config}
-import com.smule.smg.config.SMGConfigAlertCondsSummary.ObjectAlertCondSummary
-import com.smule.smg.config.{SMGConfigReloadListener, SMGConfigService, SMGLocalConfig, SMGConfigAlertCondsSummary, SMGConfigNotifyConfsSummary}
-import com.smule.smg.core.{SMGDataFeedListener, SMGDataFeedMsgCmd, SMGDataFeedMsgRun, SMGDataFeedMsgVals, SMGFetchCommand, SMGFilter, SMGIndex, SMGLogger, SMGObjectUpdate, SMGObjectView, SMGPreFetchCmd, SMGTree}
+import com.smule.smg.GrapherApi
+import com.smule.smg.config.{SMGConfigReloadListener, SMGConfigService, SMGLocalConfig}
+import com.smule.smg.core._
 import com.smule.smg.grapher.SMGAggObjectView
+import com.smule.smg.notify.SMGMonNotifyApi
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.SMGRrd
 import javax.inject.{Inject, Singleton}

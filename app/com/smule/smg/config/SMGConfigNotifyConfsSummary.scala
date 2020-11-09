@@ -3,7 +3,8 @@ package com.smule.smg.config
 import com.smule.smg.{config, monitor}
 import com.smule.smg.config.SMGConfigNotifyConfsSummary.{CommandsNotifyIndexConfSummary, CommandsNotifyObjectConfSummary, VarsNotifySeverityConfSummary}
 import com.smule.smg.core.{SMGFetchCommand, SMGObjectUpdate}
-import com.smule.smg.monitor.{SMGMonAlertConfSource, SMGMonNotifyCmd, SMGState}
+import com.smule.smg.monitor.{SMGMonAlertConfSource, SMGState}
+import com.smule.smg.notify.SMGMonNotifyCmd
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer

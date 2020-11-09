@@ -1,6 +1,6 @@
 package com.smule.smg.core
 
-import com.smule.smg.monitor.SMGMonNotifyConf
+import com.smule.smg.notify.SMGMonNotifyConf
 
 /**
   * A common for multiple rrdObjects command to be executed before the respective object fetches

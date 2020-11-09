@@ -1,5 +1,6 @@
 package com.smule.smg.core
-import com.smule.smg.monitor.SMGMonNotifyConf
+
+import com.smule.smg.notify.SMGMonNotifyConf
 
 /**
   * A (de)serializable version of SMGFetchCommand, used to keep a local copy

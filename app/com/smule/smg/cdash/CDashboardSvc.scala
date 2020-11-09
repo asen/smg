@@ -4,6 +4,7 @@ import com.smule.smg.GrapherApi
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core.{SMGAggGroupBy, SMGFilter, SMGLogger}
 import com.smule.smg.monitor._
+import com.smule.smg.notify.SMGMonNotifyApi
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import javax.inject.{Inject, Singleton}
 

@@ -206,6 +206,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
     case fm: SMGFetchCommandMessage => processFetchCommandMessage(fm)
     case dm: SMGObjectDataMessage => processObjectDataMessage(dm)
     case aggm: SMGAggObjectMessage => processAggObjectMessage(aggm)
+    case x => log.error(s"SMGUpdateActor: unexpected message: $x")
   }
 }
 

@@ -1,6 +1,6 @@
 package com.smule.smg.core
 
-import com.smule.smg.monitor.SMGMonNotifyConf
+import com.smule.smg.notify.SMGMonNotifyConf
 
 /**
   * SMG builds a tree of commands to be run for object updates to happen

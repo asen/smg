@@ -2,6 +2,7 @@ package com.smule.smg.monitor
 
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core.SMGObjectUpdate
+import com.smule.smg.notify.{SMGMonNotifyApi, SMGMonNotifyCmd, SMGMonNotifySeverity}
 
 import scala.collection.mutable.ListBuffer
 

@@ -1,6 +1,7 @@
-package com.smule.smg.monitor
+package com.smule.smg.notify
 
 import com.smule.smg.core.SMGLogger
+import com.smule.smg.monitor.SMGMonAlertConfSource
 import com.smule.smg.rrd.SMGRrd
 
 case class SMGMonNotifyConf(src: SMGMonAlertConfSource.Value,

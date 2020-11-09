@@ -5,7 +5,8 @@ import java.io.File
 import com.smule.smg.config.SMGConfigParser
 import com.smule.smg.config.SMGConfigParser.{yobjList, yobjMap}
 import com.smule.smg.core.{SMGFileUtil, SMGFilter, SMGLoggerApi}
-import com.smule.smg.monitor.{SMGMonAlertConfSource, SMGMonNotifyConf}
+import com.smule.smg.monitor.SMGMonAlertConfSource
+import com.smule.smg.notify.SMGMonNotifyConf
 import com.smule.smgplugins.scrape.RegexReplaceConf
 import org.yaml.snakeyaml.Yaml
 

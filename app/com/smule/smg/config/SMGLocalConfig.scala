@@ -5,7 +5,8 @@ import java.util.concurrent.TimeUnit
 import akka.util.Timeout
 import com.smule.smg.cdash.CDashboardConfig
 import com.smule.smg.core._
-import com.smule.smg.monitor.{SMGMonAlertConfObj, SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifyConfObj}
+import com.smule.smg.monitor.SMGMonAlertConfObj
+import com.smule.smg.notify.{SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifyConfObj}
 import com.smule.smg.remote.SMGRemote
 import com.smule.smg.rrd.{SMGRraDef, SMGRrd, SMGRrdConfig}
 

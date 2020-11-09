@@ -1,4 +1,6 @@
-package com.smule.smg.monitor
+package com.smule.smg.notify
+
+import com.smule.smg.monitor.SMGState
 
 object SMGMonNotifySeverity extends Enumeration {
   val RECOVERY, ACKNOWLEDGEMENT, ANOMALY, WARNING, FAILED, CRITICAL, SMGERR, THROTTLED, UNTHROTTLED = Value
@@ -15,4 +17,3 @@ object SMGMonNotifySeverity extends Enumeration {
     }
   }
 }
-

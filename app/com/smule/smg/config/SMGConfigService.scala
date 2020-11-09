@@ -2,7 +2,8 @@ package com.smule.smg.config
 
 import akka.actor.{ActorRef, ActorSystem}
 import com.smule.smg.core._
-import com.smule.smg.monitor.{SMGMonAlertConfVar, SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifySeverity}
+import com.smule.smg.monitor.SMGMonAlertConfVar
+import com.smule.smg.notify.{SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifySeverity}
 import com.smule.smg.plugin.SMGPlugin
 import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdateData}
 

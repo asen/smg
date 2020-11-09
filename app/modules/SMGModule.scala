@@ -6,6 +6,7 @@ import com.smule.smg.cdash.{CDashboardApi, CDashboardSvc}
 import com.smule.smg.config.{SMGConfigService, SMGConfigServiceImpl}
 import com.smule.smg.core.{ExecutionContexts, SMGExecutionContexts, SMGScheduler, SMGSchedulerApi}
 import com.smule.smg.monitor._
+import com.smule.smg.notify.{SMGMonNotifyApi, SMGMonNotifySvc}
 import com.smule.smg.remote.{SMGRemotes, SMGRemotesApi}
 import com.smule.smg.search.{SMGSearchCache, SMGSearchCacheImpl}
 import play.api.{Configuration, Environment}

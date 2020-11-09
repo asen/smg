@@ -1,7 +1,7 @@
 package com.smule.smg.core
 
 import com.smule.smg.config.SMGConfigService
-import com.smule.smg.monitor.SMGMonNotifyConf
+import com.smule.smg.notify.SMGMonNotifyConf
 import com.smule.smg.rrd.{SMGRraDef, SMGRrd}
 
 /**

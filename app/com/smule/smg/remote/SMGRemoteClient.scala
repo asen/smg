@@ -12,7 +12,8 @@ import com.smule.smg.config.SMGConfigNotifyConfsSummary._
 import com.smule.smg.config._
 import com.smule.smg.core._
 import com.smule.smg.grapher._
-import com.smule.smg.monitor.{SMGMonNotifyCmd, _}
+import com.smule.smg.monitor._
+import com.smule.smg.notify.SMGMonNotifyCmd
 import com.smule.smg.rrd.{SMGRraDef, SMGRrd, SMGRrdFetchParams, SMGRrdRow}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

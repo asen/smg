@@ -4,7 +4,7 @@ import java.util
 
 import com.smule.smg.config.SMGConfIndex
 import com.smule.smg.core.{SMGFilter, SMGPreFetchCmd, SMGRrdAggObject, SMGRrdObject}
-import com.smule.smg.monitor.SMGMonNotifyConf
+import com.smule.smg.notify.SMGMonNotifyConf
 import org.yaml.snakeyaml.Yaml
 
 import scala.collection.JavaConverters._

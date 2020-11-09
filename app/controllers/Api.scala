@@ -6,6 +6,7 @@ import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core._
 import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView}
 import com.smule.smg.monitor._
+import com.smule.smg.notify.SMGMonNotifyApi
 import com.smule.smg.remote.{SMGRemotesApi, _}
 import com.smule.smg.rrd.SMGRrdFetchParams
 import javax.inject.{Inject, Singleton}

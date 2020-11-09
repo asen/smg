@@ -7,6 +7,7 @@ import scala.collection.mutable.ListBuffer
 import com.smule.smg._
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core.{SMGIndex, SMGLogger, SMGLoggerApi}
+import com.smule.smg.notify.{SMGMonNotifyApi, SMGMonNotifyCmd}
 import com.smule.smg.remote.SMGRemote
 
 /**

@@ -1,12 +1,8 @@
-package com.smule.smg.monitor
+package com.smule.smg.notify
 
 import com.smule.smg.core.SMGCmd
 
-case class SMGMonNotifyCmd(id:String, command: String, timeoutSec: Int) {
-
-  private def escapeSingleQuotes(str: String): String = {
-    str.replaceAll("'", "\\'")
-  }
+case class SMGMonNotifyCmd(id: String, command: String, timeoutSec: Int) {
 
   def alert(severity: SMGMonNotifySeverity.Value, alertKey: String, subjStr: String, bodyStr: String): Unit = {
     val myEnv = Map(
@@ -18,4 +14,3 @@ case class SMGMonNotifyCmd(id:String, command: String, timeoutSec: Int) {
     SMGCmd.runCommand(command, timeoutSec, myEnv)
   }
 }
-

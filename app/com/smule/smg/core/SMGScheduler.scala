@@ -4,13 +4,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor.ActorSystem
 import com.smule.smg.config.SMGConfigService
-import com.smule.smg.monitor.{SMGMonNotifyApi, SMGMonitorApi}
+import com.smule.smg.monitor.SMGMonitorApi
 import com.smule.smg.rrd.SMGRrd
 import com.smule.smg.GrapherApi
+import com.smule.smg.notify.SMGMonNotifyApi
 import javax.inject.{Inject, Singleton}
 import play.api.inject.ApplicationLifecycle
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 /**

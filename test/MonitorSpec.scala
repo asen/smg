@@ -1,6 +1,8 @@
+import akka.actor.ActorSystem
 import com.smule.smg._
 import com.smule.smg.core.{SMGDataFeedMsgCmd, SMGDataFeedMsgVals, SMGLogger, SMGObjectUpdate}
 import com.smule.smg.monitor._
+import com.smule.smg.notify.{SMGMonNotifyApi, SMGMonNotifyCmd, SMGMonNotifySvc}
 import com.smule.smg.remote.SMGRemotesApi
 import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdateData}
 import helpers._
@@ -77,7 +79,6 @@ class MonitorSpec extends PlaySpecification with MockitoSugar {
 
       val ov = cs.config.viewObjectsById("test.object.1")
       val ms = mon.localObjectViewsState(Seq(ov))(ov.id)
-      log.info(s"ASEN $ms")
       ms.size shouldEqual 2
       ms.head.isOk shouldEqual true
       ms.head.recentStates.head.ts shouldEqual startOfTest + 120

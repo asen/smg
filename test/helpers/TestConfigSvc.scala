@@ -5,6 +5,7 @@ import com.smule.smg._
 import com.smule.smg.config.{SMGConfIndex, SMGConfigReloadListener, SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._
 import com.smule.smg.monitor._
+import com.smule.smg.notify.SMGMonNotifyCmd
 import com.smule.smg.plugin.SMGPlugin
 import com.smule.smg.rrd.SMGRrdConfig
 
@@ -172,7 +173,7 @@ class TestConfigSvc() extends SMGConfigService {
 
   override def notifyReloadListeners(ctx: String): Unit = {}
 
-  override val actorSystem: ActorSystem = null
+  override lazy val actorSystem: ActorSystem = ActorSystem("test")
 
   override val executionContexts: ExecutionContexts = new TestExecutionContexts()
 

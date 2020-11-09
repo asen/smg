@@ -7,6 +7,7 @@ import java.util.Date
 import play.api.libs.json.{JsPath, JsValue, Json, Reads}
 import com.smule.smg._
 import com.smule.smg.core._
+import com.smule.smg.notify.SMGMonNotifySeverity
 import com.smule.smg.remote._
 
 
