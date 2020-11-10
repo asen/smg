@@ -158,13 +158,14 @@ trait SMGMonInternalState extends SMGMonState {
             notifSvc.sendAlertMessages(this, notifCmds, isImprovement)
           else
             log.warn(s"SMGMonInternalState.addState: " +
-              s"skipping notifications to ${notifCmds.map(_.id).mkString(",")} for silenced or acked state: $id")
+              s"skipping notifications to ${notifCmds.map(_.id).mkString(",")} for " +
+              s"silenced($isSilenced) or acked($isAcked) state: $id")
         }
         monLog.logMsg(logEntry(isHardError))
       } else {
         //no log msg - continuous hard error - just resend notifications if applicable
         if (!isSilencedOrAcked)
-          notifSvc.checkAndResendAlertMessages(this, backoff)
+          notifSvc.checkAndResendAlertMessages(this, notifCmds, backoff)
       }
     }
   }

@@ -38,11 +38,12 @@ class SMGMonNotifySvc @Inject() (
     if (ncmds.nonEmpty)
       SMGMonNotifyActor.sendAlertMessages(notifyActor, monState, ncmds, isImprovement)
     else if (monState.currentStateVal > SMGState.ANOMALY)
-      log.warn(s"SMGMonNotifySvc.sendAlertMessages: empty recipient list for ${monState.id} (${monState.currentStateVal})")
+      log.info(s"SMGMonNotifySvc.sendAlertMessages: empty recipient list (notifications disabled) " +
+        s"for ${monState.id} (${monState.currentStateVal})")
   }
 
-  override def checkAndResendAlertMessages(monState: SMGMonState, backOffSeconds: Int): Unit = {
-    SMGMonNotifyActor.checkAndResendAlertMessages(notifyActor, monState, backOffSeconds)
+  override def checkAndResendAlertMessages(monState: SMGMonState, ncmds: Seq[SMGMonNotifyCmd], backOffSeconds: Int): Unit = {
+    SMGMonNotifyActor.checkAndResendAlertMessages(notifyActor, monState, ncmds: Seq[SMGMonNotifyCmd], backOffSeconds)
   }
 
   override def sendRecoveryMessages(monState: SMGMonState): Unit = {

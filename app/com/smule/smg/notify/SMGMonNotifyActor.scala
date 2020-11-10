@@ -219,21 +219,15 @@ class SMGMonNotifyActor(configSvc: SMGConfigService, state: NotifyActorState, ec
     }
   }
 
-  private def checkAndResendAlertMessages(monState: SMGMonState, backOffSeconds: Int): Unit = {
+  private def checkAndResendAlertMessages(monState: SMGMonState, ncmds: Seq[SMGMonNotifyCmd], backOffSeconds: Int): Unit = {
     log.debug(s"SMGMonNotifyActor.checkAndResendAlertMessages: ${monState.alertKey} backOffSeconds=${backOffSeconds}")
     val akey = monState.alertKey
     val tsNow = SMGRrd.tssNow
     val cmdsMap = state.activeAlertsLastTs.getOrElseUpdate(akey, {TrieMap()})
-    cmdsMap.keys.toSeq.foreach { ncmdId =>
-      val ncmdOpt = configSvc.config.notifyCommands.get(ncmdId)
-      if (ncmdOpt.isEmpty) {
-        log.warn(s"SMGMonNotifyActor: Removing activeAlertsLastTs entry for no longer existing command: $ncmdId")
-        cmdsMap.remove(ncmdId)
-      } else {
-        val tsLast = cmdsMap.get(ncmdId)
-        if (tsNow - tsLast.getOrElse(0) >= backOffSeconds) {
-          processStateCommand(monState, ncmdOpt.get, isRepeat = true, isImprovement = false, AlertResultHandler())
-        }
+    ncmds.foreach { ncmd =>
+      val tsLast = cmdsMap.get(ncmd.id)
+      if (tsNow - tsLast.getOrElse(0) >= backOffSeconds) {
+        processStateCommand(monState, ncmd, isRepeat = true, isImprovement = false, AlertResultHandler())
       }
     }
   }
@@ -319,7 +313,7 @@ class SMGMonNotifyActor(configSvc: SMGConfigService, state: NotifyActorState, ec
 
   override def receive: Receive = {
     case anm: SendAlertNotifyMsg => processAlertNotifyMsg(anm)
-    case crm: CheckAndResendAlertNotifyMsg => checkAndResendAlertMessages(crm.monState, crm.backOffSeconds)
+    case crm: CheckAndResendAlertNotifyMsg => checkAndResendAlertMessages(crm.monState, crm.ncmds, crm.backOffSeconds)
     case ccm: RunStateCommandCompleteMsg => onStateCommandComplete(ccm.ipc, ccm.success, ccm.onComplete)
     case SendRecoveryMessages(monState: SMGMonState) => sendRecoveryMessages(monState)
     case SendAcknowledgementMessages(monState: SMGMonState) => sendAcknowledgementMessages(monState)
@@ -340,7 +334,7 @@ object SMGMonNotifyActor {
   case class SendAlertNotifyMsg(monState: SMGMonState, ncmds:  Seq[SMGMonNotifyCmd],
                                 isRepeat: Boolean, isImprovement: Boolean)
   // check and re-send alert msgs if backoff has expired
-  case class CheckAndResendAlertNotifyMsg(monState: SMGMonState, backOffSeconds: Int)
+  case class CheckAndResendAlertNotifyMsg(monState: SMGMonState, ncmds: Seq[SMGMonNotifyCmd], backOffSeconds: Int)
   // send recovery msg
   case class SendRecoveryMessages(monState: SMGMonState)
   // send acknowledgement msg
@@ -357,8 +351,8 @@ object SMGMonNotifyActor {
     aref ! SendAlertNotifyMsg(monState, ncmds, isRepeat = false, isImprovement = isImprovement)
   }
 
-  def checkAndResendAlertMessages(aref: ActorRef, monState: SMGMonState, backOffSeconds: Int): Unit = {
-    aref ! CheckAndResendAlertNotifyMsg(monState, backOffSeconds)
+  def checkAndResendAlertMessages(aref: ActorRef, monState: SMGMonState, ncmds: Seq[SMGMonNotifyCmd], backOffSeconds: Int): Unit = {
+    aref ! CheckAndResendAlertNotifyMsg(monState, ncmds, backOffSeconds)
   }
 
   def sendRecoveryMessages(aref: ActorRef, monState: SMGMonState): Unit = {

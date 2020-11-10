@@ -7,7 +7,7 @@ trait SMGMonNotifyApi {
 
   def sendAlertMessages(monState: SMGMonState, ncmds: Seq[SMGMonNotifyCmd], isImprovement: Boolean): Unit
 
-  def checkAndResendAlertMessages(monState: SMGMonState, backOffSeconds: Int): Unit
+  def checkAndResendAlertMessages(monState: SMGMonState, ncmds: Seq[SMGMonNotifyCmd], backOffSeconds: Int): Unit
 
   def sendRecoveryMessages(monState: SMGMonState): Unit
 
