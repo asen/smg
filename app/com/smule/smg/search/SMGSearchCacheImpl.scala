@@ -1,8 +1,7 @@
 package com.smule.smg.search
 
-import com.smule.smg._
 import com.smule.smg.config.SMGConfigService
-import com.smule.smg.core.{SMGFetchCommand, SMGFetchCommandTree, SMGIndex, SMGLogger, SMGObjectView}
+import com.smule.smg.core._
 import com.smule.smg.grapher.SMGAggObjectView
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import javax.inject.{Inject, Singleton}
@@ -88,9 +87,9 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   }
 
 
-  private def getIdsFromRunTrees(m: Map[Int,Seq[SMGFetchCommandTree]]): Seq[String] = {
+  private def getIdsFromRunTrees(m: Map[Int,Seq[SMGTree[SMGFetchCommand]]]): Seq[String] = {
 
-    def treeToIds(rt: SMGFetchCommandTree) : Seq[String] = {
+    def treeToIds(rt: SMGTree[SMGFetchCommand]) : Seq[String] = {
       Seq[String](rt.node.id) ++ rt.children.flatMap(c => treeToIds(c))
     }
 

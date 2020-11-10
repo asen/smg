@@ -1,6 +1,7 @@
-@import com.smule.smg.core.SMGFetchCommandTree
+@import com.smule.smg.core.SMGFetchCommand
+@import com.smule.smg.core.SMGTree
 @import com.smule.smg.monitor.SMGMonState
-@(seq: Seq[SMGFetchCommandTree], levelOffs: Int, maxLevels: Int, rootId: String, curUrl: String)
+@(seq: Seq[SMGTree[SMGFetchCommand]], levelOffs: Int, maxLevels: Int, rootId: String, curUrl: String)
 
 <ul xmlns="http://www.w3.org/1999/html">
   @for(t <- seq){

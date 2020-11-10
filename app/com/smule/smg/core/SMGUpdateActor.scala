@@ -22,7 +22,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
     configSvc.executionContexts.ctxForInterval(interval)
 
   private def processTreeRoot(interval: Int,
-                              fRoot: SMGFetchCommandTree,
+                              fRoot: SMGTree[SMGFetchCommand],
                               ts: Option[Int],
                               updateCounters: Boolean,
                               parentData: Option[ParentCommandData],
@@ -118,7 +118,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
     }
   }
 
-  private def processTreeSequenceAsync(interval: Int, fRoots: Seq[SMGFetchCommandTree],
+  private def processTreeSequenceAsync(interval: Int, fRoots: Seq[SMGTree[SMGFetchCommand]],
                                            ts: Option[Int], childConc: Int,
                                            updateCounters: Boolean,
                                            parentData: Option[ParentCommandData]): Unit = {
@@ -146,7 +146,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
     }(ecForInterval(interval))
   }
 
-  private def processSMGUpdateFetchMessage(interval: Int, rootCommands: Seq[SMGFetchCommandTree],
+  private def processSMGUpdateFetchMessage(interval: Int, rootCommands: Seq[SMGTree[SMGFetchCommand]],
                                            ts: Option[Int], requestedChildConc: Int,
                                            updateCounters: Boolean,
                                            parentData: Option[ParentCommandData]): Unit = {
@@ -214,7 +214,7 @@ object SMGUpdateActor {
 
   case class SMGFetchCommandMessage(
                                     interval:Int,
-                                    rootCommands:Seq[SMGFetchCommandTree],
+                                    rootCommands:Seq[SMGTree[SMGFetchCommand]],
                                     ts: Option[Int],
                                     childConc: Int,
                                     updateCounters: Boolean,
@@ -232,7 +232,7 @@ object SMGUpdateActor {
                                   targetActor: ActorRef,
                                   ec: ExecutionContext,
                                   interval:Int,
-                                  rootCommands:Seq[SMGFetchCommandTree],
+                                  rootCommands:Seq[SMGTree[SMGFetchCommand]],
                                   ts: Option[Int],
                                   childConc: Int,
                                   updateCounters: Boolean,

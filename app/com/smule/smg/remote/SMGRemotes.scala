@@ -278,7 +278,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     * @param root
     * @return
     */
-  override def monitorRunTree(remoteId: String, root: Option[String]): Future[Map[Int, Seq[SMGFetchCommandTree]]] = {
+  override def monitorRunTree(remoteId: String, root: Option[String]): Future[Map[Int, Seq[SMGTree[SMGFetchCommand]]]] = {
     if (clientForId(remoteId).nonEmpty)
       clientForId(remoteId).get.monitorRunTree(root)
     else Future { Map() }

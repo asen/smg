@@ -1,4 +1,4 @@
-import com.smule.smg.core.{SMGCmd, SMGFetchCommand, SMGFetchCommandTree}
+import com.smule.smg.core.{SMGCmd, SMGFetchCommand, SMGTree}
 import com.smule.smg.monitor._
 import com.smule.smg.remote.{SMGRemote, SMGRemoteClient}
 import helpers.{TestConfigSvc, TestUtil}
@@ -58,12 +58,12 @@ class SerializationTestSpec extends Specification {
 
         implicit val smgFetchCommandReads: Reads[SMGFetchCommand] = rmcli.smgFetchCommandReads
 
-        implicit val smgFetchCommandTreeReads: Reads[SMGFetchCommandTree] = rmcli.smgFetchCommandTreeReads
+        implicit val smgFetchCommandTreeReads: Reads[SMGTree[SMGFetchCommand]] = rmcli.smgFetchCommandTreeReads
 
         val str = """{"60":[{"n":{"rro":"true","cmd":{"str":"df -k | grep ' /$' | awk '{print $3 * 1024, $4 * 1024}' | xargs -n 1 echo","tms":30},"id":"host.localhost.disk_usage"},"c":[]},{"n":{"rro":"true","cmd":{"str":"smgscripts/mac_localhost_sysload.sh","tms":30},"id":"host.localhost.sysload"},"c":[]}]}"""
         //      println(str)
         val jsval = Json.parse(str)
-        val deser = jsval.as[Map[String, Seq[SMGFetchCommandTree]]]
+        val deser = jsval.as[Map[String, Seq[SMGTree[SMGFetchCommand]]]]
         //      println(deser)
 
         deser.keys must have size 1

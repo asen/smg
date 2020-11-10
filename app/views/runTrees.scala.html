@@ -1,10 +1,11 @@
 @import com.smule.smg.config.SMGConfigService
-@import com.smule.smg.core.SMGFetchCommandTree
+@import com.smule.smg.core.SMGFetchCommand
+@import com.smule.smg.core.SMGTree
 @import com.smule.smg.monitor.SMGMonState
 @import com.smule.smg.remote.SMGRemote
 @import java.net.URLEncoder
 @(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String],
-  trees: Map[Int,Seq[SMGFetchCommandTree]], rootId: String, parentId: Option[String],
+  trees: Map[Int,Seq[SMGTree[SMGFetchCommand]]], rootId: String, parentId: Option[String],
   maxLevels: Int, defaultLevels: Int, curUrl: String)(implicit flash: Flash)
 
 @main("SMG - Run trees", cfSvc, 0) {

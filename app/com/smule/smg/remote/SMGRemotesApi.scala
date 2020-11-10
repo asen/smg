@@ -143,7 +143,7 @@ trait SMGRemotesApi {
     * @param root - optional "root" id
     * @return
     */
-  def monitorRunTree(remoteId: String, root: Option[String]): Future[Map[Int,Seq[SMGFetchCommandTree]]]
+  def monitorRunTree(remoteId: String, root: Option[String]): Future[Map[Int,Seq[SMGTree[SMGFetchCommand]]]]
 
   /**
     * remote call to get current (problem) states

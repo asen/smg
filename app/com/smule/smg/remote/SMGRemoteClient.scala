@@ -235,16 +235,16 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       ) (SMGFetchCommandView.apply _)
   }
 
-  implicit val smgFetchCommandTreeReads: Reads[SMGFetchCommandTree] = {
+  implicit val smgFetchCommandTreeReads: Reads[SMGTree[SMGFetchCommand]] = {
     (
       (JsPath \ "n").read[SMGFetchCommand] and
         (JsPath \ "c").read[Seq[JsValue]].map { jsseq =>
           jsseq.map { jsv =>
             //println(jsv)
-            jsv.as[SMGFetchCommandTree]
+            jsv.as[SMGTree[SMGFetchCommand]]
           }
         }
-      ) (SMGFetchCommandTree.apply _)
+      ) (SMGTree[SMGFetchCommand](_, _))
   }
 
   implicit val smgMonStateTreeReads: Reads[SMGTree[SMGMonState]] = {
@@ -704,25 +704,25 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
-  def monitorRunTree(root: Option[String]): Future[Map[Int,Seq[SMGFetchCommandTree]]] = {
+  def monitorRunTree(root: Option[String]): Future[Map[Int,Seq[SMGTree[SMGFetchCommand]]]] = {
     val params = if (root.isEmpty) "" else s"?root=${SMGRemote.localId(root.get)}"
     ws.url(remote.url + API_PREFIX + "monitor/runtree" + params).
       withRequestTimeout(configFetchTimeoutMs).get().map { resp =>
       Try {
         val jsval = Json.parse(resp.body)
-        jsval.as[Map[String, Seq[SMGFetchCommandTree]]].map { t =>
+        jsval.as[Map[String, Seq[SMGTree[SMGFetchCommand]]]].map { t =>
           (t._1.toInt, t._2)
         }
       }.recover {
         case x => {
           log.ex(x, "remote monitor/runtree parse error: " + remote.id)
-          Map[Int,Seq[SMGFetchCommandTree]]()
+          Map[Int,Seq[SMGTree[SMGFetchCommand]]]()
         }
       }.get
     }.recover {
       case x => {
         log.ex(x, "remote monitor/runtree fetch error: " + remote.id)
-        Map[Int,Seq[SMGFetchCommandTree]]()
+        Map[Int,Seq[SMGTree[SMGFetchCommand]]]()
       }
     }
   }
@@ -1256,8 +1256,8 @@ object SMGRemoteClient {
     }
   }
 
-  implicit lazy val smgFetchCommandTreeWrites: Writes[SMGFetchCommandTree] = new Writes[SMGFetchCommandTree] {
-    def writes(t: SMGFetchCommandTree) = Json.obj(
+  implicit lazy val smgFetchCommandTreeWrites: Writes[SMGTree[SMGFetchCommand]] = new Writes[SMGTree[SMGFetchCommand]] {
+    def writes(t: SMGTree[SMGFetchCommand]) = Json.obj(
         "n" -> Json.toJson(t.node),
         "c" -> Json.toJson(t.children)
       )

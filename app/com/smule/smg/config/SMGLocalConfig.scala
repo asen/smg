@@ -172,54 +172,6 @@ case class SMGLocalConfig(
 
   val monStateDir: String = globals.getOrElse("$monstate_dir", "monstate")
 
-  private def buildCommandsTree(rrdObjs: Seq[SMGRrdObject], myPreFetches: Map[String, SMGPreFetchCmd]): Seq[SMGFetchCommandTree] = {
-    val ret = ListBuffer[SMGFetchCommandTree]()
-    var recLevel = 0
-
-    def buildTree(leafs: Seq[SMGFetchCommandTree]): Unit = {
-      //      println(leafs)
-      val byPf = leafs.groupBy(_.node.preFetch.getOrElse(""))
-      val myParents = ListBuffer[SMGFetchCommandTree]()
-      byPf.foreach { t =>
-        val pfId = t._1
-        val chldrn = t._2
-        if (pfId == "") {
-          // top level
-          ret ++= chldrn
-        } else {
-          val pf = myPreFetches.get(pfId)
-          if (pf.isEmpty) {
-            processValidationError(s"buildCommandsTree: non existing pre-fetch id: $pfId")
-            ret ++= chldrn
-          } else {
-            myParents += SMGFetchCommandTree(pf.get, chldrn)
-          }
-        }
-      }
-      if (myParents.nonEmpty) {
-        if (recLevel > MAX_RUNTREE_LEVELS - 1) {
-          processValidationError(s"buildCommandsTree: CRITICAL: recursion ($recLevel) exceeded $MAX_RUNTREE_LEVELS")
-        } else {
-          recLevel += 1
-          buildTree(myParents.toList.sortBy(_.node.id))
-          recLevel -= 1
-        }
-      }
-    }
-    buildTree(rrdObjs.sortBy(_.id).map(o => SMGFetchCommandTree(o, Seq())))
-    // consolidate top-level trees sharing the same root
-    val topLevelById = ret.toList.groupBy(_.node.id)
-    topLevelById.keys.toList.sorted.map { cid =>
-      val trees = topLevelById(cid)
-      if (trees.tail.isEmpty) {
-        trees.head
-      } else {
-        SMGFetchCommandTree(trees.head.node, trees.flatMap(_.children).sortBy(_.node.id))
-      }
-    }
-  }
-
-
   private val allPreFetchesMap: Map[String, SMGPreFetchCmd] = {
     val allMaps = pluginPreFetches.values ++ Seq(preFetches).toSeq
     allMaps.foldLeft(Map[String,SMGPreFetchCmd]()) { case (itm, mm) =>
@@ -230,8 +182,8 @@ case class SMGLocalConfig(
   override val allPreFetches: Seq[SMGFetchCommand] = allPreFetchesMap.values.toSeq
 
   // build and keep the commands trees (a sequence of trees for each interval)
-  private val fetchCommandTrees: Map[Int, Seq[SMGFetchCommandTree]] = rrdObjects.groupBy(_.interval).map { t =>
-    (t._1, buildCommandsTree(t._2, allPreFetchesMap))
+  private val fetchCommandTrees: Map[Int, Seq[SMGTree[SMGFetchCommand]]] = rrdObjects.groupBy(_.interval).map { t =>
+    (t._1, SMGTree.buildTrees[SMGFetchCommand](t._2, allPreFetchesMap))
   }
 
   val allCommandsById: Map[String, SMGFetchCommand] = allPreFetchesMap ++ commandObjects.map(_.asInstanceOf[SMGFetchCommand]).
@@ -242,11 +194,11 @@ case class SMGLocalConfig(
     * @param interval - interval for which we want the run trees
     * @return
     */
-  def getFetchCommandsTrees(interval: Int): Seq[SMGFetchCommandTree] = {
+  def getFetchCommandsTrees(interval: Int): Seq[SMGTree[SMGFetchCommand]] = {
     fetchCommandTrees.getOrElse(interval, Seq())
   }
 
-  def getFetchCommandsTreesByInterval: Map[Int,Seq[SMGFetchCommandTree]] = {
+  def getFetchCommandsTreesByInterval: Map[Int,Seq[SMGTree[SMGFetchCommand]]] = {
     intervals.map(i => (i, getFetchCommandsTrees(i))).filter(_._2.nonEmpty).toMap
   }
 
@@ -256,26 +208,13 @@ case class SMGLocalConfig(
     * @param root
     * @return
     */
-  def getFetchCommandTreesWithRoot(root: Option[String]): Map[Int, Seq[SMGFetchCommandTree]] = {
+  def getFetchCommandTreesWithRoot(root: Option[String]): Map[Int, Seq[SMGTree[SMGFetchCommand]]] = {
     if (root.isDefined) {
       fetchCommandTrees.map { t =>
         (t._1, t._2.map(t => t.findTree(root.get)).filter(_.isDefined).map(_.get))
       }.filter(_._2.nonEmpty)
     } else fetchCommandTrees
   }
-
-//  def getFetchCommandWithParents(leafId: String): Seq[SMGTreeNode] = {
-//    val leafCmd = updateObjectsById.get(leafId)
-//    if (leafCmd.isEmpty) return Seq()
-//    var ret = List[SMGTreeNode](leafCmd.get)
-//    if (leafCmd.get.parentId.isEmpty) return ret
-//    var cur = preFetches.get(leafCmd.get.parentId.get)
-//    while (cur.isDefined) {
-//      ret = cur.get :: ret
-//      cur = cur.get.parentId.flatMap(p => preFetches.get(p))
-//    }
-//    ret
-//  }
 
   def getPreFetchCommandById(pfId: String): Option[SMGPreFetchCmd] = {
     var ret = preFetches.get(pfId)
@@ -295,7 +234,7 @@ case class SMGLocalConfig(
     val intvls = if (forIntervals.nonEmpty) forIntervals else intervals.toSeq.sorted
     intvls.foreach { intvl =>
       val topLevel = fetchCommandTrees.getOrElse(intvl, Seq())
-      val root = SMGFetchCommandTree.findTreeWithRoot(cmdId, topLevel)
+      val root = SMGTree.findTreeWithRoot(cmdId, topLevel)
       if (root.isDefined)
         ret ++= root.get.leafNodes.map(_.asInstanceOf[SMGRrdObject])
     }
@@ -341,19 +280,6 @@ case class SMGLocalConfig(
         (pfs(pfId), Some(plid))
       }
   }
-
-//  private def buildPf2IntervalsMap: Map[String, Seq[Int]] = {
-//    preFetches.map { t =>
-//      val pfId = t._1
-//      (pfId, getFetchCommandRrdObjects(pfId).map(ou => ou.interval).distinct.sorted)
-//    }
-//  }
-
-//  private val pf2IntervalsMap = buildPf2IntervalsMap
-//
-//  def preFetchCommandIntervals(pfId: String): Seq[Int] = {
-//    pf2IntervalsMap.getOrElse(pfId, Seq())
-//  }
 
   // validate pre_fetch commands - specifying invalid command id would be ignored
   rrdObjects.foreach{ obj =>
