@@ -2,7 +2,7 @@ package com.smule.smg.notify
 
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core.SMGLogger
-import com.smule.smg.monitor.{SMGMonAlertActive, SMGMonState}
+import com.smule.smg.monitor.{SMGMonAlertActive, SMGMonState, SMGState}
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.{JsValue, Json}
 
@@ -37,6 +37,8 @@ class SMGMonNotifySvc @Inject() (
                                  isImprovement: Boolean): Unit = {
     if (ncmds.nonEmpty)
       SMGMonNotifyActor.sendAlertMessages(notifyActor, monState, ncmds, isImprovement)
+    else if (monState.currentStateVal > SMGState.ANOMALY)
+      log.warn(s"SMGMonNotifySvc.sendAlertMessages: empty recipient list for ${monState.id} (${monState.currentStateVal})")
   }
 
   override def checkAndResendAlertMessages(monState: SMGMonState, backOffSeconds: Int): Unit = {
