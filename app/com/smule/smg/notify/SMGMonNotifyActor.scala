@@ -214,7 +214,7 @@ class SMGMonNotifyActor(configSvc: SMGConfigService, state: NotifyActorState, ec
 
   private def processAlertNotifyMsg(msg: SendAlertNotifyMsg): Unit = {
     log.debug(s"SMGMonNotifyActor.processAlertNotifyMsg: ${msg.monState.alertKey} ${msg}")
-    msg.ncmds.foreach { ncmd =>
+    msg.ncmds.distinct.foreach { ncmd =>
       processStateCommand(msg.monState, ncmd, msg.isRepeat, msg.isImprovement, AlertResultHandler())
     }
   }
@@ -224,10 +224,10 @@ class SMGMonNotifyActor(configSvc: SMGConfigService, state: NotifyActorState, ec
     val akey = monState.alertKey
     val tsNow = SMGRrd.tssNow
     val cmdsMap = state.activeAlertsLastTs.getOrElseUpdate(akey, {TrieMap()})
-    ncmds.foreach { ncmd =>
+    ncmds.distinct.foreach { ncmd =>
       val tsLast = cmdsMap.get(ncmd.id)
       if (tsNow - tsLast.getOrElse(0) >= backOffSeconds) {
-        processStateCommand(monState, ncmd, isRepeat = true, isImprovement = false, AlertResultHandler())
+        processStateCommand(monState, ncmd, isRepeat = tsLast.nonEmpty, isImprovement = false, AlertResultHandler())
       }
     }
   }

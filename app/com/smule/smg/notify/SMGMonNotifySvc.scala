@@ -43,7 +43,7 @@ class SMGMonNotifySvc @Inject() (
   }
 
   override def checkAndResendAlertMessages(monState: SMGMonState, ncmds: Seq[SMGMonNotifyCmd], backOffSeconds: Int): Unit = {
-    SMGMonNotifyActor.checkAndResendAlertMessages(notifyActor, monState, ncmds: Seq[SMGMonNotifyCmd], backOffSeconds)
+    SMGMonNotifyActor.checkAndResendAlertMessages(notifyActor, monState, ncmds, backOffSeconds)
   }
 
   override def sendRecoveryMessages(monState: SMGMonState): Unit = {
