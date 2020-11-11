@@ -151,7 +151,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     Future.sequence(futs).map { maps =>
       val nonAgsMap = if (maps.isEmpty) {
         if (ovs.nonEmpty)
-          log.error(s"objectViewStates: maps.isEmpty: ovs.size=${ovs.size}, ovs.head.id=${ovs.head.id}")
+          log.error(s"SMGMonitor.objectViewStates: maps.isEmpty: ovs.size=${ovs.size}, ovs.head.id=${ovs.head.id}")
         Map[String,Seq[SMGMonState]]()
       } else if (maps.tail.isEmpty)
         maps.head
@@ -345,12 +345,15 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
           if (sticky) {
             if (rootId.isEmpty && (flt.minState.getOrElse(SMGState.OK) == SMGState.OK) &&
               flt.includeAcked && flt.includeSilenced && flt.includeSoft) {
+              log.info(s"SMGMonitor(silence): SILENCE STICKY: until=$until desc=${stickyDesc.getOrElse("None")} " +
+                s"flt: ${flt.humanDesc}")
               addLocalStickySilence(flt, until, stickyDesc)
             } else {
-              log.error("Attempt to use sticky silence with incompatible filter which is not allowed")
+              log.error("SMGMonitor.silenceAllTrees: Attempt to use sticky silence with incompatible filter which is not allowed")
             }
           }
           localMatchingMonTrees(flt, rootId).foreach { tlt =>
+            log.info(s"SMGMonitor(silence): SILENCE TREE: root=${tlt.node.id} until=$until sticky=$sticky")
             tlt.allNodes.foreach(_.slnc(until))
           }
           true
@@ -378,6 +381,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       Future {
         val rootmsopt = allMonitorStateTreesById.get(id)
         if (rootmsopt.isDefined){
+          log.info(s"SMGMonitor(silence): ACKNOWLEDGED: $id")
           notifSvc.sendAcknowledgementMessages(rootmsopt.get.node)
           processTree(id, {ms => ms.ack()})
         } else false
@@ -398,6 +402,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     implicit val ec = configSvc.executionContexts.rrdGraphCtx
     if (SMGRemote.isLocalObj(id)) {
       Future {
+        log.info(s"SMGMonitor(silence): SILENCED: $id until=$slunt")
         processTree(id, {ms => ms.slnc(slunt)})
       }
     } else remotes.monitorSilence(id, slunt)

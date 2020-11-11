@@ -50,6 +50,9 @@ case class SMGMonFilter(rx: Option[String],
     if (includeSilenced) pairs += "slncd=on"
     pairs.mkString("&")
   }
+
+  def humanDesc: String = s"rx=${rx.getOrElse("")} rxx=${rxx.getOrElse("")} " +
+    s"ms=${minState.map(_.toString).getOrElse("")} soft=$includeSoft ackd=$includeAcked slncd=$includeSilenced"
 }
 
 object SMGMonFilter {
