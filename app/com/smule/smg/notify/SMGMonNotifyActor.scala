@@ -76,10 +76,6 @@ class SMGMonNotifyActor(configSvc: SMGConfigService, state: NotifyActorState, ec
                                    subj: String,
                                    body: String
                                  ): Boolean = {
-    if (state.isMuted) {
-      log.warn(s"SMGMonNotifyActor.notify: Muted state prevents notifications for ${alertKey} with subject $subj")
-      return false
-    }
     try {
       ncmd.alert(severity, alertKey, subj, body)
       log.info(s"SMGMonNotifyActor.notify: notified ${ncmd.id} for $subj")
@@ -107,6 +103,10 @@ class SMGMonNotifyActor(configSvc: SMGConfigService, state: NotifyActorState, ec
     val ipc = InProgressCommand(ncmd, severity, alertKey)
     if (inProgress.contains(ipc)){
       log.error(s"SMGMonNotifyActor: Command is already in progress (aborting) $ipc")
+      return
+    }
+    if (state.isMuted){
+      log.warn(s"SMGMonNotifyActor.notify: Muted state prevents notifications for ${alertKey} with subject $subj")
       return
     }
     inProgress.add(ipc)
