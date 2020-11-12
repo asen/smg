@@ -23,16 +23,16 @@ class SMGCsvCommands(log: SMGLoggerApi) {
                           headers: Map[String,Int],
                           rows: Array[Array[String]]
                           ) {
-    def getValues(sel: SMGCsvValueSelector, paramStr: String, emptyValAs0: Boolean): List[String] = {
+    def getValues(sel: SMGCsvValueSelector, paramStr: String, emptyValAs: Option[String]): List[String] = {
       val rowSeq = rows.filter { row =>
         sel.rowSelectors.forall { rs =>
           rs.matches(row, headers)
         }
       }
       if (rowSeq.isEmpty) {
-        if (emptyValAs0)
+        if (emptyValAs.isDefined)
           sel.colSelectors.map { csel =>
-            "0.0"
+            emptyValAs.get
           }
         else
           throwOnError("get", paramStr, 0, "CSV Row not found")
@@ -41,8 +41,8 @@ class SMGCsvCommands(log: SMGLoggerApi) {
           sel.colSelectors.map { csel =>
             val idx = csel.idx(headers)
             var ret = row.lift(idx).getOrElse("")
-            if (emptyValAs0 && ret.isBlank)
-              ret = "0.0"
+            if (ret.isBlank && emptyValAs.isDefined)
+              ret = emptyValAs.get
             ret
           }
         }.toList
@@ -123,17 +123,26 @@ class SMGCsvCommands(log: SMGLoggerApi) {
     (flags.toMap, rem)
   }
 
+  private def getEmptyValAs(flags: Map[String,String]): Option[String] = {
+    if (flags.contains("-e0") || flags.contains("--empty-as-0"))
+      Some("0.0")
+    else if (flags.contains("-eN") || flags.contains("--empty-as-nan"))
+      Some("NaN")
+    else
+      None
+  }
+
   private def csvGet(paramStr: String, timeoutSec: Int,
                      parentData: ParentCommandData): CommandResult = {
     try {
       val flagsT = parseGetFlags(paramStr)
       val rem = flagsT._2
-      val emptyValAs0 = flagsT._1.contains("-e0") || flagsT._1.contains("-e0")
+      val emptyValAs = getEmptyValAs(flagsT._1)
       val valueSelector = SMGCsvValueSelector.parse(rem)
       if (valueSelector.isEmpty || valueSelector.get.invalid)
         throwOnError("get", paramStr, timeoutSec, s"Invalid CSV value selector: $rem")
       val parsedData = parentData.res.data.asInstanceOf[CSVParsedData]
-      val ret = parsedData.getValues(valueSelector.get, paramStr, emptyValAs0)
+      val ret = parsedData.getValues(valueSelector.get, paramStr, emptyValAs)
       CommandResultListString(ret, None)
     } catch {
       case c: SMGCmdException => throw c
@@ -151,12 +160,12 @@ class SMGCsvCommands(log: SMGLoggerApi) {
     }
     try {
       val flagsT = parseGetFlags(paramStr)
-      var rem = flagsT._2
-      var emptyValAs0 = flagsT._1.contains("-e0") || flagsT._1.contains("-e0")
+      val rem = flagsT._2
+      val emptyValAs = getEmptyValAs(flagsT._1)
       val valueSelector = SMGCsvValueSelector.parse(rem)
       if (valueSelector.isEmpty || valueSelector.get.invalid)
         throwOnError("pget", paramStr, timeoutSec, s"Invalid CSV value selector; $paramStr")
-      val ret = parsedData.getValues(valueSelector.get, paramStr, emptyValAs0)
+      val ret = parsedData.getValues(valueSelector.get, paramStr, emptyValAs)
       CommandResultListString(ret, None)
     } catch {
       case c: SMGCmdException => throw c

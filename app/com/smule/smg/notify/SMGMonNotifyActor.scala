@@ -220,7 +220,8 @@ class SMGMonNotifyActor(configSvc: SMGConfigService, state: NotifyActorState, ec
   }
 
   private def checkAndResendAlertMessages(monState: SMGMonState, ncmds: Seq[SMGMonNotifyCmd], backOffSeconds: Int): Unit = {
-    log.debug(s"SMGMonNotifyActor.checkAndResendAlertMessages: ${monState.alertKey} backOffSeconds=${backOffSeconds}")
+    log.debug(s"SMGMonNotifyActor.checkAndResendAlertMessages: ${monState.alertKey} ${ncmds.map(_.id).mkString(",")}" +
+      s" backOffSeconds=${backOffSeconds}")
     val akey = monState.alertKey
     val tsNow = SMGRrd.tssNow
     val cmdsMap = state.activeAlertsLastTs.getOrElseUpdate(akey, {TrieMap()})

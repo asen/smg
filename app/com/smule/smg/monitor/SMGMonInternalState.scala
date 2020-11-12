@@ -167,7 +167,7 @@ trait SMGMonInternalState extends SMGMonState {
         monLog.logMsg(logEntry(isHardError))
       } else {
         //no log msg - continuous hard error - just resend notifications if applicable
-        if (!isSilencedOrAcked)
+        if (isHardError && !isSilencedOrAcked)
           notifSvc.checkAndResendAlertMessages(this, notifCmds, backoff)
       }
     }
