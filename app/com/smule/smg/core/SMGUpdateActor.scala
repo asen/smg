@@ -59,21 +59,27 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
           if (cmdTimeMs < 0) cmdTimeMs = System.currentTimeMillis() - t0 // only if run threw
           commandExecutionTimes(pf.id) = cmdTimeMs
         }
-        //this is reached only on successfull pre-fetch
-        configSvc.sendCommandMsg(SMGDataFeedMsgCmd(updTss.getOrElse(SMGRrd.tssNow), pf.id,
-          interval, leafObjs, 0, List(), None))
-        if (fRoot.node.isUpdateObj){
+        // this is reached only on successfull pre-fetch
+        // validate the result of the command if an update object, before sending success msg
+        val objectDataMessageOpt = if (fRoot.node.isUpdateObj){
           // handle unexpected class cast exceptiosn etc
           try {
             val rrdObj = fRoot.node.asInstanceOf[SMGObjectUpdate]
             val resData = myData.get.res.asUpdateData(rrdObj.vars.size)
-            sendToSelfActor ! SMGObjectDataMessage(rrdObj, updTss, resData)
+            Some(SMGObjectDataMessage(rrdObj, updTss, resData))
           } catch { case t: Throwable =>
             throw SMGCmdException(pf.command.str,
               pf.command.timeoutSec, -1, Try(myData.get.res.asStr).getOrElse(""),
               s"Invalid command result: (${t.getMessage})")
           }
-        }
+        } else None
+        // this is reached only on successfull pre-fetch AND valid result in the isUpdateObj case
+        // send command success msg
+        configSvc.sendCommandMsg(SMGDataFeedMsgCmd(updTss.getOrElse(SMGRrd.tssNow), pf.id,
+          interval, leafObjs, 0, List(), None))
+        // send object data message to self if applicable
+        if (objectDataMessageOpt.isDefined)
+          sendToSelfActor ! objectDataMessageOpt.get
         if (updateCounters)
           SMGStagedRunCounter.incIntervalCount(interval)
         val (childObjTrees, childPfTrees) = fRoot.children.partition(_.node.isUpdateObj)
