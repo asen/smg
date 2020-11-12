@@ -74,7 +74,8 @@ class SMGCsvCommands(log: SMGLoggerApi) {
         }
         case _ => log.warn(s"Invalid csv parse option (ignored): $opt")
       }
-      params = params.tail
+      if (params.nonEmpty)
+        params = params.tail
     }
     val formatStr = params.headOption.getOrElse("")
     var format = if (formatStr.isBlank)
@@ -189,7 +190,8 @@ class SMGCsvCommands(log: SMGLoggerApi) {
       case "parse" => csvParse(rem, timeoutSec, parentData.get)
       case "get" => csvGet(rem, timeoutSec, parentData.get)
       case "pget" => csvParseAndGet(rem, timeoutSec, parentData.get)
-      case _ => throw new RuntimeException(s"BUG: SMGCsvCommands: Invalid sub-cpommand: $subCmd")
+      case _ => throwOnError(subCmd, rem, timeoutSec,
+        s"Config error: SMGCsvCommands: Invalid sub-command: $subCmd")
     }
   }
 }

@@ -102,5 +102,18 @@ class SMGRrdSpec extends Specification  {
       val computed = SMGRrd.computeRpnValue(rpn, vals)
       computed shouldEqual 0.02
     }
+
+    "work for mem usage" in {
+      val vals = List(100.0, 300.0, 50.0, 1000.0)
+      // let "in = 100 - ($avail * 100 / $totl)"
+      val rpn = "100,$ds0,100.0,*,$ds3,/,-"
+      val computed = SMGRrd.computeRpnValue(rpn, vals)
+      computed shouldEqual 90.0
+      // let "out = 100 - (($avail + $cached + $buff ) * 100 / $totl)"
+      val rpn2 = "100,$ds0,$ds1,+,$ds2,+,100,*,$ds3,/,-"
+      val computed2 = SMGRrd.computeRpnValue(rpn2, vals)
+      computed2 shouldEqual 55.0
+    }
+
   }
 }

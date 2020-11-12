@@ -1,5 +1,8 @@
 package com.smule.smgplugins.cc.shared
 
+import scala.collection.mutable.ListBuffer
+import scala.util.Try
+
 object CCStringUtil {
 
   val QUOTES = Set('\'', '"')
@@ -30,6 +33,17 @@ object CCStringUtil {
       return ExtractTokenResult(qt.get._1, qt.get._2)
     val arr = rem.split("\\s+", 2)
     ExtractTokenResult(arr(0), arr.lift(1).getOrElse(""))
+  }
+
+  def tokenize(inp:String): List[String] = {
+    val ret = ListBuffer[String]()
+    var rem = inp
+    while (!rem.isBlank){
+      val tkn = CCStringUtil.extractToken(rem)
+      ret += tkn.tkn
+      rem = tkn.rem
+    }
+    ret.toList
   }
 
   case class ExtractKvTokenResult(kv: Option[(String, String)], rem: String)
@@ -66,5 +80,18 @@ object CCStringUtil {
       arr(0)
     }
     ExtractKvTokenResult(Some(key, value), rem)
+  }
+
+  def normalizeV(v: String): String = {
+    val myV = v.toLowerCase
+    if (myV.endsWith("bytes")){
+      Try(myV.stripSuffix("bytes").stripTrailing().toLong).map(_.toString).getOrElse(v)
+    } else if (myV.endsWith("kb")){
+      Try(myV.stripSuffix("kb").stripTrailing().toLong * 1024).map(_.toString).getOrElse(v)
+    } else if (myV.endsWith("mb")) {
+      Try(myV.stripSuffix("mb").stripTrailing().toLong * 1024 * 1024).map(_.toString).getOrElse(v)
+    } else if (myV.endsWith("gb")) {
+      Try(myV.stripSuffix("gb").stripTrailing().toLong * 1024 * 1024 * 1024).map(_.toString).getOrElse(v)
+    } else v
   }
 }

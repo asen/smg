@@ -6,7 +6,7 @@ import scala.util.Try
 import scala.util.matching.Regex
 
 object SMGRegexCommands {
-  val VALID_COMMANDS = Set("rxe", "rxel", "rxm", "rxml")
+  val VALID_COMMANDS = Set("rxe", "rxel", "rxm", "rxml", "rx_repl")
   val VALID_DELIMITERS = Set('\'', '"', '|', '\\', '/')
 
   def delimitedStr(inp: String): (String, String) = {
@@ -134,6 +134,22 @@ class SMGRegexCommands(log: SMGLoggerApi) {
     CommandResultListString(strLst, None)
   }
 
+  // regex replace, sed-like
+  private def rxReplCommand(paramStr: String, timeoutSec: Int,
+                            parentData: Option[ParentCommandData]): CommandResult = {
+
+    val (regex, rem) = validateParams("rx_repl", paramStr, timeoutSec, parentData)
+    val parentRes = parentData.get.res
+    val inpLines = parentRes match {
+      case stringListRes: CommandResultListString => stringListRes.lst
+      case _ => parentRes.asStr.split('\n').toList
+    }
+    val strLst = inpLines.map { ln =>
+      regex.replaceAllIn(ln, rem)
+    }
+    CommandResultListString(strLst, None)
+  }
+
   def rxCommand(action: String, paramStr: String, timeoutSec: Int,
                 parentData: Option[ParentCommandData]): CommandResult = {
     if (!SMGRegexCommands.VALID_COMMANDS.contains(action))
@@ -144,6 +160,7 @@ class SMGRegexCommands(log: SMGLoggerApi) {
       case "rxel" => rxelCommand(paramStr, timeoutSec, parentData)
       case "rxm"  => rxmCommand(paramStr, timeoutSec, parentData)
       case "rxml"  => rxmlCommand(paramStr, timeoutSec, parentData)
+      case "rx_repl"  => rxReplCommand(paramStr, timeoutSec, parentData)
       case _ => throw new RuntimeException(s"BUG: SMGRegexCommands: Invalid action: $action")
     }
   }
