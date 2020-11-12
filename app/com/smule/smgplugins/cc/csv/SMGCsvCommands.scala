@@ -29,18 +29,25 @@ class SMGCsvCommands(log: SMGLoggerApi) {
           rs.matches(row, headers)
         }
       }
-      if (rowSeq.isEmpty)
-        throwOnError("get", paramStr, 0, "CSV Row not found")
-      rowSeq.flatMap { row =>
-        sel.colSelectors.map { csel =>
-          val idx = csel.idx(headers)
-          var ret = row.lift(idx).getOrElse("")
-          if (emptyValAs0 && ret.isBlank)
-            ret = "0.0"
-          ret
-        }
+      if (rowSeq.isEmpty) {
+        if (emptyValAs0)
+          sel.colSelectors.map { csel =>
+            "0.0"
+          }
+        else
+          throwOnError("get", paramStr, 0, "CSV Row not found")
+      } else {
+        rowSeq.flatMap { row =>
+          sel.colSelectors.map { csel =>
+            val idx = csel.idx(headers)
+            var ret = row.lift(idx).getOrElse("")
+            if (emptyValAs0 && ret.isBlank)
+              ret = "0.0"
+            ret
+          }
+        }.toList
       }
-    }.toList
+    }
   }
 
 
