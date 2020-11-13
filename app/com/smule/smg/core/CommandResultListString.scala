@@ -13,7 +13,7 @@ case class CommandResultListString(lst: List[String], tss: Option[Int]) extends 
     var tsms: Option[Long] = None
     val myLst = if (limit <= 0) lst else lst.take(limit)
     val doubles = myLst.map{ s =>
-      val arr = s.split("\\s+")
+      val arr = s.stripLeading().split("\\s+")
       val newTsms = arr.lift(1).map(_.toLong)
       if (tsms.isEmpty && !conflictingTsms)
         tsms = newTsms
