@@ -22,6 +22,7 @@
     1. [Hidden Indexes](#hindexes)
     1. [Custom dashboards configuration](#cdash)
     1. [Monitoring configuration](#monitoring)
+    1. [Bundled Plugins configuration](#plugins-conf)
 
 1. [Running and troubleshooting](#running)
     1. [Pre requisites](#pre-reqs)
@@ -653,6 +654,10 @@ check for value anomalies etc. See the mon plugin for example.
 
 - Plugins can implement custom dashboard items - TODO
 
+- Plugins can implement "internal commands" for various reasons including
+e.g. keeping persistent JMX connections between runs or more efficient
+parsing of things like OpenMetrics (Prometheus) and CSV stats, 
+
 ##### Currently available plugins
 
 - jsgraph - this plugin provides a JavaScript graphing
@@ -690,6 +695,10 @@ that). TODO - config reference doc
 
 - influxdb - plugin to forward all data writes to an influxdb end-point (in batches)
 in format compatible with the Prometheus influxdb adapter.
+
+- cc - (CommonCommands) implements various commands including parsers+getters for CSV
+output, SNMP (snmpget) output, string transformers as more efficient replacements for
+using bash/cut/awk etc as external commands.
 
 <a name="concepts-monitoring" />
 
@@ -909,6 +918,7 @@ objects were defined.
 1. [Hidden Indexes](#hindexes)
 1. [Custom dashboards configuration](#cdash)
 1. [Monitoring configuration](#monitoring)
+1. [Bundled Plugins configuration](#plugins-conf)
 
 
 <a name="globals" />
@@ -1232,27 +1242,27 @@ set by SMG in the child process environment:
 
 > Check smgscripts/notif-mail.sh for an example of how this could work
 
-- **$notify-global**: a comma separated list of list of $notify-command
+- **$notify-global**: a comma separated list of $notify-command
 ids, to be executed on any global SMG errors (usually - overlaps)
 
-- **$notify-crit**: a comma separated list of list of $notify-command
+- **$notify-crit**: a comma separated list of $notify-command
 ids, to be executed on any (global or object-specific) critical errors
 
-- **$notify-fail**: a comma separated list of list of $notify-command
+- **$notify-fail**: a comma separated list of $notify-command
 ids, to be executed on any (global or object-specific) "failed" (i.e.
 fetch command failure) errors
 
-- **$notify-warn**: a comma separated list of list of $notify-command
+- **$notify-warn**: a comma separated list of $notify-command
 ids, to be executed on any (global or object-specific) warning errors
 
-- **$notify-anom**: a comma separated list of list of $notify-command
+- **$notify-anom**: a comma separated list of $notify-command
 ids, to be executed on any anomaly (spike/drop) errors. Be warned
 that this can get noisy on large setups.
 
-- **$notify-baseurl**: Base url to be used in alert notifications links,
+- **\$notify-baseurl**: Base url to be used in alert notifications links,
 default is http://localhost:9000 (so you probaly want that set if you
 intend to use alert notifications). This can also be pointed to a
-different ("master") SMG instance URL where the current one is
+different (master) SMG instance URL where the current one is
 configured. Set **$notify-remote** to be the id of the current
 instance as defined in the master config in that case.
 
@@ -1498,7 +1508,7 @@ key -> value must be present):
     instead of the original value. Inside the expression the actual
     rrd value can be referenced using the special '_$ds_' string.
     For example to multiply the actual RRD value by 8 before graphing
-    one would use the following cdef value: _"$ds,8,*"_. This specific
+    one would use the following cdef value: _"\$ds,8,*"_. This specific
     example is useful when graphing network traffic counters which are
     reported in bytes but we prefer to have them graphed in bits (per
     second)
@@ -1697,7 +1707,7 @@ In cdef\_vars we can reference all vars in the ref RRD object in a single
 [RPN expression](http://oss.oetiker.ch/rrdtool/tut/rpntutorial.en.html)
 and produce a single graph line from multiple vars. The ref object
 variables are referenced in the expression by their 0-based index with
-$ds prefix - _$ds0_, _$ds1_, _$ds2_ etc. In the above example we have
+$ds prefix - _\$ds0_, _\$ds1_, _\$ds2_ etc. In the above example we have
 
 <pre>
       ...
@@ -2232,6 +2242,176 @@ objects with more than 8 vars):
     - label: 7
       alert-p-mon-anom: ""
 </pre>
+
+
+<a name="plugins-conf" />
+
+## Bundled Plugins configuration
+ 
+- **calc** - exposes UI for graphing the result of arbitrary math expressions
+Conf file (smgconf/calc-plugin.yml) supports pre-defined expressions which
+will show up in the UI for easy access. Example
+
+<pre>
+     calc:
+       expressions:
+         - expr_id:
+            title: "Test expression"
+            expr: "localhost.sysload[0] + localhost.dummy[1]"
+            period: 24h
+            step: 60
+            maxy: 1000
+            dpp: off
+            d95p: off
+</pre>
+
+- **cc** - "Common Commands" plugin, exposes commands to use in the regular
+object commands. Subcommands:
+
+    - :cc csv
+    <pre>
+       :cc csv parse [parse opts] [format]
+         -d|--delim &lt;char> (default ',')
+         -nh|--no-header  - csv has no header row
+         -sh|--strict-header - if set parse will abort on duplicate or missing header forgiven column
+         -h|--headers hdr1,hdr2,...  - set custom header names based on position
+        [format] (default - DEFAULT) - apache commons csv pre-defined format name (e.g. EXCEL)
+    
+       :cc csv get [get opts] &lt;row selectors (k=v)> &lt;val selectors>
+         -e0|--empty-as-0 - if set non existing/empty values will return "0.0"
+         -eN|--empty-as-nan - if set non existing/empty values will return "NaN"
+        &lt;row selectors> - col1=val1 col2=val2
+           col is either a number (0-based column index) or a column header name
+           val is the value which the row must have in the respective column
+             if val starts with '~' it will be treated as regex
+             if val start with '!' the mathc is inverted (i.e. the row must not have that value)
+             use !~... for negative regex match
+        &lt;val selectors> - list of zero-based column indexes or column header names
+        In both cases if a column header name is a number it can be "quoted" in the definition so
+        that it is not treated as column index
+     
+       :cc csv pget [get opts]
+         parse the csv using default parse options and get value using provided get options in one shot
+    </pre>
+       
+    - :cc kv
+    <pre>
+        :cc kv parse [opts]
+         -d|--delim &lt;str> (default '=')
+         -n|--normalize (default - false) - convert kb/mb/gb suffixes and strip surrounding whitespace
+        
+        :cc kv get [opts] &lt;key1> &lt;key2...>
+         -d |--default &lt;str> (default - None) - return the default value if key is not found
+        
+        :cc kv pget [get opts] &lt;key1> &lt;key2>
+    </pre>
+    
+    - :cc ln
+    <pre>
+        :cc ln [opts] index1 [index2...]
+           -s &lt;separator_regex> | --separator &lt;separator_regex> (default is any whitespace - \s+)
+           -js &lt;join_str> | --join-separator &lt;join_str> (default is space)
+           -jn | --join-new-line
+        :cc ln -s ", " 1
+        split a line using the separator (regex) string and output the specified 1-based elements
+        separated by space. 0 means to output the entire input line
+    </pre>
+
+    - :cc map
+    <pre>
+        :cc map k1=v1 k2=v2 [default]
+          map input lines (kX string values) to specified output values (vX string values)
+          if a default is specified it will be returned for not matching inout lines
+          otherwise unmatched input line will result in error
+    </pre>
+
+    - :cc rpn
+    <pre>
+        :cc rpn &lt;expr1> &lt;expr2...>
+         treat input as update data (list of Doubles) and compute RPN expressions from them
+         input ines are mapped to $dsX values in the expression where X is the zero-based
+         index in the list. Output one result (Double) per RPN expression provided
+    </pre>
+
+    - :cc rx..
+        - :cc rxm
+    <pre>
+        :cc rxm &lt;regex>
+            returns entire input (all lines) if matching, error otherwise
+    </pre>
+ 
+        - :cc rxml
+    <pre>
+        :cc rxml &lt;regex>
+            returns individual matching lines, error if no matching lines (like grep)
+    </pre>
+
+        - :cc rxe
+    <pre>
+        :cc rxe &lt;regex_with_match_groups> &lt;mgrpoupIdx1> &lt;mgrpoupIdx2>
+            apply the regex on the entire input (as a string, possibly with new lines) and print
+            each match group on a separate line
+    </pre>
+
+        - :cc rxel 
+    <pre>
+        :cc rxel &lt;regex_with_match_groups> &lt;mgrpoupIdx1> &lt;mgrpoupIdx2>
+            apply the regex on each input line separately and print each line's match groups on one line
+            separated by space
+        e.g. :cc rxel |.*(\\d+).*| 1
+    </pre>
+
+        - :cc rx_repl
+    <pre>
+        :cc rx_repl &lt;regex> [replacement]
+            for each line in input replace all occurrences of regex with replacements (empty if not specified) str
+    </pre>
+
+    - :cc snmpp
+    <pre>
+        :cc snmpp parse [parse opts]
+            -l|--long-keys - keep the full SNMP OID key value (normally the part until the first :: is stripped)
+
+        :cc snmpp get [get opts] &lt;key1> &lt;key2>
+            -d|--default &lt;val> - return the supplied default value if a keyX is not found
+            missing key with no default value provided will result in error
+
+        :cc snmpp pget [get opts] &lt;key1> &lt;key2>
+            parse and get in one shot, no parse options supported
+    </pre>
+
+- **influxdb** - influxdb config is specified using the following
+    globals (part of the SMG config), with defaults:
+    <pre>
+    - $influxdb_write_host_port: "localhost:8086"
+    - $influxdb_write_url_path: "/api/v2/write?bucket=smg_db&precision=s"
+    - $influxdb_write_url_proto: "http"
+    - $influxdb_write_batch_size: 1000
+    - $influxdb_write_timeout_ms: 30000
+    - $influxdb_strip_group_index: true
+    </pre>
+
+- **jmx** - exposes the following commands to be used in configs
+    - :jmx con host:port
+    - :jmx get host:port jmxObj jmxAttr1 jmxAttr2..
+    <pre>
+        :jmx get host:port java.lang:type=Memory HeapMemoryUsage:used HeapMemoryUsage:committed
+    </pre>
+
+- **kube** - TODO
+
+- **mon** - exposes the following alert definitions
+    - alert-p-mon-anom: "change_thresh:short_period:long_period"
+        - e.g. alert-p-mon-anom: "1.5:30m:30h"
+    - alert-p-mon-ex: "period:warn_op-warn_thresh:crit_op-crit_thresh:active_time"
+        - e.g. alert-p-mon-ex: "24h:lt-0.7:lt-0.5:18_00-20_00*mon"
+    - alert-p-mon-pop: "long_per-short_per:op:warn_thresh:optional_crit_thresh"
+        - e.g. alert-p-mon-pop: "24h-5m:lt:0.7" - check the short_per (5m) average
+        value against the same value long_per (24h) ago, and compare the difference 
+        (proportion) using the provided op (lt, can be lt, lte, gt, gte) against
+        the configured warning (0.7) and optional critical thresholds  
+
+- **scrape** - TODO
 
 <a name="running">
 

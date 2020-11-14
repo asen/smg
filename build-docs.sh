@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
-MARKDOWN=smgscripts/Markdown.pl
+if which pandoc >/dev/null ; then
+  MARKDOWN="pandoc -f markdown"
+else
+  MARKDOWN="smgscripts/Markdown.pl"
+fi
+
 OUTBASEDIR=${1:-public/}
 if [ "$OUTBASEDIR" == "" ] ; then
     echo "need an output base dir"
