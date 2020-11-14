@@ -10,7 +10,27 @@ import scala.util.Try
 
 object SMGCsvCommands {
   val VALID_SUB_COMMANDS = Set("parse", "get", "pget")
+  //:cc csv parse [parse opts] [format]
+  //  -d|--delim <char> (default ',')
+  //  -nh|--no-header  - csv has no header row
+  //  -sh|--strict-header - if set parse will abort on duplicate or missing header forgiven column
+  //  -h|--headers <hdr1>,<hdr2>,...  - set custom header names based on position
+  // [format] (default - DEFAULT) - apache commons csv pre-defined format name (e.g. EXCEL)
+  //:cc csv get [get opts] <row selectors (k=v)> <val selectors>
+  //  -e0|--empty-as-0 - if set non existing/empty values will return "0.0"
+  //  -eN|--empty-as-nan - if set non existing/empty values will return "NaN"
+  // <row selectors> - col1=val1 col2=val2
+  //    col is either a number (0-based column index) or a column header name
+  //    val is the value which the row must have in the respective column
+  //      if val starts with '~' it will be treated as regex
+  //      if val start with '!' the mathc is inverted (i.e. the row must not have that value)
+  //      use !~... for negative regex match
+  // <val selectors> - list of zero-based column indexes or column header names
+  // In both cases if a column header name is a number it can be "quoted" in the definition so
+  // that it is not treated as column index
 
+  //:cc csv pget [get opts]
+  // parse the csv using default parse options and get value using provided get options in one shot
 }
 
 class SMGCsvCommands(log: SMGLoggerApi) {

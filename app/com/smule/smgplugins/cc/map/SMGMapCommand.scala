@@ -6,6 +6,10 @@ import com.smule.smgplugins.cc.shared.CCStringUtil
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
+//:cc map k1=v1 k2=v2 [<default>]
+//  map input lines (kX string values) to specified output values (vX string values)
+//  if a default is specified it will be returned for not matching inout lines
+//  otherwise unmatched input line will result in error
 class SMGMapCommand(log: SMGLoggerApi) {
 
   private def throwOnError(action: String, paramStr: String,

@@ -5,6 +5,12 @@ import com.smule.smgplugins.cc.shared.CCStringUtil
 
 object SMGKvParseCommands {
   val VALID_SUB_COMMANDS = Set("parse", "get", "pget")
+  // :cc kv parse [opts]
+  //   -d|--delim <str> (default '=')
+  //   -n|--normalize (default - false) - convert kb/mb/gb suffixes and strip surrounding whitespace
+  // :cc kv get [opts] <key1> <key2...>
+  //   -d |--default <str> (default - None) - return the default value if key is not found
+  // :cc kv pget [get opts] <key1> <key2...>
 }
 
 class SMGKvParseCommands(log: SMGLoggerApi) {

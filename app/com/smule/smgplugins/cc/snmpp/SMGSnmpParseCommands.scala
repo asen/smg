@@ -1,12 +1,17 @@
 package com.smule.smgplugins.cc.snmpp
 
-import com.smule.smg.core.{CommandResult, CommandResultCustom, CommandResultListString, ParentCommandData, SMGCmdException, SMGLoggerApi}
+import com.smule.smg.core._
 import com.smule.smgplugins.cc.shared.CCStringUtil
-
-import scala.util.Try
 
 object SMGSnmpParseCommands {
   val VALID_SUB_COMMANDS = Set("parse", "get", "pget")
+  //:cc snmpp parse [parse opts]
+  //  -l|--long-keys - keep the full SNMP OID key value (normally the part until the first :: is stripped)
+  //:cc snmpp get [get opts] <key1> <key2>
+  //  -d|--default <val> - return the supplied default value if a keyX is not found
+  //  missing key with no default value provided will result in error
+  //:cc snmpp pget [get opts] <key1> <key2>
+  //  parse and get in one shot, no parse options supported
 }
 
 

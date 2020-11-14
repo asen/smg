@@ -5,6 +5,23 @@ import com.smule.smg.core._
 import scala.util.Try
 import scala.util.matching.Regex
 
+// TODO - doc
+// :cc rxe <regex_with_match_groups> <mgrpoupIdx1> <mgrpoupIdx2>
+//    apply the regex on the entire input (as a string, possibly with new lines) and print
+//    each match group on a separate line
+// :cc rxel <regex_with_match_groups> <mgrpoupIdx1> <mgrpoupIdx2>
+//    apply the regex on each input line separately and print each line's match groups on one line
+//    separated by space
+//  e.g. :cc rxel |.*(\\d+).*| 1
+
+// :cc rxm <regex>
+//    returns entire input (all lines) if matching, error otherwise
+// :cc rxml <regex>
+//    returns individual matching lines, error if no matching lines (like grep)
+
+// :cc rx_repl <regex> [<replacement>]
+//   for each line in input replace all occurrences of regex with replacements (empty if not specified) str
+
 object SMGRegexCommands {
   val VALID_COMMANDS = Set("rxe", "rxel", "rxm", "rxml", "rx_repl")
   val VALID_DELIMITERS = Set('\'', '"', '|', '\\', '/')

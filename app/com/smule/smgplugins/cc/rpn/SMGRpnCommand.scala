@@ -5,6 +5,10 @@ import com.smule.smg.rrd.SMGRrd
 
 import scala.collection.mutable.ListBuffer
 
+//:cc rpn <expr1> <expr2...>
+// treat input as update data (list of Doubles) and compute RPN expressions from them
+// input ines are mapped to $dsX values in the expression where X is the zero-based
+// index in the list. Output one result (Double) per RPN expression provided
 class SMGRpnCommand(log: SMGLoggerApi) {
 
   private def throwOnError(action: String, paramStr: String,
