@@ -58,6 +58,27 @@ class SMGRegexCommandsSpec extends Specification {
     }
   }
 
+  "SMGRxMlCommand" should {
+    "work with no match and default value" in {
+      val rc = new SMGRegexCommands(log)
+      val inp = CommandResultListString(List(
+        "      173 congestion windows recovered after partial ack",
+        "      312 TCP data loss events",
+        "      25 timeouts after SACK recovery",
+        "      208053 fast retransmits",
+        "this is a test",
+        "output a from parent command"
+      ), None)
+      var res0 = rc.rxCommand("rxml", "-d ' 0 ' TCPLostRetransmit:",
+        30, Some(ParentCommandData(inp, None)))
+      log.info(s"RXML2 RES: $res0")
+      res0 = rc.rxCommand("rx_repl", "'TCPLostRetransmit:'",
+        30, Some(ParentCommandData(res0, None)))
+      log.info(s"RX_REPL2 RES: ${res0.asUpdateData(1)}")
+      1 equals(1)
+    }
+  }
+
   "SMGLineCommands" should {
     "work" in {
       val rc = new SMGLineCommand(log)

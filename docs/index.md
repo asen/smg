@@ -2333,17 +2333,22 @@ object commands. Subcommands:
          index in the list. Output one result (Double) per RPN expression provided
     </pre>
 
-    - :cc rx..
+    - :cc rx.. - in all cases &lt;regex> can be quoted using single quotes, double quotes, '|' or '/'.
+    
         - :cc rxm
     <pre>
-        :cc rxm &lt;regex>
-            returns entire input (all lines) if matching, error otherwise
+        :cc rxm [-d|--default 'value'] &lt;regex>
+            returns entire input (all lines) if matching. if a default value is
+            provided via the -d|--default flag value it will be outputted. Result
+            will be error otherwise.
     </pre>
  
         - :cc rxml
     <pre>
-        :cc rxml &lt;regex>
-            returns individual matching lines, error if no matching lines (like grep)
+        :cc rxml [-d|--default 'value'] &lt;regex>
+            returns individual matching lines. error if no default value is provided
+            and no matching lines (like grep). If a default value is provided (via
+            the -d or --default option value) - it will be returned with success response.
     </pre>
 
         - :cc rxe

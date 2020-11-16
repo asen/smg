@@ -1,7 +1,9 @@
 package com.smule.smgplugins.cc.rx
 
 import com.smule.smg.core._
+import com.smule.smgplugins.cc.shared.CCStringUtil
 
+import scala.collection.mutable
 import scala.util.Try
 import scala.util.matching.Regex
 
@@ -14,10 +16,11 @@ import scala.util.matching.Regex
 //    separated by space
 //  e.g. :cc rxel |.*(\\d+).*| 1
 
-// :cc rxm <regex>
-//    returns entire input (all lines) if matching, error otherwise
-// :cc rxml <regex>
-//    returns individual matching lines, error if no matching lines (like grep)
+// :cc rxm [-d <default>] <regex>
+//    returns entire input (all lines) if matching, otherwise default (if specified), error otherwise
+// :cc rxml [-d <default>] <regex>
+//    returns individual matching lines, error if no default and no matching lines (like grep),
+//    returns default if nothing matches
 
 // :cc rx_repl <regex> [<replacement>]
 //   for each line in input replace all occurrences of regex with replacements (empty if not specified) str
@@ -61,17 +64,25 @@ class SMGRegexCommands(log: SMGLoggerApi) {
   }
 
   private def validateParams(action: String, paramStr: String, timeoutSec: Int,
-                             parentData: Option[ParentCommandData]): (Regex, String) = {
+                             parentData: Option[ParentCommandData]): (Regex, String, Map[String,String]) = {
     if (parentData.isEmpty) {
       throwOnError(action, paramStr, timeoutSec, s"Regex commands expect parent data")
     }
-    val (rxStr, rem) = SMGRegexCommands.delimitedStr(paramStr)
+    var rem = paramStr.stripLeading()
+    val opts = mutable.Map[String,String]()
+    while (rem.startsWith("-")){
+      val t = CCStringUtil.extractToken(rem)
+      val t2 = CCStringUtil.extractToken(t.rem)
+      opts.put(t.tkn, t2.tkn)
+      rem = t2.rem.stripLeading()
+    }
+    val (rxStr, rem1) = SMGRegexCommands.delimitedStr(rem)
     val regex = try {
       rxStr.r
     } catch { case t: Throwable =>
       throwOnError(action, paramStr, timeoutSec, s"Invalid regex: ${t.getMessage}")
     }
-    (regex, rem.stripLeading())
+    (regex, rem1.stripLeading(), opts.toMap)
   }
 
   private def getMatchGroups(rem: String): Seq[Int] = SMGRegexCommands.getIntegerSeq(rem)
@@ -96,7 +107,7 @@ class SMGRegexCommands(log: SMGLoggerApi) {
   private def rxeCommand(paramStr: String, timeoutSec: Int,
                 parentData: Option[ParentCommandData]): CommandResult = {
 
-    val (regex, rem) = validateParams("rxe", paramStr, timeoutSec, parentData)
+    val (regex, rem, opts) = validateParams("rxe", paramStr, timeoutSec, parentData)
     val mgroups = getMatchGroups(rem)
     val inp = parentData.get.res.asStr
     val strLst = getAllMatches(regex, inp, mgroups)
@@ -108,7 +119,7 @@ class SMGRegexCommands(log: SMGLoggerApi) {
   private def rxelCommand(paramStr: String, timeoutSec: Int,
                 parentData: Option[ParentCommandData]): CommandResult = {
 
-    val (regex, rem) = validateParams("rxel", paramStr, timeoutSec, parentData)
+    val (regex, rem, opts) = validateParams("rxel", paramStr, timeoutSec, parentData)
     val mgroups = getMatchGroups(rem)
     val parentRes = parentData.get.res
     val inpLines = parentRes match {
@@ -127,36 +138,58 @@ class SMGRegexCommands(log: SMGLoggerApi) {
     CommandResultListString(strLst, None)
   }
 
+  private def getDefaultOpt(opts: Map[String, String]): Option[String] = {
+    var default : Option[String] = None
+    opts.foreach { case (k,v) =>
+      k match {
+        case "-d" | "--default" => default = Some(v)
+        case x => log.warn(s"SMGRegexCommands: Invalid rxml option (ignored): ${x}")
+      }
+    }
+    default
+  }
+
   private def rxmCommand(paramStr: String, timeoutSec: Int,
                  parentData: Option[ParentCommandData]): CommandResult = {
 
-    val (regex, rem) = validateParams("rxm", paramStr, timeoutSec, parentData)
+    val (regex, rem, opts) = validateParams("rxm", paramStr, timeoutSec, parentData)
     val inp = parentData.get.res.asStr
-    if (!regexMatches(regex, inp))
-      throwOnError("rxm", paramStr, timeoutSec, s"Regex did not match (${regex}): $inp")
-    parentData.get.res
+    val default = getDefaultOpt(opts)
+    if (!regexMatches(regex, inp)) {
+      if (default.isDefined)
+        CommandResultListString(List(default.get), None)
+      else
+        throwOnError("rxm", paramStr, timeoutSec, s"Regex did not match (${regex}): $inp")
+    } else
+      parentData.get.res
   }
 
   private def rxmlCommand(paramStr: String, timeoutSec: Int,
                  parentData: Option[ParentCommandData]): CommandResult = {
 
-    val (regex, rem) = validateParams("rxml", paramStr, timeoutSec, parentData)
+    val (regex, rem, opts) = validateParams("rxml", paramStr, timeoutSec, parentData)
     val parentRes = parentData.get.res
     val inpLines = parentRes match {
       case stringListRes: CommandResultListString => stringListRes.lst
       case _ => parentRes.asStr.split('\n').toList
     }
+    val default = getDefaultOpt(opts)
     val strLst = inpLines.filter(ln => regexMatches(regex, ln))
-    if (strLst.isEmpty)
-      throwOnError("rxml", paramStr, timeoutSec, s"Regex did not match (${regex}): $inpLines")
-    CommandResultListString(strLst, None)
+    if (strLst.isEmpty) {
+      if (default.isDefined)
+        CommandResultListString(List(default.get), None)
+      else
+        throwOnError("rxml", paramStr, timeoutSec,
+          s"Regex did not match (${regex}): $inpLines")
+    } else
+      CommandResultListString(strLst, None)
   }
 
   // regex replace, sed-like
   private def rxReplCommand(paramStr: String, timeoutSec: Int,
                             parentData: Option[ParentCommandData]): CommandResult = {
 
-    val (regex, rem) = validateParams("rx_repl", paramStr, timeoutSec, parentData)
+    val (regex, rem, opts) = validateParams("rx_repl", paramStr, timeoutSec, parentData)
     val parentRes = parentData.get.res
     val inpLines = parentRes match {
       case stringListRes: CommandResultListString => stringListRes.lst
