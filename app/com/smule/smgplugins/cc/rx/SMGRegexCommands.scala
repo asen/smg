@@ -39,7 +39,8 @@ object SMGRegexCommands {
     if (delimPos < 0)
       (realInp, "")
     else {
-      realInp.splitAt(delimPos)
+      val ret = realInp.splitAt(delimPos)
+      (ret._1, ret._2.drop(1))
     }
   }
 
