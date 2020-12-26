@@ -224,15 +224,15 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
-  def processMetricsLabels(ports: Seq[KubePort],
-                           nobj: KubeNsObject,
-                           cConf: SMGKubeClusterConf,
-                           autoConf: SMGKubeClusterAutoConf): (Seq[KubePort], Option[String]) = {
-    val myPath = autoConf.metricsPathLabel.flatMap(lbl => nobj.labels.get(lbl))
-    if (autoConf.metricsEnableLabel.isDefined) {
-      if (nobj.labels.getOrElse(autoConf.metricsEnableLabel.get, "false") == "true"){
-        val myPorts = if (autoConf.metricsPortLabel.isDefined){
-          val opt: Option[Int] = Try(nobj.labels.get(autoConf.metricsPortLabel.get).map(_.toInt)).toOption.flatten
+  def processMetricsAnnotations(ports: Seq[KubePort],
+                                nobj: KubeNsObject,
+                                cConf: SMGKubeClusterConf,
+                                autoConf: SMGKubeClusterAutoConf): (Seq[KubePort], Option[String]) = {
+    val myPath = autoConf.metricsPathAnnotation.flatMap(lbl => nobj.annotations.get(lbl))
+    if (autoConf.metricsEnableAnnotation.isDefined) {
+      if (nobj.annotations.getOrElse(autoConf.metricsEnableAnnotation.get, "false") == "true"){
+        val myPorts = if (autoConf.metricsPortAnnotation.isDefined){
+          val opt: Option[Int] = Try(nobj.annotations.get(autoConf.metricsPortAnnotation.get).map(_.toInt)).toOption.flatten
           if (opt.isEmpty) {
             Seq()
           } else
@@ -250,11 +250,10 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   }
 
   def processServiceConf(cConf: SMGKubeClusterConf, kubeService: KubeService): Seq[SMGScrapeTargetConf] = {
-    // TODO check eligibility based on labels?
     val hasDupPortNames = kubeService.ports.map(_.portName(false)).distinct.size != kubeService.ports.size
     val autoConf = cConf.svcConf
     val nobj = kubeService
-    val (ports, path) = processMetricsLabels(kubeService.ports, nobj, cConf, autoConf)
+    val (ports, path) = processMetricsAnnotations(kubeService.ports, nobj, cConf, autoConf)
     ports.flatMap { prt =>
       processAutoPortConf(cConf, autoConf, nobj,
         kubeService.clusterIp, prt, metricsPath = path, idxId = None,
@@ -274,7 +273,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         val hasDupPortNames = subs.ports.map(_.portName(false)).distinct.size != subs.ports.size
         val autoConf = cConf.endpointsConf
         val nobj = kubeEndpoint
-        val (ports, path) = processMetricsLabels(subs.ports, nobj, cConf, autoConf)
+        val (ports, path) = processMetricsAnnotations(subs.ports, nobj, cConf, autoConf)
         ports.flatMap { prt =>
           processAutoPortConf(cConf, autoConf, nobj,
             addr, prt, metricsPath = path, idxId = idx,
@@ -302,7 +301,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           val hasDupPortNames =
             pod.ports.map(_.portName(false)).distinct.lengthCompare(pod.ports.size) != 0
           val autoConf = cConf.podPortsConf
-          val (ports, path) = processMetricsLabels(pod.ports, pod, cConf, autoConf)
+          val (ports, path) = processMetricsAnnotations(pod.ports, pod, cConf, autoConf)
           ports.flatMap { podPort =>
             processAutoPortConf(cConf, autoConf, nobj,
               pod.podIp.get, podPort, metricsPath = path, idxId = None,

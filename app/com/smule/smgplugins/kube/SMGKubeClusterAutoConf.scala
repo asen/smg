@@ -11,9 +11,9 @@ case class SMGKubeClusterAutoConf(
                                    enabled: Boolean,
                                    filter: Option[SMGFilter],
                                    regexReplaces: Seq[RegexReplaceConf],
-                                   metricsEnableLabel: Option[String],
-                                   metricsPortLabel: Option[String],
-                                   metricsPathLabel: Option[String],
+                                   metricsEnableAnnotation: Option[String],
+                                   metricsPortAnnotation: Option[String],
+                                   metricsPathAnnotation: Option[String],
                                    reCheckBackoff: Long,
                                    tryHttps: Boolean,
                                    forceHttps: Boolean,
@@ -27,12 +27,12 @@ object SMGKubeClusterAutoConf {
   def disabled(ttype: String): SMGKubeClusterAutoConf =
     SMGKubeClusterAutoConf(ttype, enabled = false, filter = None,
       regexReplaces = Seq(),
-      metricsEnableLabel = None, metricsPortLabel = None, metricsPathLabel = None,
+      metricsEnableAnnotation = None, metricsPortAnnotation = None, metricsPathAnnotation = None,
       defaultRecheckBackoff, tryHttps = false, forceHttps = false, disableCheck = false)
   def enabledDefault(ttype: String): SMGKubeClusterAutoConf =
     SMGKubeClusterAutoConf(ttype, enabled = false, filter = None,
       regexReplaces = Seq(),
-      metricsEnableLabel = None, metricsPortLabel = None, metricsPathLabel = None,
+      metricsEnableAnnotation = None, metricsPortAnnotation = None, metricsPathAnnotation = None,
       defaultRecheckBackoff, tryHttps = false, forceHttps = false, disableCheck = false)
 
   def fromYamlMap(ymap: mutable.Map[String, Object], confKey: String): SMGKubeClusterAutoConf = {
@@ -51,9 +51,9 @@ object SMGKubeClusterAutoConf {
             RegexReplaceConf.fromYamlObject(yobjMap(ym))
           }
         }.getOrElse(Seq()),
-        metricsEnableLabel = scm.get("metrics_enable_label]").map(_.toString),
-        metricsPortLabel = scm.get("metrics_port_label]").map(_.toString),
-        metricsPathLabel = scm.get("metrics_path_label]").map(_.toString),
+        metricsEnableAnnotation = scm.get("metrics_enable_annotation]").map(_.toString),
+        metricsPortAnnotation = scm.get("metrics_port_annotation]").map(_.toString),
+        metricsPathAnnotation = scm.get("metrics_path_label]").map(_.toString),
         reCheckBackoff = scm.get("check_backoff").map(_.asInstanceOf[Long]).
           getOrElse(defaultRecheckBackoff),
         tryHttps = scm.get("try_https").map(_.toString).getOrElse("true") != "false",

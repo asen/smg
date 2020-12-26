@@ -26,12 +26,14 @@ object SMGKubeClient {
     val name: String
     val namespace: String
     val labels: Map[String, String]
+    val annotations: Map[String, String]
   }
 
   case class KubeNamedObject(
                               name: String,
                               namespace: String,
-                              labels: Map[String, String]
+                              labels: Map[String, String],
+                              annotations: Map[String, String]
                             ) extends KubeNsObject
 
   case class KubeServicePort(port: Int, protocol: String,
@@ -40,14 +42,16 @@ object SMGKubeClient {
   case class KubeService(name: String, namespace: String, svcType: String,
                          clusterIp: String,
                          ports: Seq[KubeServicePort],
-                         labels: Map[String, String]
+                         labels: Map[String, String],
+                         annotations: Map[String, String]
                         ) extends KubeNsObject
 
   case class KubeEndpointPort(port: Int, protocol: String, name: Option[String]) extends KubePort
   case class KubeEndpointSubset(addresses: Seq[String], ports: Seq[KubeEndpointPort])
   case class KubeEndpoint(name: String, namespace: String,
                           subsets: Seq[KubeEndpointSubset],
-                          labels: Map[String, String]
+                          labels: Map[String, String],
+                          annotations: Map[String, String]
                          ) extends KubeNsObject
 
   case class KubeTopUsage(map: Map[String, Double]) {
@@ -98,6 +102,7 @@ object SMGKubeClient {
                       node: String,
                       owner: Option[KubePodOwner],
                       labels: Map[String,String],
+                      annotations: Map[String, String],
                       podIp: Option[String],
                       ports: Seq[KubeEndpointPort]
                     ) extends KubeNsObject {
@@ -210,7 +215,8 @@ class SMGKubeClient(log: SMGLoggerApi,
             targetPort = Option(svcPort.getTargetPort).map(_.toString)
           )
         },
-        labels = Option(svc.getMetadata.getLabels).map(_.asScala.toMap).getOrElse(Map())
+        labels = Option(svc.getMetadata.getLabels).map(_.asScala.toMap).getOrElse(Map()),
+        annotations = Option(svc.getMetadata.getAnnotations).map(_.asScala.toMap).getOrElse(Map())
       )
     }
   }
@@ -232,7 +238,8 @@ class SMGKubeClient(log: SMGLoggerApi,
             }
           )
         },
-        labels = Option(ep.getMetadata.getLabels).map(_.asScala.toMap).getOrElse(Map())
+        labels = Option(ep.getMetadata.getLabels).map(_.asScala.toMap).getOrElse(Map()),
+        annotations = Option(ep.getMetadata.getAnnotations).map(_.asScala.toMap).getOrElse(Map())
       )
     }
   }
@@ -276,6 +283,7 @@ class SMGKubeClient(log: SMGLoggerApi,
         podNodeName,
         owner,
         labels,
+        annotations = Option(jpod.getMetadata.getAnnotations).map(_.asScala.toMap).getOrElse(Map()),
         Option(jpod.getStatus.getPodIP),
         ports
       )
