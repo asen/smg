@@ -117,7 +117,7 @@ class SMGScrapeObjectGen(
           rraDef = myNonAggRraDef,
           notifyConf = scrapeTargetConf.notifyConf,
           rrdInitSource = None,
-          labels = stat.labels.toMap
+          labels = stat.labels.toMap ++ scrapeTargetConf.extraLabels
         )
         if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj))
           retObjects += retObj
