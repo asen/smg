@@ -16,7 +16,8 @@ case class SMGKubeClusterAutoConf(
                                    metricsPathLabel: Option[String],
                                    reCheckBackoff: Long,
                                    tryHttps: Boolean,
-                                   forceHttps: Boolean
+                                   forceHttps: Boolean,
+                                   disableCheck: Boolean
                                  )
 
 object SMGKubeClusterAutoConf {
@@ -27,12 +28,12 @@ object SMGKubeClusterAutoConf {
     SMGKubeClusterAutoConf(ttype, enabled = false, filter = None,
       regexReplaces = Seq(),
       metricsEnableLabel = None, metricsPortLabel = None, metricsPathLabel = None,
-      defaultRecheckBackoff, tryHttps = false, forceHttps = false)
+      defaultRecheckBackoff, tryHttps = false, forceHttps = false, disableCheck = false)
   def enabledDefault(ttype: String): SMGKubeClusterAutoConf =
     SMGKubeClusterAutoConf(ttype, enabled = false, filter = None,
       regexReplaces = Seq(),
       metricsEnableLabel = None, metricsPortLabel = None, metricsPathLabel = None,
-      defaultRecheckBackoff, tryHttps = false, forceHttps = false)
+      defaultRecheckBackoff, tryHttps = false, forceHttps = false, disableCheck = false)
 
   def fromYamlMap(ymap: mutable.Map[String, Object], confKey: String): SMGKubeClusterAutoConf = {
     if (!ymap.contains(confKey))
@@ -56,7 +57,8 @@ object SMGKubeClusterAutoConf {
         reCheckBackoff = scm.get("check_backoff").map(_.asInstanceOf[Long]).
           getOrElse(defaultRecheckBackoff),
         tryHttps = scm.get("try_https").map(_.toString).getOrElse("true") != "false",
-        forceHttps = scm.get("force_https").map(_.toString).getOrElse("false") == "true"
+        forceHttps = scm.get("force_https").map(_.toString).getOrElse("false") == "true",
+        disableCheck = scm.getOrElse("disable_check", "false") == "true"
       )
     }
   }

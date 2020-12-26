@@ -181,7 +181,10 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       def myCommand(proto: String)  = cConf.fetchCommand + " " + proto + "://" + ipAddr + s":${kubePort.port}${myMetricsPath}"
       val commands = (if (!autoConf.forceHttps) Seq(myCommand("http")) else Seq()) ++
         (if (autoConf.tryHttps || autoConf.forceHttps) Seq(myCommand("https")) else Seq())
-      val workingCommandIdx = checkAutoConf(commands, cConf, autoConf, nsObject, kubePort)
+      val workingCommandIdx = if (autoConf.disableCheck) {
+        Some(0)
+      } else
+        checkAutoConf(commands, cConf, autoConf, nsObject, kubePort)
       if (workingCommandIdx.isEmpty)
         return None
       val command = commands(workingCommandIdx.get)
