@@ -71,7 +71,7 @@ object SMGKubeClient {
     private lazy val stripSuffixTokens = kind match {
       case "DaemonSet" => 1            //"-xxxxx"
       case "ReplicaSet" => 2            //"-xxxxxxxxxx-xxxxx"
-      case "StatefulSet" => 2           //"-xxxxxxxxxx-xxxxx" ??? TODO
+      case "StatefulSet" => 0           //"-x"
       case "Job" => 1                   //"-<timestamp>-xxxxx"
       case "ReplicationController" => 1 //"-xxxxx"
       case "Node" => 0                  //drop nothing
