@@ -51,9 +51,9 @@ object SMGKubeClusterAutoConf {
             RegexReplaceConf.fromYamlObject(yobjMap(ym))
           }
         }.getOrElse(Seq()),
-        metricsEnableAnnotation = scm.get("metrics_enable_annotation]").map(_.toString),
-        metricsPortAnnotation = scm.get("metrics_port_annotation]").map(_.toString),
-        metricsPathAnnotation = scm.get("metrics_path_label]").map(_.toString),
+        metricsEnableAnnotation = scm.get("metrics_enable_annotation").map(_.toString),
+        metricsPortAnnotation = scm.get("metrics_port_annotation").map(_.toString),
+        metricsPathAnnotation = scm.get("metrics_path_annotation").map(_.toString),
         reCheckBackoff = scm.get("check_backoff").map(_.asInstanceOf[Long]).
           getOrElse(defaultRecheckBackoff),
         tryHttps = scm.get("try_https").map(_.toString).getOrElse("true") != "false",

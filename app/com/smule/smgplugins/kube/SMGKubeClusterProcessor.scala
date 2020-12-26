@@ -243,7 +243,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           s"metricsEnableAnnotation=${autoConf.metricsEnableAnnotation.get}")
         (Seq(), myPath)
       }
-    } else { //no label
+    } else { //no annotation
       (ports, myPath)
     }
   }
