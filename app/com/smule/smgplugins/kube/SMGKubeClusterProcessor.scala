@@ -232,16 +232,15 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     if (autoConf.metricsEnableAnnotation.isDefined) {
       if (nobj.annotations.getOrElse(autoConf.metricsEnableAnnotation.get, "false") == "true"){
         val myPorts = if (autoConf.metricsPortAnnotation.isDefined){
-          val opt: Option[Int] = Try(nobj.annotations.get(autoConf.metricsPortAnnotation.get).map(_.toInt)).toOption.flatten
-          if (opt.isEmpty) {
-            Seq()
-          } else
-            ports.filter(p => p.port == opt.get)
+          val opt: Option[Int] = Try(nobj.annotations.get(autoConf.metricsPortAnnotation.get).
+            map(_.toInt)).toOption.flatten
+          ports.filter(p => opt.contains(p.port))
         } else ports
         (myPorts, myPath)
       } else {
-        log.debug(s"SMGKubeClusterProcessor.processMetricsLabels(${cConf.uid}): " +
-          s"${nobj.getClass.getName} ${nobj.name} skipped due to metricsEnableLabel")
+        log.info(s"SMGKubeClusterProcessor.processMetricsLabels(${cConf.uid}): " +
+          s"${nobj.getClass.getName} ${nobj.name} skipped due to " +
+          s"metricsEnableAnnotation=${autoConf.metricsEnableAnnotation.get}")
         (Seq(), myPath)
       }
     } else { //no label
@@ -292,7 +291,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       var idx: Option[Int] = if (podSeq.size > 1)  Some(0) else None
       podSeq.flatMap { pod =>
         if (pod.podIp.isEmpty){
-          log.debug(s"SMGKubeClusterProcessor.processPodPortConf(${cConf.uid}): processPodPortConf ${pod.name} has no IP")
+          log.warn(s"SMGKubeClusterProcessor.processPodPortConf(${cConf.uid}): " +
+            s"processPodPortConf ${pod.name} has no IP")
           Seq()
         } else {
           if (idx.isDefined) idx = Some(idx.get + 1)
