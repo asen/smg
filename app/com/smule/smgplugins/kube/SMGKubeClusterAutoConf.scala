@@ -11,8 +11,12 @@ case class SMGKubeClusterAutoConf(
                                    enabled: Boolean,
                                    filter: Option[SMGFilter],
                                    regexReplaces: Seq[RegexReplaceConf],
+                                   metricsEnableLabel: Option[String],
+                                   metricsPortLabel: Option[String],
+                                   metricsPathLabel: Option[String],
                                    reCheckBackoff: Long,
-                                   tryHttps: Boolean
+                                   tryHttps: Boolean,
+                                   forceHttps: Boolean
                                  )
 
 object SMGKubeClusterAutoConf {
@@ -21,10 +25,14 @@ object SMGKubeClusterAutoConf {
 
   def disabled(ttype: String): SMGKubeClusterAutoConf =
     SMGKubeClusterAutoConf(ttype, enabled = false, filter = None,
-      regexReplaces = Seq(), defaultRecheckBackoff, tryHttps = false)
+      regexReplaces = Seq(),
+      metricsEnableLabel = None, metricsPortLabel = None, metricsPathLabel = None,
+      defaultRecheckBackoff, tryHttps = false, forceHttps = false)
   def enabledDefault(ttype: String): SMGKubeClusterAutoConf =
     SMGKubeClusterAutoConf(ttype, enabled = false, filter = None,
-      regexReplaces = Seq(), defaultRecheckBackoff, tryHttps = false)
+      regexReplaces = Seq(),
+      metricsEnableLabel = None, metricsPortLabel = None, metricsPathLabel = None,
+      defaultRecheckBackoff, tryHttps = false, forceHttps = false)
 
   def fromYamlMap(ymap: mutable.Map[String, Object], confKey: String): SMGKubeClusterAutoConf = {
     if (!ymap.contains(confKey))
@@ -42,9 +50,13 @@ object SMGKubeClusterAutoConf {
             RegexReplaceConf.fromYamlObject(yobjMap(ym))
           }
         }.getOrElse(Seq()),
+        metricsEnableLabel = scm.get("metrics_enable_label]").map(_.toString),
+        metricsPortLabel = scm.get("metrics_port_label]").map(_.toString),
+        metricsPathLabel = scm.get("metrics_path_label]").map(_.toString),
         reCheckBackoff = scm.get("check_backoff").map(_.asInstanceOf[Long]).
           getOrElse(defaultRecheckBackoff),
-        tryHttps = scm.get("try_https").map(_.toString).getOrElse("true") != "false"
+        tryHttps = scm.get("try_https").map(_.toString).getOrElse("true") != "false",
+        forceHttps = scm.get("force_https").map(_.toString).getOrElse("false") == "true"
       )
     }
   }

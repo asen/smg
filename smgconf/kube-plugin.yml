@@ -25,6 +25,9 @@ kube:
 #          port_path: ":10250/metrics/cadvisor"
 #      service:
 #        enabled: true
+#        metrics_enable_label: prometheus.io/scrape
+#        metrics_port_label: prometheus.io/port
+#        metrics_path_label: prometheus.io/path
 #        filter:
 #          rx: blah
 #        regex_replaces:
