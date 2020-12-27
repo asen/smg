@@ -14,9 +14,7 @@ case class SMGKubeClusterConf(
                                idPrefix: Option[String],
                                regexReplaces: Seq[RegexReplaceConf],
                                nodeMetrics: Seq[SMGKubeClusterMetricsConf],
-                               svcConf: SMGKubeClusterAutoConf,
-                               endpointsConf: SMGKubeClusterAutoConf,
-                               podPortsConf: SMGKubeClusterAutoConf,
+                               autoConfs: Seq[SMGKubeClusterAutoConf],
                                parentPfId: Option[String],
                                parentIndexId: Option[String],
                                notifyConf: Option[SMGMonNotifyConf],
@@ -33,7 +31,7 @@ case class SMGKubeClusterConf(
 
   lazy val inspect: String = s"uid=$uid humanNamePrefix=$hnamePrefix interval=$interval command=$fetchCommand " +
     s"timeout=$fetchCommandTimeout nodeMetrics=${nodeMetrics.size} " +
-    s"services=${svcConf.enabled} endpoints=${endpointsConf.enabled} pod_ports=${podPortsConf.enabled} " +
+    s"auto_confs=${autoConfs.map(x => x.targetType).mkString(",")}" +
     s"filter: ${filter.map(_.humanText).getOrElse("None")}"
 
   lazy val clusterIndexId: Option[String] = Some("cluster."+uid) // TODO maybe optional?

@@ -77,15 +77,16 @@ data:
         - uid: cadvisor
           proto: https
           port_path: ":10250/metrics/cadvisor"
-      # service:
-      #   enabled: true
-      # endpoint:
-      #   enabled: true
-      pod_port:
-        enabled: true
-        filter:
-          # not really metrics
-          rxx: kube-state-metrics.http-metrics
+      auto_confs:
+#        - type: service
+#          enabled: false
+#        - type: endpoint
+#          enabled: true
+        - type: pod_port
+          enabled: true
+          filter:
+            # not really metrics
+            rxx: kube-state-metrics.http-metrics
 ---
 # config for the nginx reverse proxy
 apiVersion: v1

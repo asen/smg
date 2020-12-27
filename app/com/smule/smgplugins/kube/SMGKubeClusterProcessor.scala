@@ -3,11 +3,11 @@ package com.smule.smgplugins.kube
 import java.io.File
 import java.nio.file.{Files, Paths}
 import java.util.Date
-
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
 import com.smule.smg.core._
 import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNamedObject, KubeNsObject, KubePod, KubePort, KubeService}
+import com.smule.smgplugins.kube.SMGKubeClusterAutoConf.ConfType
 import com.smule.smgplugins.scrape.{OpenMetricsResultData, SMGScrapeTargetConf}
 import org.yaml.snakeyaml.Yaml
 
@@ -209,7 +209,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         notifyConf = cConf.notifyConf,
         regexReplaces = cConf.regexReplaces ++ autoConf.regexReplaces,
         labelsInUids = false,
-        extraLabels = Map("smg_target_type"-> autoConf.targetType,
+        extraLabels = Map("smg_target_type"-> autoConf.targetType.toString,
           "smg_target_host"-> ipAddr,
           "smg_target_port" -> kubePort.port.toString) ++ nsObject.labels,
         rraDefAgg = cConf.rraDefAgg,
@@ -248,9 +248,9 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
-  def processServiceConf(cConf: SMGKubeClusterConf, kubeService: KubeService): Seq[SMGScrapeTargetConf] = {
+  def processServiceConf(cConf: SMGKubeClusterConf, autoConf: SMGKubeClusterAutoConf,
+                         kubeService: KubeService): Seq[SMGScrapeTargetConf] = {
     val hasDupPortNames = kubeService.ports.map(_.portName(false)).distinct.size != kubeService.ports.size
-    val autoConf = cConf.svcConf
     val nobj = kubeService
     val (ports, path) = processMetricsAnnotations(kubeService.ports, nobj, cConf, autoConf)
     ports.flatMap { prt =>
@@ -260,7 +260,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
-  def processEndpointConf(cConf: SMGKubeClusterConf, kubeEndpoint: KubeEndpoint): Seq[SMGScrapeTargetConf] = {
+  def processEndpointConf(cConf: SMGKubeClusterConf, autoConf: SMGKubeClusterAutoConf,
+                          kubeEndpoint: KubeEndpoint): Seq[SMGScrapeTargetConf] = {
     var idx: Option[Int] = None
     if (kubeEndpoint.subsets.size > 1)
       idx = Some(0)
@@ -270,7 +271,6 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       subs.addresses.flatMap { addr =>
         if (idx.isDefined) idx = Some(idx.get + 1)
         val hasDupPortNames = subs.ports.map(_.portName(false)).distinct.size != subs.ports.size
-        val autoConf = cConf.endpointsConf
         val nobj = kubeEndpoint
         val (ports, path) = processMetricsAnnotations(subs.ports, nobj, cConf, autoConf)
         ports.flatMap { prt =>
@@ -282,7 +282,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
-  def processPodsPortConfs(cConf: SMGKubeClusterConf, pods: Seq[KubePod]) : Seq[SMGScrapeTargetConf] = {
+  def processPodsPortConfs(cConf: SMGKubeClusterConf, autoConf: SMGKubeClusterAutoConf,
+                           pods: Seq[KubePod]) : Seq[SMGScrapeTargetConf] = {
     pods.groupBy { p =>
       p.owner.map { ow =>
         (ow.kind, ow.name, p.stableUid(None))
@@ -300,7 +301,6 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           // check for dup port names
           val hasDupPortNames =
             pod.ports.map(_.portName(false)).distinct.lengthCompare(pod.ports.size) != 0
-          val autoConf = cConf.podPortsConf
           val (ports, path) = processMetricsAnnotations(pod.ports, pod, cConf, autoConf)
           ports.flatMap { podPort =>
             processAutoPortConf(cConf, autoConf, nobj,
@@ -400,24 +400,24 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           processClusterNodeMetricsConf(kubeNode.name, targetHost, cConf, cmConf, cConf.nodesIndexId)
         }
       }
-      val serviceMetricsConfs: Seq[SMGScrapeTargetConf] = if (cConf.svcConf.enabled){
-        kubeClient.listServices().flatMap { ksvc =>
-          processServiceConf(cConf, ksvc)
+      val autoMetricsConfs: Seq[SMGScrapeTargetConf] = cConf.autoConfs.filter(_.enabled).flatMap { aConf =>
+        aConf.targetType match {
+          case ConfType.service =>
+            kubeClient.listServices().flatMap { ksvc =>
+              processServiceConf(cConf, aConf, ksvc)
+            }
+          case ConfType.endpoint =>
+            kubeClient.listEndpoints().flatMap { kendp =>
+              processEndpointConf(cConf, aConf, kendp)
+            }
+          case ConfType.pod_port =>
+            processPodsPortConfs(cConf, aConf, kubeClient.listPods)
         }
-      } else Seq()
-      val endpointsMetricsConfs: Seq[SMGScrapeTargetConf] = if (cConf.endpointsConf.enabled){
-        kubeClient.listEndpoints().flatMap { kendp =>
-          processEndpointConf(cConf, kendp)
-        }
-      } else Seq()
-      val podPortsMetricsConfs: Seq[SMGScrapeTargetConf] = if (cConf.podPortsConf.enabled){
-        processPodsPortConfs(cConf, kubeClient.listPods)
-      } else Seq()
+      }
       // dump
       val objsLst = new java.util.ArrayList[Object]()
       // TODO need to insert indexes ?
-      (topStats ++ nodeMetricsConfs ++ serviceMetricsConfs ++
-        endpointsMetricsConfs ++ podPortsMetricsConfs).foreach { stConf =>
+      (topStats ++ nodeMetricsConfs ++ autoMetricsConfs).foreach { stConf =>
         objsLst.add(SMGScrapeTargetConf.dumpYamlObj(stConf))
       }
       val out = new StringBuilder()
@@ -534,19 +534,19 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           idxPrefix + "node.",
           myParentIndexId
         )
-      if (cConf.svcConf.enabled)  // top level svcs metrics index
+      if (cConf.autoConfs.exists(x => x.targetType == ConfType.service && x.enabled))  // top level svcs metrics index
         ret += myIndexDef(cConf.servicesIndexId.get,
           s"Kubernetes cluster ${cConf.uid} - Services",
           idxPrefix + "service.",
           myParentIndexId
         )
-      if (cConf.endpointsConf.enabled) // top level endpoints metrics index
+      if (cConf.autoConfs.exists(x => x.targetType == ConfType.endpoint && x.enabled)) // top level endpoints metrics index
         ret += myIndexDef(cConf.endpointsIndexId.get,
           s"Kubernetes cluster ${cConf.uid} - Endpoints",
           idxPrefix + "endpoint.",
           myParentIndexId
         )
-      if (cConf.podPortsConf.enabled) // top level podPorts metrics index
+      if (cConf.autoConfs.exists(x => x.targetType == ConfType.pod_port && x.enabled)) // top level podPorts metrics index
         ret += myIndexDef(cConf.podPortsIndexId.get,
           s"Kubernetes cluster ${cConf.uid} - auto discovered metrics from pod listen ports",
           idxPrefix + "pod_port.",

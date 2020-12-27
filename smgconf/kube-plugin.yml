@@ -23,7 +23,8 @@ kube:
 #        - uid: cadvisor
 #          proto: https
 #          port_path: ":10250/metrics/cadvisor"
-#      service:
+#      auto_confs:
+#      - type: service
 #        enabled: true
 #        metrics_enable_annotation: prometheus.io/scrape
 #        metrics_port_annotation: prometheus.io/port
@@ -35,7 +36,7 @@ kube:
 #           regex: "^go_(gc)_(duration)"
 #           replace: "go_$2_$1"
 #        check_backoff: 600000
-#      endpoint:
+#      - type: endpoint
 #      prefix_ids_with_cluster_id: false
     - include: "/etc/smg/kube-clusters.d/*.{yml,yaml}"
     - include: "/opt/smg/data/conf/kube-clusters.d/*.{yml,yaml}"
