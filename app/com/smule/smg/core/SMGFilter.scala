@@ -83,7 +83,7 @@ case class SMGFilter(px: Option[String],
       remotes.contains(SMGRemote.remoteId(oid))
   }
 
-  private def matchesId(oid: String): Boolean = {
+  def matchesId(oid: String): Boolean = {
     var ret = true
     if ((px.getOrElse("") != "") && (!SMGRemote.localId(oid).startsWith(px.get))) ret = false
     if ((sx.getOrElse("") != "") && (!SMGRemote.localId(oid).endsWith(sx.get))) ret = false

@@ -82,16 +82,19 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     good ++ bad
   }
 
+  private def logSkipped(kubeNsObject: KubeNsObject, targetType: String,
+                         clusterUid: String, reason: String): Unit = {
+    log.info(s"SMGKubeClusterProcessor.checkAutoConf(${targetType}): ${clusterUid} " +
+      s"${kubeNsObject.namespace}.${kubeNsObject.name}: skipped due to $reason")
+  }
+
   private def checkAutoConfCommand(command: String,
                             cConf: SMGKubeClusterConf,
                             autoConf: SMGKubeClusterAutoConf,
                             kubeNsObject: KubeNsObject,
                             kubePort: KubePort): Boolean = {
     // filter out invalid ports as far as we can tell
-    def logSkipped(reason: String): Unit = {
-      log.info(s"SMGKubeClusterProcessor.checkAutoConf(${autoConf.targetType}): ${cConf.uid} " +
-        s"${kubeNsObject.namespace}.${kubeNsObject.name}: skipped due to $reason")
-    }
+    def logSkipped(reason: String): Unit = this.logSkipped(kubeNsObject, autoConf.targetType.toString, cConf.uid, reason)
     val lastGoodRunTs = knownGoodServiceCommands.get(command).map(_._2)
     if (lastGoodRunTs.isDefined) {
       // re-check occasionally?
@@ -177,6 +180,17 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                           forcePortNums: Boolean
                          ): Option[SMGScrapeTargetConf] = {
     try {
+      val uid = cConf.uidPrefix + autoConf.targetType + "." + nsObject.namespace +
+        "." + nsObject.name + "." + kubePort.portName(forcePortNums) + idxId.map(x => s"._$x").getOrElse("")
+      val title = s"${cConf.hnamePrefix}${autoConf.targetType} " +
+        s"${nsObject.namespace}.${nsObject.name}:${kubePort.portName(forcePortNums)}${idxId.map(x => s" ($x)").getOrElse("")}"
+      if (autoConf.filter.isDefined){
+        val flt = autoConf.filter.get
+        if (!flt.matchesId(uid)){
+          logSkipped(nsObject, autoConf.targetType.toString, cConf.uid, "skipped due filter not matching id")
+          return None
+        }
+      }
       val myMetricsPath = metricsPath.getOrElse("/metrics")
       def myCommand(proto: String)  = cConf.fetchCommand + " " + proto + "://" + ipAddr + s":${kubePort.port}${myMetricsPath}"
       val commands = (if (!autoConf.forceHttps) Seq(myCommand("http")) else Seq()) ++
@@ -188,10 +202,6 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       if (workingCommandIdx.isEmpty)
         return None
       val command = commands(workingCommandIdx.get)
-      val uid = cConf.uidPrefix + autoConf.targetType + "." + nsObject.namespace +
-        "." + nsObject.name + "." + kubePort.portName(forcePortNums) + idxId.map(x => s"._$x").getOrElse("")
-      val title = s"${cConf.hnamePrefix}${autoConf.targetType} " +
-        s"${nsObject.namespace}.${nsObject.name}:${kubePort.portName(forcePortNums)}${idxId.map(x => s" ($x)").getOrElse("")}"
       val confOutput = s"${cConf.uid}-${autoConf.targetType}-${nsObject.namespace}-" +
         s"${nsObject.name}-${kubePort.port}${idxId.map(x => s"-$x").getOrElse("")}.yml"
       val ret = SMGScrapeTargetConf(

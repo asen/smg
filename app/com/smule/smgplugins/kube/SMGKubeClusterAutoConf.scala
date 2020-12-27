@@ -10,7 +10,7 @@ import scala.util.Try
 
 case class SMGKubeClusterAutoConf(
                                    targetType: ConfType.Value,
-                                   aconfUid: Option[String],
+//                                   aconfUid: Option[String],
                                    enabled: Boolean,
                                    filter: Option[SMGFilter],
                                    regexReplaces: Seq[RegexReplaceConf],
@@ -39,7 +39,7 @@ object SMGKubeClusterAutoConf {
     }
     val ret = SMGKubeClusterAutoConf(
       targetType = confType.get,
-      aconfUid = scm.get("uid").map(_.toString),
+//      aconfUid = scm.get("uid").map(_.toString),
       enabled = scm.get("enabled").forall(_.toString != "false"),
       filter = scm.get("filter").map(yo => SMGFilter.fromYamlMap(yobjMap(yo).toMap)),
       regexReplaces = scm.get("regex_replaces").map{ yo =>
