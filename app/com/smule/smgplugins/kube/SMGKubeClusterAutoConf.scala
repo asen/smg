@@ -29,7 +29,7 @@ object SMGKubeClusterAutoConf {
     val endpoint, service, pod_port = Value
   }
 
-  private val defaultRecheckBackoff: Long = 600000L
+  val defaultRecheckBackoff: Long = 600000L
 
   def fromYamlMap(scm: mutable.Map[String, Object], log: SMGLoggerApi): Option[SMGKubeClusterAutoConf] = {
     val confType: Option[ConfType.Value] = Try(ConfType.withName(scm("type").toString)).toOption

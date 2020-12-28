@@ -57,30 +57,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     Some(ret)
   }
 
-  // command -> (nsobj, last executed (good or bad), desc for bad)
-  private val knownGoodServiceCommands = TrieMap[String,(KubeNsObject, Long)]()
-  private val knownBadServiceCommands = TrieMap[String,(KubeNsObject, Long, String)]()
-
-  case class AutoDiscoveredCommandStatus(nsObj: KubeNsObject, tsms: Long,
-                                         command: String, reason: Option[String]){
-    def tsStr: String = new Date(tsms).toString
-    private def reasonOrOk = reason.map("ERROR: " + _).getOrElse("OK")
-    def inspect: String = s"${nsObj.namespace}/${nsObj.name}: $command (ts=$tsStr) status=$reasonOrOk"
-  }
-
-  def listAutoDiscoveredCommands: Seq[AutoDiscoveredCommandStatus] = {
-    val good = knownGoodServiceCommands.toSeq.sortBy { x =>
-      (x._2._1.namespace, x._2._1.name)
-    }.map { x =>
-      AutoDiscoveredCommandStatus(nsObj = x._2._1, tsms = x._2._2, command = x._1, reason = None)
-    }
-    val bad = knownBadServiceCommands.toSeq.sortBy { x =>
-      (x._2._1.namespace, x._2._1.name)
-    }.map { x =>
-      AutoDiscoveredCommandStatus(nsObj = x._2._1, tsms = x._2._2, command = x._1, reason = Some(x._2._3))
-    }
-    good ++ bad
-  }
+  private val autoDiscoveryCache = new CommandAutoDiscoveryCache(log)
 
   private def logSkipped(kubeNsObject: KubeNsObject, targetType: String,
                          clusterUid: String, reason: String): Unit = {
@@ -95,14 +72,14 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                             kubePort: KubePort): Boolean = {
     // filter out invalid ports as far as we can tell
     def logSkipped(reason: String): Unit = this.logSkipped(kubeNsObject, autoConf.targetType.toString, cConf.uid, reason)
-    val lastGoodRunTs = knownGoodServiceCommands.get(command).map(_._2)
+    val lastGoodRunTs = autoDiscoveryCache.lastGoodRunTs(command)
     if (lastGoodRunTs.isDefined) {
       // re-check occasionally?
       // TODO: right now - once good, its good until SMG restart
       // note that removed services will not even get here and will disappear automatically
       return true
     }
-    val lastBadRunTs = knownBadServiceCommands.get(command).map(_._2)
+    val lastBadRunTs = autoDiscoveryCache.lastBadRunTs(command)
     if (lastBadRunTs.isDefined){
       val randomizedBackoff = autoConf.reCheckBackoff +
         Random.nextInt(autoConf.reCheckBackoff.toInt).toLong
@@ -116,7 +93,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     if (kubePort.protocol != "TCP") {
       val reason = s"protocol=${kubePort.protocol} (not TCP)"
       logSkipped(reason)
-      knownBadServiceCommands.put(command, (kubeNsObject, System.currentTimeMillis(), reason))
+      autoDiscoveryCache.recordBad(command, kubeNsObject, reason)
       return false
     }
     try {
@@ -126,31 +103,29 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         if (OpenMetricsStat.parseText(out, log, labelsInUid = false).nonEmpty) {
           //keep known up services in a cache and not run this every minute -
           //we only want to know if it is http and has valid /metrics URL, once
-          knownGoodServiceCommands.put(command, (kubeNsObject, System.currentTimeMillis()))
-          knownBadServiceCommands.remove(command)
+          autoDiscoveryCache.recordGood(command, kubeNsObject)
           true
         } else {
           val reason = s"command output unparse-able ($command): ${out}"
           logSkipped(reason)
-          knownBadServiceCommands.put(command, (kubeNsObject, System.currentTimeMillis(), reason))
+          autoDiscoveryCache.recordBad(command, kubeNsObject, reason)
           false
         }
       } else {
         if (outObj.data.asInstanceOf[OpenMetricsResultData].stats.nonEmpty){
-          knownGoodServiceCommands.put(command,  (kubeNsObject, System.currentTimeMillis()))
-          knownBadServiceCommands.remove(command)
+          autoDiscoveryCache.recordGood(command, kubeNsObject)
           true
         } else {
           val reason = s"command output parsed but empty ($command)"
           logSkipped(reason)
-          knownBadServiceCommands.put(command,  (kubeNsObject, System.currentTimeMillis(), reason))
+          autoDiscoveryCache.recordBad(command, kubeNsObject, reason)
           false
         }
       }
     } catch { case t: Throwable => //SMGCmdException =>
       val reason = s"command or metrics parse failed: ${t.getMessage}"
       logSkipped(reason)
-      knownBadServiceCommands.put(command, (kubeNsObject, System.currentTimeMillis(), reason))
+      autoDiscoveryCache.recordBad(command, kubeNsObject, reason)
       false
     }
   }
@@ -465,7 +440,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   }
 
   def run(): Boolean = {
-    // TODO
+    autoDiscoveryCache.cleanupOld(SMGKubeClusterAutoConf.defaultRecheckBackoff * 2)
     var ret = false
     pluginConf.clusterConfs.foreach { cConf =>
        if (processClusterConf(cConf))
