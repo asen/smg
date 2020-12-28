@@ -286,7 +286,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           Seq()
         } else {
           if (idx.isDefined) idx = Some(idx.get + 1)
-          val nobj = KubeNamedObject(pod.stableUid(idx), pod.namespace, pod.labels, pod.annotations)
+          val nobj = KubeNamedObject(pod.stableName(idx), pod.namespace, pod.labels, pod.annotations)
           // check for dup port names
           val hasDupPortNames =
             pod.ports.map(_.portName(false)).distinct.lengthCompare(pod.ports.size) != 0

@@ -106,8 +106,8 @@ object SMGKubeClient {
                       podIp: Option[String],
                       ports: Seq[KubeEndpointPort]
                     ) extends KubeNsObject {
-    def stableUid(groupIndex: Option[Int]): String = namespace + "." +
-      owner.map(_.podStableUid(name, groupIndex)).getOrElse(name)
+    def stableName(groupIndex: Option[Int]): String = owner.map(_.podStableUid(name, groupIndex)).getOrElse(name)
+    def stableUid(groupIndex: Option[Int]): String = namespace + "." + stableName(groupIndex)
   }
 
 
