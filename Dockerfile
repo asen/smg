@@ -56,6 +56,8 @@ RUN mkdir -p /opt/smg/inst
 # COPY target/universal/stage /opt/smg/inst/smg
 COPY . /opt/smg/inst/smg
 
+RUN ln -s /opt/smg/inst/smg/logs /var/log/smg
+
 # A hack to point the jmx plugin to use /opt/smg/data/rrd/jmx for rrd data dir
 RUN sed -i 's|smgrrd/jmx|/opt/smg/data/rrd/jmx|' /opt/smg/inst/smg/smgconf/jmx-plugin.yml
 
