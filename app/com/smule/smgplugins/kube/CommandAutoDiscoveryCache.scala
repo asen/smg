@@ -12,13 +12,6 @@ class CommandAutoDiscoveryCache(log: SMGLoggerApi) {
   private val knownGoodServiceCommands = TrieMap[String,(KubeNsObject, Long)]()
   private val knownBadServiceCommands = TrieMap[String,(KubeNsObject, Long, String)]()
 
-  case class AutoDiscoveredCommandStatus(nsObj: KubeNsObject, tsms: Long,
-                                         command: String, reason: Option[String]){
-    def tsStr: String = new Date(tsms).toString
-    private def reasonOrOk = reason.map("ERROR: " + _).getOrElse("OK")
-    def inspect: String = s"${nsObj.namespace}/${nsObj.name}: $command (ts=$tsStr) status=$reasonOrOk"
-  }
-
   def lastGoodRunTs(command: String): Option[Long] = {
     val ret = knownGoodServiceCommands.get(command)
     if (ret.isDefined)

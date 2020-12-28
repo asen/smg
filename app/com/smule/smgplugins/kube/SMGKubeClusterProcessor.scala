@@ -59,7 +59,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 
   private val autoDiscoveryCache = new CommandAutoDiscoveryCache(log)
 
-  def listAutoDiscoveredCommands: Seq[autoDiscoveryCache.AutoDiscoveredCommandStatus] =
+  def listAutoDiscoveredCommands: Seq[AutoDiscoveredCommandStatus] =
     autoDiscoveryCache.listAutoDiscoveredCommands
 
   private def logSkipped(kubeNsObject: KubeNsObject, targetType: String,
