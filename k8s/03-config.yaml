@@ -84,6 +84,9 @@ data:
 #          enabled: true
         - type: pod_port
           enabled: true
+          metrics_enable_annotation: prometheus.io/scrape
+          metrics_port_annotation: prometheus.io/port
+          metrics_path_annotation: prometheus.io/path
           filter:
             # not really metrics
             rxx: kube-state-metrics.http-metrics

@@ -2396,6 +2396,7 @@ object commands. Subcommands:
     - $influxdb_strip_group_index: true
     </pre>
 
+
 - **jmx** - exposes the following commands to be used in configs
     - :jmx con host:port
     - :jmx get host:port jmxObj jmxAttr1 jmxAttr2..
