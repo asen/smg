@@ -3,6 +3,7 @@ package com.smule.smg.core
 import com.smule.smg.rrd.SMGRrd
 
 import scala.collection.concurrent.TrieMap
+import scala.util.Try
 
 /**
   * Mutable store for keeping a cache of recently fetched values.
@@ -65,7 +66,16 @@ class SMGValuesCache(log: SMGLoggerApi) {
           if (deltaTime > 0 && deltaTime < maxCacheAge(ou)) {
             val rates = opt.get.vals.zip(prevOpt.get.vals).map { case (cur, prev) => (cur - prev) / deltaTime }
             val isGood = rates.zip(ou.vars).forall { case (rate, v) =>
-              (!rate.isNaN) && (rate >= v.getOrElse("min", "0.0").toDouble) && v.get("max").forall(_.toDouble >= rate)
+              val minCompareRate = Try{
+                val m = v.getOrElse("min", "0.0") ;
+                if (m == "U")
+                  Double.NegativeInfinity
+                else
+                  m.toDouble
+              }.getOrElse(Double.NegativeInfinity)
+              val maxCompareRate = v.get("max").flatMap(x => Try(x.toDouble).toOption).
+                getOrElse(Double.PositiveInfinity)
+              (!rate.isNaN) && (rate >= minCompareRate) && (maxCompareRate >= rate)
             }
             if (isGood)
               if (counterAsRate)
