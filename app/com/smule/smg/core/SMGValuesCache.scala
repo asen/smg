@@ -66,15 +66,7 @@ class SMGValuesCache(log: SMGLoggerApi) {
           if (deltaTime > 0 && deltaTime < maxCacheAge(ou)) {
             val rates = opt.get.vals.zip(prevOpt.get.vals).map { case (cur, prev) => (cur - prev) / deltaTime }
             val isGood = rates.zip(ou.vars).forall { case (rate, v) =>
-              val minCompareRate = Try{
-                val m = v.getOrElse("min", "0.0") ;
-                if (m == "U")
-                  Double.NegativeInfinity
-                else
-                  m.toDouble
-              }.getOrElse(Double.NegativeInfinity)
-              val maxCompareRate = v.get("max").flatMap(x => Try(x.toDouble).toOption).
-                getOrElse(Double.PositiveInfinity)
+              val (minCompareRate, maxCompareRate) = ou.getVarMinMaxCompareValues(v)
               (!rate.isNaN) && (rate >= minCompareRate) && (maxCompareRate >= rate)
             }
             if (isGood)

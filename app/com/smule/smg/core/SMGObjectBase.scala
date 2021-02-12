@@ -3,6 +3,8 @@ package com.smule.smg.core
 import com.smule.smg.remote.SMGRemote
 import com.smule.smg.rrd.SMGRraDef
 
+import scala.util.Try
+
 /**
   * Created by asen on 10/6/16.
   */
@@ -57,4 +59,16 @@ trait SMGObjectBase {
       ) ++ labels.keys.toSeq.sorted.map{k => s"$k=${labels(k)}"}
     ).mkString(" ").toLowerCase
 
+  def getVarMinMaxCompareValues(v: Map[String, String]): (Double, Double) = {
+    val minCompareValue = Try{
+      val m = v.getOrElse("min", "0.0") ;
+      if (m == "U")
+        Double.NegativeInfinity
+      else
+        m.toDouble
+    }.getOrElse(Double.NegativeInfinity)
+    val maxCompareValue = v.get("max").flatMap(x => Try(x.toDouble).toOption).
+      getOrElse(Double.PositiveInfinity)
+    (minCompareValue, maxCompareValue)
+  }
 }

@@ -47,14 +47,14 @@ class SMGMonInternalVarState(var objectUpdate: SMGObjectUpdate,
           s"detected: $ts - $myCounterPrevTs = $tsDelta")
       None
     } else {
-      val maxr = objectUpdate.vars(vix).get("max").map(_.toDouble)
+      val (minCompareRate, maxCompareRate) = objectUpdate.getVarMinMaxCompareValues(objectUpdate.vars(vix))
       val r = (rawVal - myCounterPrevValue) / tsDelta
-      val tpl = if ((r < 0) || (maxr.isDefined && (maxr.get < r))){
+      val tpl = if ((r < minCompareRate) || (r > maxCompareRate)){
         log.debug(s"SMGMonInternalVarState.processCounterUpdate($id): Counter overflow detected: " +
-          s"p=$myCounterPrevValue/$myCounterPrevTs c=$rawVal/$ts r=$r maxr=$maxr")
+          s"p=$myCounterPrevValue/$myCounterPrevTs c=$rawVal/$ts r=$r maxr=$maxCompareRate minr=$minCompareRate")
         (Double.NaN, Some(s"ANOM: Counter overflow: p=${objectUpdate.numFmt(myCounterPrevValue, vix)} " +
           s"c=${objectUpdate.numFmt(rawVal, vix)} td=$tsDelta r=${objectUpdate.numFmt(r, vix)} " +
-          s"maxr=${objectUpdate.numFmt(maxr.getOrElse(Double.NaN), vix)}"))
+          s"maxr=$maxCompareRate minr=$minCompareRate"))
       } else
         (r, None)
       Some(tpl)
