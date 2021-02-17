@@ -4,8 +4,6 @@ v 1.2+
 
 * stable release
 * handle kube-state-metrics in Kube plugin (not really metrics)
-* per-recipient throttling of alerts
-* retry individual failed notifications commands not only when all fail
 
 == Documentation ==
 
