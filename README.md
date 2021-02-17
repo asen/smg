@@ -28,14 +28,14 @@ Docs on github: https://github.com/asen/smg/blob/master/docs/index.md
 
 Binary releases available here: https://github.com/asen/smg/releases
 
-Docker image: gcr.io/asen-smg/smg-1.1:latest
+Docker image: gcr.io/asen-smg/smg-1.2:latest
 
 ## Run in container
 
 * mkdir -p /opt/smg/data /etc/smg/conf.d
 
 * docker run -d --name smg -p 9000:9000 -v /opt/smg/data -v /etc/smg/conf.d/ \
-    gcr.io/asen-smg/smg-1.1:latest
+    gcr.io/asen-smg/smg-1.2:latest
 
 * Point your browser to http://$DOCKER_HOST:9000 (the local metrics stats should
 show up in a minute or two)
@@ -60,14 +60,14 @@ with auto-discovery (similar to Prometheus)
 * Unpack tgz
 
     ```
-       # tar -xzf smg-1.1.tgz
+       # tar -xzf smg-1.2.tgz
     ```
  
 * Create /etc/smg/config.yml (e.g. by copying the example config into 
 /etc/smg/config.yml and editing as needed):
 
     ```
-        # mkdir /etc/smg && cp smg-1.1/smgconf/config-example.yml /etc/smg/config.yml
+        # mkdir /etc/smg && cp smg-1.2/smgconf/config-example.yml /etc/smg/config.yml
         # vim /etc/smg/config.yml
     ```
   
@@ -133,14 +133,14 @@ installed if different).
     $ git checkout release # recommended, to get on a stable branch
     $ ./build-smg.sh
     ...
-    *** Done. Output in target/universal/smg-1.1.tgz
+    *** Done. Output in target/universal/smg-1.2.tgz
 ```
 
 ## Build a custom Docker image
 
 Start your Dockerfile with
 
-    FROM gcr.io/asen-smg/smg-1.1:latest
+    FROM gcr.io/asen-smg/smg-1.2:latest
 
 Or check the Dockerfile and build-docker.sh files in the root project dir to build your own from scratch.
 

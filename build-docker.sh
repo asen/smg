@@ -9,7 +9,7 @@ if [ "$1" == "--push" ] ; then
     shift
 fi
 
-export VERSION=${VERSION:-1.2}
+export VERSION=${VERSION:-1.3}
 
 IMAGE_VERSION=${IMAGE_VERSION:-0.2}
 IMAGE_NAME=${IMAGE_NAME:-gcr.io/asen-smg/smg-$VERSION}
