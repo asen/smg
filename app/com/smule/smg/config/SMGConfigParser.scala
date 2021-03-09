@@ -597,6 +597,10 @@ class SMGConfigParser(log: SMGLoggerApi) {
                     s"(assuming default)", isWarn = true)
                 confInterval = SMGConfigParser.defaultInterval
               }
+              // dataDelay is deprecated, use data_delay
+              val dataDelay = ymap.getOrElse("data_delay",
+                ymap.getOrElse("dataDelay", 0).asInstanceOf[Int]
+              ).asInstanceOf[Int]
               val obj = SMGRrdObject(
                 id = oid,
                 parentIds = parentIds.toList,
@@ -605,7 +609,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 title = ymap.getOrElse("title", oid).toString,
                 rrdType = myRrdType,
                 interval = confInterval,
-                dataDelay = ymap.getOrElse("dataDelay", 0).asInstanceOf[Int],
+                dataDelay = dataDelay,
                 delay = getDelay(ymap),
                 stack = ymap.getOrElse("stack", false).asInstanceOf[Boolean],
                 preFetch = parentIds.headOption,
