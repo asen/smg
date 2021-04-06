@@ -218,22 +218,20 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     */
   override def config: SMGLocalConfig = currentConfig
 
-  private val reloadIsRunning: AtomicBoolean = new AtomicBoolean(false)
+  private val reloadSyncObj: Object = new Object()
 
   /**
     * @inheritdoc
     */
   override def reloadLocal(): Unit = {
-    if (!reloadIsRunning.getAndSet(true)) {
-      val t0 = System.currentTimeMillis()
-      log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)
-      try {
+    val t0 = System.currentTimeMillis()
+    log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)
+    try {
+      reloadSyncObj.synchronized {
         val newConf = configParser.getNewConfig(plugins, topLevelConfigFile)
         createNonExistingRrds(newConf)
         initExecutionContexts(newConf.intervalConfs)
-        currentConfig.synchronized {  // not really needed ...
-          currentConfig = newConf
-        }
+        currentConfig = newConf
         cleanupCachedValuesMap(newConf)
         notifyReloadListeners("ConfigService.reload")
         plugins.foreach(_.onConfigReloaded())
@@ -241,11 +239,11 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
         log.info("SMGConfigServiceImpl.reload: completed for " + (t1 - t0) + "ms. rrdConf=" + newConf.rrdConf +
           " imgDir=" + newConf.imgDir + " urlPrefix=" + newConf.urlPrefix +
           " humanDesc: " + newConf.humanDesc)
-      } finally {
-        reloadIsRunning.set(false)
       }
-    } else {
-      log.warn("SMGConfigServiceImpl.reload: Reload is already running in another thread, aborting")
+    } catch {
+      case t: Throwable =>
+        log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error (rethrowing)")
+        throw t
     }
   }
 
