@@ -1,13 +1,13 @@
 package com.smule.smg.config
 
 import java.io.File
-import java.util.concurrent.atomic.AtomicBoolean
-
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import akka.actor.{ActorSystem, DeadLetter, Props}
 import com.smule.smg.core._
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginConfig}
 import com.smule.smg.rrd.SMGRrdUpdate
 import com.typesafe.config.ConfigFactory
+
 import javax.inject.{Inject, Singleton}
 import play.{Environment, Mode}
 import play.api.Configuration
@@ -220,13 +220,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
 
   private val reloadSyncObj: Object = new Object()
 
-  /**
-    * @inheritdoc
-    */
-  override def reloadLocal(): Unit = {
+  private def doReloadSync(): Unit = {
     val t0 = System.currentTimeMillis()
     log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)
     try {
+      // XXX right now this onluy ever runs in a single thread so synchronization
+      // is not really needed. OTOH it doesn't hurt much too
+      // (this can take many seconds so overhead can be ignored)
       reloadSyncObj.synchronized {
         val newConf = configParser.getNewConfig(plugins, topLevelConfigFile)
         createNonExistingRrds(newConf)
@@ -242,8 +242,41 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       }
     } catch {
       case t: Throwable =>
-        log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error (rethrowing)")
-        throw t
+        log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error")
+    }
+  }
+
+  private val pendingReloads = new AtomicInteger(0)
+  private val MAX_RELOADS_IN_A_ROW = 10
+
+  /**
+    * @inheritdoc
+    */
+  override def reloadLocal(): Unit = {
+   var pending = pendingReloads.incrementAndGet()
+    if (pending > 1){
+      log.warn(s"SMGConfigServiceImpl.reload: Reload already running, requested another one  (pending=$pending)")
+      return
+    }
+    // only one thread which got pending=1 gets here.
+    // pendingReloads does not get to 0 or 1 until done and before then can only be incremented
+    var reloads = 0
+    while (pending > 0) {
+      reloads += 1
+      log.info(s"SMGConfigServiceImpl.reload: Reload requested (reloads=$reloads/pending=${pendingReloads.get()}")
+      doReloadSync()
+      pending = pendingReloads.decrementAndGet()
+      // if pending == 0 (was 1) -> all good, new threads can take over
+      // if pending == 1 (was 2) -> this thread will do another reload, others can't take over
+      if (pending > 1) { // consolidate multiple reload requests into one.
+        log.warn(s"SMGConfigServiceImpl.reload: Consolidating multiple pending reload requests into one ($pending)")
+        pendingReloads.set(1)
+        pending = 1
+      }
+      if (reloads > MAX_RELOADS_IN_A_ROW && pending > 0) {
+        log.error(s"SMGConfigServiceImpl.reload: Too many reloads in a row: (reloads=$reloads/pending=${pendingReloads.get()})")
+        pending = 0
+      }
     }
   }
 
