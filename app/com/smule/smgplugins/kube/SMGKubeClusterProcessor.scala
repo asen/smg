@@ -166,7 +166,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         val flt = autoConf.filter.get
         if (!flt.matchesId(uid)){
           logSkipped(nsObject, autoConf.targetType.toString, cConf.uid,
-            s"skipped due to filter not matching id: $uid")
+            s"filter not matching id: $uid")
           return None
         }
       }
