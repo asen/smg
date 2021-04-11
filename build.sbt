@@ -42,6 +42,7 @@ libraryDependencies += "io.prometheus" % "simpleclient_common" % "0.9.0"
 libraryDependencies += "io.prometheus" % "simpleclient_hotspot" % "0.9.0"
 
 libraryDependencies += "org.apache.commons" % "commons-csv" % "1.8"
+libraryDependencies += "org.scalatra.scalate" %% "scalate-core" % "1.9.6"
 
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 

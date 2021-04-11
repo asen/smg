@@ -1,0 +1,171 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%
+  // Configure this with a command like this:
+  // command: 'curl -sS -f http://%node_host%/haproxy/stats/url'
+  // runtime_data: true
+%>
+<%@ val node_name: String %>
+<%@ val command: String %>
+<%@ val data: Seq[String] %>
+<%@ val id_prefix: String = "hap." %>
+<%@ val title_prefix: String = "" %>
+<%@ val interval: Int = 60 %>
+<%@ val timeout: Int = 30 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+
+- id: <%= id_prefix %><%= node_name %>.stats.fetch
+  type: $pre_fetch
+  desc: "Fetch Haproxy stats over HTTP - <%= node_name %>"
+  command: "<%= command %>"
+  timeout: <%= timeout %>
+  pass_data: true
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+- id: <%= id_prefix %><%= node_name %>.stats.parse
+  type: $pre_fetch
+  desc: "Parse Haproxy CSV stats - <%= node_name %>"
+  command: ":cc csv parse"
+  pass_data: true
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.fetch
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+- ^<%= id_prefix %><%= node_name %>:
+  title: "<%= title_prefix %><%= node_name %> Haproxy stats"
+  px: "<%= id_prefix %><%= node_name %>."
+  cols: 8
+#if (parent_index != "")
+  parent: <%= parent_index %>
+#end
+
+#for (line <- data.tail)
+<%
+  val arr = line.split(",")
+  val px = if (arr(1) == "FRONTEND" || arr(1) == "BACKEND") "bf" else "host"
+  val itm = if (px == "bf") arr(0) else s"${arr(0)}.${arr(1)}"
+  val row_matchers = if (px == "bf") s"0=${arr(0)}" else s"0=${arr(0)} 1=${arr(1)}"
+%>
+####################################
+# node_name = <%= node_name %>
+# itm = <%= itm %>
+# row_matchers = <%= row_matchers %>
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.rate
+  command: ":cc csv get -e0 <%= row_matchers %> rate"
+  title: <%= node_name %> <%= itm %> Rate
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  vars:
+  - label: consec
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.stot
+  command: ":cc csv get -e0 <%= row_matchers %> stot"
+  title: <%= node_name %> <%= itm %> Sessions/sec
+  rrdType: DERIVE
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  vars:
+  - label: stot
+  mu: sess/sec
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scur
+  command: ":cc csv get -e0 <%= row_matchers %> scur"
+  title: <%= node_name %> <%= itm %> Sess (scur)
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  vars:
+  - label: conns
+
+#if (arr(6) != "")
+
+# We want to monitor on cur/limit % so graph that
+# It uses a csv get pre-fetch to get the scur and slim values and then
+# a rpn command to calculate %
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scurlimitperc.parse
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  command: ":cc csv get -e0 <%= row_matchers %> scur slim"
+  pass_data: true
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scurlimitperc
+  pre_fetch: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scurlimitperc.parse
+  # ($ds0 * 100) / $ds1
+  command: ":cc rpn $ds0,100,*,$ds1,/"
+  title:  <%= node_name %> <%= itm %> Cur/Limit %
+  interval: <%= interval %>
+  vars:
+    - label: cur/limit perc
+      mu: "%"
+#end
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.qcur
+  command: ":cc csv get -e0 <%= row_matchers %> qcur"
+  title: <%= node_name %> <%= itm %> Queue (qcur)
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  vars:
+  - label: queued conns
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.rate_max
+  command: ":cc csv get -e0 <%= row_matchers %> rate_max"
+  title: <%= node_name %> <%= itm %> Rate max
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  vars:
+  - label: max consec
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scur_max
+  command: ":cc csv get -e0 <%= row_matchers %> smax"
+  title: <%= node_name %> <%= itm %> Sess (scur) max
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  vars:
+  - label: max conns
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.qcur_max
+  command: ":cc csv get -e0 <%= row_matchers %> qmax"
+  title: <%= node_name %> <%= itm %> Queue (qcur) max
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  vars:
+  - label: max queued conns
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.netio
+  command: ":cc csv get -e0 <%= row_matchers %> bin bout"
+  title: <%= node_name %> <%= itm %> In/Out traffic b/s
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  rrdType: DERIVE
+  vars:
+  - label: in
+    mu: "b/s"
+    cdef: "$ds,8,*"
+  - label: out
+    mu: "b/s"
+    cdef: "$ds,8,*"
+
+# Up/Down uses a csv get pre-fetch and then map command to
+# convert the string OPEN/UP values to 1 and anyhing else - 0
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.updown.parse
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  command: ":cc csv get -e0 <%= row_matchers %> status"
+  pass_data: true
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.updown
+  pre_fetch: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.updown.parse
+  command: ":cc map OPEN=1 UP=1 0"
+  title: <%= node_name %> <%= itm %> UP/DOWN
+  interval: <%= interval %>
+  vars:
+  - label: up/down
+#end
+

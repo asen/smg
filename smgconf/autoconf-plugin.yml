@@ -1,0 +1,51 @@
+
+autoconf:
+  # this dir needs to be included by /etc/smg/config.yml for this to work
+  conf_output_dir: "/opt/smg/data/conf/auto-conf-private.d"
+  conf_output_dir_owned: true
+  template_dirs:
+    - "/etc/smg/ac-templates"
+    - "/opt/smg/data/conf/ac-templates"
+    - "smgconf/ac-templates"
+  targets:
+#    - output: haproxy-stats.yml
+#      uid: haproxy-stats
+#      template: haproxy
+#      node_name: localhost
+#      runtime_data: true
+#      runtime_data_timeout_sec: 30
+#      resolve_name: false
+#      command: 'curl -sS -f http://localhost/stats'
+#      node_host: 127.0.0.1
+#      context:
+#        data:
+#          - dummy line 1
+#          - dummy line 2
+#        blah: blah-blah
+
+    - output: centos8-snmp-static.yml
+      template: linux-snmp-static
+      node_name: vm-c8
+      resolve_name: false
+      context:
+        node_host: 192.168.1.169
+        netio_snmp_indexes:
+          - "2"
+        du_interval: "300"
+        disk_drives:
+          - mount: "/"
+            oid: "34"
+
+    - output: centos8-snmp-auto.yml
+      template: linux-snmp-auto
+      node_name: vm-c8-auto
+      resolve_name: false
+      runtime_data: true
+      runtime_data_timeout_sec: 30
+      command: 'smgscripts/snmp-walk-storage-network.sh %node_host%'
+      context:
+        node_host: 192.168.1.169
+        snmp_notify_disable: true
+
+    - include: "/etc/smg/auto-conf.d/*.{yml,yaml}"
+    - include: "/opt/smg/data/conf/auto-conf.d/*.{yml,yaml}"

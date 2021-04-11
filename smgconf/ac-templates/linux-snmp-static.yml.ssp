@@ -1,0 +1,376 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%@ val node_name: String %>
+<%@ val node_host: String %>
+<%@ val id_prefix: String = "host." %>
+<%@ val title_prefix: String = "Host " %>
+<%@ val interval: String = "60" %>
+<%@ val du_interval: String = "60" %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val snmp_notify_disable: Boolean = false %>
+<%@ val snmp_notify_strikes: String = "" %>
+<%@ val desc: String = "" %>
+<%@ val snmp_community: String = "public" %>
+<%@ val add_ping: Boolean = true %>
+<%@ val has_swap: Boolean = false %>
+<%@ val check_swpio: Boolean = false %>
+<%@ val netio_max: String = "" %>
+<%@ val netio_snmp_indexes: Seq[String] = Seq[String]() %>
+<%@ val disk_drives: Seq[Map[String,Object]] = Seq() %>
+<%
+  val swap_io_oids = if (has_swap) "ssSwapIn.0 ssSwapOut.0" else ""
+  val swp_oids = if (has_swap) "memAvailSwap.0 memTotalSwap.0" else ""
+  val netio_snmp_oids = netio_snmp_indexes.map {n =>  s"ifHCInOctets.${n} ifHCOutOctets.${n}"}
+%>
+
+#if (add_ping)
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.ping
+  desc: "Check that host <%= node_name %> is up"
+  command: "ping -W 2 -n -c 1 <%= node_host %> > /dev/null || ping -W 2 -n -c 1 <%= node_host %> > /dev/null"
+  ignorets: true
+  timeout: 5
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+#end
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.snmp
+#if (add_ping)
+  pre_fetch: <%= id_prefix %><%= node_name %>.ping
+#end
+#if (!add_ping)
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+#end
+  desc: "Check that SNMP is up on <%= node_name %>"
+  command: "snmpget -v2c -c<%= snmp_community %> <%= node_host %> sysDescr.0"
+  ignorets: true
+#if (snmp_notify_disable)
+  notify-disable: true
+#end
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+  timeout: 5
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.snmp.fetch
+  desc: "Fetch system stats from SNMP on <%= node_name %>"
+  pass_data: true
+  command: >
+    snmpget -v2c -c<%= snmp_community %> -mall <%= node_host %> laLoad.1 laLoad.2
+    ssCpuRawUser.0 ssCpuRawNice.0 ssCpuRawSystem.0 ssCpuRawIdle.0
+    ssCpuRawWait.0 ssCpuRawInterrupt.0 ssCpuRawSoftIRQ.0
+    ssRawInterrupts.0 ssRawContexts.0 ssIORawSent.0 ssIORawReceived.0
+    tcpPassiveOpens.0 tcpActiveOpens.0
+    memAvailReal.0 memCached.0 memBuffer.0 memTotalReal.0 <%= swp_oids %>
+    tcpCurrEstab.0 <%= swap_io_oids %> <%= netio_snmp_oids.mkString(" ") %>
+  timeout: 10
+#if (snmp_notify_strikes != "")
+  notify-strikes: <%= snmp_notify_strikes %>
+#end
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.snmp.parse
+  desc: "Fetch system stats from SNMP on <%= node_name %>"
+  pass_data: true
+  command: ":cc snmpp parse"
+  timeout: 10
+#if (snmp_notify_strikes != "")
+  notify-strikes: <%= snmp_notify_strikes %>
+#end
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.fetch
+
+- ^<%= id_prefix %><%= node_name %>:
+  title: "<%= title_prefix %><%= node_name %>"
+  px: "<%= id_prefix %><%= node_name %>."
+#if (desc != "")
+  desc: "<%= desc %>"
+#end
+#if (parent_index != "")
+  parent: "<%= parent_index %>"
+#end
+
+- id: <%= id_prefix %><%= node_name %>.sysload
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
+  command: ":cc snmpp get laLoad.1 laLoad.2"
+  title: "<%= title_prefix %><%= node_name %> - Load average over 1/5 min periods"
+  interval: 60
+  vars:
+  - label: sl1min
+  - label: sl5min
+
+- id: <%= id_prefix %><%= node_name %>.cpu
+  title: "<%= title_prefix %><%= node_name %> - CPU usage"
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
+  command: >
+    :cc snmpp get ssCpuRawUser.0 ssCpuRawNice.0 ssCpuRawSystem.0 ssCpuRawIdle.0
+    ssCpuRawWait.0 ssCpuRawInterrupt.0 ssCpuRawSoftIRQ.0
+  rrd_type: DERIVE
+  stack: true
+  interval: <%= interval %>
+  vars:
+  - label: user
+    mu: "%"
+    lt: "AREA"
+  - label: nice
+    mu: "%"
+    lt: "AREA"
+  - label: system
+    mu: "%"
+    lt: "AREA"
+  - label: idle
+    mu: "%"
+    # alert-warn-lt: 5
+    # alert-crit-lt: 1
+    lt: "AREA"
+  - label: iowait
+    mu: "%"
+    lt: "AREA"
+  - label: irq
+    mu: "%"
+    lt: "AREA"
+  - label: softirq
+    mu: "%"
+    lt: "AREA"
+
+- id: <%= id_prefix %><%= node_name %>.cpu0
+  title: "<%= title_prefix %><%= node_name %> - User and System CPU usage"
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
+  command: ":cc snmpp get ssCpuRawUser.0 ssCpuRawSystem.0"
+  rrd_type: DERIVE
+  interval: <%= interval %>
+  vars:
+  - label: user
+    mu: "%"
+  - label: sys
+    mu: "%"
+
+- id: <%= id_prefix %><%= node_name %>.cpu1
+  title: "<%= title_prefix %><%= node_name %> - Nice and Wait CPU usage"
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
+  command: ":cc snmpp get ssCpuRawNice.0 ssCpuRawWait.0"
+  rrd_type: DERIVE
+  interval: <%= interval %>
+  vars:
+  - label: nice
+    mu: "%"
+  - label: wait
+    mu: "%"
+
+- id: <%= id_prefix %><%= node_name %>.intctx
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
+  command: ":cc snmpp get ssRawInterrupts.0 ssRawContexts.0"
+  title: "<%= title_prefix %><%= node_name %> - Interrupts/context switches"
+  rrd_type: DERIVE
+  interval: <%= interval %>
+  vars:
+  - label: ints
+  - label: ctxs
+
+- id: <%= id_prefix %><%= node_name %>.blkio
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
+  command: ":cc snmpp get ssIORawSent.0 ssIORawReceived.0"
+  title: "<%= title_prefix %><%= node_name %> - Block Device I/O"
+  rrd_type: DERIVE
+  interval: <%= interval %>
+  vars:
+  - label: wrtn
+    mu: "blk/s"
+  - label: read
+    mu: "blk/s"
+
+#if (has_swap)
+- id: <%= id_prefix %><%= node_name %>.swpio
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
+  command: ":cc snmpp get ssSwapIn.0 ssSwapOut.0"
+  title: "<%= title_prefix %><%= node_name %> - Swap I/O"
+  rrd_type: GAUGE
+  interval: <%= interval %>
+  vars:
+  - label: in
+  mu: "B"
+  - label: out
+  mu: "B"
+#if (check_swpio)
+  alert-warn-gt: 100000000
+  alert-crit-gt: 1000000000
+#end
+
+#end
+
+#for ( (oids, ix) <- netio_snmp_oids.zipWithIndex)
+<%
+  val suffix = if (ix == 0) "" else s".dvc${ix+1}"
+  val add_title = if (ix == 0) "" else s" (${ix+1})"
+%>
+- id: <%= id_prefix %><%= node_name %><%= suffix %>.netio
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
+  command: ":cc snmpp get <%= oids %>"
+  title: "<%= title_prefix %><%= node_name %> - Network I/O Octets<%= add_title %>"
+#if (netio_max != "")
+  rrd_type: COUNTER
+#end
+#if (netio_max == "")
+  rrd_type: DERIVE
+#end
+  interval: <%= interval %>
+  vars:
+  - label: in
+    mu: "b/s"
+    cdef: "$ds,8,*"
+#if (netio_max != "")
+    max: <%= netio_max %>
+    # if (check_netio)
+    # 875000000 * 8 = 7Gbps, 1000000000 * 8 = 8Gbps
+    alert-warn-gt: 875000000
+    # alert-crit-gt: 1000000000
+    # end
+#end
+  - label: out
+    mu: "b/s"
+    cdef: "$ds,8,*"
+#if (netio_max != "")
+    max: <%= netio_max %>
+    # if (check_netio)
+    # 875000000 * 8 = 7Gbps, 1000000000 * 8 = 8Gbps
+    alert-warn-gt: 875000000
+    # alert-crit-gt: 1000000000
+    # end
+#end
+
+#end
+
+- id: <%= id_prefix %><%= node_name %>.newconn
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
+  command: ":cc snmpp get tcpPassiveOpens.0 tcpActiveOpens.0"
+  title: "<%= title_prefix %><%= node_name %> - Network New Connections"
+  rrd_type: DERIVE
+  interval: <%= interval %>
+  vars:
+  - label: in
+    mu: "c/s"
+  - label: out
+    mu: "c/s"
+
+- id: <%= id_prefix %><%= node_name %>.estconn
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
+  command: ":cc snmpp get tcpCurrEstab.0"
+  title: "<%= title_prefix %><%= node_name %> - Network Established Connections"
+  rrd_type: GAUGE
+  interval: <%= interval %>
+  vars:
+  - label: conns
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.snmp.memswp.parse.values
+  desc: "Parse memory-related stats from SNMP on <%= node_name %>"
+  pass_data: true
+  command: ":cc snmpp get memAvailReal.0 memCached.0 memBuffer.0 memTotalReal.0 <%= swp_oids %>"
+#if (snmp_notify_strikes != "")
+  notify-strikes: <%= snmp_notify_strikes %>
+#end
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
+
+# let "in = 100 - ($avail * 100 / $totl)"
+# val rpn = "100,$ds0,100.0,*,$ds3,/,-"
+# let "out = 100 - (($avail + $cached + $buff ) * 100 / $totl)"
+# val rpn2 = "100,$ds0,$ds1,+,$ds2,+,100,*,$ds3,/,-"
+- id: <%= id_prefix %><%= node_name %>.mempercent
+  command: ":cc rpn 100,$ds0,100.0,*,$ds3,/,- 100,$ds0,$ds1,+,$ds2,+,100,*,$ds3,/,-"
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.memswp.parse.values
+  title: "<%= title_prefix %><%= node_name %> - Memory Used"
+  rrd_type: GAUGE
+  interval: <%= interval %>
+  vars:
+  - label: total used
+    mu: "%"
+    maxy: 100
+  - label: used w/o buf/cache
+    mu: "%"
+
+#if (has_swap)
+
+# read -d "\n" avail totl <<<"$($SNMP_VALS memAvailSwap.0 memTotalSwap.0)"
+# let "in = 100 - ($avail * 100 / $totl)"
+- id: <%= id_prefix %><%= node_name %>.swappercent
+  command: ":cc rpn 100,$ds4,100.0,*,$ds5,/,-"
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.memswp.parse.values
+  title: "<%= title_prefix %><%= node_name %> - Swap Used"
+  rrd_type: GAUGE
+  interval: <%= interval %>
+  vars:
+  - label: perc
+  mu: "%"
+#end
+
+#if (disk_drives.nonEmpty)
+<%
+  val oids = disk_drives.map {drv_conf =>
+    val oid = drv_conf("oid")
+    s"hrStorageUsed.${oid} hrStorageSize.${oid}"
+  }.mkString(" ")
+%>
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.snmp.disks
+  desc: "Fetch disk usage stats from SNMP on <%= node_name %>"
+  pass_data: true
+  command: "snmpget -v2c -c<%= snmp_community %> -mall <%= node_host %> <%= oids %>"
+  timeout: 20
+#if (snmp_notify_strikes != "")
+  notify-strikes: <%= snmp_notify_strikes %>
+#end
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.snmp.disks.parse
+  desc: "Parse disk usage stats from SNMP on <%= node_name %>"
+  pass_data: true
+  command: ":cc snmpp parse"
+  timeout: 5
+#if (snmp_notify_strikes != "")
+  notify-strikes: <%= snmp_notify_strikes %>
+#end
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.disks
+
+#for (drv_conf <- disk_drives)
+<%
+  val drv: String = drv_conf("mount").toString
+  val oid: String = drv_conf("oid").toString
+  val drv_safe = drv.replace('/', '_')
+  val reserved_blocks = drv_conf.getOrElse("reserved_blocks", "0")
+%>
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.snmp.disks.get.drv<%= drv_safe %>
+  desc: "Parse disk usage stats from SNMP on <%= node_name %>"
+  pass_data: true
+  command: ":cc snmpp get hrStorageUsed.<%= oid %> hrStorageSize.<%= oid %>"
+  timeout: 5
+#if (snmp_notify_strikes != "")
+  notify-strikes: <%= snmp_notify_strikes %>
+#end
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.disks.parse
+
+- id: <%= id_prefix %><%= node_name %>.disk<%= drv_safe %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp.disks.get.drv<%= drv_safe %>
+  # (hrStorageUsed.to_f + RESERVED_BLOCKS) * 100 / hrStorageSize
+  command: ":cc rpn <%= reserved_blocks %>,$ds0,+,100,*,$ds1,/"
+  title: "<%= title_prefix %><%= title_prefix %><%= node_name %> - Disk usage <%= drv %> partition"
+  interval: <%= du_interval %>
+  vars:
+  - label: perc
+    mu: "%"
+# TODO add alerts
+
+#end
+#end
