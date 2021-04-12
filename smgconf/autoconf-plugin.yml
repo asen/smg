@@ -8,16 +8,12 @@ autoconf:
     - "/opt/smg/data/conf/ac-templates"
     - "smgconf/ac-templates"
   targets:
-#    - output: haproxy-stats.yml
-#      uid: haproxy-stats
+#    - output: localhost-haproxy-stats.yml
 #      template: haproxy
 #      node_name: localhost
 #      runtime_data: true
 #      runtime_data_timeout_sec: 30
-#      resolve_name: false
-#      command: 'curl -sS -f http://localhost/stats'
-#      context:
-#        node_host: 127.0.0.1
+#      command: "curl -sS -f 'http://localhost/haproxy?stats;csv'"
 
 #    - output: centos8-snmp-static.yml
 #      template: linux-snmp-static

@@ -1,7 +1,7 @@
 # This file is managed by SMG AutoConf. Changes will be overwritten
 <%
   // Configure this with a command like this:
-  // command: 'curl -sS -f http://%node_host%/haproxy/stats/url'
+  // command: "curl -sS -f 'http://%node_host%/haproxy/stats/url;csv'"
   // runtime_data: true
 %>
 <%@ val node_name: String %>
@@ -14,6 +14,7 @@
 <%@ val pre_fetch: String = "" %>
 <%@ val parent_index: String = "" %>
 <%@ val notify_fail: String = "" %>
+<%@ val index_rows: String = "6" %>
 
 - id: <%= id_prefix %><%= node_name %>.stats.fetch
   type: $pre_fetch
@@ -38,10 +39,11 @@
   notify-fail: <%= notify_fail %>
 #end
 
-- ^<%= id_prefix %><%= node_name %>:
+- id: ^<%= id_prefix %><%= node_name %>
   title: "<%= title_prefix %><%= node_name %> Haproxy stats"
   px: "<%= id_prefix %><%= node_name %>."
-  cols: 8
+  cols: 10
+  rows: <%= index_rows %>
 #if (parent_index != "")
   parent: <%= parent_index %>
 #end
@@ -50,17 +52,43 @@
 <%
   val arr = line.split(",")
   val px = if (arr(1) == "FRONTEND" || arr(1) == "BACKEND") "bf" else "host"
-  val itm = if (px == "bf") arr(0) else s"${arr(0)}.${arr(1)}"
-  val row_matchers = if (px == "bf") s"0=${arr(0)}" else s"0=${arr(0)} 1=${arr(1)}"
+  val itm = if (px == "bf") s"${arr(0)}.${arr(1).toLowerCase}" else s"${arr(0)}.${arr(1)}"
+  val itm_title = s"${arr(0)} ${arr(1)}"
+  val row_matchers = s"0=${arr(0)} 1=${arr(1)}"
+  // The parent item index is the backend summary index for hosts and the above ("global") parent for the rest
+  val parent_index_sx = if (px == "bf") "" else s".bf.${arr(0)}.backend"
+  val index_title_desc = arr(1) match {
+    case "FRONTEND" => ""
+    case "BACKEND" => " (summary)"
+    case _ => " (backend host)"
+  }
 %>
 ####################################
 # node_name = <%= node_name %>
 # itm = <%= itm %>
 # row_matchers = <%= row_matchers %>
 
+#if (arr(1) == "BACKEND")
+# extra index for backends - "all backend hosts" stats, suitable for grouping/filtering
+- id: ^<%= id_prefix %><%= node_name %>.host.<%= itm %>
+  title: "<%= title_prefix %><%= node_name %> Haproxy stats - <%= itm_title %> (all backend hosts)"
+  px: "<%= id_prefix %><%= node_name %>.host.<%= arr(0) %>."
+  cols: 10
+  rows: <%= index_rows %>
+  parent: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>
+
+#end
+
+- id: ^<%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>
+  title: "<%= title_prefix %><%= node_name %> Haproxy stats - <%= itm_title %><%= index_title_desc %>"
+  px: "<%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>."
+  cols: 10
+  rows: <%= index_rows %>
+  parent: <%= id_prefix %><%= node_name %><%= parent_index_sx %>
+
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.rate
   command: ":cc csv get -e0 <%= row_matchers %> rate"
-  title: <%= node_name %> <%= itm %> Rate
+  title: <%= node_name %> <%= itm_title %> Rate
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
@@ -68,23 +96,21 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.stot
   command: ":cc csv get -e0 <%= row_matchers %> stot"
-  title: <%= node_name %> <%= itm %> Sessions/sec
+  title: <%= node_name %> <%= itm_title %> Sessions/sec
   rrdType: DERIVE
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
   - label: stot
-  mu: sess/sec
+    mu: sess/sec
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scur
   command: ":cc csv get -e0 <%= row_matchers %> scur"
-  title: <%= node_name %> <%= itm %> Sess (scur)
+  title: <%= node_name %> <%= itm_title %> Sess (scur)
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
   - label: conns
-
-#if (arr(6) != "")
 
 # We want to monitor on cur/limit % so graph that
 # It uses a csv get pre-fetch to get the scur and slim values and then
@@ -102,13 +128,12 @@
   title:  <%= node_name %> <%= itm %> Cur/Limit %
   interval: <%= interval %>
   vars:
-    - label: cur/limit perc
-      mu: "%"
-#end
+  - label: cur/limit perc
+    mu: "%"
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.qcur
   command: ":cc csv get -e0 <%= row_matchers %> qcur"
-  title: <%= node_name %> <%= itm %> Queue (qcur)
+  title: <%= node_name %> <%= itm_title %> Queue (qcur)
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
@@ -116,7 +141,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.rate_max
   command: ":cc csv get -e0 <%= row_matchers %> rate_max"
-  title: <%= node_name %> <%= itm %> Rate max
+  title: <%= node_name %> <%= itm_title %> Rate max
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
@@ -124,7 +149,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scur_max
   command: ":cc csv get -e0 <%= row_matchers %> smax"
-  title: <%= node_name %> <%= itm %> Sess (scur) max
+  title: <%= node_name %> <%= itm_title %> Sess (scur) max
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
@@ -132,7 +157,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.qcur_max
   command: ":cc csv get -e0 <%= row_matchers %> qmax"
-  title: <%= node_name %> <%= itm %> Queue (qcur) max
+  title: <%= node_name %> <%= itm_title %> Queue (qcur) max
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
@@ -140,7 +165,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.netio
   command: ":cc csv get -e0 <%= row_matchers %> bin bout"
-  title: <%= node_name %> <%= itm %> In/Out traffic b/s
+  title: <%= node_name %> <%= itm_title %> In/Out traffic b/s
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   rrdType: DERIVE
@@ -163,9 +188,9 @@
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.updown
   pre_fetch: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.updown.parse
   command: ":cc map OPEN=1 UP=1 0"
-  title: <%= node_name %> <%= itm %> UP/DOWN
+  title: <%= node_name %> <%= itm_title %> UP/DOWN
   interval: <%= interval %>
   vars:
   - label: up/down
-#end
 
+#end
