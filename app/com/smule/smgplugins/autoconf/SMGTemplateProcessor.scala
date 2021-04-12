@@ -12,9 +12,9 @@ class SMGTemplateProcessor() {
 
   private def scalafyObject(o: Object): Object = {
     o match {
-      case _: util.List[Object] =>
+      case _: util.List[Object] @unchecked =>
         SMGConfigParser.yobjList(o).map(o => scalafyObject(o))
-      case _: util.Map[String, Object] =>
+      case _: util.Map[String, Object] @unchecked =>
         SMGConfigParser.yobjMap(o).map(t => (t._1, scalafyObject(t._2))).toMap
       case _ =>
         o
