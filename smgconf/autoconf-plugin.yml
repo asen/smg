@@ -1,7 +1,7 @@
 
 autoconf:
   # this dir needs to be included by /etc/smg/config.yml for this to work
-  conf_output_dir: "/opt/smg/data/conf/auto-conf-private.d"
+  conf_output_dir: "/opt/smg/data/conf/autoconf-private.d"
   conf_output_dir_owned: true
   template_dirs:
     - "/etc/smg/ac-templates"
@@ -47,5 +47,5 @@ autoconf:
 #        port_range:
 #          - "6379"
 
-    - include: "/etc/smg/auto-conf.d/*.{yml,yaml}"
-    - include: "/opt/smg/data/conf/auto-conf.d/*.{yml,yaml}"
+    - include: "/etc/smg/autoconf.d/*.{yml,yaml}"
+    - include: "/opt/smg/data/conf/autoconf.d/*.{yml,yaml}"

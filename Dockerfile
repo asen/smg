@@ -44,7 +44,7 @@ RUN echo '- $monstate_dir: "/opt/smg/data/monstate"' >> /etc/smg/config.yml
 RUN echo '' >> /etc/smg/config.yml
 RUN echo '- $include: "/etc/smg/conf.d/*.{yaml,yml}"' >> /etc/smg/config.yml
 RUN echo '- $include: "/opt/smg/data/conf/scrape-private.d/*.{yaml,yml}"' >> /etc/smg/config.yml
-RUN echo '- $include: "/opt/smg/data/conf/auto-conf-private.d/*.{yaml,yml}"' >> /etc/smg/config.yml
+RUN echo '- $include: "/opt/smg/data/conf/autoconf-private.d/*.{yaml,yml}"' >> /etc/smg/config.yml
 RUN echo '' >> /etc/smg/config.yml
 
 VOLUME [ "/etc/smg/conf.d" ]
