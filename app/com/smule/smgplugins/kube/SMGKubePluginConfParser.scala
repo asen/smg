@@ -164,10 +164,12 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
     createDirIfNotThere(autoconfTargetsD)
     val clusterLst = yobjList(pluginConfMap("clusters"))
     val clusterConfs = parseClustersSeq(clusterLst, confFile)
+    val logSkipped = pluginConfMap.getOrElse("log_skipped", "false").toString == "true"
     SMGKubePluginConf(
       scrapeTargetsD = scrapeTargetsD,
       autoconfTargetsD = autoconfTargetsD,
-      clusterConfs = clusterConfs
+      clusterConfs = clusterConfs,
+      logSkipped = logSkipped
     )
   }
   

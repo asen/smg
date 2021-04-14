@@ -1,18 +1,16 @@
 package com.smule.smgplugins.kube
 
-import java.io.File
-import java.nio.file.{Files, Paths}
-import java.util.Date
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
 import com.smule.smg.core._
 import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smgplugins.autoconf.SMGAutoTargetConf
-import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNamedObject, KubeNsObject, KubePod, KubePort, KubeService}
+import com.smule.smgplugins.kube.SMGKubeClient._
 import com.smule.smgplugins.kube.SMGKubeClusterAutoConf.ConfType
 import com.smule.smgplugins.scrape.{OpenMetricsResultData, SMGScrapeTargetConf}
 import org.yaml.snakeyaml.Yaml
 
-import scala.collection.concurrent.TrieMap
+import java.io.File
+import java.nio.file.{Files, Paths}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Try}
@@ -71,8 +69,12 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 
   private def logSkipped(kubeNsObject: KubeNsObject, targetType: String,
                          clusterUid: String, reason: String): Unit = {
-    log.info(s"SMGKubeClusterProcessor.checkAutoConf(${targetType}): ${clusterUid} " +
-      s"${kubeNsObject.namespace}.${kubeNsObject.name}: skipped due to $reason")
+    val msg = s"SMGKubeClusterProcessor.checkAutoConf(${targetType}): ${clusterUid} " +
+      s"${kubeNsObject.namespace}.${kubeNsObject.name}: skipped due to $reason"
+    if (pluginConf.logSkipped)
+      log.info(msg)
+    else
+      log.debug(msg)
   }
 
   private def checkMetricsAutoConfCommand(

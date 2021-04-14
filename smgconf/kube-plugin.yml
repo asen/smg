@@ -4,6 +4,7 @@ kube:
   # respective scrape/autoconf plugin confs
   scrape_targets_d: "/opt/smg/data/conf/scrape-targets.d"
   autoconf_targets_d: "/opt/smg/data/conf/autoconf.d"
+#  log_skipped: false
   clusters:
 #    - uid: skube-int
 ##      name: skube-int
