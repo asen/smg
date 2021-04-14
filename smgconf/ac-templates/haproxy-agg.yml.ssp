@@ -20,7 +20,7 @@
 <%@ val parent_index: String = "" %>
 <%@ val index_rows: String = "6" %>
 <%
-  val member_names = members.split("\\s*[ ,]\\s*")
+  val member_names = members.strip().split("\\s*[ ,]\\s*")
   val real_members_desc = if (members_desc == "") members else members_desc
 %>
 
