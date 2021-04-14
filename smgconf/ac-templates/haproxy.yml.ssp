@@ -2,6 +2,8 @@
 <%
   // Configure this with a command like this:
   // command: "curl -sS -f 'http://%node_host%/haproxy/stats/url;csv'"
+  // resolve_name: true  // assumes node_name resolves to node_host, or specify node_host
+  // node_host: 1.2.3.4
   // runtime_data: true
 %>
 <%@ val node_name: String %>
@@ -88,7 +90,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.rate
   command: ":cc csv get -e0 <%= row_matchers %> rate"
-  title: <%= node_name %> <%= itm_title %> Rate
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate"
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
@@ -96,7 +98,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.stot
   command: ":cc csv get -e0 <%= row_matchers %> stot"
-  title: <%= node_name %> <%= itm_title %> Sessions/sec
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sessions/sec"
   rrdType: DERIVE
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
@@ -106,7 +108,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scur
   command: ":cc csv get -e0 <%= row_matchers %> scur"
-  title: <%= node_name %> <%= itm_title %> Sess (scur)
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur)"
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
@@ -125,7 +127,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scurlimitperc.parse
   # ($ds0 * 100) / $ds1
   command: ":cc rpn $ds0,100,*,$ds1,/"
-  title:  <%= node_name %> <%= itm %> Cur/Limit %
+  title:  "<%= title_prefix %><%= node_name %> <%= itm %> Cur/Limit %"
   interval: <%= interval %>
   vars:
   - label: cur/limit perc
@@ -133,7 +135,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.qcur
   command: ":cc csv get -e0 <%= row_matchers %> qcur"
-  title: <%= node_name %> <%= itm_title %> Queue (qcur)
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur)"
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
@@ -141,7 +143,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.rate_max
   command: ":cc csv get -e0 <%= row_matchers %> rate_max"
-  title: <%= node_name %> <%= itm_title %> Rate max
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate max"
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
@@ -149,7 +151,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scur_max
   command: ":cc csv get -e0 <%= row_matchers %> smax"
-  title: <%= node_name %> <%= itm_title %> Sess (scur) max
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur) max"
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
@@ -157,7 +159,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.qcur_max
   command: ":cc csv get -e0 <%= row_matchers %> qmax"
-  title: <%= node_name %> <%= itm_title %> Queue (qcur) max
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur) max"
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
@@ -165,7 +167,7 @@
 
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.netio
   command: ":cc csv get -e0 <%= row_matchers %> bin bout"
-  title: <%= node_name %> <%= itm_title %> In/Out traffic b/s
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> In/Out traffic b/s"
   interval: <%= interval %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   rrdType: DERIVE
@@ -188,7 +190,7 @@
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.updown
   pre_fetch: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.updown.parse
   command: ":cc map OPEN=1 UP=1 0"
-  title: <%= node_name %> <%= itm_title %> UP/DOWN
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> UP(1)/DOWN(0)"
   interval: <%= interval %>
   vars:
   - label: up/down

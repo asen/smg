@@ -1,0 +1,194 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%
+  // Configure this with a command like this:
+  // command: "curl -sS -f 'http://%node_host%/haproxy/stats/url;csv'"
+  // runtime_data: true
+  // node_host: 1.2.3.4 //(one of the mebers, to discover frontend/backends/servers)
+  // members: <node_name_1>, <node_name_2>, ...
+%>
+<%@ val node_name: String %>
+<%
+  //@ val command: String  // not used needed in template
+%>
+<%@ val data: Seq[String] %>
+<%@ val members: String %>
+<%@ val id_prefix: String = "hap." %>
+<%@ val agg_prefix: String = "agg" %>
+<%@ val title_prefix: String = "" %>
+<%@ val interval: Int = 60 %>
+<%@ val timeout: Int = 30 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val index_rows: String = "6" %>
+
+- id: ^<%= id_prefix %><%= node_name %>
+  title: "<%= title_prefix %><%= node_name %> Haproxy stats"
+  px: "<%= id_prefix %><%= node_name %>.<%= agg_prefix %>"
+  cols: 10
+  rows: <%= index_rows %>
+#if (parent_index != "")
+  parent: <%= parent_index %>
+#end
+
+<%
+  val member_names = members.split("\\s*[ ,]\\s*")
+%>
+#for (line <- data.tail)
+<%
+  val arr = line.split(",")
+  val px = if (arr(1) == "FRONTEND" || arr(1) == "BACKEND") "bf" else "host"
+  val itm = if (px == "bf") s"${arr(0)}.${arr(1).toLowerCase}" else s"${arr(0)}.${arr(1)}"
+  val itm_title = s"${arr(0)} ${arr(1)}"
+  val row_matchers = s"0=${arr(0)} 1=${arr(1)}"
+  // The parent item index is the backend summary index for hosts and the above ("global") parent for the rest
+  val parent_index_sx = if (px == "bf") "" else s".bf.${arr(0)}.backend"
+  val index_title_desc = arr(1) match {
+    case "FRONTEND" => ""
+    case "BACKEND" => " (summary)"
+    case _ => " (backend host)"
+  }
+%>
+####################################
+# node_name = <%= node_name %>
+# itm = <%= itm %>
+# row_matchers = <%= row_matchers %>
+
+#if (arr(1) == "BACKEND")
+# extra index for backends - "all backend hosts" stats, suitable for grouping/filtering
+- id: ^<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.host.<%= itm %>
+  title: "<%= title_prefix %><%= node_name %> Haproxy stats - <%= itm_title %> (all backend hosts)"
+  px: "<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.host.<%= arr(0) %>."
+  cols: 10
+  rows: <%= index_rows %>
+  parent: <%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>
+
+#end
+
+- id: ^<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>
+  title: "<%= title_prefix %><%= node_name %> Haproxy stats - <%= itm_title %><%= index_title_desc %>"
+  px: "<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>."
+  cols: 10
+  rows: <%= index_rows %>
+  parent: <%= id_prefix %><%= node_name %>.<%= agg_prefix %><%= parent_index_sx %>
+
+- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.rate
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate, sum from <%= members %>"
+  interval: <%= interval %>
+  vars:
+  - label: consec
+  op: SUM
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.rate
+#end
+
+- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.stot
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sessions/sec, sum from <%= members %>"
+  rrd_type: DERIVE
+  interval: <%= interval %>
+  vars:
+  - label: stot
+    mu: sess/sec
+  op: SUM
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.stot
+#end
+
+- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.scur
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur), sum from <%= members %>"
+  interval: <%= interval %>
+  vars:
+  - label: conns
+  op: SUM
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.scur
+#end
+
+- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.scurlimitperc
+  title:  "<%= node_name %> <%= itm %> Cur/Limit %, average from <%= members %>"
+  interval: <%= interval %>
+  vars:
+  - label: cur/limit perc
+    mu: "%"
+  op: AVG
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.scurlimitperc
+#end
+
+- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.qcur
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur), sum from <%= members %>"
+  interval: <%= interval %>
+  vars:
+  - label: queued conns
+  op: SUMN
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.qcur
+#end
+
+- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.rate_max
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate max, sum from <%= members %>"
+  interval: <%= interval %>
+  vars:
+  - label: max consec
+  op: SUM
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.rate_max
+#end
+
+- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.scur_max
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur) max, sum from <%= members %>"
+  interval: <%= interval %>
+  vars:
+  - label: max conns
+  op: SUM
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.scur_max
+#end
+
+- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.qcur_max
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur) max, sum from <%= members %>"
+  interval: <%= interval %>
+  vars:
+  - label: max queued conns
+  op: SUM
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.qcur_max
+#end
+
+- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.netio
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> In/Out traffic b/s, sum from <%= members %>"
+  interval: <%= interval %>
+  rrd_type: DERIVE
+  vars:
+  - label: in
+    mu: "b/s"
+    cdef: "$ds,8,*"
+  - label: out
+    mu: "b/s"
+    cdef: "$ds,8,*"
+  op: SUM
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.netio
+#end
+
+- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.updown
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> UP(1)/DOWN(0), average from <%= members %>"
+  interval: <%= interval %>
+  vars:
+  - label: up/down
+  op: AVG
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.updown
+#end
+
+#end
