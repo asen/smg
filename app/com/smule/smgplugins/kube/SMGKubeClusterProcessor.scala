@@ -6,12 +6,14 @@ import java.util.Date
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
 import com.smule.smg.core._
 import com.smule.smg.openmetrics.OpenMetricsStat
+import com.smule.smgplugins.autoconf.SMGAutoTargetConf
 import com.smule.smgplugins.kube.SMGKubeClient.{KubeEndpoint, KubeNamedObject, KubeNsObject, KubePod, KubePort, KubeService}
 import com.smule.smgplugins.kube.SMGKubeClusterAutoConf.ConfType
 import com.smule.smgplugins.scrape.{OpenMetricsResultData, SMGScrapeTargetConf}
 import org.yaml.snakeyaml.Yaml
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Try}
 
@@ -73,11 +75,13 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       s"${kubeNsObject.namespace}.${kubeNsObject.name}: skipped due to $reason")
   }
 
-  private def checkAutoConfCommand(command: String,
-                            cConf: SMGKubeClusterConf,
-                            autoConf: SMGKubeClusterAutoConf,
-                            kubeNsObject: KubeNsObject,
-                            kubePort: KubePort): Boolean = {
+  private def checkMetricsAutoConfCommand(
+                                           command: String,
+                                           cConf: SMGKubeClusterConf,
+                                           autoConf: SMGKubeClusterAutoConf,
+                                           kubeNsObject: KubeNsObject,
+                                           kubePort: KubePort
+                                         ): Boolean = {
     // filter out invalid ports as far as we can tell
     def logSkipped(reason: String): Unit = this.logSkipped(kubeNsObject, autoConf.targetType.toString, cConf.uid, reason)
     val lastGoodRunTs = autoDiscoveryCache.lastGoodRunTs(command)
@@ -138,13 +142,15 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
-  private def checkAutoConf(commands: Seq[String],
-                            cConf: SMGKubeClusterConf,
-                            autoConf: SMGKubeClusterAutoConf,
-                            kubeNsObject: KubeNsObject,
-                            kubePort: KubePort): Option[Int] = {
+  private def checkMetricsAutoConf(
+                                    commands: Seq[String],
+                                    cConf: SMGKubeClusterConf,
+                                    autoConf: SMGKubeClusterAutoConf,
+                                    kubeNsObject: KubeNsObject,
+                                    kubePort: KubePort
+                                  ): Option[Int] = {
     val ret = commands.indexWhere { cmd =>
-      checkAutoConfCommand(cmd, cConf, autoConf, kubeNsObject, kubePort)
+      checkMetricsAutoConfCommand(cmd, cConf, autoConf, kubeNsObject, kubePort)
     }
     if (ret < 0)
       None
@@ -152,16 +158,17 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       Some(ret)
   }
 
-  def processAutoPortConf(cConf: SMGKubeClusterConf,
-                          autoConf: SMGKubeClusterAutoConf,
-                          nsObject: KubeNsObject,
-                          ipAddr: String,
-                          kubePort: KubePort,
-                          metricsPath: Option[String],
-                          idxId: Option[Int],
-                          parentIndexId: Option[String],
-                          forcePortNums: Boolean
-                         ): Option[SMGScrapeTargetConf] = {
+  def processMetricsAutoPortConf(
+                                  cConf: SMGKubeClusterConf,
+                                  autoConf: SMGKubeClusterAutoConf,
+                                  nsObject: KubeNsObject,
+                                  ipAddr: String,
+                                  kubePort: KubePort,
+                                  metricsPath: Option[String],
+                                  idxId: Option[Int],
+                                  parentIndexId: Option[String],
+                                  forcePortNums: Boolean
+                                ): Option[SMGScrapeTargetConf] = {
     try {
       val uid = cConf.uidPrefix + autoConf.targetType + "." + nsObject.namespace +
         "." + nsObject.name + "." + kubePort.portName(forcePortNums) + idxId.map(x => s"._$x").getOrElse("")
@@ -182,7 +189,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val workingCommandIdx = if (autoConf.disableCheck) {
         Some(0)
       } else
-        checkAutoConf(commands, cConf, autoConf, nsObject, kubePort)
+        checkMetricsAutoConf(commands, cConf, autoConf, nsObject, kubePort)
       if (workingCommandIdx.isEmpty)
         return None
       val command = commands(workingCommandIdx.get)
@@ -242,13 +249,139 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
+  def getAutoconfAnnotationGropus(annotations: Map[String,String], prefix: String): Seq[Map[String,String]] = {
+    val myAnnotationGroups = annotations.filter{ t =>
+      t._1.startsWith(prefix)
+    }.toSeq.groupBy { t =>
+      t._1.split("/",2)(0)
+    }
+    myAnnotationGroups.toSeq.map { case (_, tseq) =>
+      tseq.map { case (k,v) =>
+        (k.split("/",2).lift(1).getOrElse(""), v)
+      }.toMap
+    }
+  }
+
+  def expandAutoconfAnnotationPorts(ports: Seq[KubePort],
+                                    annotationsMap: Map[String,String]): Seq[Map[String,String]] = {
+    val template = annotationsMap.get("template")
+    if (template.isEmpty)
+      return Seq()
+    val staticPorts = annotationsMap.get("ports").map(_.split("\\s*,\\s*").toSeq).getOrElse(
+      annotationsMap.get("port").map(x => Seq(x)).getOrElse(Seq())
+    )
+    val actualPorts = if (staticPorts.nonEmpty) {
+      staticPorts.map { port_str =>
+        val kubePort = ports.find(p => p.port.toString == port_str || p.name.contains(port_str))
+        if (kubePort.isDefined) {
+          (kubePort.get.port.toString, kubePort.get.name.getOrElse(kubePort.get.port.toString))
+        } else {
+          (port_str, port_str)
+        }
+      }
+    } else {
+      ports.map(kp => (kp.port.toString, kp.name.getOrElse(kp.port.toString)))
+    }
+    val hasDupPortNames = actualPorts.map(_._2).distinct.size != actualPorts.size
+    actualPorts.map { port =>
+      annotationsMap ++ Map(
+        "port" -> port._1,
+        "port_name" -> (if (hasDupPortNames) port._1 else port._2)
+      )
+    }
+  }
+
+  def processAutoconfAnnotations(
+                                  ports: Seq[KubePort],
+                                  nobjAnnotations: Map[String,String],
+                                  autoconfAnnotationsPrefix: String
+                                ): Seq[Map[String, String]] = {
+    val myAutoconfGroups = getAutoconfAnnotationGropus(nobjAnnotations, autoconfAnnotationsPrefix)
+    myAutoconfGroups.flatMap { annotationsMap =>
+      expandAutoconfAnnotationPorts(ports, annotationsMap)
+    }
+  }
+
+  def processAutoconfMap(
+                          autoconfMap: Map[String, String],
+                          cConf: SMGKubeClusterConf,
+                          autoConf: SMGKubeClusterAutoConf,
+                          nsObject: KubeNsObject,
+                          ipAddr: String,
+                          idxId: Option[Int],
+                          parentIndexId: Option[String]
+                        ): Option[SMGAutoTargetConf] = {
+
+    val contextMap = mutable.Map[String,Object]()
+    contextMap ++= autoconfMap
+    try {
+      val template = contextMap.get("template")
+      val templateName = template.get.toString
+      val staticOutput = contextMap.remove("output").map(_.toString)
+      val staticUid = contextMap.remove("uid").map(_.toString)
+      val staticNodeName = contextMap.remove("node_name").map(_.toString)
+      val staticResolveName = contextMap.get("resolve_name").map(_.toString)
+
+      val commandOpt = contextMap.get("command").map(_.toString)
+      val runtimeDataOpt = contextMap.get("runtime_data").map(_.toString)
+      val runtimeDataTimeoutSecOpt = contextMap.get("runtime_data_timeout_sec").flatMap(s => Try(s.toString.toInt).toOption)
+      val portName = contextMap.getOrElse("port_name", "0")
+
+      contextMap.put("node_host", ipAddr)
+      contextMap.put("kube_host", ipAddr)
+      contextMap.put("id_prefix", cConf.uidPrefix)
+      contextMap.put("kube_prefix", cConf.uidPrefix)
+      val idName =  autoConf.targetType + "." + nsObject.namespace +
+        "." + nsObject.name + "." + portName + idxId.map(x => s"._$x").getOrElse("") +
+        s".${templateName}"
+      val nodeName = staticNodeName.getOrElse(idName)
+      val uid = cConf.uidPrefix + idName
+      val title = s"${cConf.hnamePrefix}${autoConf.targetType} " +
+        s"${nsObject.namespace}.${nsObject.name}:${portName}${idxId.map(x => s" ($x)").getOrElse("")} " +
+        s"- ${templateName}"
+      contextMap.put("kube_title", title)
+      if (autoConf.filter.isDefined){
+        val flt = autoConf.filter.get
+        if (!flt.matchesId(uid)){
+          logSkipped(nsObject, autoConf.targetType.toString, cConf.uid,
+            s"filter not matching id: $uid")
+          return None
+        }
+      }
+      val confOutput = staticOutput.getOrElse(s"${cConf.uid}-${autoConf.targetType}-${nsObject.namespace}-" +
+        s"${nsObject.name}-${portName}${idxId.map(x => s"-$x").getOrElse("")}-${templateName}.yml")
+
+      val extraLabels = Map("smg_target_type"-> autoConf.targetType.toString,
+        "smg_target_host"-> ipAddr,
+        "smg_target_port" -> portName) ++ nsObject.labels
+      contextMap.put("extra_labels", extraLabels)
+      val ret = SMGAutoTargetConf (
+        template = templateName,
+        output = Some(confOutput),
+        uid = staticUid,
+        runtimeData = runtimeDataOpt.contains("true"),
+        runtimeDataTimeoutSec = runtimeDataTimeoutSecOpt,
+        resolveName = staticResolveName.contains("true"),
+        nodeName = Some(nodeName),
+        command = commandOpt,
+        context = contextMap.toMap
+      )
+
+      Some(ret)
+    } catch { case t: Throwable =>
+      log.ex(t, s"SMGKubeClusterProcessor.processAutoconfMap(${nsObject.name}.${nsObject.namespace}): " +
+        s"Context: ${contextMap}. Unexpected error: ${t.getMessage}")
+      None
+    }
+  }
+
   def processServiceConf(cConf: SMGKubeClusterConf, autoConf: SMGKubeClusterAutoConf,
                          kubeService: KubeService): Seq[SMGScrapeTargetConf] = {
     val hasDupPortNames = kubeService.ports.map(_.portName(false)).distinct.size != kubeService.ports.size
     val nobj = kubeService
     val (ports, path) = processMetricsAnnotations(kubeService.ports, nobj, cConf, autoConf)
     ports.flatMap { prt =>
-      processAutoPortConf(cConf, autoConf, nobj,
+      processMetricsAutoPortConf(cConf, autoConf, nobj,
         kubeService.clusterIp, prt, metricsPath = path, idxId = None,
         parentIndexId = cConf.endpointsIndexId, forcePortNums = hasDupPortNames)
     }
@@ -268,7 +401,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         val nobj = kubeEndpoint
         val (ports, path) = processMetricsAnnotations(subs.ports, nobj, cConf, autoConf)
         ports.flatMap { prt =>
-          processAutoPortConf(cConf, autoConf, nobj,
+          processMetricsAutoPortConf(cConf, autoConf, nobj,
             addr, prt, metricsPath = path, idxId = idx,
             parentIndexId = cConf.endpointsIndexId, forcePortNums = hasDupPortNames)
         }
@@ -277,7 +410,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   }
 
   def processPodsPortConfs(cConf: SMGKubeClusterConf, autoConf: SMGKubeClusterAutoConf,
-                           pods: Seq[KubePod]) : Seq[SMGScrapeTargetConf] = {
+                           pods: Seq[KubePod]) : Seq[Either[SMGScrapeTargetConf,SMGAutoTargetConf]] = {
     pods.groupBy { p =>
       p.owner.map { ow =>
         (ow.kind, ow.name, p.stableUid(None))
@@ -295,12 +428,19 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           // check for dup port names
           val hasDupPortNames =
             pod.ports.map(_.portName(false)).distinct.lengthCompare(pod.ports.size) != 0
+          val autoconfMaps = processAutoconfAnnotations(pod.ports, pod.annotations, autoConf.autoconfAnnotationsPrefix)
+          val autoconfs = autoconfMaps.flatMap { acm =>
+            processAutoconfMap(acm, cConf, autoConf, nobj,
+              pod.podIp.get, idxId = None,
+              parentIndexId = cConf.podPortsIndexId)
+          }.map(Right(_))
           val (ports, path) = processMetricsAnnotations(pod.ports, pod, cConf, autoConf)
-          ports.flatMap { podPort =>
-            processAutoPortConf(cConf, autoConf, nobj,
+          val scrapeConfs = ports.flatMap { podPort =>
+            processMetricsAutoPortConf(cConf, autoConf, nobj,
               pod.podIp.get, podPort, metricsPath = path, idxId = None,
               parentIndexId = cConf.podPortsIndexId, forcePortNums = hasDupPortNames)
-          }
+          }.map(Left(_))
+          autoconfs ++ scrapeConfs
         }
       }
     }
@@ -381,12 +521,11 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     ret.toList
   }
 
-  def getYamlText(cConf: SMGKubeClusterConf): Option[String] = {
+  def getYamlText(cConf: SMGKubeClusterConf): (Option[String], Option[String]) = {
     val kubeClient = new SMGKubeClient(log, cConf.uid, cConf.authConf, cConf.fetchCommandTimeout)
     try {
       // generate SMGScrapeTargetConf from topNodes and topPods
       val topStats = processKubectlTopStats(cConf)
-
       // generate metrics confs
       val nodeMetricsConfs: Seq[SMGScrapeTargetConf] = cConf.nodeMetrics.flatMap { cmConf =>
         kubeClient.listNodes().flatMap { kubeNode =>
@@ -394,70 +533,104 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           processClusterNodeMetricsConf(kubeNode.name, targetHost, cConf, cmConf, cConf.nodesIndexId)
         }
       }
-      val autoMetricsConfs: Seq[SMGScrapeTargetConf] = cConf.autoConfs.filter(_.enabled).flatMap { aConf =>
+      val autoMetricsConfs: Seq[Either[SMGScrapeTargetConf,SMGAutoTargetConf]] = cConf.autoConfs.
+        filter(_.enabled).flatMap { aConf =>
         aConf.targetType match {
           case ConfType.service =>
             kubeClient.listServices().flatMap { ksvc =>
               processServiceConf(cConf, aConf, ksvc)
-            }
+            }.map(Left(_))
           case ConfType.endpoint =>
             kubeClient.listEndpoints().flatMap { kendp =>
               processEndpointConf(cConf, aConf, kendp)
-            }
+            }.map(Left(_))
           case ConfType.pod_port =>
             processPodsPortConfs(cConf, aConf, kubeClient.listPods)
         }
       }
       // dump
-      val objsLst = new java.util.ArrayList[Object]()
+      val scrapeObjsLst = new java.util.ArrayList[Object]()
       // TODO need to insert indexes ?
-      (topStats ++ nodeMetricsConfs ++ autoMetricsConfs).foreach { stConf =>
-        objsLst.add(SMGScrapeTargetConf.dumpYamlObj(stConf))
+      (topStats ++ nodeMetricsConfs ++ autoMetricsConfs.flatMap(x => x.left.toOption)).foreach { stConf =>
+        scrapeObjsLst.add(SMGScrapeTargetConf.dumpYamlObj(stConf))
       }
-      if (!objsLst.isEmpty) {
+      val scrapeText = if (!scrapeObjsLst.isEmpty) {
         val out = new StringBuilder()
         out.append(s"# This file is automatically generated. Changes will be overwritten\n")
         out.append(s"# Generated by SMGKubePlugin from cluster config ${cConf.uid}.\n")
         val yaml = new Yaml()
-        out.append(yaml.dump(objsLst))
+        out.append(yaml.dump(scrapeObjsLst))
         out.append("\n")
         Some(out.toString())
       } else None
+      val autoconfObjsLst = new java.util.ArrayList[Object]()
+      autoMetricsConfs.flatMap(x => x.right.toOption).foreach { atConf =>
+        scrapeObjsLst.add(SMGAutoTargetConf.dumpYamlObj(atConf))
+      }
+      val autoconfText = if (!scrapeObjsLst.isEmpty) {
+        val out = new StringBuilder()
+        out.append(s"# This file is automatically generated. Changes will be overwritten\n")
+        out.append(s"# Generated by SMGKubePlugin from cluster config ${cConf.uid}.\n")
+        val yaml = new Yaml()
+        out.append(yaml.dump(scrapeObjsLst))
+        out.append("\n")
+        Some(out.toString())
+      } else None
+      (scrapeText, autoconfText)
     } finally {
       kubeClient.close()
     }
   }
 
-  def processClusterConf(cConf: SMGKubeClusterConf): Boolean = {
+  def replaceFile(confOutputFile: String, yamlText: String): Boolean = {
+    val oldYamlText = if (Files.exists(Paths.get(confOutputFile)))
+      SMGFileUtil.getFileContents(confOutputFile)
+    else
+      ""
+    if (oldYamlText == yamlText) {
+      log.debug(s"SMGKubeClusterProcessor.replaceFile(${confOutputFile}) - no config changes detected")
+      return false
+    }
+    if (yamlText != "") {
+      SMGFileUtil.outputStringToFile(confOutputFile, yamlText, None) // cConf.confOutputBackupExt???
+    } else Files.delete(Paths.get(confOutputFile))
+    true
+  }
+
+  case class RunResult(reloadScrape: Boolean, reloadAtoconf: Boolean)
+
+  def processClusterConf(cConf: SMGKubeClusterConf): RunResult = {
     // output a cluster yaml and return true if changed
     try {
-      val yamlText = getYamlText(cConf).getOrElse("")
+      val scrapeAndAutoconfYamls = getYamlText(cConf)
+      val scrapeYamlText = scrapeAndAutoconfYamls._1.getOrElse("")
       val confOutputFile = pluginConf.scrapeTargetsD.stripSuffix(File.separator) + (File.separator) +
         cConf.uid + ".yml"
-      val oldYamlText = if (Files.exists(Paths.get(confOutputFile)))
-        SMGFileUtil.getFileContents(confOutputFile)
-      else
-        ""
-      if (oldYamlText == yamlText) {
-        log.debug(s"SMGKubeClusterProcessor.processClusterConf(${cConf.uid}) - no config changes detected")
-        return false
-      }
-      if (yamlText != "") {
-        SMGFileUtil.outputStringToFile(confOutputFile, yamlText, None) // cConf.confOutputBackupExt???
-      } else Files.delete(Paths.get(confOutputFile))
-      true
+      val scrapeNeedReload = replaceFile(confOutputFile, scrapeYamlText)
+
+      val autoconfYamlText = scrapeAndAutoconfYamls._2.getOrElse("")
+      val autoconfOutputFile = pluginConf.autoconfTargetsD.stripSuffix(File.separator) + File.separator +
+        cConf.uid + ".yml"
+      val autoconfNeedReload = replaceFile(autoconfOutputFile, autoconfYamlText)
+
+      RunResult(scrapeNeedReload, autoconfNeedReload)
     } catch { case t: Throwable =>
       log.ex(t, s"SMGKubeClusterProcessor.processClusterConf(${cConf.uid}): unexpected error: ${t.getMessage}")
-      false
+      RunResult(reloadScrape = false, reloadAtoconf = false)
     }
   }
 
-  def run(): Boolean = {
+  def run(): RunResult = {
     autoDiscoveryCache.cleanupOld(SMGKubeClusterAutoConf.defaultRecheckBackoff * 2)
-    var ret = false
+    var ret = RunResult(reloadScrape = false,reloadAtoconf = false)
     pluginConf.clusterConfs.foreach { cConf =>
-       if (processClusterConf(cConf))
-         ret = true
+      val cRet = processClusterConf(cConf)
+      if (cRet.reloadScrape) {
+        ret = RunResult(reloadScrape = true, reloadAtoconf = ret.reloadAtoconf)
+      }
+      if (cRet.reloadAtoconf) {
+        ret = RunResult(ret.reloadScrape, reloadAtoconf = true)
+      }
     }
     ret
   }

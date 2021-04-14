@@ -34,17 +34,32 @@ class SMGKubePlugin(
   override def preFetches: Map[String, SMGPreFetchCmd] = targetProcessor.preFetches.
     groupBy(_.id).map{ case (k,v) => (k,v.head)}
 
-  private def reloadScrapeConf(): Unit = {
-    val scrapePlugin = smgConfSvc.plugins.find(_.pluginId == "scrape")
-    if (scrapePlugin.isEmpty){
-      log.error("Could not find the scrape plugin instance, this is unlikely to work as expected. " +
+//  private def reloadScrapeConf(): Unit = {
+//    val scrapePlugin = smgConfSvc.plugins.find(_.pluginId == "scrape")
+//    if (scrapePlugin.isEmpty){
+//      log.error("Could not find the scrape plugin instance, this is unlikely to work as expected. " +
+//        "Trying ConfigService reload")
+//      smgConfSvc.reloadLocal()
+//    } else {
+//      try {
+//        scrapePlugin.get.reloadConf()
+//      } catch { case t: Throwable =>
+//        log.ex(t, s"Unexpected error from scrapePlugin.reload: ${t.getMessage}")
+//      }
+//    }
+//  }
+
+  private def reloadAnotherPluginConf(pluginId: String): Unit = {
+    val plugin = smgConfSvc.plugins.find(_.pluginId == pluginId)
+    if (plugin.isEmpty){
+      log.error(s"Could not find the $pluginId plugin instance, this is unlikely to work as expected. " +
         "Trying ConfigService reload")
       smgConfSvc.reloadLocal()
     } else {
       try {
-        scrapePlugin.get.reloadConf()
+        plugin.get.reloadConf()
       } catch { case t: Throwable =>
-        log.ex(t, s"Unexpected error from scrapePlugin.reload: ${t.getMessage}")
+        log.ex(t, s"Unexpected error from reloadAnothePluginConf($pluginId).reload: ${t.getMessage}")
       }
     }
   }
@@ -58,9 +73,14 @@ class SMGKubePlugin(
     Future {
       try {
         log.debug("SMGKubePlugin.run - processing in async thread")
-        if (targetProcessor.run()){
+        val runResult = targetProcessor.run()
+        if (runResult.reloadScrape){
           log.info("SMGKubePlugin.run - reloading Scrape conf due to changed configs")
-          reloadScrapeConf()
+          reloadAnotherPluginConf("scrape")
+        }
+        if (runResult.reloadAtoconf){
+          log.info("SMGKubePlugin.run - reloading Autoconf conf due to changed configs")
+          reloadAnotherPluginConf("autoconf")
         }
         log.debug("SMGKubePlugin.run - done processing in async thread")
       } catch { case t: Throwable =>

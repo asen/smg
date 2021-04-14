@@ -138,6 +138,13 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
     }
   }
 
+  private def createDirIfNotThere(dir: String): Unit = {
+    val dirF = new File(dir)
+    if (!dirF.exists()){
+      dirF.mkdirs()
+    }
+  }
+
   private def parseConf(): SMGKubePluginConf = {
     val confTxt = SMGFileUtil.getFileContents(confFile)
     val yaml = new Yaml()
@@ -151,14 +158,15 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
     }
     val scrapeTargetsD = pluginConfMap.
       getOrElse("scrape_targets_d", SMGKubePluginConf.empty.scrapeTargetsD).toString
-    val scrapeTargetsDFile = new File(scrapeTargetsD)
-    if (!(scrapeTargetsDFile.exists() && scrapeTargetsDFile.isDirectory)){
-      scrapeTargetsDFile.mkdirs()
-    }
+    createDirIfNotThere(scrapeTargetsD)
+    val autoconfTargetsD = pluginConfMap.
+      getOrElse("autoconf_targets_d", SMGKubePluginConf.empty.autoconfTargetsD).toString
+    createDirIfNotThere(autoconfTargetsD)
     val clusterLst = yobjList(pluginConfMap("clusters"))
     val clusterConfs = parseClustersSeq(clusterLst, confFile)
     SMGKubePluginConf(
       scrapeTargetsD = scrapeTargetsD,
+      autoconfTargetsD = autoconfTargetsD,
       clusterConfs = clusterConfs
     )
   }

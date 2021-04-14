@@ -7,6 +7,7 @@ import com.smule.smg.notify.SMGMonNotifyConf
 
 import java.io.File
 import java.nio.file.Paths
+import java.util
 import scala.collection.mutable
 
 case class SMGAutoTargetConf(
@@ -46,6 +47,29 @@ case class SMGAutoTargetConf(
 }
 
 object SMGAutoTargetConf {
+
+  def dumpYamlObj(in: SMGAutoTargetConf): java.util.Map[String,Object] = {
+    val ret = new java.util.HashMap[String,Object]()
+    ret.put("template", in.template)
+    if (in.output.isDefined)
+      ret.put("output", in.output.get)
+    if (in.uid.isDefined)
+      ret.put("uid", in.uid.get)
+    if (in.runtimeData)
+      ret.put("runtime_data", Boolean.box(true))
+    if (in.runtimeDataTimeoutSec.isDefined)
+      ret.put("runtime_data_timeout_sec", Integer.valueOf(in.runtimeDataTimeoutSec.get))
+    if (in.resolveName)
+      ret.put("resolve_name", Boolean.box(true))
+    if (in.nodeName.isDefined)
+      ret.put("node_name", in.nodeName.get)
+    if (in.command.isDefined)
+      ret.put("command", in.command.get)
+    if (in.context.nonEmpty)
+      ret.put("context", in.context)
+    ret
+  }
+
   def fromYamlObj(ymap: mutable.Map[String,Object], log: SMGLoggerApi): Option[SMGAutoTargetConf] = {
     if (!ymap.contains("template")){
       log.error("SMGAutoTargetConf: Config does not contain template param")

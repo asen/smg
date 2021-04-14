@@ -1,6 +1,9 @@
 
 kube:
+  # XXX if changing these two - make sure these are actually included by the
+  # respective scrape/autoconf plugin confs
   scrape_targets_d: "/opt/smg/data/conf/scrape-targets.d"
+  autoconf_targets_d: "/opt/smg/data/conf/autoconf.d"
   clusters:
 #    - uid: skube-int
 ##      name: skube-int

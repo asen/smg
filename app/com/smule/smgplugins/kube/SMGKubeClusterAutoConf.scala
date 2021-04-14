@@ -14,9 +14,13 @@ case class SMGKubeClusterAutoConf(
                                    enabled: Boolean,
                                    filter: Option[SMGFilter],
                                    regexReplaces: Seq[RegexReplaceConf],
+
                                    metricsEnableAnnotation: Option[String],
                                    metricsPortAnnotation: Option[String],
                                    metricsPathAnnotation: Option[String],
+
+                                   autoconfAnnotationsPrefix: String,
+
                                    reCheckBackoff: Long,
                                    tryHttps: Boolean,
                                    forceHttps: Boolean,
@@ -50,6 +54,9 @@ object SMGKubeClusterAutoConf {
       metricsEnableAnnotation = scm.get("metrics_enable_annotation").map(_.toString),
       metricsPortAnnotation = scm.get("metrics_port_annotation").map(_.toString),
       metricsPathAnnotation = scm.get("metrics_path_annotation").map(_.toString),
+
+      autoconfAnnotationsPrefix = scm.getOrElse("ac_annotations_prefix", "smg.autoconf").toString,
+
       reCheckBackoff = scm.get("check_backoff").map(_.asInstanceOf[Long]).
         getOrElse(defaultRecheckBackoff),
       tryHttps = scm.get("try_https").map(_.toString).getOrElse("true") != "false",

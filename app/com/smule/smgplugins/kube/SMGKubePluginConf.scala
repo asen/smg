@@ -2,6 +2,7 @@ package com.smule.smgplugins.kube
 
 case class SMGKubePluginConf(
                               scrapeTargetsD: String,
+                              autoconfTargetsD: String,
                               clusterConfs: Seq[SMGKubeClusterConf]
                             ) {
    lazy val clusterConfByUid: Map[String, SMGKubeClusterConf] =
@@ -12,5 +13,8 @@ case class SMGKubePluginConf(
 
 object SMGKubePluginConf {
   val empty: SMGKubePluginConf =
-    SMGKubePluginConf(scrapeTargetsD = "/etc/smg/scrape-targets.d", clusterConfs = Seq())
+    SMGKubePluginConf(
+      scrapeTargetsD = "/etc/smg/scrape-targets.d",
+      autoconfTargetsD = "/etc/smg/autoconf.d",
+      clusterConfs = Seq())
 }
