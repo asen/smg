@@ -12,18 +12,20 @@
 %>
 <%@ val data: Seq[String] %>
 <%@ val members: String %>
+<%@ val members_desc: String = "" %>
 <%@ val id_prefix: String = "hap." %>
 <%@ val agg_prefix: String = "agg" %>
 <%@ val title_prefix: String = "" %>
 <%@ val interval: Int = 60 %>
-<%@ val timeout: Int = 30 %>
-<%@ val pre_fetch: String = "" %>
 <%@ val parent_index: String = "" %>
-<%@ val notify_fail: String = "" %>
 <%@ val index_rows: String = "6" %>
+<%
+  val member_names = members.split("\\s*[ ,]\\s*")
+  val real_members_desc = if (members_desc == "") members else members_desc
+%>
 
 - id: ^<%= id_prefix %><%= node_name %>
-  title: "<%= title_prefix %><%= node_name %> Haproxy stats"
+  title: "<%= title_prefix %><%= node_name %> Haproxy stats, sum from <%= real_members_desc %>"
   px: "<%= id_prefix %><%= node_name %>.<%= agg_prefix %>"
   cols: 10
   rows: <%= index_rows %>
@@ -31,9 +33,6 @@
   parent: <%= parent_index %>
 #end
 
-<%
-  val member_names = members.split("\\s*[ ,]\\s*")
-%>
 #for (line <- data.tail)
 <%
   val arr = line.split(",")
@@ -57,7 +56,7 @@
 #if (arr(1) == "BACKEND")
 # extra index for backends - "all backend hosts" stats, suitable for grouping/filtering
 - id: ^<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.host.<%= itm %>
-  title: "<%= title_prefix %><%= node_name %> Haproxy stats - <%= itm_title %> (all backend hosts)"
+  title: "<%= title_prefix %><%= node_name %> Haproxy stats - <%= itm_title %> (all backend hosts), sum from <%= real_members_desc %>"
   px: "<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.host.<%= arr(0) %>."
   cols: 10
   rows: <%= index_rows %>
@@ -66,14 +65,14 @@
 #end
 
 - id: ^<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>
-  title: "<%= title_prefix %><%= node_name %> Haproxy stats - <%= itm_title %><%= index_title_desc %>"
+  title: "<%= title_prefix %><%= node_name %> Haproxy stats - <%= itm_title %><%= index_title_desc %>, sum from <%= real_members_desc %>"
   px: "<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>."
   cols: 10
   rows: <%= index_rows %>
   parent: <%= id_prefix %><%= node_name %>.<%= agg_prefix %><%= parent_index_sx %>
 
 - id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.rate
-  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate, sum from <%= members %>"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate, sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
   - label: consec
@@ -84,7 +83,7 @@
 #end
 
 - id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.stot
-  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sessions/sec, sum from <%= members %>"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sessions/sec, sum from <%= real_members_desc %>"
   rrd_type: DERIVE
   interval: <%= interval %>
   vars:
@@ -97,7 +96,7 @@
 #end
 
 - id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.scur
-  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur), sum from <%= members %>"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur), sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
   - label: conns
@@ -108,7 +107,7 @@
 #end
 
 - id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.scurlimitperc
-  title:  "<%= node_name %> <%= itm %> Cur/Limit %, average from <%= members %>"
+  title:  "<%= node_name %> <%= itm %> Cur/Limit %, average from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
   - label: cur/limit perc
@@ -120,7 +119,7 @@
 #end
 
 - id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.qcur
-  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur), sum from <%= members %>"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur), sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
   - label: queued conns
@@ -131,7 +130,7 @@
 #end
 
 - id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.rate_max
-  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate max, sum from <%= members %>"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate max, sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
   - label: max consec
@@ -142,7 +141,7 @@
 #end
 
 - id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.scur_max
-  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur) max, sum from <%= members %>"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur) max, sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
   - label: max conns
@@ -153,7 +152,7 @@
 #end
 
 - id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.qcur_max
-  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur) max, sum from <%= members %>"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur) max, sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
   - label: max queued conns
@@ -164,7 +163,7 @@
 #end
 
 - id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.netio
-  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> In/Out traffic b/s, sum from <%= members %>"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> In/Out traffic b/s, sum from <%= real_members_desc %>"
   interval: <%= interval %>
   rrd_type: DERIVE
   vars:
@@ -181,7 +180,7 @@
 #end
 
 - id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.updown
-  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> UP(1)/DOWN(0), average from <%= members %>"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> UP(1)/DOWN(0), average from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
   - label: up/down
