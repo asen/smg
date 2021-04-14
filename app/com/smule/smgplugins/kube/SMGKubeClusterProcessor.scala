@@ -378,19 +378,28 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   }
 
   def processServiceConf(cConf: SMGKubeClusterConf, autoConf: SMGKubeClusterAutoConf,
-                         kubeService: KubeService): Seq[SMGScrapeTargetConf] = {
+                         kubeService: KubeService): Seq[Either[SMGScrapeTargetConf,SMGAutoTargetConf]]  = {
     val hasDupPortNames = kubeService.ports.map(_.portName(false)).distinct.size != kubeService.ports.size
     val nobj = kubeService
+
+    val autoconfMaps = processAutoconfAnnotations(kubeService.ports, nobj.annotations, autoConf.autoconfAnnotationsPrefix)
+    val autoconfs = autoconfMaps.flatMap { acm =>
+      processAutoconfMap(acm, cConf, autoConf, nobj,
+        kubeService.clusterIp, idxId = None,
+        parentIndexId = cConf.endpointsIndexId)
+    }.map(Right(_))
+
     val (ports, path) = processMetricsAnnotations(kubeService.ports, nobj, cConf, autoConf)
-    ports.flatMap { prt =>
+    val scrapeConfs = ports.flatMap { prt =>
       processMetricsAutoPortConf(cConf, autoConf, nobj,
         kubeService.clusterIp, prt, metricsPath = path, idxId = None,
         parentIndexId = cConf.endpointsIndexId, forcePortNums = hasDupPortNames)
-    }
+    }.map(Left(_))
+    autoconfs ++ scrapeConfs
   }
 
   def processEndpointConf(cConf: SMGKubeClusterConf, autoConf: SMGKubeClusterAutoConf,
-                          kubeEndpoint: KubeEndpoint): Seq[SMGScrapeTargetConf] = {
+                          kubeEndpoint: KubeEndpoint): Seq[Either[SMGScrapeTargetConf,SMGAutoTargetConf]] = {
     var idx: Option[Int] = None
     if (kubeEndpoint.subsets.size > 1)
       idx = Some(0)
@@ -399,14 +408,22 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         idx = Some(0)
       subs.addresses.flatMap { addr =>
         if (idx.isDefined) idx = Some(idx.get + 1)
-        val hasDupPortNames = subs.ports.map(_.portName(false)).distinct.size != subs.ports.size
         val nobj = kubeEndpoint
+        val autoconfMaps = processAutoconfAnnotations(subs.ports, nobj.annotations, autoConf.autoconfAnnotationsPrefix)
+        val autoconfs = autoconfMaps.flatMap { acm =>
+          processAutoconfMap(acm, cConf, autoConf, nobj,
+            addr, idxId = idx,
+            parentIndexId = cConf.endpointsIndexId)
+        }.map(Right(_))
+
+        val hasDupPortNames = subs.ports.map(_.portName(false)).distinct.size != subs.ports.size
         val (ports, path) = processMetricsAnnotations(subs.ports, nobj, cConf, autoConf)
-        ports.flatMap { prt =>
+        val scrapeConfs = ports.flatMap { prt =>
           processMetricsAutoPortConf(cConf, autoConf, nobj,
             addr, prt, metricsPath = path, idxId = idx,
             parentIndexId = cConf.endpointsIndexId, forcePortNums = hasDupPortNames)
-        }
+        }.map(Left(_))
+        autoconfs ++ scrapeConfs
       }
     }
   }
@@ -427,15 +444,15 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         } else {
           if (idx.isDefined) idx = Some(idx.get + 1)
           val nobj = KubeNamedObject(pod.stableName(idx), pod.namespace, pod.labels, pod.annotations)
-          // check for dup port names
-          val hasDupPortNames =
-            pod.ports.map(_.portName(false)).distinct.lengthCompare(pod.ports.size) != 0
           val autoconfMaps = processAutoconfAnnotations(pod.ports, pod.annotations, autoConf.autoconfAnnotationsPrefix)
           val autoconfs = autoconfMaps.flatMap { acm =>
             processAutoconfMap(acm, cConf, autoConf, nobj,
               pod.podIp.get, idxId = None,
               parentIndexId = cConf.podPortsIndexId)
           }.map(Right(_))
+          // check for dup port names
+          val hasDupPortNames =
+            pod.ports.map(_.portName(false)).distinct.lengthCompare(pod.ports.size) != 0
           val (ports, path) = processMetricsAnnotations(pod.ports, pod, cConf, autoConf)
           val scrapeConfs = ports.flatMap { podPort =>
             processMetricsAutoPortConf(cConf, autoConf, nobj,
@@ -553,11 +570,11 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           case ConfType.service =>
             kubeClient.listServices().flatMap { ksvc =>
               processServiceConf(cConf, aConf, ksvc)
-            }.map(Left(_))
+            }
           case ConfType.endpoint =>
             kubeClient.listEndpoints().flatMap { kendp =>
               processEndpointConf(cConf, aConf, kendp)
-            }.map(Left(_))
+            }
           case ConfType.pod_port =>
             processPodsPortConfs(cConf, aConf, kubeClient.listPods)
         }
