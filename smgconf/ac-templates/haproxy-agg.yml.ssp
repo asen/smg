@@ -14,7 +14,7 @@
 <%@ val members: String %>
 <%@ val members_desc: String = "" %>
 <%@ val id_prefix: String = "hap." %>
-<%@ val agg_prefix: String = "agg" %>
+<%@ val name_suffix: String = "" %>
 <%@ val title_prefix: String = "" %>
 <%@ val interval: Int = 60 %>
 <%@ val parent_index: String = "" %>
@@ -24,9 +24,9 @@
   val real_members_desc = if (members_desc == "") members else members_desc
 %>
 
-- id: ^<%= id_prefix %><%= node_name %>
+- id: ^<%= id_prefix %><%= node_name %><%= name_suffix %>
   title: "<%= title_prefix %><%= node_name %> Haproxy stats, sum from <%= real_members_desc %>"
-  px: "<%= id_prefix %><%= node_name %>.<%= agg_prefix %>"
+  px: "<%= id_prefix %><%= node_name %><%= name_suffix %>"
   cols: 10
   rows: <%= index_rows %>
 #if (parent_index != "")
@@ -55,23 +55,23 @@
 
 #if (arr(1) == "BACKEND")
 # extra index for backends - "all backend hosts" stats, suitable for grouping/filtering
-- id: ^<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.host.<%= itm %>
+- id: ^<%= id_prefix %><%= node_name %><%= name_suffix %>.host.<%= itm %>
   title: "<%= title_prefix %><%= node_name %> Haproxy stats - <%= itm_title %> (all backend hosts), sum from <%= real_members_desc %>"
-  px: "<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.host.<%= arr(0) %>."
+  px: "<%= id_prefix %><%= node_name %><%= name_suffix %>.host.<%= arr(0) %>."
   cols: 10
   rows: <%= index_rows %>
-  parent: <%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>
+  parent: <%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>
 
 #end
 
-- id: ^<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>
+- id: ^<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>
   title: "<%= title_prefix %><%= node_name %> Haproxy stats - <%= itm_title %><%= index_title_desc %>, sum from <%= real_members_desc %>"
-  px: "<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>."
+  px: "<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>."
   cols: 10
   rows: <%= index_rows %>
-  parent: <%= id_prefix %><%= node_name %>.<%= agg_prefix %><%= parent_index_sx %>
+  parent: <%= id_prefix %><%= node_name %><%= name_suffix %><%= parent_index_sx %>
 
-- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.rate
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.rate
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate, sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
@@ -82,7 +82,7 @@
   - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.rate
 #end
 
-- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.stot
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.stot
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sessions/sec, sum from <%= real_members_desc %>"
   rrd_type: DERIVE
   interval: <%= interval %>
@@ -95,7 +95,7 @@
   - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.stot
 #end
 
-- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.scur
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.scur
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur), sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
@@ -106,7 +106,7 @@
   - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.scur
 #end
 
-- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.scurlimitperc
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.scurlimitperc
   title:  "<%= node_name %> <%= itm %> Cur/Limit %, average from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
@@ -118,7 +118,7 @@
   - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.scurlimitperc
 #end
 
-- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.qcur
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.qcur
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur), sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
@@ -129,7 +129,7 @@
   - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.qcur
 #end
 
-- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.rate_max
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.rate_max
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate max, sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
@@ -140,7 +140,7 @@
   - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.rate_max
 #end
 
-- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.scur_max
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.scur_max
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur) max, sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
@@ -151,7 +151,7 @@
   - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.scur_max
 #end
 
-- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.qcur_max
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.qcur_max
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur) max, sum from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
@@ -162,7 +162,7 @@
   - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.qcur_max
 #end
 
-- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.netio
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.netio
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> In/Out traffic b/s, sum from <%= real_members_desc %>"
   interval: <%= interval %>
   rrd_type: DERIVE
@@ -179,7 +179,7 @@
   - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.netio
 #end
 
-- id: +<%= id_prefix %><%= node_name %>.<%= agg_prefix %>.<%= px %>.<%= itm %>.updown
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.updown
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> UP(1)/DOWN(0), average from <%= real_members_desc %>"
   interval: <%= interval %>
   vars:
