@@ -334,8 +334,10 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val idName =  autoConf.targetType + "." + nsObject.namespace +
         "." + nsObject.name + "." + portName + idxId.map(x => s"._$x").getOrElse("") +
         s".${templateName}"
+      contextMap.put("kube_id_name", idName)
       val nodeName = staticNodeName.getOrElse(idName)
       val uid = cConf.uidPrefix + idName
+      contextMap.put("kube_uid", uid)
       val title = s"${cConf.hnamePrefix}${autoConf.targetType} " +
         s"${nsObject.namespace}.${nsObject.name}:${portName}${idxId.map(x => s" ($x)").getOrElse("")} " +
         s"- ${templateName}"
