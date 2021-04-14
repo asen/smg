@@ -322,7 +322,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val staticNodeName = contextMap.remove("node_name").map(_.toString)
       val staticResolveName = contextMap.get("resolve_name").map(_.toString)
 
-      val commandOpt = contextMap.get("command").map(_.toString)
+      val commandOpt = contextMap.remove("command").map(_.toString)
       val runtimeDataOpt = contextMap.get("runtime_data").map(_.toString)
       val runtimeDataTimeoutSecOpt = contextMap.get("runtime_data_timeout_sec").flatMap(s => Try(s.toString.toInt).toOption)
       val portName = contextMap.getOrElse("port_name", "0")

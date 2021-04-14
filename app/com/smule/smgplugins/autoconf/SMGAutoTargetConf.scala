@@ -48,6 +48,32 @@ case class SMGAutoTargetConf(
 
 object SMGAutoTargetConf {
 
+  def dumpYamlList(lst: Seq[Object]): java.util.List[Object] = {
+    val ret = new java.util.ArrayList[Object]()
+    lst.foreach { (v) =>
+      val toPut: Object = v match {
+        case m: Map[String, Object] @unchecked => dumpYamlMap(m)
+        case s: Seq[Object] @unchecked => dumpYamlList(s)
+        case _ => v
+      }
+      ret.add(toPut)
+    }
+    ret
+  }
+
+  def dumpYamlMap(context: Map[String, Object]): java.util.Map[String,Object] = {
+    val ret = new java.util.HashMap[String,Object]()
+    context.foreach { case (k,v) =>
+      val toPut: Object = v match {
+        case m: Map[String, Object] @unchecked => dumpYamlMap(m)
+        case s: Seq[Object] @unchecked => dumpYamlList(s)
+        case _ => v
+      }
+      ret.put(k, toPut)
+    }
+    ret
+  }
+
   def dumpYamlObj(in: SMGAutoTargetConf): java.util.Map[String,Object] = {
     val ret = new java.util.HashMap[String,Object]()
     ret.put("template", in.template)
@@ -66,7 +92,7 @@ object SMGAutoTargetConf {
     if (in.command.isDefined)
       ret.put("command", in.command.get)
     if (in.context.nonEmpty)
-      ret.put("context", in.context)
+      ret.put("context", dumpYamlMap(in.context))
     ret
   }
 
