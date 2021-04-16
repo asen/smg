@@ -15,7 +15,7 @@ object SMGScrapeCommands {
 class SMGScrapeCommands(log: SMGLoggerApi) {
 
   private def parseText(inp: String, labelUid: Boolean): CommandResult = {
-    val stats  = OpenMetricsStat.parseText(inp, log, labelsInUid = labelUid)
+    val stats  = OpenMetricsStat.parseText(inp, labelsInUid = labelUid, Some(log))
     CommandResultCustom(OpenMetricsResultData(stats))
   }
 

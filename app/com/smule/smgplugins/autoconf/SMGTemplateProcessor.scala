@@ -1,14 +1,19 @@
 package com.smule.smgplugins.autoconf
 
 import com.smule.smg.config.SMGConfigParser
-import org.fusesource.scalate.{Binding, RenderContext, TemplateEngine}
+import com.smule.smg.core.SMGLoggerApi
+import org.fusesource.scalate.TemplateEngine
 
 import java.util
 
-class SMGTemplateProcessor() {
-
+class SMGTemplateProcessor(log: SMGLoggerApi) {
   private val engine = new TemplateEngine
+  // XXX this plugin is loaded using the root java class loader which messes up
+  // class resolution. We want to use the "app" class loader used by the SMG core
+  // and just get a reference to it via a static class from SMG core
+  engine.classLoader = SMGConfigParser.getClass.getClassLoader
   engine.allowReload = true
+  log.info(s"SMGTemplateProcessor: using classLoader: ${engine.classLoader}")
 
   private def scalafyObject(o: Object): Object = {
     o match {
@@ -21,8 +26,14 @@ class SMGTemplateProcessor() {
     }
   }
 
-  def processTemplate(inputFile: String, context: Map[String,Object]): String = {
+  def processTemplate(inputFile: String, context: Map[String,Object]): Option[String] = {
     val scalafiedContext = context.map(t => (t._1, scalafyObject(t._2)))
-    engine.layout(inputFile, scalafiedContext)
+    try {
+      Some(engine.layout(inputFile, scalafiedContext))
+    } catch { case t: Throwable =>
+      log.error(s"SMGTemplateProcessorprocessTemplate: Error processing template $inputFile message: " +
+        s"${t.getMessage} (context: $scalafiedContext)")
+      None
+    }
   }
 }

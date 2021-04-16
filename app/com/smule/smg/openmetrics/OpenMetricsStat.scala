@@ -58,7 +58,7 @@ object OpenMetricsStat {
     (value, rem.drop(eix + 1))
   }
 
-  private def parseLabels(inp: String, log: SMGLoggerApi): (Seq[(String,String)], String) = {
+  private def parseLabels(inp: String, log: Option[SMGLoggerApi]): (Seq[(String,String)], String) = {
     try {
       val ret = ListBuffer[(String, String)]()
       var remaining = inp.stripLeading()
@@ -85,7 +85,8 @@ object OpenMetricsStat {
       if (eolIx < 0) throw new RuntimeException(s"labels def not ending with ${END_LABELS}")
       (ret.toList, remaining.drop(1).stripLeading())
     } catch { case t: Throwable =>
-      log.ex(t, s"OpenMetricsStat.parseLabels: bad input: $inp")
+      if (log.isDefined)
+        log.get.ex(t, s"OpenMetricsStat.parseLabels: bad input: $inp")
       (Seq(), "")
     }
   }
@@ -99,7 +100,7 @@ object OpenMetricsStat {
                          metaKey: Option[String],
                          metaType: Option[String],
                          metaHelp: Option[String],
-                         log: SMGLoggerApi,
+                         log: Option[SMGLoggerApi],
                          groupIndex: Option[Int],
                          labelsInUid: Boolean,
                          parseContext: ParseContext
@@ -116,12 +117,14 @@ object OpenMetricsStat {
       }
       val rem = remaining.stripLeading() // just on case ...
       if (rem == "") {
-        log.warn(s"OpenMetricsStat.parseLine: bad line (not enough tokens or corrupt labels): $ln")
+        if (log.isDefined)
+          log.get.warn(s"OpenMetricsStat.parseLine: bad line (not enough tokens or corrupt labels): $ln")
         return None
       }
       val arr = rem.split("\\s+")
       if (arr.length > 2) {
-        log.warn(s"OpenMetricsStat.parseLine: bad line (too many tokens): $ln")
+        if (log.isDefined)
+          log.get.warn(s"OpenMetricsStat.parseLine: bad line (too many tokens): $ln")
       }
       // some special cases for Go NaN formatting
       val value = if (arr(0).matches("^[\\+-]?Inf.*") )
@@ -129,12 +132,14 @@ object OpenMetricsStat {
       else try {
         arr(0).toDouble
       } catch { case t: Throwable =>
-        log.warn(s"OpenMetricsStat.parseLine: bad line (invalid Double value): ${arr(0)}: ln=$ln")
+        if (log.isDefined)
+          log.get.warn(s"OpenMetricsStat.parseLine: bad line (invalid Double value): ${arr(0)}: ln=$ln")
         return None
       }
       var tsms = arr.lift(1).map(_.toLong)
       if (tsms.isDefined && tsms.get <= 0){
-        log.warn(s"OpenMetricsStat.parseLine: bad line (non-positive timestamp value): ${arr(1)}: ln=$ln")
+        if (log.isDefined)
+          log.get.warn(s"OpenMetricsStat.parseLine: bad line (non-positive timestamp value): ${arr(1)}: ln=$ln")
         tsms = None
       }
       var smgUid = if (!hasLabels) name else {
@@ -165,7 +170,8 @@ object OpenMetricsStat {
         )
       )
     } catch { case t: Throwable =>
-      log.ex(t, s"OpenMetricsStat.parseLine: bad line (unexpected error): $ln")
+      if (log.isDefined)
+        log.get.ex(t, s"OpenMetricsStat.parseLine: bad line (unexpected error): $ln")
       None
     }
   }
@@ -175,7 +181,7 @@ object OpenMetricsStat {
                                metaKey: Option[String],
                                metaType: Option[String],
                                metaHelp: Option[String],
-                               log: SMGLoggerApi,
+                               log: Option[SMGLoggerApi],
                                labelsInUid: Boolean,
                                parseContext: ParseContext
                              ): Seq[OpenMetricsStat] = {
@@ -188,7 +194,7 @@ object OpenMetricsStat {
     }
   }
 
-  def parseText(inp: String, log: SMGLoggerApi, labelsInUid: Boolean): Seq[OpenMetricsStat] = {
+  def parseText(inp: String, labelsInUid: Boolean, log: Option[SMGLoggerApi]): Seq[OpenMetricsStat] = {
     val ret = ListBuffer[OpenMetricsStat]()
     var curMetaKey: Option[String] = None
     var curMetaType: Option[String] = None
@@ -206,7 +212,7 @@ object OpenMetricsStat {
 
     inpRef.lines.foreach { rawLine =>
       val ln = rawLine.strip()
-      if (!ln.isEmpty) {
+      if (ln.nonEmpty) {
         if (ln.startsWith("#")) {
           try {
             val commentOrMeta = ln.stripPrefix("#").stripLeading()
@@ -227,13 +233,15 @@ object OpenMetricsStat {
                   curMetaType = Some(metaData)
                 }
               } else {
-                log.debug(s"Empty $metaVerb metadata (curMetaKey=${curMetaKey.getOrElse("")})")
+                if (log.isDefined)
+                  log.get.debug(s"Empty $metaVerb metadata (curMetaKey=${curMetaKey.getOrElse("")})")
               }
             } else { //- comment ... reset curMetaKey?
               processCurGroupLinesAndReset()
             }
           } catch { case t: Throwable =>
-            log.ex(t, s"Unexpected error processing comment line: $ln")
+            if (log.isDefined)
+              log.get.ex(t, s"Unexpected error processing comment line: $ln")
             processCurGroupLinesAndReset()
             curMetaKey = None
           }

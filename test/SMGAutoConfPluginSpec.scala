@@ -1,4 +1,4 @@
-import com.smule.smg.core.SMGLogger
+import com.smule.smg.core.{SMGFileUtil, SMGLogger}
 import com.smule.smgplugins.autoconf.SMGTemplateProcessor
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
@@ -13,7 +13,7 @@ class SMGAutoConfPluginSpec extends Specification{
 
   "SMGTemplateProcessor" should {
     "work with haproxy" in {
-      val p = new SMGTemplateProcessor()
+      val p = new SMGTemplateProcessor(log)
       val out = p.processTemplate("smgconf/ac-templates/haproxy.yml.ssp", Map(
         "node_name" -> "test1",
         "command" -> "curl -sS -f 'http://test1/stats;csv'",
@@ -24,7 +24,7 @@ class SMGAutoConfPluginSpec extends Specification{
 "nginx_gzip_buffer_farm,nginx_6080,0,0,5,125,20000,8588023,9369066870,21334887356,,0,,0,0,0,0,no check,1,1,0,,,,,,1,5,1,,8588027,,2,142,,351,,,,0,8561594,23830,1572,370,0,0,,,,659,0,,,,,0,,,0,0,30,30",
 "nginx_gzip_buffer_farm,nginx_6081,0,0,5,126,20000,8595505,9440821308,21340361699,,0,,0,0,0,0,no check,1,1,0,,,,,,1,5,2,,8595509,,2,125,,346,,,,0,8569122,23899,1511,339,0,0,,,,636,0,,,,,0,,,0,0,36,36,"
         )
-      ))
+      )).get
       println("===================")
       println(out)
       val out2 = p.processTemplate("smgconf/ac-templates/haproxy.yml.ssp", Map(
@@ -33,7 +33,7 @@ class SMGAutoConfPluginSpec extends Specification{
         "data" -> Seq(
           "# pxname,svname,qcur,qmax,scur,smax,slim,stot,bin,bout,dreq,dresp,ereq,econ,eresp,wretr,wredis,status,weight,act,bck,chkfail,chkdown,lastchg,downtime,qlimit,pid,iid,sid,throttle,lbtot,tracked,type,rate,rate_lim,rate_max,check_status,check_code,check_duration,hrsp_1xx,hrsp_2xx,hrsp_3xx,hrsp_4xx,hrsp_5xx,hrsp_other,hanafail,req_rate,req_rate_max,req_tot,cli_abrt,srv_abrt,comp_in,comp_out,comp_byp,comp_rsp,lastsess,last_chk,last_agt,qtime,ctime,rtime,ttime,"
         )
-      ))
+      )).get
       println("===================")
       println(out2)
       1.equals(1)
@@ -41,11 +41,11 @@ class SMGAutoConfPluginSpec extends Specification{
   }
 
   "work with redis" in {
-    val p = new SMGTemplateProcessor()
+    val p = new SMGTemplateProcessor(log)
     val out = p.processTemplate("smgconf/ac-templates/redis.yml.ssp", Map(
       "node_name" -> "localhost",
       "node_host" -> "localhost"
-    ))
+    )).get
     println("===================")
     println(out)
     val portRange = new util.ArrayList[String]()
@@ -55,18 +55,18 @@ class SMGAutoConfPluginSpec extends Specification{
       "node_name" -> "localhost",
       "node_host" -> "someother_host",
       "port_range" -> portRange
-    ))
+    )).get
     println("===================")
     println(out2)
     1.equals(1)
   }
 
   "work with linux-snmp-static" in {
-    val p = new SMGTemplateProcessor()
+    val p = new SMGTemplateProcessor(log)
     val out = p.processTemplate("smgconf/ac-templates/linux-snmp-static.yml.ssp", Map(
       "node_name" -> "localhost",
       "node_host" -> "localhost"
-    ))
+    )).get
     println("===================")
     println(out)
     val dd = new util.ArrayList[java.util.Map[String,Object]]()
@@ -78,9 +78,22 @@ class SMGAutoConfPluginSpec extends Specification{
       "node_name" -> "localhost",
       "node_host" -> "someother_host",
       "disk_drives" -> dd
-    ))
+    )).get
     println("===================")
     println(out2)
+    1.equals(1)
+  }
+
+  "work with openmetrics" in {
+    val data = SMGFileUtil.getFileLines("test-data/metrics.txt")
+    val p = new SMGTemplateProcessor(log)
+    val out = p.processTemplate("smgconf/ac-templates/openmetrics.yml.ssp", Map(
+      "node_name" -> "localhost",
+      "node_host" -> "localhost",
+      "data" -> data
+    )).get
+    println("===================")
+    println(out)
     1.equals(1)
   }
 }

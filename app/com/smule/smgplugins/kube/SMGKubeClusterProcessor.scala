@@ -114,7 +114,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val outObj = smgConfSvc.runFetchCommand(SMGCmd(command, cConf.fetchCommandTimeout), None)
       if (cConf.needParse) {
         val out = outObj.asStr
-        if (OpenMetricsStat.parseText(out, log, labelsInUid = false).nonEmpty) {
+        if (OpenMetricsStat.parseText(out, labelsInUid = false, Some(log)).nonEmpty) {
           //keep known up services in a cache and not run this every minute -
           //we only want to know if it is http and has valid /metrics URL, once
           autoDiscoveryCache.recordGood(command, kubeNsObject)

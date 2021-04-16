@@ -62,7 +62,11 @@ class SMGAutoTargetProcessor(
     try {
       val ctx = getTargetContext(conf)
       val templateFile = pluginConf.getTemplateFilename(conf.template)
-      val outputContents = templateProcessor.processTemplate(templateFile, ctx)
+      val outputContentsOpt = templateProcessor.processTemplate(templateFile, ctx)
+      if (outputContentsOpt.isEmpty) {
+        return false
+      }
+      val outputContents = outputContentsOpt.get
       val oldContents = if (Files.exists(Paths.get(confOutputFile)))
         SMGFileUtil.getFileContents(confOutputFile)
       else

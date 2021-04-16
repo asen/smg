@@ -13,7 +13,7 @@ class SMGAutoConfPlugin (
                         ) extends SMGPlugin{
   private val log = new SMGPluginLogger(pluginId)
   private val confParser = new SMGAutoConfPluginConfParser(pluginId, pluginConfFile, log)
-  private val templateProcessor = new SMGTemplateProcessor()
+  private val templateProcessor = new SMGTemplateProcessor(log)
   private val myEc: ExecutionContext =
     smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.plugins-shared")
 
