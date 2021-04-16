@@ -7,6 +7,8 @@ autoconf:
     - "/etc/smg/ac-templates"
     - "/opt/smg/data/conf/ac-templates"
     - "smgconf/ac-templates"
+# XXX This setting is special, not subject to reload. false means allow_reload (and is the default)
+  prevent_template_reload: false
   targets:
 #    - output: localhost-haproxy-stats.yml
 #      template: haproxy

@@ -85,11 +85,13 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
       if (!dirFile.exists())
         dirFile.mkdirs() // this would throw if there is fs/permissions issue and reject the conf
     }
+    val preventTemplateReload = pluginConfMap.get("prevent_template_reload").exists(_.toString == "true")
     SMGAutoConfPluginConf(
       targetConfs,
       templateDirs,
       confOutputDir,
-      confOutputDirOwned
+      confOutputDirOwned,
+      preventTemplateReload
     )
   }
 

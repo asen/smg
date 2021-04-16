@@ -1,0 +1,302 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%
+  // Configure this with a command like this:
+  // command: 'curl -sS -f http://%node_host%:%port%/metrics'
+  // runtime_data: true
+%>
+<%@ val command: String %>
+<%@ val node_name: String %>
+<%@ val node_host: String %>
+<%@ val data: Seq[String] %>
+<%@ val id_prefix: String = "host." %>
+<%@ val title_prefix: String = "Host " %>
+<%@ val interval: Int = 60 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val desc: String = "" %>
+<%@ val add_ping: Boolean = true %>
+<%@ val net_dvc_filters: Seq[String] = Seq(
+  "node_network_up=1",
+  "node_network_address_assign_type=0"
+) %>
+<%@ val netio_max: String = "" %>
+<%
+  // parse /metrics output
+  //  val parser = new com.smule.smg.openmetrics.OpenMetricsStatHelper()
+  //  val parsed = parser.parseText(data.mkString("\n"), labels_in_uids, None)
+  val parsed = com.smule.smg.openmetrics.OpenMetricsStat.parseText(data.mkString("\n"), labelsInUid = true, None)
+  val parsedByUid = parsed.groupBy(_.smgUid)
+  val cpuUsageComponents = Seq("user", "nice", "system", "idle", "iowait", "irq", "softirq", "steal")
+  val cpuSecondsPrefix = "node_cpu_seconds_total.cpu."
+  val cpuIdPrefixes = scala.collection.mutable.ListBuffer[String]()
+
+  val diskReadBytesPrefix = "node_disk_read_bytes_total.device."
+  val diskDevices = scala.collection.mutable.ListBuffer[String]()
+
+  val networkDeviceIdPrefix = "node_network_device_id.device."
+  val networkDevices = scala.collection.mutable.ListBuffer[String]()
+  val networkDeviceFilters = net_dvc_filters.map { s =>
+    val arr = s.split("=", 2)
+    (s"${arr(0)}.device.", scala.util.Try(arr(1).toDouble).getOrElse(Double.NaN))
+  }
+  parsed.foreach { oms =>
+    if (oms.smgUid.startsWith(cpuSecondsPrefix)){
+      val cpuId = scala.util.Try(
+        oms.smgUid.stripPrefix(cpuSecondsPrefix).split("\\.",2)(0).toInt
+      ).getOrElse(-1)
+      if (cpuId > -1) {
+        val cip = s"${cpuSecondsPrefix}${cpuId}."
+        if (!cpuIdPrefixes.contains(cip))
+          cpuIdPrefixes += cip
+      }
+    } else if (oms.smgUid.startsWith(diskReadBytesPrefix)) {
+      diskDevices += oms.smgUid.stripPrefix(diskReadBytesPrefix)
+    } else if (oms.smgUid.startsWith(networkDeviceIdPrefix)) {
+      val filterDevice = { dvc: String =>
+        dvc != "lo" && networkDeviceFilters.forall { case (px, v) =>
+          parsedByUid.get(px + dvc).flatMap(_.headOption.map(_.value)).getOrElse(Double.NaN) == v
+        }
+      }
+      val dvcName = oms.smgUid.stripPrefix(networkDeviceIdPrefix)
+      if (filterDevice(dvcName))
+        networkDevices += dvcName
+    }
+  }
+%>
+
+#if (add_ping)
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.ping
+  desc: "Check that host <%= node_name %> is up"
+  command: "ping -W 2 -n -c 1 <%= node_host %> > /dev/null || ping -W 2 -n -c 1 <%= node_host %> > /dev/null"
+  ignorets: true
+  timeout: 5
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+#end
+
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.metrics
+#if (add_ping)
+  pre_fetch: <%= id_prefix %><%= node_name %>.ping
+#elseif (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+  desc: "Fetch system metrics from <%= node_name %>"
+  command: "<%= command %>"
+  pass_data: true
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+  timeout: 10
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.metrics.parse
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics
+  desc: "Parse system metrics from <%= node_name %>"
+  pass_data: true
+  command: ":scrape parse :lbluid"
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+  timeout: 5
+
+- ^<%= id_prefix %><%= node_name %>:
+  title: "<%= title_prefix %><%= node_name %>"
+  px: "<%= id_prefix %><%= node_name %>."
+#if (desc != "")
+  desc: "<%= desc %>"
+#end
+#if (parent_index != "")
+  parent: "<%= parent_index %>"
+#end
+
+- id: <%= id_prefix %><%= node_name %>.sysload
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_load1,node_load5,node_load15"
+  title: "<%= title_prefix %><%= node_name %> - Load average over 1/5/15 min periods"
+  interval: 60
+  vars:
+  - label: sl1min
+  - label: sl5min
+  - label: sl15min
+
+
+# an aggregate object, components defined later below
+- id: +<%= id_prefix %><%= node_name %>._agg.cpu
+  title: "<%= title_prefix %><%= node_name %> - CPU usage (all cores)"
+  rrd_type: DDERIVE
+  stack: true
+  interval: <%= interval %>
+  vars:
+#for (stat <- cpuUsageComponents)
+  - label: <%= stat %>
+    mu: "%"
+    lt: "AREA"
+    cdef: "$ds,100,*"
+#end
+  op: SUM
+  ids:
+#for ( coreId <- cpuIdPrefixes.indices )
+  - <%= id_prefix %><%= node_name %>._dtl.core<%= coreId %>.cpu
+#end
+
+- id: <%= id_prefix %><%= node_name %>.intctx
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_intr_total,node_context_switches_total"
+  title: "<%= title_prefix %><%= node_name %> - Interrupts/context switches"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: ints
+  - label: ctxs
+
+<%
+  val memProps = Seq("MemTotal", "MemFree", "Cached", "SReclaimable", "Buffers")
+  val memScapeGetParams = memProps.map(s => s"node_memory_${s}_bytes").mkString(",")
+%>
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.metrics.mem.values
+  desc: "Parse memory-related stats from metrics on <%= node_name %>"
+  pass_data: true
+  command: ":scrape get <%= memScapeGetParams %>"
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+
+- id: <%= id_prefix %><%= node_name %>.meminfo.detail
+  rrd_type: GAUGE
+  command: "-"
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.mem.values
+  interval: <%= interval %>
+  title: "<%= node_name %> - /proc/meminfo details"
+  vars:
+  - label: MemTotal
+    mu: B
+  - label: MemFree
+    mu: B
+  - label: Cached
+    mu: B
+  - label: SReclaimable
+    mu: B
+  - label: Buffers
+    mu: B
+
+- id: <%= id_prefix %><%= node_name %>.meminfo.percused
+  rrd_type: GAUGE
+  # ((ds0 - ds1 - ds2 - ds3 - ds4) * 100) / ds0
+  command: ":cc rpn $ds0,-$ds1,+,-$ds2,+,-$ds3,+,-$ds4,+,100,*,$ds0,/"
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.mem.values
+  interval: <%= interval %>
+  title: "<%= node_name %> - /proc/meminfo Used % (total - free - cached - reclaimable - buffers ) * 100 / total"
+  vars:
+  - label: "used percent"
+    mu: "%"
+    maxy: 100
+
+#if (diskDevices.length > 0)
+# another agg object
+- id: +<%= id_prefix %><%= node_name %>._agg.blkio
+  title: "<%= title_prefix %><%= node_name %> - Block Device I/O (all devices)"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: wrtn
+    mu: "B/s"
+  - label: read
+    mu: "B/s"
+  op: SUM
+  ids:
+#for ( dvc <- diskDevices )
+  - <%= id_prefix %><%= node_name %>._dtl.<%= dvc %>.blkio
+#end
+#end
+
+#if (networkDevices.length > 0)
+# another agg object
+- id: +<%= id_prefix %><%= node_name %>._agg.netio
+  title: "<%= title_prefix %><%= node_name %> - Network Device I/O (all devices)"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: in
+    mu: "b/s"
+    cdef: "$ds,8,*"
+  - label: out
+    mu: "b/s"
+    cdef: "$ds,8,*"
+  op: SUM
+  ids:
+#for (dvc <- networkDevices)
+  - <%= id_prefix %><%= node_name %>._dtl.<%= dvc %>.netio
+#end
+#end
+
+#### details stats
+
+#for ( t <- cpuIdPrefixes.zipWithIndex )
+<%
+  val cpuIdPx = t._1
+  val cpuIdNum = t._2
+  val coreId = s"core${cpuIdNum}"
+
+  val scrapeGetParams = cpuUsageComponents.map { cuc =>
+    s"${cpuIdPx}mode.${cuc}"
+  }.mkString(",")
+%>
+- id: <%= id_prefix %><%= node_name %>._dtl.<%= coreId %>.cpu
+  title: "<%= title_prefix %><%= node_name %> - CPU usage (<%= coreId %>)"
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get <%= scrapeGetParams %>"
+  rrd_type: DDERIVE
+  stack: true
+  interval: <%= interval %>
+  vars:
+#for (stat <- cpuUsageComponents)
+  - label: <%= stat %>
+    mu: "%"
+    lt: "AREA"
+    cdef: "$ds,100,*"
+#end
+
+#end
+
+#for (dvc <- diskDevices)
+
+- id: <%= id_prefix %><%= node_name %>._dtl.<%= dvc %>.blkio
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  title: "<%= title_prefix %><%= node_name %> - Block Device I/O (<%= dvc %>)"
+  command: ":scrape get node_disk_written_bytes_total.device.<%= dvc %>,node_disk_read_bytes_total.device.<%= dvc %>"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: wrtn
+    mu: "B/s"
+  - label: read
+    mu: "B/s"
+
+#end
+
+#if (networkDevices.length > 0)
+#for (dvc <- networkDevices)
+# dtl object for netio dvc <%= dvc %>
+- id: <%= id_prefix %><%= node_name %>._dtl.<%= dvc %>.netio
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  title: "<%= title_prefix %><%= node_name %> - Block Device I/O (<%= dvc %>)"
+  command: ":scrape get node_network_receive_bytes_total.device.<%= dvc %>,node_network_transmit_bytes_total.device.<%= dvc %>"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: in
+    mu: "b/s"
+    cdef: "$ds,8,*"
+  - label: out
+    mu: "b/s"
+    cdef: "$ds,8,*"
+
+#end
+#end

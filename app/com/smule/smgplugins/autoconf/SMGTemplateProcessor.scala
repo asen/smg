@@ -6,13 +6,13 @@ import org.fusesource.scalate.TemplateEngine
 
 import java.util
 
-class SMGTemplateProcessor(log: SMGLoggerApi) {
+class SMGTemplateProcessor(log: SMGLoggerApi, preventReload: Boolean = false) {
   private val engine = new TemplateEngine
   // XXX this plugin is loaded using the root java class loader which messes up
   // class resolution. We want to use the "app" class loader used by the SMG core
   // and just get a reference to it via a static class from SMG core
   engine.classLoader = SMGConfigParser.getClass.getClassLoader
-  engine.allowReload = true
+  engine.allowReload = !preventReload
   log.info(s"SMGTemplateProcessor: using classLoader: ${engine.classLoader}")
 
   private def scalafyObject(o: Object): Object = {

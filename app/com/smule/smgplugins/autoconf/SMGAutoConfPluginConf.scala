@@ -7,7 +7,8 @@ case class SMGAutoConfPluginConf(
                                   targets: Seq[SMGAutoTargetConf],
                                   templateDirs: Seq[String],
                                   confOutputDir: Option[String],
-                                  confOutputDirOwned: Boolean
+                                  confOutputDirOwned: Boolean,
+                                  preventTemplateReload: Boolean
                                 ) {
 
  def getTemplateFilename(shortName: String): String = {
@@ -29,5 +30,5 @@ case class SMGAutoConfPluginConf(
 object SMGAutoConfPluginConf {
   val empty: SMGAutoConfPluginConf =
     SMGAutoConfPluginConf(targets = Seq(), templateDirs = Seq(),
-      confOutputDir = None, confOutputDirOwned = false)
+      confOutputDir = None, confOutputDirOwned = false, preventTemplateReload = false)
 }
