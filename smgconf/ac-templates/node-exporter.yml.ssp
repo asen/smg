@@ -20,11 +20,13 @@
   "node_network_up=1",
   "node_network_address_assign_type=0"
 ) %>
+<%@ val fs_label_filters: Seq[String] = Seq(
+  "device!=tmpfs",
+  "mountpoint!=/boot"
+) %>
 <%@ val netio_max: String = "" %>
 <%
   // parse /metrics output
-  //  val parser = new com.smule.smg.openmetrics.OpenMetricsStatHelper()
-  //  val parsed = parser.parseText(data.mkString("\n"), labels_in_uids, None)
   val parsed = com.smule.smg.openmetrics.OpenMetricsStat.parseText(data.mkString("\n"), labelsInUid = true, None)
   val parsedByUid = parsed.groupBy(_.smgUid)
   val cpuUsageComponents = Seq("user", "nice", "system", "idle", "iowait", "irq", "softirq", "steal")
@@ -40,6 +42,13 @@
     val arr = s.split("=", 2)
     (s"${arr(0)}.device.", scala.util.Try(arr(1).toDouble).getOrElse(Double.NaN))
   }
+
+  val fsAvailBytesPrefix = "node_filesystem_avail_bytes.device."
+  val fsLabelFilters = fs_label_filters.flatMap { s =>
+    com.smule.smg.core.SMGFilterLabels.parse(s)
+  }
+  val fsMounts = scala.collection.mutable.ListBuffer[(String,String)]()
+
   parsed.foreach { oms =>
     if (oms.smgUid.startsWith(cpuSecondsPrefix)){
       val cpuId = scala.util.Try(
@@ -61,8 +70,65 @@
       val dvcName = oms.smgUid.stripPrefix(networkDeviceIdPrefix)
       if (filterDevice(dvcName))
         networkDevices += dvcName
+    } else if (oms.smgUid.startsWith(fsAvailBytesPrefix)) {
+      val lblsMap: Map[String,String] = oms.labels.toMap
+      if (fsLabelFilters.forall(_.matches(lblsMap)) && lblsMap.contains("mountpoint"))
+        fsMounts += Tuple2(lblsMap("mountpoint"), oms.smgUid.stripPrefix(fsAvailBytesPrefix))
     }
   }
+
+// TODO
+
+// node_edac_***
+
+//  # HELP node_entropy_available_bits Bits of available entropy.
+//  # TYPE node_entropy_available_bits gauge
+//  node_entropy_available_bits 3934
+
+//  # HELP node_filefd_allocated File descriptor statistics: allocated.
+//  # TYPE node_filefd_allocated gauge
+//  node_filefd_allocated 3424
+//  # HELP node_filefd_maximum File descriptor statistics: maximum.
+//  # TYPE node_filefd_maximum gauge
+//  node_filefd_maximum 3.272613e+06
+
+//  # HELP node_forks_total Total number of forks.
+//  # TYPE node_forks_total counter
+//  node_forks_total 4.04954479e+08
+
+// node_hwmon_
+// node_ipvs_
+// node_md_
+// node_nf_conntrack
+
+//  # HELP node_procs_blocked Number of processes blocked waiting for I/O to complete.
+//  # TYPE node_procs_blocked gauge
+//  node_procs_blocked 0
+//  # HELP node_procs_running Number of processes in runnable state.
+//  # TYPE node_procs_running gauge
+//  node_procs_running 6
+
+// node_sockstat
+
+// # HELP node_time_seconds System time in seconds since epoch (1970).
+//  # TYPE node_time_seconds gauge
+//  node_time_seconds 1.618591963281852e+09
+
+// node_timex
+
+// node_vmstat
+//  So what does these esoteric names mean .Here is a reference on what these terms mean.
+//
+//  pgpgin      –  Number of kilobytes the system has paged in from disk per second.
+//  pgpgout     –  Number of kilobytes the system has paged out to disk per second.
+//  pswpin      –  Number of kilobytes the system has swapped in from disk per second.
+//  pswpout     –  Number of kilobytes the system has swapped out to disk per second.
+//
+//  The following statistics are only available by kernels from 2.6.
+//  pgfault     –  Number of page faults the system has made per second (minor + major).
+//  pgmajfault  –  Number of major faults per second the system required loading a memory page from disk.
+//
+
 %>
 
 #if (add_ping)
@@ -216,6 +282,49 @@
 #end
 #end
 
+#### Disk space usage
+
+#for ( fsmT <- fsMounts)
+<%
+  val mountp = fsmT._1
+  val idsx = fsmT._2
+  val drvsafe = idsx.split("\\.").last
+//  "node_filesystem_avail_bytes",
+//  "node_filesystem_size_bytes",
+//  "node_filesystem_files",
+//  "node_filesystem_files_free"
+  val fsScapeGetParams = Seq("avail_bytes", "size_bytes", "files_free", "files").map { s =>
+    s"node_filesystem_${s}.device.${idsx}"
+  }.mkString(",")
+%>
+#  <%= mountp %> -> <%= idsx %>
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.metrics.fs.<%= drvsafe %>.values
+  desc: "Parse filesystem-related stats for <%= mountp %> from metrics on <%= node_name %>"
+  pass_data: true
+  command: ":scrape get <%= fsScapeGetParams %>"
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+
+- id: <%= id_prefix %><%= node_name %>.fs.percused.<%= drvsafe %>
+  rrd_type: GAUGE
+  # ((ds1 - ds0) * 100) / ds1
+  # ((ds3 - ds2) * 100) / ds3
+  command: ":cc rpn $ds1,$ds0,-,100,*,$ds1,/ $ds3,$ds2,-,100,*,$ds3,/"
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.fs.<%= drvsafe %>.values
+  interval: <%= interval %>
+  title: "<%= node_name %> - Disk usage <%= mountp %> filesystem"
+  vars:
+  - label: "used bytes"
+    mu: "%"
+    maxy: 100
+  - label: "used inodes"
+    mu: "%"
+    maxy: 100
+
+#end
+
+#### Network Stats
+
 #if (networkDevices.length > 0)
 # another agg object
 - id: +<%= id_prefix %><%= node_name %>._agg.netio
@@ -236,6 +345,146 @@
 #end
 #end
 
+- id: <%= id_prefix %><%= node_name %>.netstat.tcp.newconn
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_netstat_Tcp_PassiveOpens,node_netstat_Tcp_ActiveOpens"
+  title: "<%= title_prefix %><%= node_name %> - Network New Connections"
+  rrd_type: DDERIVE
+  interval: 60
+  vars:
+  - label: in
+    mu: "c/s"
+  - label: out
+    mu: "c/s"
+
+- id: <%= id_prefix %><%= node_name %>.netstat.tcp.estconn
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_netstat_Tcp_CurrEstab"
+  title: "<%= title_prefix %><%= node_name %> - Network Established Connections"
+  interval: 60
+  vars:
+  - label: conns
+    mu: "c/s"
+
+- id: <%= id_prefix %><%= node_name %>.netstat.tcp.syncookies
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_netstat_TcpExt_SyncookiesRecv,node_netstat_TcpExt_SyncookiesSent,node_netstat_TcpExt_SyncookiesFailed"
+  title: "<%= title_prefix %><%= node_name %> - Syncookies Recv/Sent/Failed"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: recv
+    mu: "ev/s"
+  - label: sent
+    mu: "ev/s"
+  - label: failed
+    mu: "ev/s"
+
+- id: <%= id_prefix %><%= node_name %>.netstat.tcp.errdropoverf
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_netstat_Tcp_InErrs,node_netstat_TcpExt_ListenDrops,node_netstat_TcpExt_ListenOverflows"
+  title: "<%= title_prefix %><%= node_name %> - TCP InErrs/ListenDrops/ListenOverflows"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: inErrs
+    mu: "ev/s"
+  - label: lsnDrop
+    mu: "ev/s"
+  - label: lsnOverf
+    mu: "ev/s"
+
+- id: <%= id_prefix %><%= node_name %>.netstat.tcp.retrans
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_netstat_TcpExt_TCPSynRetrans,node_netstat_Tcp_RetransSegs"
+  title: "<%= title_prefix %><%= node_name %> - TCP SynRetrans/RetransSegs"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: synRtrn
+    mu: "ev/s"
+  - label: rtrnSegs
+    mu: "ev/s"
+
+- id: <%= id_prefix %><%= node_name %>.netstat.udp4.datagrams
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_netstat_Udp_InDatagrams,node_netstat_Udp_OutDatagrams"
+  title: "<%= title_prefix %><%= node_name %> - UDP4 InDatagrams/OutDatagrams"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: in
+    mu: "pkt/s"
+  - label: out
+    mu: "pkt/s"
+
+- id: <%= id_prefix %><%= node_name %>.netstat.udp4.errs
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_netstat_Udp_InErrors,node_netstat_UdpLite_InErrors,node_netstat_Udp_NoPorts"
+  title: "<%= title_prefix %><%= node_name %> - UDP4 InErrs/LiteInErrs/NoPorts"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: inErrs
+    mu: "ev/s"
+  - label: liteInErrs
+    mu: "ev/s"
+  - label: noPorts
+    mu: "ev/s"
+
+- id: <%= id_prefix %><%= node_name %>.netstat.udp6.datagrams
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_netstat_Udp6_InDatagrams,node_netstat_Udp6_OutDatagrams"
+  title: "<%= title_prefix %><%= node_name %> - UDP6 InDatagrams/OutDatagrams"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: in
+    mu: "pkt/s"
+  - label: out
+    mu: "pkt/s"
+
+- id: <%= id_prefix %><%= node_name %>.netstat.udp6.errs
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_netstat_Udp6_InErrors,node_netstat_UdpLite6_InErrors,node_netstat_Udp6_NoPorts"
+  title: "<%= title_prefix %><%= node_name %> - UDP6 InErrs/LiteInErrs/NoPorts"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: inErrs
+    mu: "ev/s"
+  - label: liteInErrs
+    mu: "ev/s"
+  - label: noPorts
+    mu: "ev/s"
+
+
+- id: <%= id_prefix %><%= node_name %>.netstat.ipv4.octets
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_netstat_IpExt_InOctets,node_netstat_IpExt_OutOctets"
+  title: "<%= title_prefix %><%= node_name %> - Netstat IPV4 I/O Octets"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: in
+    mu: "B/s"
+  - label: out
+    mu: "B/s"
+
+- id: <%= id_prefix %><%= node_name %>.netstat.ipv6.octets
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  command: ":scrape get node_netstat_Ip6_InOctets,node_netstat_Ip6_OutOctets"
+  title: "<%= title_prefix %><%= node_name %> - Netstat IPV6 I/O Octets"
+  rrd_type: DDERIVE
+  interval: <%= interval %>
+  vars:
+  - label: in
+    mu: "B/s"
+  - label: out
+    mu: "B/s"
+
+
+######################
 #### details stats
 
 #for ( t <- cpuIdPrefixes.zipWithIndex )

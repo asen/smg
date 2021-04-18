@@ -251,26 +251,64 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
-  def getAutoconfAnnotationGropus(annotations: Map[String,String], prefix: String): Seq[Map[String,String]] = {
+  private val SEQ_TYPE_PREFIX = "_seq-"
+  private val MAP_TYPE_PREFIX = "_map-"
+  // smg.autoconf-0/template: blah
+  // smg.autoconf-0/fs_label_filters/_list-a: "device!=tmpfs"
+  // smg.autoconf-0/fs_label_filters/_list-b: "mountpoint!=/boot"
+  // smg.autoconf-0/net_dvc_filters/_map-my_key: "my value"
+  // smg.autoconf-0/net_dvc_filters/_map-my_other_key: "my other value"
+  def getAutoconfAnnotationGroup(tseq: Seq[(String, String)]): Map[String,Object] = {
+    val retStrings = mutable.Map[String, String]()
+    val retSeqs = mutable.Map[String, mutable.Map[String, String]]()
+    val retMaps = mutable.Map[String, mutable.Map[String, String]]()
+    tseq.map { case (k,v) =>
+      val myK = k.split("/",2).lift(1).getOrElse("")
+      (myK, v)
+    }.foreach { case (myk,v) =>
+      val arr = myk.split("/", 2)
+      val mytyp = arr.lift(1).getOrElse("")
+      if (mytyp.startsWith(SEQ_TYPE_PREFIX)){
+        val seqName = arr(0)
+        val seqIndex = mytyp.stripPrefix(SEQ_TYPE_PREFIX)
+        val seqBuf = retSeqs.getOrElseUpdate(seqName, mutable.Map())
+        seqBuf.put(seqIndex, v)
+      } else if (mytyp.startsWith(MAP_TYPE_PREFIX)){
+        val mapName = arr(0)
+        val mapKey = mytyp.stripPrefix(MAP_TYPE_PREFIX)
+        val mapBuf = retMaps.getOrElseUpdate(mapName, mutable.Map())
+        mapBuf.put(mapKey, v)
+      } else {
+        retStrings.put(myk, v)
+      }
+    }
+    retStrings.toMap ++ retSeqs.map { case (k,v) =>
+      // sort the "index" -> "value" map by index and get the values
+      (k, v.toSeq.sortBy(_._1).map(_._2).toList)
+    }.toMap ++ retMaps.map { case (k,v) =>
+      (k,v.toMap)
+    }.toMap
+  }
+
+  def getAutoconfAnnotationGropus(annotations: Map[String,String], prefix: String): Seq[Map[String,Object]] = {
     val myAnnotationGroups = annotations.filter{ t =>
       t._1.startsWith(prefix)
     }.toSeq.groupBy { t =>
       t._1.split("/",2)(0)
     }
     myAnnotationGroups.toSeq.map { case (_, tseq) =>
-      tseq.map { case (k,v) =>
-        (k.split("/",2).lift(1).getOrElse(""), v)
-      }.toMap
+      getAutoconfAnnotationGroup(tseq)
     }
   }
 
   def expandAutoconfAnnotationPorts(ports: Seq[KubePort],
-                                    annotationsMap: Map[String,String]): Seq[Map[String,String]] = {
-    val template = annotationsMap.get("template")
+                                    annotationsMap: Map[String,Object]): Seq[Map[String,Object]] = {
+    val template = annotationsMap.get("template").map(_.toString)
     if (template.isEmpty)
       return Seq()
-    val staticPorts = annotationsMap.get("ports").map(_.split("\\s*,\\s*").toSeq).getOrElse(
-      annotationsMap.get("port").map(x => Seq(x)).getOrElse(Seq())
+    val staticPorts = annotationsMap.get("ports").
+      map(_.toString).map(_.split("\\s*,\\s*").toSeq).getOrElse(
+      annotationsMap.get("port").map(_.toString).map(x => Seq(x)).getOrElse(Seq())
     )
     val actualPorts = if (staticPorts.nonEmpty) {
       staticPorts.map { port_str =>
@@ -297,7 +335,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                                   ports: Seq[KubePort],
                                   nobjAnnotations: Map[String,String],
                                   autoconfAnnotationsPrefix: String
-                                ): Seq[Map[String, String]] = {
+                                ): Seq[Map[String, Object]] = {
     val myAutoconfGroups = getAutoconfAnnotationGropus(nobjAnnotations, autoconfAnnotationsPrefix)
     myAutoconfGroups.flatMap { annotationsMap =>
       expandAutoconfAnnotationPorts(ports, annotationsMap)
@@ -305,7 +343,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   }
 
   def processAutoconfMap(
-                          autoconfMap: Map[String, String],
+                          autoconfMap: Map[String, Object],
                           cConf: SMGKubeClusterConf,
                           autoConf: SMGKubeClusterAutoConf,
                           nsObject: KubeNsObject,
