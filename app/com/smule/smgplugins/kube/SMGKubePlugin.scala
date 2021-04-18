@@ -34,21 +34,6 @@ class SMGKubePlugin(
   override def preFetches: Map[String, SMGPreFetchCmd] = targetProcessor.preFetches.
     groupBy(_.id).map{ case (k,v) => (k,v.head)}
 
-//  private def reloadScrapeConf(): Unit = {
-//    val scrapePlugin = smgConfSvc.plugins.find(_.pluginId == "scrape")
-//    if (scrapePlugin.isEmpty){
-//      log.error("Could not find the scrape plugin instance, this is unlikely to work as expected. " +
-//        "Trying ConfigService reload")
-//      smgConfSvc.reloadLocal()
-//    } else {
-//      try {
-//        scrapePlugin.get.reloadConf()
-//      } catch { case t: Throwable =>
-//        log.ex(t, s"Unexpected error from scrapePlugin.reload: ${t.getMessage}")
-//      }
-//    }
-//  }
-
   private def reloadAnotherPluginConf(pluginId: String): Unit = {
     val plugin = smgConfSvc.plugins.find(_.pluginId == pluginId)
     if (plugin.isEmpty){

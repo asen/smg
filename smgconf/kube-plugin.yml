@@ -15,10 +15,15 @@ kube:
 #      fetch_command: ':scrape fetch :tokenf /etc/smg/kube-token'
 #      need_parse: false # set to false if fetch_command returns internally parsed OpenMetricsResultData
 #      fetch_timeout: 10
-#      node_metrcis:
+#      node_metrics:
 #        - uid: node
 #          proto: http
 #          port_path: ":9100/metrics"
+#        - template: node-exporter
+#          command: 'curl -sS -f http://%node_host%:9100/metrics'
+#          runtime_data: true
+#          filter:
+#            rxx: blah
 #        - uid: kubelet
 #          proto: https
 #          port_path: ":10250/metrics"

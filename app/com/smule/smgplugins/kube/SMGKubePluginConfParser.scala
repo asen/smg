@@ -1,7 +1,5 @@
 package com.smule.smgplugins.kube
 
-import java.io.File
-
 import com.smule.smg.config.SMGConfigParser
 import com.smule.smg.config.SMGConfigParser.{yobjList, yobjMap}
 import com.smule.smg.core.{SMGFileUtil, SMGFilter, SMGLoggerApi}
@@ -10,12 +8,13 @@ import com.smule.smg.notify.SMGMonNotifyConf
 import com.smule.smgplugins.scrape.RegexReplaceConf
 import org.yaml.snakeyaml.Yaml
 
+import java.io.File
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLoggerApi) {
 
-  private def parseClusterMetricConf(ymap: mutable.Map[String, Object]): Option[SMGKubeClusterMetricsConf] = {
+  private def parseNodeMetricConf(ymap: mutable.Map[String, Object]): Option[SMGKubeNodeMetricsConf] = {
     if (!ymap.contains("uid")){
       return None
     }
@@ -28,7 +27,7 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
     )
 
     Some(
-      SMGKubeClusterMetricsConf(
+      SMGKubeNodeMetricsConf(
         uid = uid,
         humanName = ymap.get("name").map(_.toString),
         interval = ymap.get("interval").map(_.asInstanceOf[Int]),
@@ -59,10 +58,21 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
       pluginId + "." + uid,
       ymap.toMap.map(t => (t._1, t._2.toString))
     )
-    val nodeMetrics = if (ymap.contains("node_metrcis")){
-      val metricsSeq = yobjList(ymap("node_metrcis"))
-      metricsSeq.flatMap { o => parseClusterMetricConf(yobjMap(o))}
-    } else Seq()
+    val nodeMetrics = ListBuffer[SMGKubeNodeMetricsConf]()
+    val nodeAutoconfs = ListBuffer[Map[String, Object]]()
+    if (ymap.contains("node_metrics")){
+      val metricsSeq = yobjList(ymap("node_metrics"))
+      metricsSeq.foreach { o =>
+        val m = yobjMap(o)
+        if (m.contains("template")) {
+          nodeAutoconfs += m.toMap
+        } else {
+          val ret = parseNodeMetricConf(m)
+          if (ret.isDefined)
+            nodeMetrics += ret.get
+        }
+      }
+    }
 
     val autoConfs = if (ymap.contains("auto_confs")){
       val seq = yobjList(ymap("auto_confs"))
@@ -85,7 +95,8 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
         regexReplaces = ymap.get("regex_replaces").map { yo: Object =>
           yobjList(yo).flatMap { o =>  RegexReplaceConf.fromYamlObject(yobjMap(o)) }
         }.getOrElse(Seq()),
-        nodeMetrics = nodeMetrics,
+        nodeMetrics = nodeMetrics.toList,
+        nodeAutoconfs = nodeAutoconfs.toList,
         autoConfs = autoConfs,
         parentPfId  = ymap.get("pre_fetch").map(_.toString),
         parentIndexId = ymap.get("parent_index").map(_.toString),

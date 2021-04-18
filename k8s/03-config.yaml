@@ -67,10 +67,13 @@ data:
       fetch_timeout: 8
       rra_dtl: kube_dtl_15s
       rra_agg: kube_agg_15s
-      node_metrcis:
+      node_metrics:
         - uid: node
           proto: http
           port_path: ":9100/metrics"
+        - template: node-exporter
+          command: "curl -sS -s http://%node_host%:9100/metrics"
+          runtime_data: true
         - uid: kubelet
           proto: https
           port_path: ":10250/metrics"

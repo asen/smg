@@ -10,7 +10,12 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 object SMGKubeClient {
-  case class KubeNode(name: String, hostName: Option[String], ipAddress: Option[String])
+  case class KubeNode(
+                       name: String,
+                       hostName: Option[String],
+                       ipAddress: Option[String],
+                       labels: Map[String, String]
+                     )
 
   trait KubePort {
     val port: Int
@@ -186,10 +191,14 @@ class SMGKubeClient(log: SMGLoggerApi,
       val nodeAddresses = n.getStatus.getAddresses.asScala
       val ipAddress = nodeAddresses.find(_.getType == "InternalIP").map(_.getAddress)
       val hostName = nodeAddresses.find(_.getType == "Hostname").map(_.getAddress)
+      val nodeLabels = n.getMetadata.getLabels.asScala.toMap ++ n.getSpec.getTaints.asScala.map { tnt =>
+        ("_taint."+ tnt.getKey, tnt.getValue + ":" + tnt.getEffect)
+      }
       KubeNode(
         name = n.getMetadata.getName,
         hostName = hostName,
-        ipAddress = ipAddress
+        ipAddress = ipAddress,
+        labels = nodeLabels
       )
     }
   }

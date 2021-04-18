@@ -20,11 +20,13 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                               log: SMGLoggerApi) {
   private def pluginConf = pluginConfParser.conf // function - do not cache pluginConf
 
-  private def processClusterNodeMetricsConf(objectName: String,
-                                            targetHost: String,
-                                            cConf: SMGKubeClusterConf,
-                                            cmConf: SMGKubeClusterMetricsConf,
-                                            parentIndexId: Option[String]): Option[SMGScrapeTargetConf] = {
+  private def processNodeMetricsConf(
+                                      objectName: String,
+                                      targetHost: String,
+                                      cConf: SMGKubeClusterConf,
+                                      cmConf: SMGKubeNodeMetricsConf,
+                                      parentIndexId: Option[String]
+                                    ): Option[SMGScrapeTargetConf] = {
     val targetType = "node"
     val tcUid = s"${cConf.uidPrefix}$targetType.$objectName.${cmConf.uid}"
     if (!SMGConfigParser.validateOid(tcUid)) {
@@ -67,14 +69,20 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   def listAutoDiscoveredCommands: Seq[AutoDiscoveredCommandStatus] =
     autoDiscoveryCache.listAutoDiscoveredCommands
 
-  private def logSkipped(kubeNsObject: KubeNsObject, targetType: String,
+
+  private def logSkipped(namespace: String, name: String, targetType: String,
                          clusterUid: String, reason: String): Unit = {
     val msg = s"SMGKubeClusterProcessor.checkAutoConf(${targetType}): ${clusterUid} " +
-      s"${kubeNsObject.namespace}.${kubeNsObject.name}: skipped due to $reason"
+      s"${namespace}${name}: skipped due to $reason"
     if (pluginConf.logSkipped)
       log.info(msg)
     else
       log.debug(msg)
+  }
+
+  private def logSkipped(kubeNsObject: KubeNsObject, targetType: String,
+                         clusterUid: String, reason: String): Unit = {
+    logSkipped(kubeNsObject.namespace, kubeNsObject.name, targetType, clusterUid, reason)
   }
 
   private def checkMetricsAutoConfCommand(
@@ -342,21 +350,26 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
   }
 
-  def processAutoconfMap(
+  private def processAutoconfMap(
                           autoconfMap: Map[String, Object],
                           cConf: SMGKubeClusterConf,
-                          autoConf: SMGKubeClusterAutoConf,
-                          nsObject: KubeNsObject,
+                          targetType: String,
+                          filter: Option[SMGFilter],
+                          kubeObjectName: String,
+                          kubeObjectNamespace: Option[String],
+                          kubeObjectLabels: Map[String,String],
                           ipAddr: String,
                           idxId: Option[Int],
                           parentIndexId: Option[String]
                         ): Option[SMGAutoTargetConf] = {
 
+    val namespaceStr = kubeObjectNamespace.map(_ + ".").getOrElse("")
+    val namespaceFnStr = kubeObjectNamespace.map(_ + "-").getOrElse("")
     val contextMap = mutable.Map[String,Object]()
     contextMap ++= autoconfMap
     try {
-      val template = contextMap.get("template")
-      val templateName = template.get.toString
+      val template = contextMap("template").toString
+      val templateAlias = contextMap.get("template_alias").map(_.toString).getOrElse(template)
       val staticOutput = contextMap.remove("output").map(_.toString)
       val staticUid = contextMap.remove("uid").map(_.toString)
       val staticNodeName = contextMap.remove("node_name").map(_.toString)
@@ -371,34 +384,34 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       contextMap.put("kube_host", ipAddr)
       contextMap.put("id_prefix", cConf.uidPrefix)
       contextMap.put("kube_prefix", cConf.uidPrefix)
-      val idName =  autoConf.targetType + "." + nsObject.namespace +
-        "." + nsObject.name + "." + portName + idxId.map(x => s"._$x").getOrElse("") +
-        s".${templateName}"
+      val idName =  targetType + "." + namespaceStr +
+        kubeObjectName + "." + portName + idxId.map(x => s"._$x").getOrElse("") +
+        s".${templateAlias}"
       contextMap.put("kube_id_name", idName)
       val nodeName = staticNodeName.getOrElse(idName)
       val uid = cConf.uidPrefix + idName
       contextMap.put("kube_uid", uid)
-      val title = s"${cConf.hnamePrefix}${autoConf.targetType} " +
-        s"${nsObject.namespace}.${nsObject.name}:${portName}${idxId.map(x => s" ($x)").getOrElse("")} " +
-        s"- ${templateName}"
+      val title = s"${cConf.hnamePrefix}${targetType} " +
+        s"${namespaceStr}${kubeObjectName}:${portName}${idxId.map(x => s" ($x)").getOrElse("")} " +
+        s"- ${templateAlias}"
       contextMap.put("kube_title", title)
-      if (autoConf.filter.isDefined){
-        val flt = autoConf.filter.get
+      if (filter.isDefined){
+        val flt = filter.get
         if (!flt.matchesId(uid)){
-          logSkipped(nsObject, autoConf.targetType.toString, cConf.uid,
+          logSkipped(namespaceStr, kubeObjectName, targetType.toString, cConf.uid,
             s"filter not matching id: $uid")
           return None
         }
       }
-      val confOutput = staticOutput.getOrElse(s"${cConf.uid}-${autoConf.targetType}-${nsObject.namespace}-" +
-        s"${nsObject.name}-${portName}${idxId.map(x => s"-$x").getOrElse("")}-${templateName}.yml")
+      val confOutput = staticOutput.getOrElse(s"${cConf.uid}-${targetType}-${namespaceFnStr}" +
+        s"${kubeObjectName}-${portName}${idxId.map(x => s"-$x").getOrElse("")}-${templateAlias}.yml")
 
-      val extraLabels = Map("smg_target_type"-> autoConf.targetType.toString,
+      val extraLabels = Map("smg_target_type"-> targetType,
         "smg_target_host"-> ipAddr,
-        "smg_target_port" -> portName) ++ nsObject.labels
+        "smg_target_port" -> portName) ++ kubeObjectLabels
       contextMap.put("extra_labels", extraLabels)
       val ret = SMGAutoTargetConf (
-        template = templateName,
+        template = template,
         output = Some(confOutput),
         uid = staticUid,
         runtimeData = runtimeDataOpt.contains("true"),
@@ -408,10 +421,9 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         command = commandOpt,
         context = contextMap.toMap
       )
-
       Some(ret)
     } catch { case t: Throwable =>
-      log.ex(t, s"SMGKubeClusterProcessor.processAutoconfMap(${nsObject.name}.${nsObject.namespace}): " +
+      log.ex(t, s"SMGKubeClusterProcessor.processAutoconfMap(${kubeObjectName}.${kubeObjectNamespace}): " +
         s"Context: ${contextMap}. Unexpected error: ${t.getMessage}")
       None
     }
@@ -424,7 +436,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 
     val autoconfMaps = processAutoconfAnnotations(kubeService.ports, nobj.annotations, autoConf.autoconfAnnotationsPrefix)
     val autoconfs = autoconfMaps.flatMap { acm =>
-      processAutoconfMap(acm, cConf, autoConf, nobj,
+      processAutoconfMap(acm, cConf, autoConf.targetType.toString, autoConf.filter,
+        nobj.name, Some(nobj.namespace), nobj.labels,
         kubeService.clusterIp, idxId = None,
         parentIndexId = cConf.endpointsIndexId)
     }.map(Right(_))
@@ -451,7 +464,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         val nobj = kubeEndpoint
         val autoconfMaps = processAutoconfAnnotations(subs.ports, nobj.annotations, autoConf.autoconfAnnotationsPrefix)
         val autoconfs = autoconfMaps.flatMap { acm =>
-          processAutoconfMap(acm, cConf, autoConf, nobj,
+          processAutoconfMap(acm, cConf, autoConf.targetType.toString, autoConf.filter,
+            nobj.name, Some(nobj.namespace), nobj.labels,
             addr, idxId = idx,
             parentIndexId = cConf.endpointsIndexId)
         }.map(Right(_))
@@ -486,7 +500,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           val nobj = KubeNamedObject(pod.stableName(idx), pod.namespace, pod.labels, pod.annotations)
           val autoconfMaps = processAutoconfAnnotations(pod.ports, pod.annotations, autoConf.autoconfAnnotationsPrefix)
           val autoconfs = autoconfMaps.flatMap { acm =>
-            processAutoconfMap(acm, cConf, autoConf, nobj,
+            processAutoconfMap(acm, cConf, autoConf.targetType.toString, autoConf.filter,
+              nobj.name, Some(nobj.namespace), nobj.labels,
               pod.podIp.get, idxId = None,
               parentIndexId = cConf.podPortsIndexId)
           }.map(Right(_))
@@ -597,11 +612,29 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     try {
       // generate SMGScrapeTargetConf from topNodes and topPods
       val topStats = processKubectlTopStats(cConf)
-      // generate metrics confs
-      val nodeMetricsConfs: Seq[SMGScrapeTargetConf] = cConf.nodeMetrics.flatMap { cmConf =>
+      // generate metrics confs and autoconfs
+      val nodeMetricsConfs = ListBuffer[SMGScrapeTargetConf]()
+      val nodeAutoConfs = ListBuffer[SMGAutoTargetConf]()
+      kubeClient.listNodes().foreach { kubeNode =>
+        val targetHost = kubeNode.ipAddress.getOrElse(kubeNode.hostName.getOrElse(kubeNode.name))
+        cConf.nodeMetrics.foreach { cmConf =>
+          processNodeMetricsConf(kubeNode.name, targetHost, cConf,
+            cmConf, cConf.nodesIndexId).foreach { c =>
+            nodeMetricsConfs += c
+          }
+        }
+        cConf.nodeAutoconfs.foreach { ac =>
+          val flt = ac.get("filter").map(SMGConfigParser.yobjMap).map(m => SMGFilter.fromYamlMap(m.toMap))
+          val aacOpt = processAutoconfMap(ac, cConf, "node", flt, kubeNode.name, None,
+            kubeNode.labels, targetHost, None, cConf.nodesIndexId)
+          if (aacOpt.isDefined)
+            nodeAutoConfs += aacOpt.get
+        }
+      }
+      cConf.nodeMetrics.flatMap { cmConf =>
         kubeClient.listNodes().flatMap { kubeNode =>
           val targetHost = kubeNode.ipAddress.getOrElse(kubeNode.hostName.getOrElse(kubeNode.name))
-          processClusterNodeMetricsConf(kubeNode.name, targetHost, cConf, cmConf, cConf.nodesIndexId)
+          processNodeMetricsConf(kubeNode.name, targetHost, cConf, cmConf, cConf.nodesIndexId)
         }
       }
       val autoMetricsConfs: Seq[Either[SMGScrapeTargetConf,SMGAutoTargetConf]] = cConf.autoConfs.
@@ -628,7 +661,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val scrapeText = dumpObjList(cConf.uid, "scrape", scrapeObjsLst)
 
       val autoconfObjsLst = new java.util.ArrayList[Object]()
-      autoMetricsConfs.flatMap(x => x.right.toOption).foreach { atConf =>
+      (nodeAutoConfs.toList ++ autoMetricsConfs.flatMap(x => x.right.toOption)).foreach { atConf =>
         autoconfObjsLst.add(SMGAutoTargetConf.dumpYamlObj(atConf))
       }
       val autoconfText = dumpObjList(cConf.uid, "autoconf", autoconfObjsLst)
