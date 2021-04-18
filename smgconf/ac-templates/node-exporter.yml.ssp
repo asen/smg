@@ -11,6 +11,7 @@
 <%@ val id_prefix: String = "host." %>
 <%@ val title_prefix: String = "Host " %>
 <%@ val interval: Int = 60 %>
+<%@ val rra_def: String = "" %>
 <%@ val pre_fetch: String = "" %>
 <%@ val parent_index: String = "" %>
 <%@ val notify_fail: String = "" %>
@@ -187,7 +188,10 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
   command: ":scrape get node_load1,node_load5,node_load15"
   title: "<%= title_prefix %><%= node_name %> - Load average over 1/5/15 min periods"
-  interval: 60
+  interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: sl1min
   - label: sl5min
@@ -198,6 +202,9 @@
 - id: +<%= id_prefix %><%= node_name %>._agg.cpu
   title: "<%= title_prefix %><%= node_name %> - CPU usage (all cores)"
   rrd_type: DDERIVE
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   stack: true
   interval: <%= interval %>
   vars:
@@ -219,6 +226,9 @@
   title: "<%= title_prefix %><%= node_name %> - Interrupts/context switches"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: ints
   - label: ctxs
@@ -239,6 +249,9 @@
   command: "-"
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics.mem.values
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   title: "<%= node_name %> - /proc/meminfo details"
   vars:
   - label: MemTotal
@@ -258,6 +271,9 @@
   command: ":cc rpn $ds0,-$ds1,+,-$ds2,+,-$ds3,+,-$ds4,+,100,*,$ds0,/"
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics.mem.values
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   title: "<%= node_name %> - /proc/meminfo Used % (total - free - cached - reclaimable - buffers ) * 100 / total"
   vars:
   - label: "used percent"
@@ -270,6 +286,9 @@
   title: "<%= title_prefix %><%= node_name %> - Block Device I/O (all devices)"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: wrtn
     mu: "B/s"
@@ -312,6 +331,9 @@
   command: ":cc rpn $ds1,$ds0,-,100,*,$ds1,/ $ds3,$ds2,-,100,*,$ds3,/"
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics.fs.<%= drvsafe %>.values
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   title: "<%= node_name %> - Disk usage <%= mountp %> filesystem"
   vars:
   - label: "used bytes"
@@ -331,6 +353,9 @@
   title: "<%= title_prefix %><%= node_name %> - Network Device I/O (all devices)"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: in
     mu: "b/s"
@@ -350,7 +375,10 @@
   command: ":scrape get node_netstat_Tcp_PassiveOpens,node_netstat_Tcp_ActiveOpens"
   title: "<%= title_prefix %><%= node_name %> - Network New Connections"
   rrd_type: DDERIVE
-  interval: 60
+  interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: in
     mu: "c/s"
@@ -361,7 +389,10 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
   command: ":scrape get node_netstat_Tcp_CurrEstab"
   title: "<%= title_prefix %><%= node_name %> - Network Established Connections"
-  interval: 60
+  interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: conns
     mu: "c/s"
@@ -372,6 +403,9 @@
   title: "<%= title_prefix %><%= node_name %> - Syncookies Recv/Sent/Failed"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: recv
     mu: "ev/s"
@@ -386,6 +420,9 @@
   title: "<%= title_prefix %><%= node_name %> - TCP InErrs/ListenDrops/ListenOverflows"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: inErrs
     mu: "ev/s"
@@ -400,6 +437,9 @@
   title: "<%= title_prefix %><%= node_name %> - TCP SynRetrans/RetransSegs"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: synRtrn
     mu: "ev/s"
@@ -412,6 +452,9 @@
   title: "<%= title_prefix %><%= node_name %> - UDP4 InDatagrams/OutDatagrams"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: in
     mu: "pkt/s"
@@ -424,6 +467,9 @@
   title: "<%= title_prefix %><%= node_name %> - UDP4 InErrs/LiteInErrs/NoPorts"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: inErrs
     mu: "ev/s"
@@ -438,6 +484,9 @@
   title: "<%= title_prefix %><%= node_name %> - UDP6 InDatagrams/OutDatagrams"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: in
     mu: "pkt/s"
@@ -450,6 +499,9 @@
   title: "<%= title_prefix %><%= node_name %> - UDP6 InErrs/LiteInErrs/NoPorts"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: inErrs
     mu: "ev/s"
@@ -465,6 +517,9 @@
   title: "<%= title_prefix %><%= node_name %> - Netstat IPV4 I/O Octets"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: in
     mu: "B/s"
@@ -477,6 +532,9 @@
   title: "<%= title_prefix %><%= node_name %> - Netstat IPV6 I/O Octets"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: in
     mu: "B/s"
@@ -504,6 +562,9 @@
   rrd_type: DDERIVE
   stack: true
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
 #for (stat <- cpuUsageComponents)
   - label: <%= stat %>
@@ -522,6 +583,9 @@
   command: ":scrape get node_disk_written_bytes_total.device.<%= dvc %>,node_disk_read_bytes_total.device.<%= dvc %>"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: wrtn
     mu: "B/s"
@@ -539,6 +603,9 @@
   command: ":scrape get node_network_receive_bytes_total.device.<%= dvc %>,node_network_transmit_bytes_total.device.<%= dvc %>"
   rrd_type: DDERIVE
   interval: <%= interval %>
+#if (rra_def != "")
+  rra_def: <%= rra_def %>
+#end
   vars:
   - label: in
     mu: "b/s"
