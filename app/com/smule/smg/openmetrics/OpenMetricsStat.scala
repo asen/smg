@@ -24,6 +24,7 @@ case class OpenMetricsStat(
     (if (prefix == "") "" else s"($prefix) ") +
       name + grpIdxTitlePart + metaHelp.map(s => s" - ${s}").getOrElse("")
   }
+  lazy val labelsAsMap: Map[String, String] = labels.toMap
 }
 
 object OpenMetricsStat {
