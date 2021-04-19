@@ -21,8 +21,12 @@
   "node_network_up=1",
   "node_network_address_assign_type=0"
 ) %>
+<%@ val net_dvc_filters_oldv: Seq[String] = Seq(
+  "device=~^(eth|en).*"
+) %>
 <%@ val fs_label_filters: Seq[String] = Seq(
   "device!=tmpfs",
+  "device!=sunrpc",
   "mountpoint!=/boot"
 ) %>
 <%@ val netio_max: String = "" %>
@@ -30,11 +34,22 @@
   // parse /metrics output
   val parsed = com.smule.smg.openmetrics.OpenMetricsStat.parseText(data.mkString("\n"), labelsInUid = true, None)
   val parsedByUid = parsed.groupBy(_.smgUid)
+
+  // XXX older node exporter reports some stats without _total/_bytes suffixes
+  var totalSuffix = "_total"
+  var bytesSuffix = "_bytes"
+  var secondsSuffix = "_seconds"
+  if (parsedByUid.contains("node_intr")) {
+    totalSuffix = ""
+    bytesSuffix = ""
+    secondsSuffix = ""
+  }
+
   val cpuUsageComponents = Seq("user", "nice", "system", "idle", "iowait", "irq", "softirq", "steal")
-  val cpuSecondsPrefix = "node_cpu_seconds_total.cpu."
+  val cpuSecondsPrefix = s"node_cpu${secondsSuffix}${totalSuffix}.cpu."
   val cpuIdPrefixes = scala.collection.mutable.ListBuffer[String]()
 
-  val diskReadBytesPrefix = "node_disk_read_bytes_total.device."
+  val diskReadBytesPrefix = s"node_disk_read${bytesSuffix}${totalSuffix}.device."
   val diskDevices = scala.collection.mutable.ListBuffer[String]()
 
   val networkDeviceIdPrefix = "node_network_device_id.device."
@@ -44,7 +59,13 @@
     (s"${arr(0)}.device.", scala.util.Try(arr(1).toDouble).getOrElse(Double.NaN))
   }
 
-  val fsAvailBytesPrefix = "node_filesystem_avail_bytes.device."
+  val networkDeviceIdPrefixOldv = "node_network_receive_bytes.device."
+  val networkDevicesOldv = scala.collection.mutable.ListBuffer[String]()
+  val networkDeviceFiltersOldv = net_dvc_filters_oldv.flatMap { s =>
+    com.smule.smg.core.SMGFilterLabels.parse(s)
+  }
+
+  val fsAvailBytesPrefix = s"node_filesystem_avail${bytesSuffix}.device."
   val fsLabelFilters = fs_label_filters.flatMap { s =>
     com.smule.smg.core.SMGFilterLabels.parse(s)
   }
@@ -52,14 +73,10 @@
 
   parsed.foreach { oms =>
     if (oms.smgUid.startsWith(cpuSecondsPrefix)){
-      val cpuId = scala.util.Try(
-        oms.smgUid.stripPrefix(cpuSecondsPrefix).split("\\.",2)(0).toInt
-      ).getOrElse(-1)
-      if (cpuId > -1) {
-        val cip = s"${cpuSecondsPrefix}${cpuId}."
-        if (!cpuIdPrefixes.contains(cip))
-          cpuIdPrefixes += cip
-      }
+      val cpuId = oms.smgUid.stripPrefix(cpuSecondsPrefix).split("\\.",2)(0)
+      val cip = s"${cpuSecondsPrefix}${cpuId}."
+      if (!cpuIdPrefixes.contains(cip))
+        cpuIdPrefixes += cip
     } else if (oms.smgUid.startsWith(diskReadBytesPrefix)) {
       diskDevices += oms.smgUid.stripPrefix(diskReadBytesPrefix)
     } else if (oms.smgUid.startsWith(networkDeviceIdPrefix)) {
@@ -71,6 +88,11 @@
       val dvcName = oms.smgUid.stripPrefix(networkDeviceIdPrefix)
       if (filterDevice(dvcName))
         networkDevices += dvcName
+    } else if (oms.smgUid.startsWith(networkDeviceIdPrefixOldv)) {
+        val lblsMap: Map[String,String] = oms.labels.toMap
+        if (networkDeviceFiltersOldv.forall(_.matches(lblsMap)) && lblsMap.contains("device")) {
+          networkDevicesOldv += lblsMap("device")
+        }
     } else if (oms.smgUid.startsWith(fsAvailBytesPrefix)) {
       val lblsMap: Map[String,String] = oms.labels.toMap
       if (fsLabelFilters.forall(_.matches(lblsMap)) && lblsMap.contains("mountpoint"))
@@ -239,11 +261,7 @@
 
 <%
   val memProps = Seq("MemTotal", "MemFree", "Cached", "SReclaimable", "Buffers")
-  val memBytesSx = if (parsedByUid.contains("node_memory_MemTotal_bytes"))
-    "_bytes"
-  else
-    ""
-  val memScapeGetParams = memProps.map(s => s"node_memory_${s}${memBytesSx}").mkString(",")
+  val memScapeGetParams = memProps.map(s => s"node_memory_${s}${bytesSuffix}").mkString(",")
 %>
 - type: $pre_fetch
   id: <%= id_prefix %><%= node_name %>.metrics.mem.values
@@ -320,7 +338,7 @@
 //  "node_filesystem_size_bytes",
 //  "node_filesystem_files",
 //  "node_filesystem_files_free"
-  val fsScapeGetParams = Seq("avail_bytes", "size_bytes", "files_free", "files").map { s =>
+  val fsScapeGetParams = Seq(s"avail${bytesSuffix}", s"size${bytesSuffix}", "files_free", "files").map { s =>
     s"node_filesystem_${s}.device.${idsx}"
   }.mkString(",")
 %>
@@ -354,8 +372,10 @@
 #end
 
 #### Network Stats
-
-#if (networkDevices.length > 0)
+<%
+  val myNetDevices = if (networkDevices.nonEmpty) networkDevices else networkDevicesOldv
+%>
+#if (myNetDevices.length > 0)
 # another agg object
 - id: +<%= id_prefix %><%= node_name %>._agg.netio
   title: "<%= title_prefix %><%= node_name %> - Network Device I/O (all devices)"
@@ -373,7 +393,7 @@
     cdef: "$ds,8,*"
   op: SUM
   ids:
-#for (dvc <- networkDevices)
+#for (dvc <- myNetDevices)
   - <%= id_prefix %><%= node_name %>._dtl.<%= dvc %>.netio
 #end
 #end
@@ -602,13 +622,12 @@
 
 #end
 
-#if (networkDevices.length > 0)
-#for (dvc <- networkDevices)
+#for (dvc <- myNetDevices)
 # dtl object for netio dvc <%= dvc %>
 - id: <%= id_prefix %><%= node_name %>._dtl.<%= dvc %>.netio
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  title: "<%= title_prefix %><%= node_name %> - Block Device I/O (<%= dvc %>)"
-  command: ":scrape get node_network_receive_bytes_total.device.<%= dvc %>,node_network_transmit_bytes_total.device.<%= dvc %>"
+  title: "<%= title_prefix %><%= node_name %> - Network Device I/O (<%= dvc %>)"
+  command: ":scrape get node_network_receive_bytes<%= totalSuffix %>.device.<%= dvc %>,node_network_transmit_bytes<%= totalSuffix %>.device.<%= dvc %>"
   rrd_type: DDERIVE
   interval: <%= interval %>
 #if (rra_def != "")
@@ -622,5 +641,4 @@
     mu: "b/s"
     cdef: "$ds,8,*"
 
-#end
 #end
