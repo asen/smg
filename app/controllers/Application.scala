@@ -567,7 +567,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  private val FETCH_HUMAN_DATE_FORMAT = "yyyy-MM-dd HH:mm:SS"
+  private val FETCH_HUMAN_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss"
 
   private def fetchCommon(ov: SMGObjectView, d: Boolean, ret: Seq[SMGRrdRow]): Result = {
     val dateFormatter = new SimpleDateFormat(FETCH_HUMAN_DATE_FORMAT)
