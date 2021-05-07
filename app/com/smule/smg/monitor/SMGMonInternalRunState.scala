@@ -11,6 +11,7 @@ class SMGMonInternalRunState(val interval: Int,
 
   override val id: String = SMGMonInternalRunState.stateId(interval, pluginId)
 
+  override def intervals: Seq[Int] = Seq(interval)
   override def alertKey: String = id
 
   override def parentId: Option[String] = None

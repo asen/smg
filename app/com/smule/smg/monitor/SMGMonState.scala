@@ -41,6 +41,7 @@ trait SMGMonState extends SMGTreeNode {
   def pfId: Option[String]
   def aggShowUrlFilter: Option[String]
   def remote : SMGRemote
+  def intervals: Seq[Int]
 
   def recentStates: Seq[SMGState]
 

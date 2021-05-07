@@ -27,7 +27,7 @@ trait GrapherApi {
     * @param cmdId - top-level command id to execute and then all child commands as defined
     * @return - true if matching interval and command were found and false otherwise.
     */
-  def runCommandsTree(interval: Int, cmdId: String): Boolean
+  def runCommandsTreeNow(interval: Int, cmdId: String): Future[Boolean]
 
   /**
     * Get Top Level configured indexes, grouped by remote

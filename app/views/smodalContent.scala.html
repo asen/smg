@@ -10,7 +10,11 @@
     <font color="@{obj.node.state.recentStates.head.stateColor}">
       <strong>@{obj.node.state.recentStates.head.state}</strong></font>
     }
-    <strong>@{obj.node.state.text}</strong> @monStateActions(obj.node.state, None)<br/>
+    <strong>@{obj.node.state.text}</strong> @monStateActions(obj.node.state, None)
+      @if(obj.node.fetchCommand.isDefined){
+        @monStateRerunAction(obj.node.state.id)
+      }
+      <br/>
     Previous states: @for(s <- obj.node.state.recentStates.tail) {
       @smgState(s) |
     }

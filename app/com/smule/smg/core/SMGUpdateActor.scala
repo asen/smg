@@ -89,7 +89,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
           childObjTrees.foreach { rrdObjTree =>
             SMGUpdateActor.sendSMGFetchCommandMessage(actorSystem, sendToSelfActor,
               ecForInterval(interval), interval, Seq(rrdObjTree), updTss,
-              pf.childConc, updateCounters, myData, log)
+              pf.childConc, updateCounters, myData, log, forceDelay = None)
           }
 //          log.debug(s"SMGUpdateActor.processTreeRoot($interval): Sent update messages for " +
 //            s"[${pf.id}] object children (${childObjTrees.size})")
@@ -97,7 +97,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
         if (childPfTrees.nonEmpty) {
           SMGUpdateActor.sendSMGFetchCommandMessage(actorSystem, sendToSelfActor,
             ecForInterval(interval), interval, childPfTrees, updTss,
-            pf.childConc, updateCounters, myData, log)
+            pf.childConc, updateCounters, myData, log, forceDelay = None)
 //          log.debug(s"SMGUpdateActor.processTreeRoot($interval): Sent update messages for " +
 //            s"[${pf.id}] pre_fetch children (${childPfTrees.size})")
         }
@@ -243,9 +243,10 @@ object SMGUpdateActor {
                                   childConc: Int,
                                   updateCounters: Boolean,
                                   parentData: Option[ParentCommandData],
-                                  log: SMGLoggerApi
+                                  log: SMGLoggerApi,
+                                  forceDelay: Option[Double]
                                 ) : Unit = {
-    val byDelay = rootCommands.groupBy(_.node.delay)
+    val byDelay = rootCommands.groupBy(rc => if (forceDelay.isDefined) forceDelay.get else rc.node.delay)
     byDelay.foreach { case (delay, seq) =>
       val msg = SMGFetchCommandMessage(interval, seq, ts, childConc,
         updateCounters, parentData)

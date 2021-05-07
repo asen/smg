@@ -201,6 +201,13 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     } else Future { Seq() }
   }
 
+  override def runCommandTree(interval: Int, id: String): Future[Boolean]  = {
+    val remoteId = SMGRemote.remoteId(id)
+    if (clientForId(remoteId).nonEmpty){
+      clientForId(remoteId).get.runCommandTree(interval, SMGRemote.localId(id))
+    } else Future { false }
+  }
+
   val currentFutures = new java.util.concurrent.ConcurrentHashMap[String,File]()
 
   override def downloadRrd(robj:SMGObjectView): Future[Option[SMGObjectView]] = {
@@ -315,7 +322,13 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     if (clientForId(remoteId).nonEmpty)
       clientForId(remoteId).get.monitorTrees(flt, rootId, limit)
     else Future { (Seq(), 0) }
+  }
 
+  override def monitorRerun(id: String, intvls: Seq[Int]): Future[Boolean] = {
+    val remoteId = SMGRemote.remoteId(id)
+    if (clientForId(remoteId).nonEmpty){
+      clientForId(remoteId).get.monitorRerun(SMGRemote.localId(id), intvls)
+    } else Future { false }
   }
 
   override def monitorSilenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int,

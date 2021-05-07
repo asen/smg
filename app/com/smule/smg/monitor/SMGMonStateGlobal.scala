@@ -29,6 +29,8 @@ case class SMGMonStateGlobal(title: String,
 
   override val errorRepeat  = 1
 
+  override def intervals: Seq[Int] = Seq()
+
   override def alertKey = s"${SMGMonState.MON_STATE_GLOBAL_PX}$label"
 
   override def recentStates: Seq[SMGState] = Seq(currentState)

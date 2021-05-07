@@ -9,11 +9,13 @@ import com.smule.smg.monitor._
 import com.smule.smg.notify.SMGMonNotifyApi
 import com.smule.smg.remote.{SMGRemotesApi, _}
 import com.smule.smg.rrd.SMGRrdFetchParams
+
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 /**
   * Created by asen on 11/19/15.
@@ -277,6 +279,15 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
+  def runCommandTree(interval: Int, id: String): Action[AnyContent] = Action.async {
+    smg.runCommandsTreeNow(interval, id).map { ret =>
+      if (ret)
+        Ok(s"OK - sent message for ${id}")
+      else
+        NotFound(s"ERROR - did not find commands tree with root ${id}")
+    }
+  }
+
   def pluginData(pluginId: String) = Action { request =>
     val httpParams = request.queryString.map { case (k, v) => k -> v.mkString }
     configSvc.plugins.find(p => p.pluginId == pluginId) match {
@@ -291,6 +302,25 @@ class Api  @Inject() (actorSystem: ActorSystem,
     val ids = idsStr.split(',').toList
     val objsById = configSvc.config.viewObjectsById
     ids.map(oid => objsById.get(oid)).filter(o => o.nonEmpty).map(o => o.get)
+  }
+
+  def monitorRerun(id: String): Action[AnyContent] = Action.async { request =>
+    val paramsOpt = request.body.asFormUrlEncoded
+    val intervals : Seq[Int] = if (paramsOpt.isDefined && paramsOpt.get.contains("intvls")) {
+      val params: Map[String, Seq[String]] = paramsOpt.get
+      val ivsStr: String = params("intvls").headOption.getOrElse("")
+      if (ivsStr == "")
+        Seq[Int]()
+      else {
+        ivsStr.split(",").flatMap{s => Try(s.toInt).toOption }
+      }
+    } else Seq()
+    monitorApi.monitorRerun(id, intervals).map { ret =>
+      if (ret)
+        Ok("Success")
+      else
+        NotFound("Some error occured (posibly state not found)")
+    }
   }
 
   def monitorLog(period: Option[String], limit: Option[Int], sev: Option[String], soft: Option[String],

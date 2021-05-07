@@ -92,6 +92,14 @@ trait SMGRemotesApi {
   def fetchAggRows(aobj: SMGAggObjectView, params: SMGRrdFetchParams): Future[Seq[SMGRrdRow]]
 
   /**
+    * request a command tree to be run immediately (instead of when scheduled)
+    * @param interval - the command tree interval
+    * @param id - the commad tree id
+    * @return - future true on success and false on failure
+    */
+  def runCommandTree(interval: Int, id: String): Future[Boolean]
+
+  /**
     * Download rrd file from remote instance (to use for cross-remote agg images)
     * @param robj
     * @return
@@ -173,6 +181,8 @@ trait SMGRemotesApi {
     * @return
     */
   def monitorTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], limit: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
+
+  def monitorRerun(id: String, intvls: Seq[Int]): Future[Boolean]
 
   def monitorSilenceAllTrees(remoteId: String, flt: SMGMonFilter, rootId: Option[String], until: Int,
                              sticky: Boolean, stickyDesc: Option[String]): Future[Boolean]

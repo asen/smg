@@ -75,6 +75,17 @@ trait SMGMonitorApi {
   def monTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String], limit: Int): Future[(Seq[SMGTree[SMGMonState]], Int)]
 
   /**
+    * re-run some monitor state command tree,
+    * for the given sequence of intervals (or all intervals if seq is empty)
+    *
+    * @param id
+    * @param intvls
+    * @return
+    */
+  def monitorRerun(id: String, intvls: Seq[Int]): Future[Boolean]
+
+
+  /**
     *
     * @param remoteIds
     * @param flt

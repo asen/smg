@@ -1,0 +1,5 @@
+@(stateId: String)
+<form style="display: inline-block;" method="POST" action="/monitor/rerun/@stateId">
+  <input type="hidden" name="id" value="@{stateId}">
+  <input type="submit" value="Run now">
+</form>

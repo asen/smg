@@ -17,6 +17,7 @@ case class SMGMonStateView(id: String,
                            aggShowUrlFilter: Option[String],
                            recentStates: Seq[SMGState],
                            errorRepeat: Int,
+                           intervals: Seq[Int],
                            remote: SMGRemote
                           ) extends SMGMonState {
 

@@ -112,7 +112,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       commandTrees.foreach { fRoot =>
         SMGUpdateActor.sendSMGFetchCommandMessage(actorSystem, updateActor,
           configSvc.executionContexts.ctxForInterval(interval),
-            interval, Seq(fRoot), None, 1, updateCounters = true, None, log)
+            interval, Seq(fRoot), None, 1, updateCounters = true, None, log, forceDelay = None)
         log.debug(s"SMGrapher.run(interval=$interval): Sent fetch update message for: ${fRoot.node.id}")
       }
       log.info(s"SMGrapher.run(interval=$interval): sent messages for $sz fetch commands")
@@ -135,21 +135,25 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     }
   }
 
-  override def runCommandsTree(interval: Int, cmdId: String): Boolean = {
-    val conf = configSvc.config
-    val commandTrees = conf.getFetchCommandsTrees(interval)
-    val topLevel = commandTrees.find(t => t.findTree(cmdId).isDefined)
-    if (topLevel.isDefined){
-      val root = topLevel.get.findTree(cmdId).get
-      SMGUpdateActor.sendSMGFetchCommandMessage(actorSystem, updateActor,
-        configSvc.executionContexts.ctxForInterval(interval),
-        interval, Seq(root), None, root.node.childConc, updateCounters = false, None, log)
-      log.info(s"SMGrapher.runCommandsTree(interval=$interval): Sent fetch update message for: " + root.node)
-      true
-    } else {
-      log.warn(s"SMGrapher.runCommandsTree(interval=$interval): could not find commands tree with root id $cmdId")
-      false
-    }
+  override def runCommandsTreeNow(interval: Int, cmdId: String): Future[Boolean] = {
+    if (SMGRemote.isRemoteObj(cmdId)){
+      remotes.runCommandTree(interval, cmdId)
+    } else Future {
+      val conf = configSvc.config
+      val commandTrees = conf.getFetchCommandsTrees(interval)
+      val topLevel = commandTrees.find(t => t.findTree(cmdId).isDefined)
+      if (topLevel.isDefined) {
+        val root = topLevel.get.findTree(cmdId).get
+        SMGUpdateActor.sendSMGFetchCommandMessage(actorSystem, updateActor,
+          configSvc.executionContexts.ctxForInterval(interval),
+          interval, Seq(root), None, root.node.childConc, updateCounters = false, None, log, Some(0.0))
+        log.info(s"SMGrapher.runCommandsTree(interval=$interval): Sent fetch update message for: " + root.node)
+        true
+      } else {
+        log.warn(s"SMGrapher.runCommandsTree(interval=$interval): could not find commands tree with root id $cmdId")
+        false
+      }
+    }(configSvc.executionContexts.rrdGraphCtx)
   }
 
   private def filterTopLevel(indexes: Seq[SMGIndex]) = indexes.filter( ix => ix.parentId.isEmpty)

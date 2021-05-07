@@ -606,20 +606,35 @@ class Application  @Inject() (actorSystem: ActorSystem,
   }
 
   /**
-    * Trigger an update job using external scheduler (e.g. cron). Do not use if using internal scheduler
+    * Trigger an update command (or entire interval) using external scheduler (e.g. cron, if not
+    * using internal scheduler) or manually (to retry)
     *
     * @param interval - interval for which to run the update job
+    * @param id - fetch command id to run
     * @return
     */
-  def runJob(interval: Int, id: Option[String]): Action[AnyContent] = Action {
+  def runJob(interval: Int, id: Option[String]): Action[AnyContent] = Action.async { request =>
     if (id.isEmpty || (id.get == "")) {
-      smg.run(interval)
-      Ok("OK")
+      Future {
+        smg.run(interval)
+        Ok("OK")
+      }
     } else {
-      if (smg.runCommandsTree(interval, id.get))
-        Ok(s"OK - sent message for ${id.get}")
-      else
-        NotFound(s"ERROR - did not find commands tree with root ${id.get}")
+      val referer = request.headers.get(REFERER)
+      smg.runCommandsTreeNow(interval, id.get).map { ret =>
+        if (referer.isDefined) {
+          Redirect(referer.get).flashing(if (ret) {
+            "success" -> s"Successfully triggered command $id (intvl=$interval)"
+          } else {
+            "error" -> s"Some error(s) occured triggering command $id (intvl=$interval). Check application log for more details."
+          })
+        } else {
+          if (ret)
+            Ok(s"OK - sent message for ${id.get}")
+          else
+            NotFound(s"ERROR - did not find commands tree with root ${id.get}")
+        }
+      }
     }
   }
 
@@ -748,6 +763,35 @@ class Application  @Inject() (actorSystem: ActorSystem,
         Ok(views.html.inspectObject(configSvc, ov.get, pfs, ac, ncUnk, nc, ncmdsByVar,
           Seq(notifyStrikesObj) ++ notifyStrikesVars, hstate))
       } else NotFound("Object not found")
+    }
+  }
+
+  def monitorRerun(id: String): Action[AnyContent] = Action.async {request =>
+    val paramsOpt = request.body.asFormUrlEncoded
+    val intervals : Seq[Int] = if (paramsOpt.isDefined && paramsOpt.get.contains("intvls")) {
+      val params: Map[String, Seq[String]] = paramsOpt.get
+      val ivsStr: String = params("intvls").headOption.getOrElse("")
+      if (ivsStr == "")
+        Seq[Int]()
+      else {
+        ivsStr.split(",").flatMap{s => Try(s.toInt).toOption }
+      }
+    } else Seq()
+    val referer = request.headers.get(REFERER)
+    monitorApi.monitorRerun(id, intervals).map { ret =>
+      val intervalsStr = if (intervals.nonEmpty) s" (intervals=${intervals.mkString(",")})" else ""
+      if (referer.isDefined) {
+        Redirect(referer.get).flashing(if (ret) {
+          "success" -> s"Successfully triggered command $id$intervalsStr"
+        } else {
+          "error" -> s"Some error(s) occured triggering command $id$intervalsStr. Check application log for more details."
+        })
+      } else {
+        if (ret)
+          Ok(s"OK - sent message for ${id}$intervalsStr")
+        else
+          NotFound(s"ERROR - did not find commands tree with root ${id}$intervalsStr")
+      }
     }
   }
 

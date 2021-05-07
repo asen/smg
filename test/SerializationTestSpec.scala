@@ -34,7 +34,8 @@ class SerializationTestSpec extends Specification {
           aggShowUrlFilter = Some(s"px=some.object.id.$i"),
           recentStates = Seq(),
           errorRepeat = 0,
-          remote = SMGRemote.local
+          remote = SMGRemote.local,
+          intervals = Seq(60)
         )
       }.toList
 

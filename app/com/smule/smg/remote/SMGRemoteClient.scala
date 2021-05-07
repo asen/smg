@@ -189,6 +189,7 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
         (JsPath \ "uf").readNullable[String] and
         (JsPath \ "rs").readNullable[List[SMGState]].map(opt => opt.getOrElse(List())) and // TODO temp readNullable
         (JsPath \ "er").readNullable[Int].map(oi => oi.getOrElse(0)) and // TODO temp readNullable
+        (JsPath \ "intvls").readNullable[Seq[Int]].map(oi => oi.getOrElse(Seq[Int]())) and // TODO temp readNullable
         // XXX "remote" is always null ...
         (JsPath \ "remote").readNullable[String].map(s => remote)
       ) (SMGMonStateView.apply _)
@@ -562,6 +563,18 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
     }
   }
 
+  def runCommandTree(interval: Int, id: String): Future[Boolean] = {
+    ws.url(remote.url + API_PREFIX + s"run/$interval/$id").
+      withRequestTimeout(graphTimeoutMs).post(Map[String,Seq[String]]()).map { resp =>
+      resp.status == 200
+    }.recover {
+      case x: Throwable => {
+        log.ex(x, s"runCommandTree exception: interval=$interval, id=$id")
+        false
+      }
+    }
+  }
+
   /**
     * Download a remote object rrd file to a local file
     *
@@ -610,6 +623,19 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   def pluginData(pluginId: String, httpParams: Map[String, String]): Future[String] = {
     ws.url(remote.url + API_PREFIX + "plugin/" + pluginId).withQueryStringParameters(httpParams.toList:_*).
       get().map(_.body).recover{ case e: Exception => "" }
+  }
+
+  def monitorRerun(id: String, intvls: Seq[Int]): Future[Boolean] = {
+    val postMap = Map("intvls" -> Seq(intvls.mkString(",")))
+    ws.url(remote.url + API_PREFIX + s"monitor/rerun/$id").
+      withRequestTimeout(graphTimeoutMs).post(postMap).map { resp =>
+      resp.status == 200
+    }.recover {
+      case x: Throwable => {
+        log.ex(x, s"runCommandTree exception: id=$id intervals=${intvls.mkString(",")}")
+        false
+      }
+    }
   }
 
   def monitorLogs(flt: SMGMonitorLogFilter): Future[Seq[SMGMonitorLogMsg]] = {
@@ -1187,7 +1213,8 @@ object SMGRemoteClient {
         "t" -> Json.toJson(ms.text),
         "h" -> Json.toJson(if (ms.isHard) 1 else 0),
         "rs" -> Json.toJson(ms.recentStates),
-        "er" -> Json.toJson(ms.errorRepeat)
+        "er" -> Json.toJson(ms.errorRepeat),
+        "intvls" -> Json.toJson(ms.intervals)
       )
       if (ms.isAcked) mm += ("a" -> Json.toJson(1))
       if (ms.isSilenced) mm += ("sl" -> Json.toJson(1))

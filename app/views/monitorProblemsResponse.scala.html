@@ -1,5 +1,5 @@
 @import com.smule.smg.monitor.SMGMonitorStatesResponse
-
+@import com.smule.smg.monitor.SMGState
 @(msr: SMGMonitorStatesResponse, curUrl: String)
 
 @monitorMuteUnmute(msr.remote.id, msr.isMuted, curUrl)
@@ -16,6 +16,10 @@
       [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ]
 
       @monStateActions(ms, Some(curUrl))
+
+      @if(ms.currentStateVal == SMGState.FAILED){
+        @monStateRerunAction(ms.id)
+      }
 
       @if(msr.activeAlerts.contains(ms.alertKey)) {
       @defining(msr.activeAlerts(ms.alertKey)) { aa =>

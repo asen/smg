@@ -51,6 +51,8 @@ GET     /monitor/unmute       controllers.Application.monitorUnmute(remote: Stri
 
 POST    /monitor/saveStates   controllers.Application.monitorSaveStates()
 
+POST    /monitor/rerun/:id    controllers.Application.monitorRerun(id: String)
+
 GET     /proxy/:remote/*path  controllers.Application.proxy(remote: String, path: String)
 
 GET     /inspect/:id          controllers.Application.inspect(id: String)
@@ -96,6 +98,7 @@ GET     /api/reloadSlave/:slaveId   controllers.Api.reloadSlave(slaveId: String)
 POST    /api/graph          controllers.Api.graph
 POST    /api/agg            controllers.Api.agg
 GET     /api/rrd/:oid       controllers.Api.downloadRrd(oid: String)
+POST    /api/run/:interval/:id   controllers.Api.runCommandTree(interval: Int, id: String)
 
 GET     /api/monitor/states     controllers.Api.monitorStates(ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String])
 GET     /api/monitor/silenced   controllers.Api.monitorSilenced()
@@ -114,6 +117,7 @@ GET     /api/monitor/slnc       controllers.Api.monitorSilence(id: String, slunt
 GET     /api/monitor/unslnc     controllers.Api.monitorUnsilence(id: String)
 POST    /api/monitor/ackList    controllers.Api.monitorAckList()
 POST    /api/monitor/slncList   controllers.Api.monitorSilenceList()
+POST    /api/monitor/rerun/:id  controllers.Api.monitorRerun(id: String)
 
 POST    /api/monitor/statesd    controllers.Api.statesDetails()
 

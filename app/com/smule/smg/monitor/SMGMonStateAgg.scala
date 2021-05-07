@@ -38,6 +38,8 @@ case class SMGMonStateAgg(id: String, lst: Seq[SMGMonState], showUrlFilter: Stri
     }
   }
 
+  override val intervals: Seq[Int] = lst.flatMap(_.intervals).distinct.sorted
+
   // XXX chop off :ix portion of child alert keys to define this alert key.
   // Agg states cover entire objects in the context of alerting so var indexes are thrown away
   override def alertKey: String = lst.map(_.alertKey.split(":")(0)).distinct.mkString(",")

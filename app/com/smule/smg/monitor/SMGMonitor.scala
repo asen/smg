@@ -335,6 +335,36 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
 
+  override def monitorRerun(id: String, intvls: Seq[Int]): Future[Boolean] = {
+    implicit val ec = configSvc.executionContexts.rrdGraphCtx
+    if (SMGRemote.isRemoteObj(id)) {
+      remotes.monitorRerun(id, intvls)
+    } else {
+      val rootOpt = findTreeWithRootId(id)
+      if (rootOpt.isEmpty) {
+        Future.successful(false)
+      } else {
+        val actualIntervals = if (intvls.isEmpty)
+          rootOpt.get.node.intervals
+        else {
+          rootOpt.get.node.intervals.filter(i => intvls.contains(i))
+        }
+        if (actualIntervals.isEmpty)
+          Future.successful(false)
+        else {
+          // id can point to a var state in which case we want the object id
+          val commandId = rootOpt.get.node.oid.getOrElse(id)
+          val futSeq = actualIntervals.map { iv =>
+            smg.runCommandsTreeNow(iv, id)
+          }
+          Future.sequence(futSeq).map{ bseq =>
+            bseq.forall(b => b)
+          }
+        }
+      }
+    }
+  }
+
   override def silenceAllTrees(remoteIds: Seq[String], flt: SMGMonFilter, rootId: Option[String], until: Int,
                                sticky: Boolean, stickyDesc: Option[String]): Future[Boolean] = {
     implicit val ec = configSvc.executionContexts.rrdGraphCtx
