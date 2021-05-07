@@ -5,9 +5,11 @@
   [
   @if(ms.isAcked) {
     Acknowledged
-    @monStateActionDisplay(ms.id, "Unack", "unack", curUrl, None)
+    @monStateActionDisplay(ms.id, "Unack", "unack", curUrl, None,
+      Some("Remove the acknowledgement of this state (re-enabling alerts)"))
   } else {
-    @monStateActionDisplay(ms.id, "Ack", "ack", curUrl, None)
+    @monStateActionDisplay(ms.id, "Ack", "ack", curUrl, None,
+      Some("Acknowledge this state problem (disabling alerts)"))
   }
   ]
 }
@@ -15,7 +17,9 @@
 [
 @if(ms.isSilenced) {
   Silenced @{ms.silencedUntilStr}
-  @monStateActionDisplay(ms.id, "Unsilence", "unslnc", curUrl, None)
+  @monStateActionDisplay(ms.id, "Unsilence", "unslnc", curUrl, None,
+    Some("Remove the silencing of this state (re-enabling alerts)"))
 }
-@monStateActionDisplay(ms.id, "Silence for", "slnc", curUrl, Some("slunt", "2h"))
+@monStateActionDisplay(ms.id, "Silence for", "slnc", curUrl, Some("slunt", "2h"),
+  Some("Silence this state problem (disabling alerts) for the specified time period"))
 ]
