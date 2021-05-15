@@ -263,7 +263,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     var reloads = 0
     while (pending > 0) {
       reloads += 1
-      log.info(s"SMGConfigServiceImpl.reload: Reload requested (reloads=$reloads/pending=${pendingReloads.get()}")
+      log.info(s"SMGConfigServiceImpl.reload: Reload requested (reloads=$reloads/pending=${pendingReloads.get()})")
       doReloadSync()
       pending = pendingReloads.decrementAndGet()
       // if pending == 0 (was 1) -> all good, new threads can take over

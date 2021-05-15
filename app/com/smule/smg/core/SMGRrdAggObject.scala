@@ -38,7 +38,10 @@ case class SMGRrdAggObject(id: String,
 
   override val pluginId: Option[String] = None
 
-  override val command: SMGCmd = SMGCmd(s"+$aggOp: ${ous.size} objs")
+  private def cmdUids(maxCmdUids: Int = 10): String = ous.take(maxCmdUids).map(_.id).mkString(", ") +
+    (if (ous.lengthCompare(maxCmdUids) > 0) s", ...(${ous.size - maxCmdUids} more)" else "")
+
+  override val command: SMGCmd = SMGCmd(s"+$aggOp(${ous.size}): ${cmdUids()}")
   override val passData: Boolean = true
 
   val commandDesc: Option[String] = Some(title)
