@@ -22,7 +22,7 @@ px: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p
 #end
 #end
 <%
-val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_name}<%= redis_suffix %>.all" else parent_index
+val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_name}${redis_suffix}.all" else parent_index
 %>
 
 #for ( port <- port_range )
