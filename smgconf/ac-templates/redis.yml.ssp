@@ -10,31 +10,32 @@
 <%@ val parent_index: String = "" %>
 <%@ val notify_fail: String = "" %>
 <%@ val desc: String = "" %>
+<%@ val redis_suffix: String = ".redis" %>
 <%@ val redisBelow3: Boolean = false %>
 
 #if (port_range.lengthCompare(1) > 0)
-- ^<%= id_prefix %><%= node_name %>.redis.all:
+- ^<%= id_prefix %><%= node_name %><%= redis_suffix %>.all:
   title: "<%= title_prefix %><%= node_name %> Redis stats - all ports <%= if (desc == "") "" else s" ($desc)" %>"
-px: <%= id_prefix %><%= node_name %>.redis.p
+px: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p
 #if (parent_index != "")
   parent: <%= parent_index %>
 #end
 #end
 <%
-val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_name}.redis.all" else parent_index
+val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_name}<%= redis_suffix %>.all" else parent_index
 %>
 
 #for ( port <- port_range )
 
-- ^<%= id_prefix %><%= node_name %>.redis.p<%= port %>:
+- ^<%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>:
   title: "<%= title_prefix %><%= node_name %> Redis stats - port <%= port %><%= if (desc == "") "" else s" ($desc)" %>"
-  px: <%= id_prefix %><%= node_name %>.redis.p<%= port %>
+  px: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>
 #if (my_parent_index != "")
   parent: <%= my_parent_index %>
 #end
 
 - type: $pre_fetch
-  id: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info
+  id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info
   command: "redis-cli -h <%= node_host %> -p <%= port %> info"
   timeout: <%= timeout %>
   pass_data: true
@@ -46,18 +47,18 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
 #end
 
 - type: $pre_fetch
-  id: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info.parse
+  id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv parse -d :"
   timeout: <%= timeout %>
   pass_data: true
-  pre_fetch: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info
 #if (notify_fail != "")
   notify-fail: <%= notify_fail %>
 #end
 
-- id: <%= id_prefix %><%= node_name %>.redis.p<%= port %>.clients
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>.clients
   interval: <%= interval %>
-  pre_fetch: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info.parse
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get connected_clients"
   timeout: <%= timeout %>
   title: "<%= title_prefix %><%= node_name %> - Redis <%= port %> Connected clients"
@@ -65,9 +66,9 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   vars:
   - label: clients
 
-- id: <%= id_prefix %><%= node_name %>.redis.p<%= port %>.conn
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>.conn
   interval: <%= interval %>
-  pre_fetch: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info.parse
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get total_connections_received"
   timeout: <%= timeout %>
   title: "<%= title_prefix %><%= node_name %> - Redis <%= port %> Connections received"
@@ -76,9 +77,9 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   - label: connections
     mu: conns/sec
 
-- id: <%= id_prefix %><%= node_name %>.redis.p<%= port %>.cmd
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>.cmd
   interval: <%= interval %>
-  pre_fetch: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info.parse
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get total_commands_processed"
   timeout: <%= timeout %>
   title: "<%= title_prefix %><%= node_name %> - Redis <%= port %> Commands processed"
@@ -87,9 +88,9 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   - label: commands
     mu: cmds/sec
 
-- id: <%= id_prefix %><%= node_name %>.redis.p<%= port %>.usedmem
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>.usedmem
   interval: <%= interval %>
-  pre_fetch: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info.parse
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get used_memory"
   timeout: <%= timeout %>
   title: "<%= title_prefix %><%= node_name %> - Redis <%= port %> Memory used"
@@ -97,9 +98,9 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   - label: mem
     mu: B
 
-- id: <%= id_prefix %><%= node_name %>.redis.p<%= port %>.expired_keys
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>.expired_keys
   interval: <%= interval %>
-  pre_fetch: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info.parse
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get expired_keys"
   timeout: <%= timeout %>
   title: "<%= title_prefix %><%= node_name %> - Redis <%= port %> Expired keys/sec"
@@ -110,10 +111,10 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
 
 #if (!redisBelow3)
 
-- id: <%= id_prefix %><%= node_name %>.redis.p<%= port %>.used_memory_lua
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>.used_memory_lua
   interval: <%= interval %>
   rrdType: GAUGE
-  pre_fetch: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info.parse
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get used_memory_lua"
   timeout: <%= timeout %>
   title: "<%= title_prefix %><%= node_name %> - Redis <%= port %> used_memory_lua"
@@ -121,9 +122,9 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   - label: used_memory_lua
   mu: B
 
-- id: <%= id_prefix %><%= node_name %>.redis.p<%= port %>.input_bytes
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>.input_bytes
   interval: <%= interval %>
-  pre_fetch: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info.parse
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get total_net_input_bytes"
   timeout: <%= timeout %>
   title: "<%= title_prefix %><%= node_name %> - Redis <%= port %> Input bytes/sec"
@@ -132,9 +133,9 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   - label: total_net_input_bytes
     mu: Bps
 
-- id: <%= id_prefix %><%= node_name %>.redis.p<%= port %>.output_bytes
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>.output_bytes
   interval: <%= interval %>
-  pre_fetch: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info.parse
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get total_net_output_bytes"
   timeout: <%= timeout %>
   title: "<%= title_prefix %><%= node_name %> - Redis <%= port %> Output bytes/sec"
@@ -146,18 +147,18 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
 #end
 
 # TODO this may have to be a counter
-- id: <%= id_prefix %><%= node_name %>.redis.p<%= port %>.evictedkeys
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>.evictedkeys
   interval: <%= interval %>
-  pre_fetch: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info.parse
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get evicted_keys"
   timeout: <%= timeout %>
   title: "<%= title_prefix %><%= node_name %> - Redis <%= port %> Evicted keys"
   vars:
   - label: keys
 
-- id: <%= id_prefix %><%= node_name %>.redis.p<%= port %>.blockedclients
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p<%= port %>.blockedclients
   interval: <%= interval %>
-  pre_fetch: <%= id_prefix %><%= node_name %>.redis.<%= port %>.info.parse
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get blocked_clients"
   timeout: <%= timeout %>
   title: "<%= title_prefix %><%= node_name %> - Redis <%= port %> Blocked clients"
