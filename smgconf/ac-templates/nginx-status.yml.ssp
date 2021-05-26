@@ -1,0 +1,116 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%
+  // Configure this with a command like this:
+  // command: "curl -sS -f 'http://%node_host%/nginx_status'"
+  // resolve_name: true  // assumes node_name resolves to node_host, or specify node_host
+                        // node_host: 1.2.3.4
+%>
+<%@ val node_name: String %>
+<%@ val command: String %>
+<%@ val id_prefix: String = "host." %>
+<%@ val title_prefix: String = "Host " %>
+<%@ val nginx_suffix: String = ".nginx" %>
+<%@ val desc: String = "" %>
+<%@ val interval: Int = 60 %>
+<%@ val timeout: Int = 10 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+
+# Active connections: 64
+# server accepts handled requests
+# 344743 344743 285224
+# Reading: 0 Writing: 39 Waiting: 25
+
+- ^<%= id_prefix %><%= node_name %><%= nginx_suffix %>:
+  title: "<%= title_prefix %><%= node_name %> Nginx stats<%= if (desc == "") "" else s" ($desc)" %>"
+  px: <%= id_prefix %><%= node_name %><%= nginx_suffix %>
+#if (parent_index != "")
+  parent: <%= parent_index %>
+#end
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.stats
+  command: "<%= command %>"
+  timeout: <%= timeout %>
+  pass_data: true
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.normalize
+  command: "smgscripts/nginx-status-parse.sh -"
+  timeout: <%= timeout %>
+  pass_data: true
+  pre_fetch: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.stats
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.parse
+  command: ":cc kv parse -d :"
+  timeout: <%= timeout %>
+  pass_data: true
+  pre_fetch: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.normalize
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+# active: 53
+# accepts: 356405
+# handled: 356405
+# requests: 357718
+# reading: 0
+# writing: 37
+# waiting: 16
+
+- id: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.active
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.parse
+  command: ":cc kv get active"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Nginx Active connections"
+  rrd_type: GAUGE
+  vars:
+  - label: conns
+
+- id: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.reqs
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.parse
+  command: ":cc kv get requests"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Nginx requests per sec"
+  rrd_type: DERIVE
+  vars:
+  - label: requests
+    mu: req/sec
+
+- id: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.conns
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.parse
+  command: ":cc kv get accepts handled"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Nginx server accepts/handled per sec"
+  rrd_type: DERIVE
+  vars:
+  - label: accepts
+    mu: conn/sec
+  - label: handled
+    mu: conn/sec
+
+- id: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.rww
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.parse
+  command: ":cc kv get reading writing waiting"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Nginx reading/writing/waiting"
+  rrd_type: GAUGE
+  vars:
+  - label: reading
+  - label: writing
+  - label: waiting
