@@ -17,6 +17,7 @@
 <%@ val parent_index: String = "" %>
 <%@ val notify_fail: String = "" %>
 <%@ val index_rows: String = "6" %>
+<%@ val filter_rxx: String = "" %>
 
 - id: <%= id_prefix %><%= node_name %>.stats.fetch
   type: $pre_fetch
@@ -44,7 +45,7 @@
 - id: ^<%= id_prefix %><%= node_name %>
   title: "<%= title_prefix %><%= node_name %> Haproxy stats"
   px: "<%= id_prefix %><%= node_name %>."
-  cols: 10
+  cols: 12
   rows: <%= index_rows %>
 #if (parent_index != "")
   parent: <%= parent_index %>
@@ -64,11 +65,18 @@
     case "BACKEND" => " (summary)"
     case _ => " (backend host)"
   }
+  val filterMatches = (filter_rxx == "") || (!itm.matches(filter_rxx))
 %>
+
 ####################################
 # node_name = <%= node_name %>
 # itm = <%= itm %>
 # row_matchers = <%= row_matchers %>
+#if (filterMatches == false)
+
+# SKIPPED DUE TO filterMatches
+
+#else
 
 #if (arr(1) == "BACKEND")
 # extra index for backends - "all backend hosts" stats, suitable for grouping/filtering
@@ -195,4 +203,49 @@
   vars:
   - label: up/down
 
-#end
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.hrsp
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  command: ":cc csv get -e0 <%= row_matchers %> hrsp_1xx hrsp_2xx hrsp_3xx hrsp_4xx hrsp_5xx hrsp_other"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> response codes (hrsp)"
+  interval: <%= interval %>
+  rrd_type: DERIVE
+  vars:
+  - label: hrsp_1xx
+    mu: rsp/sec
+  - label: hrsp_2xx
+    mu: rsp/sec
+  - label: hrsp_3xx
+    mu: rsp/sec
+  - label: hrsp_4xx
+    mu: rsp/sec
+  - label: hrsp_5xx
+    mu: rsp/sec
+  - label: hrsp_other
+    mu: rsp/sec
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.denerrwarn
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  command: ":cc csv get -e0 <%= row_matchers %> dreq dresp ereq econ eresp wretr wredis"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> denied/errors/warnings"
+  interval: <%= interval %>
+  rrd_type: DERIVE
+  vars:
+  - label: dreq
+    mu: denied/sec
+  - label: dresp
+    mu: denied/sec
+  - label: ereq
+    mu: err/sec
+  - label: econ
+    mu: err/sec
+  - label: eresp
+    mu: err/sec
+  - label: wretr
+    mu: warn/sec
+  - label: wredis
+    mu: warn/sec
+
+#end # if (filterMatches == false)
+
+#end # for
+

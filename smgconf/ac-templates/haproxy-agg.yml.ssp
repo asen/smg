@@ -19,6 +19,7 @@
 <%@ val interval: Int = 60 %>
 <%@ val parent_index: String = "" %>
 <%@ val index_rows: String = "6" %>
+<%@ val filter_rxx: String = "" %>
 <%
   val member_names = members.strip().split("\\s*[ ,]\\s*")
   val real_members_desc = if (members_desc == "") members else members_desc
@@ -27,7 +28,7 @@
 - id: ^<%= id_prefix %><%= node_name %><%= name_suffix %>
   title: "<%= title_prefix %><%= node_name %> Haproxy stats, sum from <%= real_members_desc %>"
   px: "<%= id_prefix %><%= node_name %><%= name_suffix %>"
-  cols: 10
+  cols: 12
   rows: <%= index_rows %>
 #if (parent_index != "")
   parent: <%= parent_index %>
@@ -47,11 +48,17 @@
     case "BACKEND" => " (summary)"
     case _ => " (backend host)"
   }
+  val filterMatches = (filter_rxx == "") || (!itm.matches(filter_rxx))
 %>
 ####################################
 # node_name = <%= node_name %>
 # itm = <%= itm %>
 # row_matchers = <%= row_matchers %>
+#if (filterMatches == false)
+
+# SKIPPED DUE TO filterMatches
+
+#else
 
 #if (arr(1) == "BACKEND")
 # extra index for backends - "all backend hosts" stats, suitable for grouping/filtering
@@ -190,4 +197,54 @@
   - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.updown
 #end
 
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.hrsp
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> response codes (hrsp), sum from <%= real_members_desc %>"
+  interval: <%= interval %>
+  rrd_type: DERIVE
+  vars:
+  - label: hrsp_1xx
+    mu: rsp/sec
+  - label: hrsp_2xx
+    mu: rsp/sec
+  - label: hrsp_3xx
+    mu: rsp/sec
+  - label: hrsp_4xx
+    mu: rsp/sec
+  - label: hrsp_5xx
+    mu: rsp/sec
+  - label: hrsp_other
+    mu: rsp/sec
+  op: SUM
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.hrsp
 #end
+
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.denerrwarn
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> denied/errors/warnings, sum from <%= real_members_desc %>"
+  interval: <%= interval %>
+  rrd_type: DERIVE
+  vars:
+  - label: dreq
+    mu: denied/sec
+  - label: dresp
+    mu: denied/sec
+  - label: ereq
+    mu: err/sec
+  - label: econ
+    mu: err/sec
+  - label: eresp
+    mu: err/sec
+  - label: wretr
+    mu: warn/sec
+  - label: wredis
+    mu: warn/sec
+  op: SUM
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.denerrwarn
+#end
+
+#end # if (filterMatches == false)
+
+#end # for
