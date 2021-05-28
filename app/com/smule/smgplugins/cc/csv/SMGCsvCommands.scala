@@ -23,8 +23,9 @@ object SMGCsvCommands {
   //    col is either a number (0-based column index) or a column header name
   //    val is the value which the row must have in the respective column
   //      if val starts with '~' it will be treated as regex
-  //      if val start with '!' the mathc is inverted (i.e. the row must not have that value)
+  //      if val start with '!' the match is inverted (i.e. the row must not have that value)
   //      use !~... for negative regex match
+  //      use 0=~.* to match any row
   // <val selectors> - list of zero-based column indexes or column header names
   // In both cases if a column header name is a number it can be "quoted" in the definition so
   // that it is not treated as column index
