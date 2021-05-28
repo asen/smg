@@ -244,7 +244,13 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         val myPorts = if (autoConf.metricsPortAnnotation.isDefined){
           val opt: Option[Int] = Try(nobj.annotations.get(autoConf.metricsPortAnnotation.get).
             map(_.toInt)).toOption.flatten
-          ports.filter(p => opt.contains(p.port))
+          val kp = ports.find(p => opt.contains(p.port))
+          if (kp.isDefined)
+            Seq(kp.get)
+          else {
+            val skp = opt.map(pn => KubeSyntheticPort(pn, "TCP", None))
+            Seq(skp).flatten
+          }
         } else ports
         (myPorts, myPath)
       } else {

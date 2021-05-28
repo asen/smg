@@ -27,6 +27,12 @@ object SMGKubeClient {
       name.getOrElse(port.toString)
   }
 
+  case class KubeSyntheticPort(
+                                port: Int,
+                                protocol: String,
+                                name: Option[String]
+  ) extends KubePort
+
   trait KubeNsObject {
     val name: String
     val namespace: String
