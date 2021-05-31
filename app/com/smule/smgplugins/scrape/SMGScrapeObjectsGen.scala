@@ -161,6 +161,7 @@ class SMGScrapeObjectsGen(
     }
     val titleGroupIndexId = if (hasMany) Some(ix) else None
     val smgBaseUid = idPrefix + processRegexReplaces(idSuffix, scrapeTargetConf.regexReplaces)
+    var indexCols = 0
     // all buckets in one graph
     if (buckets.nonEmpty) {
       val ouid = smgBaseUid + s".${groupType}_buckets"
@@ -183,8 +184,10 @@ class SMGScrapeObjectsGen(
         rrdType = rrdType, // TODO may need to infer that or have both a GAUGE and DDERIVE?
         labels = myLabels
       )
-      if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj))
+      if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj)) {
         ret.rrdObjects += retObj
+        indexCols += 1
+      }
     }
 
     // one more graph for sum
@@ -203,8 +206,10 @@ class SMGScrapeObjectsGen(
         rrdType = rrdType, // TODO may need to infer that or have both a GAUGE and DDERIVE?
         labels = myLabels
       )
-      if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj))
+      if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj)) {
         ret.rrdObjects += retObj
+        indexCols += 1
+      }
     }
 
     // one more graph for count
@@ -222,8 +227,10 @@ class SMGScrapeObjectsGen(
         rrdType = rrdType, // TODO may need to infer that or have both a GAUGE and DDERIVE?
         labels = myLabels
       )
-      if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj))
+      if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj)) {
         ret.rrdObjects += retObj
+        indexCols += 1
+      }
     }
 
     // an extra average graph if both sum/count available
@@ -251,6 +258,7 @@ class SMGScrapeObjectsGen(
         rrdType = rrdType,
         labels = myLabels
       )
+      indexCols += 1
     }
 
     // add an index
@@ -261,13 +269,15 @@ class SMGScrapeObjectsGen(
         flt = SMGFilter.fromPrefixLocal(smgBaseUid + "."),
         desc = grp.metaHelp,
         parentIndexId = Some(parentIndexId),
-        cols = Some(4),
+        cols = Some(indexCols),
         rows = Some(15)
       )
       ret.indexes += retIx
     }
     ret
   }
+
+  private def isSumCountName(name: String): Boolean = name.endsWith("_sum") || name.endsWith("_count")
 
   private def processSumCountGroups(
                                       grp: OpenMetricsGroup,
@@ -299,27 +309,28 @@ class SMGScrapeObjectsGen(
     var hasMore = myRows.nonEmpty
     while (hasMore){
       val curGroup = ListBuffer[OpenMetricsRow]()
-      curGroup ++= myRows.takeWhile(r => !r.name.endsWith("_sum") && !r.name.endsWith("_count"))
-      if (curGroup.isEmpty){
-        log.warn(s"SMGScrapeObjectGen.processSumCountGroups: ${grp.metaKey} empty group")
+      curGroup ++= myRows.takeWhile(r => !isSumCountName(r.name))
+      var nextName: String = myRows.headOption.map(_.name).getOrElse("")
+      if (curGroup.isEmpty && !isSumCountName(nextName)){
+        log.warn(s"SMGScrapeObjectGen.processSumCountGroups: ${grp.metaKey} empty group with no sum/count")
         hasMore = false
       } else {
         myRows = myRows.drop(curGroup.size)
         // also get _sum and _count, do not assume specific order or existence of both
         val sumCount = ListBuffer[OpenMetricsRow]()
-        var nextName: String = myRows.headOption.map(_.name).getOrElse("")
-        if (nextName.endsWith("_sum") || nextName.endsWith("_count")) {
+        if (isSumCountName(nextName)) {
           sumCount += myRows.head
           myRows = myRows.tail
         }
         nextName = myRows.headOption.map(_.name).getOrElse("")
-        if (nextName.endsWith("_sum") || nextName.endsWith("_count")) {
+        if (isSumCountName(nextName)) {
           sumCount += myRows.head
           myRows = myRows.tail
         }
         val sumOpt = sumCount.find(_.name.endsWith("_sum"))
         val countOpt = sumCount.find(_.name.endsWith("_count"))
-        sumCountGroups += ((curGroup.toList, sumOpt, countOpt))
+        if (curGroup.nonEmpty || sumOpt.nonEmpty || countOpt.nonEmpty)
+          sumCountGroups += ((curGroup.toList, sumOpt, countOpt))
         hasMore = myRows.nonEmpty
       }
     }
@@ -335,7 +346,7 @@ class SMGScrapeObjectsGen(
         flt = SMGFilter.fromPrefixLocal(smgBaseUid + "."),
         desc = grp.metaHelp,
         parentIndexId = Some(parentIndexId),
-        cols = Some(4),
+        cols = Some(4),  // TODO can be 3?
         rows = Some(15)
       )
       myParentIndexId = smgBaseUid
