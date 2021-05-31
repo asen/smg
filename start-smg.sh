@@ -62,25 +62,33 @@ if [ "$WAIT" == "$WAIT_OPT" ] ; then
   trap _term SIGTERM
 fi
 
-$NOHUP bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS $JAVA_11_KUBE_TLS_OPT $LOGGER_OPT \
+COMMAND="bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS $JAVA_11_KUBE_TLS_OPT $LOGGER_OPT \
     -Dplay.crypto.secret=fabe980f8f27865e11eeaf9e4ff4fc65 \
     -Dhttp.port=$HTTP_PORT $BIND_OPT \
     -Dakka.http.parsing.max-uri-length=2m \
     -Dakka.http.parsing.max-header-value-length=2m \
     -Dplay.server.akka.max-header-value-length=2m \
-    -Dpidfile.path=run/play.pid \
-    >logs/nohup.out 2>&1 &
-ret=$?
-child=$!
-
-if [ "$ret" == "0" ] ; then
-   echo "Started (mem=$JVM_MEM port=$HTTP_PORT$BIND_STR). \
-Check $APP_HOME/logs/nohup.out for errors and $APP_HOME/logs/application.log for progress"
-else
-   echo "Some error occurred ($ret)"
-   exit $ret
-fi
+    -Dpidfile.path=run/play.pid"
 
 if [ "$WAIT" == "$WAIT_OPT" ] ; then
+  $NOHUP $COMMAND >logs/nohup.out 2>&1 &
+  ret=$?
+  if [ "$ret" == "0" ] ; then
+    echo "Started (mem=$JVM_MEM port=$HTTP_PORT$BIND_STR). \
+Check $APP_HOME/logs/nohup.out for errors and $APP_HOME/logs/application.log for progress"
+  else
+    echo "Some error occurred ($ret)"
+    exit $ret
+  fi
+else
+  $COMMAND &
+  ret=$?
+  child=$!
+    if [ "$ret" == "0" ] ; then
+    echo "Started (mem=$JVM_MEM port=$HTTP_PORT$BIND_STR)."
+  else
+    echo "Some error occurred ($ret)"
+    exit $ret
+  fi
   wait "$child"
 fi
