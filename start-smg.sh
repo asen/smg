@@ -71,16 +71,6 @@ COMMAND="bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS $JAVA_11_KUBE_TLS_O
     -Dpidfile.path=run/play.pid"
 
 if [ "$WAIT" == "$WAIT_OPT" ] ; then
-  $NOHUP $COMMAND >logs/nohup.out 2>&1 &
-  ret=$?
-  if [ "$ret" == "0" ] ; then
-    echo "Started (mem=$JVM_MEM port=$HTTP_PORT$BIND_STR). \
-Check $APP_HOME/logs/nohup.out for errors and $APP_HOME/logs/application.log for progress"
-  else
-    echo "Some error occurred ($ret)"
-    exit $ret
-  fi
-else
   $COMMAND &
   ret=$?
   child=$!
@@ -91,4 +81,14 @@ else
     exit $ret
   fi
   wait "$child"
+else
+  $NOHUP $COMMAND >logs/nohup.out 2>&1 &
+  ret=$?
+  if [ "$ret" == "0" ] ; then
+    echo "Started (mem=$JVM_MEM port=$HTTP_PORT$BIND_STR). \
+Check $APP_HOME/logs/nohup.out for errors and $APP_HOME/logs/application.log for progress"
+  else
+    echo "Some error occurred ($ret)"
+    exit $ret
+  fi
 fi
