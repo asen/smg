@@ -13,6 +13,8 @@ case class SMGScrapedObjectsBuf() {
   val aggObjects: ListBuffer[SMGRrdAggObject] = ListBuffer[SMGRrdAggObject]()
   val indexes: ListBuffer[SMGConfIndex] = ListBuffer[SMGConfIndex]()
 
+  def isEmpty: Boolean = rrdObjects.isEmpty && aggObjects.isEmpty && viewObjects.isEmpty
+
   def mergeOther(other: SMGScrapedObjectsBuf): Unit = {
     preFetches ++= other.preFetches
     rrdObjects ++= other.rrdObjects
@@ -20,12 +22,4 @@ case class SMGScrapedObjectsBuf() {
     aggObjects ++= other.aggObjects
     indexes ++= other.indexes
   }
-
-  def toScrapedObjects: SMGScrapedObjects = SMGScrapedObjects(
-    preFetches = preFetches.toList,
-    rrdObjects = rrdObjects.toList,
-    viewObjects = viewObjects.toList,
-    aggObjects = aggObjects.toList,
-    indexes = indexes.toList
-  )
 }

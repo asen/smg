@@ -407,10 +407,11 @@ class SMGScrapeObjectsGen(
       // add an index
       if (ret.rrdObjects.nonEmpty) {
         val smgBaseUid = idPrefix + baseUid
+        val filterDotSuffix = if (hasMany) "." else ""
         ret.indexes += myIndex(
           idxId = smgBaseUid,
           title = grp.title(scrapeTargetConf.humanName, baseUid, None),
-          flt = SMGFilter.fromPrefixLocal(smgBaseUid + "."),
+          flt = SMGFilter.fromPrefixLocal(smgBaseUid + filterDotSuffix),
           desc = grp.metaHelp,
           parentIndexId = Some(parentIndexId)
         )
@@ -435,7 +436,7 @@ class SMGScrapeObjectsGen(
   }
 
 
-  def generateSMGObjects(): SMGScrapedObjects = {
+  def generateSMGObjects(): SMGScrapedObjectsBuf = {
     // process scraped metrics and produce SMG objects
     val ret = SMGScrapedObjectsBuf()
     var preFetchIds = List[String]()
@@ -482,6 +483,6 @@ class SMGScrapeObjectsGen(
         ret.mergeOther(grpRet)
       }
     }
-    ret.toScrapedObjects
+    ret
   }
 }
