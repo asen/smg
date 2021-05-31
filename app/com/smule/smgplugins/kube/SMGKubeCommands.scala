@@ -20,8 +20,9 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
     val baseLabels = Seq[(String,String)](
       ("smg_cluster_id", clusterUid)
     )
-    in.groupBy(_.kubePod.owner).toSeq.sortBy{ t =>
-      t._2.head.kubePod.namespace + "/" + t._1.map(x => x.name).getOrElse("")
+    in.groupBy(pu => pu.kubePod.owner).toSeq.sortBy{ t =>
+      t._2.head.kubePod.namespace + "/" +
+        t._1.map(x => x.namespace + "/" + x.name + "/" + x.namespace).getOrElse("")
     }.foreach { case (owner, pods) =>
       val ownerLabels = baseLabels ++ Seq[(String,String)](
         ("smg_pod_owner_kind", owner.map(_.kind).getOrElse("none")),

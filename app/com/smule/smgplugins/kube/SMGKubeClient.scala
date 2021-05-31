@@ -82,7 +82,7 @@ object SMGKubeClient {
   case class KubeTopNamedUsage(name: String, usage: KubeTopUsage, labels: Map[String,String])
   case class KubeTopNodesResult(tsms: Long, nodesUsage: List[KubeTopNamedUsage])
 
-  case class KubePodOwner(kind: String, name: String)  {
+  case class KubePodOwner(kind: String, name: String, namespace: String)  {
     private lazy val stripSuffixTokens = kind match {
       case "DaemonSet" => 1            //"-xxxxx"
       case "ReplicaSet" => 2            //"-xxxxxxxxxx-xxxxx"
@@ -274,7 +274,7 @@ class SMGKubeClient(log: SMGLoggerApi,
       val podName = jpod.getMetadata.getName
       val podNamespace = Option(jpod.getMetadata.getNamespace).getOrElse("default")
       val owners = jpod.getMetadata.getOwnerReferences.asScala.map { ow =>
-        KubePodOwner(ow.getKind, ow.getName)
+        KubePodOwner(ow.getKind, ow.getName, podNamespace)
       }
       val owner = if (owners.isEmpty)
         None
