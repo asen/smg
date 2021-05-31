@@ -122,34 +122,29 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
   private def commandGet(paramStr: String,
                         timeoutSec: Int,
                         parentData: Option[ParentCommandData]): CommandResult = {
-    try {
-      if (parentData.isEmpty)
-        throwOnError("get", paramStr, timeoutSec, "Did not get parsed parentData to get data from")
-      val parsedData = parentData.get.res.data.asInstanceOf[OpenMetricsResultData]
-      val keys = paramStr.strip().split("\\s*[, ]\\s*")
-      var conflictingTsms = false
-      var tsms: Option[Long] = None
-      val ret = keys.map { k =>
-        val opt = parsedData.byUid.get(k)
-        if (opt.isEmpty) {
-          throwOnError("get", paramStr, timeoutSec, s"Key not found in metrics data: ${k}")
-        }
-        val newTsms = opt.get.tsms
-        if (tsms.isEmpty && !conflictingTsms)
-          tsms = newTsms
-        else if (tsms != newTsms) {
-          log.warn(s"SMGScrapeCommands.commandGet: Conflicting timestamps in get: $paramStr")
-          conflictingTsms = true
-          tsms = None
-        }
-        opt.get.value
+    if (parentData.isEmpty)
+      throwOnError("get", paramStr, timeoutSec, "Did not get parsed parentData to get data from")
+    val parsedData = parentData.get.res.data.asInstanceOf[OpenMetricsResultData]
+    val keys = paramStr.strip().split("\\s*[, ]\\s*")
+    var conflictingTsms = false
+    var tsms: Option[Long] = None
+    val ret = keys.map { k =>
+      val opt = parsedData.byUid.get(k)
+      if (opt.isEmpty) {
+        throwOnError("get", paramStr, timeoutSec, s"Key not found in metrics data: ${k}")
       }
-      val mytss = tsms.map(x => (x / 1000).toInt)
-      CommandResultListDouble(ret.toList, if (mytss.isDefined) mytss else parentData.flatMap(_.useTss))
-    } catch { case t: Throwable =>
-      log.ex(t, s"SMGScrapeCommands: Unexpected exception in commandGet: ${t.getMessage}")
-      throw t
+      val newTsms = opt.get.tsms
+      if (tsms.isEmpty && !conflictingTsms)
+        tsms = newTsms
+      else if (tsms != newTsms) {
+        log.warn(s"SMGScrapeCommands.commandGet: Conflicting timestamps in get: $paramStr")
+        conflictingTsms = true
+        tsms = None
+      }
+      opt.get.value
     }
+    val mytss = tsms.map(x => (x / 1000).toInt)
+    CommandResultListDouble(ret.toList, if (mytss.isDefined) mytss else parentData.flatMap(_.useTss))
   }
 
   def runPluginFetchCommand(cmd: String,
