@@ -200,6 +200,8 @@ object SMGYamlConfigGen {
       ret.put("prx", obj.prx.get)
     if (obj.trx.isDefined)
       ret.put("trx", obj.trx.get)
+    if (obj.lbls.isDefined)
+      ret.put("lbls", obj.lbls.get)
     if (obj.remotes.nonEmpty)
       ret.put("remote", obj.remotes.mkString(","))
     // Graph options
