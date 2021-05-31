@@ -220,19 +220,19 @@ object SMGFilter {
 
   def fromYamlMap(yamlMap: Map[String, Object]): SMGFilter = {
     SMGFilter(
-      if (yamlMap.contains("px")) Some(yamlMap("px").toString) else None,
-      if (yamlMap.contains("sx")) Some(yamlMap("sx").toString) else None,
-      if (yamlMap.contains("rx")) Some(yamlMap("rx").toString) else None,
-      if (yamlMap.contains("rxx")) Some(yamlMap("rxx").toString) else None,
-      if (yamlMap.contains("prx")) Some(yamlMap("prx").toString) else None,
-      if (yamlMap.contains("trx")) Some(yamlMap("trx").toString) else None,
-      if (yamlMap.contains("lbls")) Some(yamlMap("lbls").toString) else None,
+      px = if (yamlMap.contains("px")) Some(yamlMap("px").toString) else None,
+      sx = if (yamlMap.contains("sx")) Some(yamlMap("sx").toString) else None,
+      rx = if (yamlMap.contains("rx")) Some(yamlMap("rx").toString) else None,
+      rxx = if (yamlMap.contains("rxx")) Some(yamlMap("rxx").toString) else None,
+      prx = if (yamlMap.contains("prx")) Some(yamlMap("prx").toString) else None,
+      trx = if (yamlMap.contains("trx")) Some(yamlMap("trx").toString) else None,
+      lbls = if (yamlMap.contains("lbls")) Some(yamlMap("lbls").toString) else None,
       // XXX TODO using coma to separate remote ids, use space instead?
-      if (yamlMap.contains("remote")) yamlMap("remote").toString.split(",").toSeq else Seq(),
-      GraphOptions(
-        if (yamlMap.contains("step")) Some(yamlMap("step").asInstanceOf[Int]) else None,
-        if (yamlMap.contains("pl")) Some(yamlMap("pl").toString) else None,
-        if (yamlMap.contains("xsort")) Some(yamlMap("xsort").asInstanceOf[Int]) else None,
+      remotes = if (yamlMap.contains("remote")) yamlMap("remote").toString.split(",").toSeq else Seq(),
+      gopts = GraphOptions(
+        step = if (yamlMap.contains("step")) Some(yamlMap("step").asInstanceOf[Int]) else None,
+        pl = if (yamlMap.contains("pl")) Some(yamlMap("pl").toString) else None,
+        xsort = if (yamlMap.contains("xsort")) Some(yamlMap("xsort").asInstanceOf[Int]) else None,
         disablePop = yamlMap.getOrElse("dpp", "false").toString == "true",
         disable95pRule = yamlMap.getOrElse("d95p", "false").toString == "true",
         maxY = if (yamlMap.contains("maxy")) Some(yamlMap("maxy").toString.toDouble) else None,
