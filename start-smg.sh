@@ -49,16 +49,20 @@ GC_OPTS=""
 JAVA_11_KUBE_TLS_OPT="-J-Djdk.tls.client.protocols=TLSv1.2"
 
 NOHUP=nohup
+LOGGER_OPT=""
 if [ "$WAIT" == "$WAIT_OPT" ] ; then
+  LOGGER_OPT="-Dlogger.resource=logback-play-stdout.xml"
   NOHUP=""
   _term() {
-    echo "Caught SIGTERM signal!"
+    echo "SMG: Caught SIGTERM signal!"
     ./stop-smg.sh
+    echo "SMG: Exiting gracefully"
+    exit 0
   }
   trap _term SIGTERM
 fi
 
-$NOHUP bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS $JAVA_11_KUBE_TLS_OPT \
+$NOHUP bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS $JAVA_11_KUBE_TLS_OPT $LOGGER_OPT \
     -Dplay.crypto.secret=fabe980f8f27865e11eeaf9e4ff4fc65 \
     -Dhttp.port=$HTTP_PORT $BIND_OPT \
     -Dakka.http.parsing.max-uri-length=2m \

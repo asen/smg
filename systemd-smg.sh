@@ -52,8 +52,7 @@ bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS $JAVA_11_KUBE_TLS_OPT \
     -Dakka.http.parsing.max-uri-length=2m \
     -Dakka.http.parsing.max-header-value-length=2m \
     -Dplay.server.akka.max-header-value-length=2m \
-    -Dpidfile.path=run/play.pid \
-    -Dlogger.resource=logback-play-systemd.xml
+    -Dpidfile.path=run/play.pid
 
 #if [ "$?" == "0" ] ; then
 #   echo "Started (mem=$JVM_MEM port=$HTTP_PORT$BIND_STR). \
