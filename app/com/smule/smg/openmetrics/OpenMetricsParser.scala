@@ -4,30 +4,10 @@ import com.smule.smg.config.SMGConfigParser
 import com.smule.smg.core.SMGLoggerApi
 
 import scala.collection.immutable.StringOps
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.matching.Regex
 
-case class OpenMetricsStat(
-                          smgUid: String,
-                          metaKey: Option[String],
-                          metaType: Option[String],
-                          metaHelp: Option[String],
-                          name: String,
-                          labels: Seq[(String, String)],
-                          value: Double,
-                          tsms: Option[Long],
-                          groupIndex: Option[Int]
-                          ) {
-  private lazy val grpIdxTitlePart = if (groupIndex.isDefined) { s" (${groupIndex.get})" } else ""
-  def title(prefix: String): String = {
-    (if (prefix == "") "" else s"($prefix) ") +
-      name + grpIdxTitlePart + metaHelp.map(s => s" - ${s}").getOrElse("")
-  }
-  lazy val labelsAsMap: Map[String, String] = labels.toMap
-}
-
-object OpenMetricsStat {
+object OpenMetricsParser {
 
   private val START_LABELS = '{'
   private val END_LABELS = '}'
@@ -35,21 +15,30 @@ object OpenMetricsStat {
 
   private def normalizedUid(name: String, labels: Seq[(String, String)]): String =
     name + (if (labels.nonEmpty){
-        "." + labels.map(t => s"${t._1}.${t._2}").mkString(".")
-      } else "")
+      "." + labels.map(t => s"${t._1}.${t._2}").mkString(".")
+    } else "")
 
   private val replaceRegexStr = "[^" + SMGConfigParser.ALLOWED_UID_CHARS_REGEX_STR + "]"
 
+  def safeUid(in: String): String = in.replaceAll(replaceRegexStr, "_")
+
   def labelUid(name: String, labels: Seq[(String, String)]): String =
-    normalizedUid(name, labels).replaceAll(replaceRegexStr, "_")
+    safeUid(normalizedUid(name, labels))
 
   def groupIndexUid(name: String, groupIndex: Option[Int], suffixPrefix: String = "_"): String = {
-    if (groupIndex.isEmpty) name else
-      name.replaceAll(replaceRegexStr, "_") + s".${suffixPrefix}${groupIndex.get}"
+    val safeName = safeUid(name)
+    if (groupIndex.isEmpty) safeName else
+      safeName + s".${suffixPrefix}${groupIndex.get}"
+  }
+
+  def mergeLabels(in: Seq[(String,String)]): Map[String,Seq[String]] = {
+    in.groupBy(_._1).map { case (k, vs) =>
+      (k, vs.map(_._2).distinct)
+    }
   }
 
   // extract a quoted value out of inp and return it together with the remaining string
-  // assumes inpiut starts with a single or double quote
+  // assumes input starts with a single or double quote
   private def quotedValue(inp: String): (String, String) = {
     val quoteChar = inp(0)
     val rem = inp.drop(1)
@@ -87,25 +76,15 @@ object OpenMetricsStat {
       (ret.toList, remaining.drop(1).stripLeading())
     } catch { case t: Throwable =>
       if (log.isDefined)
-        log.get.ex(t, s"OpenMetricsStat.parseLabels: bad input: $inp")
+        log.get.ex(t, s"OpenMetricsGroup.parseLabels: bad input: $inp")
       (Seq(), "")
     }
   }
 
-  private class ParseContext(){
-    val uidCounts: mutable.Map[String, Int] = mutable.Map[String,Int]()
-  }
-
   private def parseLine(
                          ln: String,
-                         metaKey: Option[String],
-                         metaType: Option[String],
-                         metaHelp: Option[String],
-                         log: Option[SMGLoggerApi],
-                         groupIndex: Option[Int],
-                         labelsInUid: Boolean,
-                         parseContext: ParseContext
-                       ): Option[OpenMetricsStat] = {
+                         log: Option[SMGLoggerApi]
+                       ): Option[OpenMetricsRow] = {
     try {
       val hasLabels = ln.contains(START_LABELS)
       val (name, labels, remaining) = if (hasLabels) {
@@ -119,13 +98,13 @@ object OpenMetricsStat {
       val rem = remaining.stripLeading() // just on case ...
       if (rem == "") {
         if (log.isDefined)
-          log.get.warn(s"OpenMetricsStat.parseLine: bad line (not enough tokens or corrupt labels): $ln")
+          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (not enough tokens or corrupt labels): $ln")
         return None
       }
       val arr = rem.split("\\s+")
       if (arr.length > 2) {
         if (log.isDefined)
-          log.get.warn(s"OpenMetricsStat.parseLine: bad line (too many tokens): $ln")
+          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (too many tokens): $ln")
       }
       // some special cases for Go NaN formatting
       val value = if (arr(0).matches("^[\\+-]?Inf.*") )
@@ -134,45 +113,26 @@ object OpenMetricsStat {
         arr(0).toDouble
       } catch { case t: Throwable =>
         if (log.isDefined)
-          log.get.warn(s"OpenMetricsStat.parseLine: bad line (invalid Double value): ${arr(0)}: ln=$ln")
+          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (invalid Double value): ${arr(0)}: ln=$ln")
         return None
       }
       var tsms = arr.lift(1).map(_.toLong)
       if (tsms.isDefined && tsms.get <= 0){
         if (log.isDefined)
-          log.get.warn(s"OpenMetricsStat.parseLine: bad line (non-positive timestamp value): ${arr(1)}: ln=$ln")
+          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (non-positive timestamp value): ${arr(1)}: ln=$ln")
         tsms = None
       }
-      var smgUid = if (!hasLabels) name else {
-        if (labelsInUid){
-          OpenMetricsStat.labelUid(name, labels)
-        } else {
-          OpenMetricsStat.groupIndexUid(name, groupIndex)
-        }
-      }
-      // enforce indexed uids when conflicting, ref. kube-sate-metrics
-      if (!parseContext.uidCounts.contains(smgUid)){
-        parseContext.uidCounts(smgUid) = 0
-      } else {
-        parseContext.uidCounts(smgUid) = parseContext.uidCounts(smgUid) + 1
-        smgUid =  OpenMetricsStat.groupIndexUid(name, Some(parseContext.uidCounts(smgUid)), "dup")
-      }
       Some(
-        OpenMetricsStat(
-          smgUid = smgUid,
-          metaKey = metaKey,
-          metaType = metaType,
-          metaHelp = metaHelp,
+        OpenMetricsRow(
           name = name,
           labels = labels,
           value = value,
-          tsms = tsms,
-          groupIndex = groupIndex
+          tsms = tsms
         )
       )
     } catch { case t: Throwable =>
       if (log.isDefined)
-        log.get.ex(t, s"OpenMetricsStat.parseLine: bad line (unexpected error): $ln")
+        log.get.ex(t, s"OpenMetricsGroup.parseLine: bad line (unexpected error): $ln")
       None
     }
   }
@@ -182,30 +142,24 @@ object OpenMetricsStat {
                                metaKey: Option[String],
                                metaType: Option[String],
                                metaHelp: Option[String],
-                               log: Option[SMGLoggerApi],
-                               labelsInUid: Boolean,
-                               parseContext: ParseContext
-                             ): Seq[OpenMetricsStat] = {
-    var groupIndex = if (lines.lengthCompare(1) > 0) Some(0) else None
-    lines.flatMap { ln =>
-      val opt = parseLine(ln, metaKey, metaType, metaHelp, log, groupIndex, labelsInUid, parseContext)
-      if (opt.isDefined && groupIndex.isDefined)
-        groupIndex = Some(groupIndex.get + 1)
-      opt
+                               log: Option[SMGLoggerApi]
+                             ): OpenMetricsGroup = {
+    val rows = lines.flatMap { ln =>
+      parseLine(ln, log)
     }
+    OpenMetricsGroup(metaKey, metaType, metaHelp, rows)
   }
 
-  def parseText(inp: String, labelsInUid: Boolean, log: Option[SMGLoggerApi]): Seq[OpenMetricsStat] = {
-    val ret = ListBuffer[OpenMetricsStat]()
+  def parseText(inp: String, log: Option[SMGLoggerApi]): Seq[OpenMetricsGroup] = {
+    val ret = ListBuffer[OpenMetricsGroup]()
     var curMetaKey: Option[String] = None
     var curMetaType: Option[String] = None
     var curMetaHelp: Option[String] = None
     val curGroupLines: ListBuffer[String] = ListBuffer[String]()
     val inpRef: StringOps = inp // XXX workaround for Java 11 String.lines() overriding Scala
-    val parseContext = new ParseContext()
+
     def processCurGroupLinesAndReset(): Unit = {
-      ret ++= parseLinesGroup(curGroupLines,  curMetaKey, curMetaType, curMetaHelp,
-        log, labelsInUid, parseContext)
+      ret += parseLinesGroup(curGroupLines,  curMetaKey, curMetaType, curMetaHelp, log)
       curGroupLines.clear()
       curMetaHelp = None
       curMetaType = None
@@ -251,14 +205,15 @@ object OpenMetricsStat {
         }
       } // else - empty line ... TODO - should we reset curMetaKey?
     }
+    //    if (curGroupLines.nonEmpty)
     processCurGroupLinesAndReset()
     ret.toList
   }
 
-  def dumpStats(stats: Seq[OpenMetricsStat]): List[String] = {
+  def dumpStats(groups: Seq[OpenMetricsGroup]): List[String] = {
     val ret = ListBuffer[String]()
     var curMetaKey: Option[String] = None
-    stats.foreach { stat =>
+    groups.foreach { stat =>
       if (stat.metaKey != curMetaKey) {
         if (stat.metaKey.isDefined) {
           if (stat.metaHelp.isDefined)
@@ -268,16 +223,18 @@ object OpenMetricsStat {
         }
       }
       curMetaKey = stat.metaKey
-      val labelsStr = if (stat.labels.isEmpty) "" else {
-        s"${START_LABELS}" + stat.labels.map { case (k, v) =>
-          k + "=\"" + v + "\""
-        }.mkString(",") + END_LABELS
+      stat.rows.foreach { row =>
+        val labelsStr = if (row.labels.isEmpty) "" else {
+          s"${START_LABELS}" + row.labels.map { case (k, v) =>
+            k + "=\"" + v + "\""
+          }.mkString(",") + END_LABELS
+        }
+        val tsStr = if (row.tsms.isEmpty) "" else {
+          " " + row.tsms.get.toString
+        }
+        val statStr = row.name + labelsStr + s" ${row.value}" + tsStr
+        ret += statStr
       }
-      val tsStr = if (stat.tsms.isEmpty) "" else {
-        " " + stat.tsms.get.toString
-      }
-      val statStr = stat.name + labelsStr + s" ${stat.value}" + tsStr
-      ret += statStr
     }
     ret.toList
   }

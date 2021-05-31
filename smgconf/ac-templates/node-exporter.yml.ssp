@@ -33,8 +33,11 @@
 <%@ val netio_max: String = "" %>
 <%
   // parse /metrics output
-  val parsed = com.smule.smg.openmetrics.OpenMetricsStat.parseText(data.mkString("\n"), labelsInUid = true, None)
-  val parsedByUid = parsed.groupBy(_.smgUid)
+  val groups = com.smule.smg.openmetrics.OpenMetricsParser.parseText(data.mkString("\n"), None)
+  val parsed = groups.flatMap { grp =>
+    grp.rows.map { row => (grp, row) }
+  }
+  val parsedByUid = parsed.groupBy(_._2.labelUid)
 
   // XXX older node exporter reports some stats without _total/_bytes suffixes
   var totalSuffix = "_total"
@@ -72,32 +75,32 @@
   }
   val fsMounts = scala.collection.mutable.ListBuffer[(String,String)]()
 
-  parsed.foreach { oms =>
-    if (oms.smgUid.startsWith(cpuSecondsPrefix)){
-      val cpuId = oms.smgUid.stripPrefix(cpuSecondsPrefix).split("\\.",2)(0)
+  parsed.foreach { case (grp,oms) =>
+    if (oms.labelUid.startsWith(cpuSecondsPrefix)){
+      val cpuId = oms.labelUid.stripPrefix(cpuSecondsPrefix).split("\\.",2)(0)
       val cip = s"${cpuSecondsPrefix}${cpuId}."
       if (!cpuIdPrefixes.contains(cip))
         cpuIdPrefixes += cip
-    } else if (oms.smgUid.startsWith(diskReadBytesPrefix)) {
-      diskDevices += oms.smgUid.stripPrefix(diskReadBytesPrefix)
-    } else if (oms.smgUid.startsWith(networkDeviceIdPrefix)) {
+    } else if (oms.labelUid.startsWith(diskReadBytesPrefix)) {
+      diskDevices += oms.labelUid.stripPrefix(diskReadBytesPrefix)
+    } else if (oms.labelUid.startsWith(networkDeviceIdPrefix)) {
       val filterDevice = { dvc: String =>
         dvc != "lo" && networkDeviceFilters.forall { case (px, v) =>
-          parsedByUid.get(px + dvc).flatMap(_.headOption.map(_.value)).getOrElse(Double.NaN) == v
+          parsedByUid.get(px + dvc).flatMap(t => t.headOption.map(_._2.value)).getOrElse(Double.NaN) == v
         }
       }
-      val dvcName = oms.smgUid.stripPrefix(networkDeviceIdPrefix)
+      val dvcName = oms.labelUid.stripPrefix(networkDeviceIdPrefix)
       if (filterDevice(dvcName))
         networkDevices += dvcName
-    } else if (oms.smgUid.startsWith(networkDeviceIdPrefixOldv)) {
+    } else if (oms.labelUid.startsWith(networkDeviceIdPrefixOldv)) {
         val lblsMap: Map[String,String] = oms.labels.toMap
         if (networkDeviceFiltersOldv.forall(_.matches(lblsMap)) && lblsMap.contains("device")) {
           networkDevicesOldv += lblsMap("device")
         }
-    } else if (oms.smgUid.startsWith(fsAvailBytesPrefix)) {
+    } else if (oms.labelUid.startsWith(fsAvailBytesPrefix)) {
       val lblsMap: Map[String,String] = oms.labels.toMap
       if (fsLabelFilters.forall(_.matches(lblsMap)) && lblsMap.contains("mountpoint"))
-        fsMounts += Tuple2(lblsMap("mountpoint"), oms.smgUid.stripPrefix(fsAvailBytesPrefix))
+        fsMounts += Tuple2(lblsMap("mountpoint"), oms.labelUid.stripPrefix(fsAvailBytesPrefix))
     }
   }
 

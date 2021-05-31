@@ -1,9 +1,9 @@
 package com.smule.smgplugins.scrape
 
-import com.smule.smg.openmetrics.OpenMetricsStat
+import com.smule.smg.openmetrics.{OpenMetricsGroup, OpenMetricsRow}
 
-case class OpenMetricsResultData(stats: Seq[OpenMetricsStat]) {
-  val byUid: Map[String, OpenMetricsStat] = stats.groupBy(_.smgUid).map { t =>
+case class OpenMetricsResultData(stats: Seq[OpenMetricsGroup]) {
+  val byUid: Map[String, OpenMetricsRow] = stats.flatMap(_.rows).groupBy(_.labelUid).map { t =>
     (t._1, t._2.head)
   }
 }

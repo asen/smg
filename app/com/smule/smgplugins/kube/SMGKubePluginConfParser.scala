@@ -80,6 +80,10 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
         SMGKubeClusterAutoConf.fromYamlMap(yobjMap(o), log)
       }
     } else Seq()
+    val rraDef: Option[String] = if (ymap.contains("rra_def"))
+      ymap.get("rra_def").map(_.toString)
+    else
+      ymap.get("rra_agg").map(_.toString) // backwards compatible
     Some(
       SMGKubeClusterConf(
         uid = uid,
@@ -104,8 +108,7 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
         authConf = SMGKubeClusterAuthConf.fromYamlObject(ymap),
         prefixIdsWithClusterId = ymap.get("prefix_ids_with_cluster_id").map(_.toString).getOrElse("false") == "true",
         kubectlTopStats = ymap.get("top_stats").map(_.toString).getOrElse("true") != "false",
-        rraDefAgg = ymap.get("rra_agg").map(_.toString),
-        rraDefDtl = ymap.get("rra_dtl").map(_.toString),
+        rraDef = rraDef,
         needParse = ymap.getOrElse("need_parse", "true").toString != "false"
       )
     )

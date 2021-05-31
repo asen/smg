@@ -12,5 +12,13 @@ case class SMGScrapedObjects(
                               indexes: List[SMGConfIndex]
                             ){
   lazy val isEmpty: Boolean = rrdObjects.isEmpty && aggObjects.isEmpty && viewObjects.isEmpty
+
+  def merged(other: SMGScrapedObjects): SMGScrapedObjects = SMGScrapedObjects(
+    preFetches ++ other.preFetches,
+    rrdObjects ++ other.rrdObjects,
+    viewObjects ++ other.viewObjects,
+    aggObjects ++ other.aggObjects,
+    indexes ++ other.indexes
+  )
 }
 

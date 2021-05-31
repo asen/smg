@@ -1,7 +1,7 @@
 package com.smule.smgplugins.kube
 
 import com.smule.smg.core._
-import com.smule.smg.openmetrics.OpenMetricsStat
+import com.smule.smg.openmetrics.{OpenMetricsGroup, OpenMetricsRow}
 import com.smule.smgplugins.scrape.OpenMetricsResultData
 
 import scala.collection.mutable.ListBuffer
@@ -12,11 +12,11 @@ object SMGKubeCommands {
 
 class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeClusterAuthConf) {
 
-  private case class PodMetrics(pods: Seq[OpenMetricsStat], conts: Seq[OpenMetricsStat])
+  private case class PodMetrics(pods: Seq[OpenMetricsGroup], conts: Seq[OpenMetricsGroup])
 
   private def podsUsagesToMetrics(tsms: Long, in: Seq[SMGKubeClient.KubeTopPodUsage]): PodMetrics = {
-    val podsRet = ListBuffer[OpenMetricsStat]()
-    val contsRet = ListBuffer[OpenMetricsStat]()
+    val podsRet = ListBuffer[OpenMetricsGroup]()
+    val contsRet = ListBuffer[OpenMetricsGroup]()
     val baseLabels = Seq[(String,String)](
       ("smg_cluster_id", clusterUid)
     )
@@ -36,66 +36,66 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
         val podKey = s"pod.${podStats.kubePod.stableUid(groupIndex)}"
         val podCpuKey = s"${podKey}.cpu"
         val podMemKey = s"${podKey}.mem"
-        podsRet += OpenMetricsStat(
-          smgUid = podCpuKey,
+        podsRet += OpenMetricsGroup(
           metaKey = Some(podCpuKey),
           metaType = Some("gauge"),
           metaHelp = Some(s"pod ${podStats.kubePod.name} cpu used"),
-          name = podCpuKey,
-          labels = podLabels ++ Seq(
-            ("smg_top_stat", "cpu")
-          ),
-          value = podStats.usage.cpu,
-          tsms = Some(tsms),
-          groupIndex = None
+          rows = Seq(OpenMetricsRow(
+            name = podCpuKey,
+            labels = podLabels ++ Seq(
+              ("smg_top_stat", "cpu")
+            ),
+            value = podStats.usage.cpu,
+            tsms = Some(tsms)
+          ))
         )
-        podsRet +=  OpenMetricsStat(
-          smgUid = podMemKey,
+        podsRet +=  OpenMetricsGroup(
           metaKey = Some(podMemKey),
           metaType = Some("gauge"),
           metaHelp = Some(s"pod ${podStats.kubePod.name} memory used"),
-          name = podMemKey,
-          labels = podLabels ++ Seq(
-            ("smg_top_stat", "memory")
-          ),
-          value = podStats.usage.memory,
-          tsms = Some(tsms),
-          groupIndex = None
+          rows = Seq(OpenMetricsRow(
+            name = podMemKey,
+            labels = podLabels ++ Seq(
+              ("smg_top_stat", "memory")
+            ),
+            value = podStats.usage.memory,
+            tsms = Some(tsms)
+          ))
         )
         val contPodKey = s"cont.${podStats.kubePod.stableUid(groupIndex)}"
         podStats.containersUsage.sortBy(_.name).foreach { contStats =>
           val contKey = s"${contPodKey}.${contStats.name}"
           val contCpuKey = s"${contKey}.cpu"
           val contMemKey = s"${contKey}.mem"
-          contsRet += OpenMetricsStat(
-            smgUid = contCpuKey,
+          contsRet += OpenMetricsGroup(
             metaKey = Some(contCpuKey),
             metaType = Some("gauge"),
             metaHelp = Some(s"kubectl top pod ${podStats.kubePod.namespace}.${podStats.kubePod.name}, " +
               s"container ${contStats.name} cpu used"),
-            name = contCpuKey,
-            labels = podLabels ++ Seq(
-              ("smg_top_stat", "cpu"),
-              ("smg_top_container", contStats.name)
-            ),
-            value = contStats.usage.cpu,
-            tsms = Some(tsms),
-            groupIndex = None
+            rows = Seq(OpenMetricsRow(
+              name = contCpuKey,
+              labels = podLabels ++ Seq(
+                ("smg_top_stat", "cpu"),
+                ("smg_top_container", contStats.name)
+              ),
+              value = contStats.usage.cpu,
+              tsms = Some(tsms)
+            ))
           )
-          contsRet +=  OpenMetricsStat(
-            smgUid = contMemKey,
+          contsRet +=  OpenMetricsGroup(
             metaKey = Some(contMemKey),
             metaType = Some("gauge"),
             metaHelp = Some(s"pod ${podStats.kubePod.name}, " +
               s"container ${contStats.name} memory used"),
-            name = contMemKey,
-            labels = podLabels ++ Seq(
-              ("smg_top_stat", "memory"),
-              ("smg_top_container", contStats.name)
-            ),
-            value = contStats.usage.memory,
-            tsms = Some(tsms),
-            groupIndex = None
+            rows = Seq(OpenMetricsRow(
+              name = contMemKey,
+              labels = podLabels ++ Seq(
+                ("smg_top_stat", "memory"),
+                ("smg_top_container", contStats.name)
+              ),
+              value = contStats.usage.memory,
+              tsms = Some(tsms)
+            ))
           )
         }
       }
@@ -103,41 +103,41 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
     PodMetrics(podsRet.toList, contsRet.toList)
   }
 
-  private def nodesUsagesToMetrics(tsms: Long, in: Seq[SMGKubeClient.KubeTopNamedUsage]): Seq[OpenMetricsStat] = {
+  private def nodesUsagesToMetrics(tsms: Long, in: Seq[SMGKubeClient.KubeTopNamedUsage]): Seq[OpenMetricsGroup] = {
     in.sortBy(_.name).flatMap { nu =>
       val nodeKey = s"${nu.name}"
       val nodeCpuKey = s"${nodeKey}.cpu"
       val nodeMemKey = s"${nodeKey}.mem"
       Seq(
-        OpenMetricsStat(
-          smgUid = nodeCpuKey,
+        OpenMetricsGroup(
           metaKey = Some(nodeCpuKey),
           metaType = Some("gauge"),
           metaHelp = Some(s"kubectl top node ${nu.name} cpu"),
-          name = nodeCpuKey,
-          labels = nu.labels.toSeq ++ Seq(
-            ("smg_cluster_id", clusterUid),
-            ("smg_top_node", nu.name),
-            ("smg_top_stat", "cpu")
-          ),
-          value = nu.usage.cpu,
-          tsms = Some(tsms),
-          groupIndex = None
+          rows = Seq(OpenMetricsRow(
+            name = nodeCpuKey,
+            labels = nu.labels.toSeq ++ Seq(
+              ("smg_cluster_id", clusterUid),
+              ("smg_top_node", nu.name),
+              ("smg_top_stat", "cpu")
+            ),
+            value = nu.usage.cpu,
+            tsms = Some(tsms)
+          ))
         ),
-        OpenMetricsStat(
-          smgUid = nodeMemKey,
+        OpenMetricsGroup(
           metaKey = Some(nodeMemKey),
           metaType = Some("gauge"),
           metaHelp = Some(s"kubectl top node ${nu.name} memory used"),
-          name = nodeMemKey,
-          labels = nu.labels.toSeq ++ Seq(
-            ("smg_cluster_id", clusterUid),
-            ("smg_top_node", nu.name),
-            ("smg_top_stat", "memory")
-          ),
-          value = nu.usage.memory,
-          tsms = Some(tsms),
-          groupIndex = None
+          rows = Seq(OpenMetricsRow(
+            name = nodeMemKey,
+            labels = nu.labels.toSeq ++ Seq(
+              ("smg_cluster_id", clusterUid),
+              ("smg_top_node", nu.name),
+              ("smg_top_stat", "memory")
+            ),
+            value = nu.usage.memory,
+            tsms = Some(tsms)
+          ))
         )
       )
     }

@@ -1,12 +1,12 @@
 package com.smule.smgplugins.scrape
 
 import com.smule.smg.core._
-import com.smule.smg.openmetrics.OpenMetricsStat
+import com.smule.smg.openmetrics.OpenMetricsParser
 import com.smule.smgplugins.scrape.SMGScrapeCommands.{FETCH_OPTION_BEARER_TOKEN_FILE, FETCH_OPTION_SECURE_TLS, PARSE_OPTION_LABEL_UIDS}
 
 object SMGScrapeCommands {
   val VALID_COMMANDS = Set("fetch", "http", "parse", "get")
-  val PARSE_OPTION_LABEL_UIDS = ":lbluid"
+  val PARSE_OPTION_LABEL_UIDS = ":lbluid"   // deperecated/unused
 
   val FETCH_OPTION_SECURE_TLS = ":secure"
   val FETCH_OPTION_BEARER_TOKEN_FILE = ":tokenf"
@@ -14,8 +14,8 @@ object SMGScrapeCommands {
 
 class SMGScrapeCommands(log: SMGLoggerApi) {
 
-  private def parseText(inp: String, labelUid: Boolean): CommandResult = {
-    val stats  = OpenMetricsStat.parseText(inp, labelsInUid = labelUid, Some(log))
+  private def parseText(inp: String): CommandResult = {
+    val stats  = OpenMetricsParser.parseText(inp, Some(log))
     CommandResultCustom(OpenMetricsResultData(stats))
   }
 
@@ -38,11 +38,10 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
 
   private def commandFetchCommon(paramStr: String,
                            timeoutSec: Int,
-                           parentData: Option[ParentCommandData]): (String, Boolean) = {
+                           parentData: Option[ParentCommandData]): String = {
     var myParamStr = paramStr
     var secureTls = false
     var tokenFile: Option[String] = None
-    var labelUids: Boolean = false
     while (myParamStr.startsWith(":")){
       val arr = myParamStr.split("\\s+", 2)
       arr(0) match {
@@ -56,7 +55,7 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
           myParamStr = arr1.lift(1).getOrElse("")
         }
         case PARSE_OPTION_LABEL_UIDS => {
-          labelUids = true
+          //labelUids = true , now obsolete
           myParamStr = arr.lift(1).getOrElse("")
         }
         case x => throwOnError("fetch", paramStr,
@@ -67,15 +66,15 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
     if (targetUrl.isBlank)
       throwOnError("fetch", paramStr,
         timeoutSec, s"Invalid fetch url param - blank")
-    (httpClient.getUrl(targetUrl, timeoutSec, secureTls, tokenFile), labelUids)
+    httpClient.getUrl(targetUrl, timeoutSec, secureTls, tokenFile)
   }
 
   private def commandFetchAndParse(paramStr: String,
                                    timeoutSec: Int,
                                    parentData: Option[ParentCommandData]): CommandResult = {
     try {
-      val (dataTxt, labelUids) = commandFetchCommon(paramStr, timeoutSec, parentData)
-      parseText(dataTxt, labelUids)
+      val dataTxt = commandFetchCommon(paramStr, timeoutSec, parentData)
+      parseText(dataTxt)
     } catch { case t: Throwable =>
       throwOnError("parse", paramStr, timeoutSec, s"${t.getMessage}")
     }
@@ -85,7 +84,7 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
                                timeoutSec: Int,
                                parentData: Option[ParentCommandData]): CommandResult = {
     try {
-      val (dataTxt, labelUids) = commandFetchCommon(paramStr, timeoutSec, parentData)
+      val dataTxt = commandFetchCommon(paramStr, timeoutSec, parentData)
       CommandResultCustom(dataTxt)
     } catch { case t: Throwable =>
       throwOnError("http", paramStr, timeoutSec,s"${t.getMessage}")
@@ -96,9 +95,8 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
                            timeoutSec: Int,
                            parentData: Option[ParentCommandData]): CommandResult = {
     var myParamStr = paramStr
-    var labelUids: Boolean = false
     if (myParamStr.startsWith(SMGScrapeCommands.PARSE_OPTION_LABEL_UIDS)){
-      labelUids = true
+      // labelUids = true - obsolete, ignored
       myParamStr = myParamStr.stripPrefix(SMGScrapeCommands.PARSE_OPTION_LABEL_UIDS).stripLeading()
     }
     val dataTxt = if ((myParamStr == "") || (myParamStr == "-")){
@@ -114,7 +112,7 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
       }
     }
     try {
-      parseText(dataTxt, labelUids)
+      parseText(dataTxt)
     } catch { case t: Throwable =>
       throwOnError("parse", paramStr, timeoutSec,
         s"Unexpected OpenMetrics parse error: ${t.getClass.getName}: ${t.getMessage}")
@@ -124,29 +122,34 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
   private def commandGet(paramStr: String,
                         timeoutSec: Int,
                         parentData: Option[ParentCommandData]): CommandResult = {
-    if (parentData.isEmpty)
-      throwOnError("get", paramStr, timeoutSec, "Did not get parsed parentData to get data from")
-    val parsedData = parentData.get.res.data.asInstanceOf[OpenMetricsResultData]
-    val keys = paramStr.strip().split("\\s*,\\s*")
-    var conflictingTsms = false
-    var tsms: Option[Long] = None
-    val ret = keys.map { k =>
-      val opt = parsedData.byUid.get(k)
-      if (opt.isEmpty){
-        throwOnError("get", paramStr, timeoutSec, s"Key not found in metrics data: ${k}")
+    try {
+      if (parentData.isEmpty)
+        throwOnError("get", paramStr, timeoutSec, "Did not get parsed parentData to get data from")
+      val parsedData = parentData.get.res.data.asInstanceOf[OpenMetricsResultData]
+      val keys = paramStr.strip().split("\\s*[, ]\\s*")
+      var conflictingTsms = false
+      var tsms: Option[Long] = None
+      val ret = keys.map { k =>
+        val opt = parsedData.byUid.get(k)
+        if (opt.isEmpty) {
+          throwOnError("get", paramStr, timeoutSec, s"Key not found in metrics data: ${k}")
+        }
+        val newTsms = opt.get.tsms
+        if (tsms.isEmpty && !conflictingTsms)
+          tsms = newTsms
+        else if (tsms != newTsms) {
+          log.warn(s"SMGScrapeCommands.commandGet: Conflicting timestamps in get: $paramStr")
+          conflictingTsms = true
+          tsms = None
+        }
+        opt.get.value
       }
-      val newTsms = opt.get.tsms
-      if (tsms.isEmpty && !conflictingTsms)
-        tsms = newTsms
-      else if (tsms != newTsms){
-        log.warn(s"SMGScrapeCommands.commandGet: Conflicting timestamps in get: $paramStr")
-        conflictingTsms = true
-        tsms = None
-      }
-      opt.get.value
+      val mytss = tsms.map(x => (x / 1000).toInt)
+      CommandResultListDouble(ret.toList, if (mytss.isDefined) mytss else parentData.flatMap(_.useTss))
+    } catch { case t: Throwable =>
+      log.ex(t, s"SMGScrapeCommands: Unexpected exception in commandGet: ${t.getMessage}")
+      throw t
     }
-    val mytss = tsms.map(x => (x / 1000).toInt)
-    CommandResultListDouble(ret.toList, if (mytss.isDefined) mytss else parentData.flatMap(_.useTss) )
   }
 
   def runPluginFetchCommand(cmd: String,

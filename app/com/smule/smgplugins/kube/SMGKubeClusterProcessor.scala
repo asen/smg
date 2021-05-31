@@ -2,7 +2,7 @@ package com.smule.smgplugins.kube
 
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
 import com.smule.smg.core._
-import com.smule.smg.openmetrics.OpenMetricsStat
+import com.smule.smg.openmetrics.OpenMetricsParser
 import com.smule.smgplugins.autoconf.SMGAutoTargetConf
 import com.smule.smgplugins.kube.SMGKubeClient._
 import com.smule.smgplugins.kube.SMGKubeClusterAutoConf.ConfType
@@ -57,8 +57,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       regexReplaces = cConf.regexReplaces ++ cmConf.regexReplaces,
       labelsInUids = cmConf.labelsInUids,
       extraLabels = Map("smg_target_host"-> targetHost, "smg_target_port_path" -> cmConf.portAndPath),
-      rraDefAgg = cConf.rraDefAgg,
-      rraDefDtl = cConf.rraDefDtl,
+      rraDef = cConf.rraDef,
       needParse = cConf.needParse
     )
     Some(ret)
@@ -121,7 +120,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val outObj = smgConfSvc.runFetchCommand(SMGCmd(command, cConf.fetchCommandTimeout), None)
       if (cConf.needParse) {
         val out = outObj.asStr
-        if (OpenMetricsStat.parseText(out, labelsInUid = false, Some(log)).nonEmpty) {
+        if (OpenMetricsParser.parseText(out, Some(log)).nonEmpty) {
           //keep known up services in a cache and not run this every minute -
           //we only want to know if it is http and has valid /metrics URL, once
           autoDiscoveryCache.recordGood(command, kubeNsObject)
@@ -222,8 +221,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         extraLabels = Map("smg_target_type"-> autoConf.targetType.toString,
           "smg_target_host"-> ipAddr,
           "smg_target_port" -> kubePort.port.toString) ++ nsObject.labels,
-        rraDefAgg = cConf.rraDefAgg,
-        rraDefDtl = cConf.rraDefDtl,
+        rraDef = cConf.rraDef,
         needParse = cConf.needParse
       )
       Some(ret)
@@ -554,8 +552,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       regexReplaces = cConf.regexReplaces,
       labelsInUids = false,
       extraLabels = Map("smg_target_type"-> "kubectl-top-nodes"),
-      rraDefAgg = cConf.rraDefAgg,
-      rraDefDtl = cConf.rraDefDtl,
+      rraDef = cConf.rraDef,
       needParse = cConf.needParse
     )
     val topPodsPfId = cConf.uidPrefix + KUBECTL_TOP_PODS_PF_NAME
@@ -576,8 +573,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       regexReplaces = cConf.regexReplaces,
       labelsInUids = false,
       extraLabels = Map("smg_target_type"-> "kubectl-top-pods"),
-      rraDefAgg = cConf.rraDefAgg,
-      rraDefDtl = cConf.rraDefDtl,
+      rraDef = cConf.rraDef,
       needParse = cConf.needParse
     )
     ret += SMGScrapeTargetConf(
@@ -596,8 +592,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       regexReplaces = cConf.regexReplaces,
       labelsInUids = false,
       extraLabels = Map("smg_target_type"-> "kubectl-top-conts"),
-      rraDefAgg = cConf.rraDefAgg,
-      rraDefDtl = cConf.rraDefDtl,
+      rraDef = cConf.rraDef,
       needParse = cConf.needParse
     )
     ret.toList

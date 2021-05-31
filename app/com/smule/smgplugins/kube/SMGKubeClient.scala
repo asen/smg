@@ -1,7 +1,7 @@
 package com.smule.smgplugins.kube
 
 import com.smule.smg.core.{SMGFileUtil, SMGLoggerApi}
-import com.smule.smg.openmetrics.OpenMetricsStat
+import com.smule.smg.openmetrics.OpenMetricsParser
 import com.smule.smgplugins.kube.SMGKubeClient._
 import io.fabric8.kubernetes.api.model.Quantity
 import io.fabric8.kubernetes.client.{Config, ConfigBuilder, DefaultKubernetesClient}
@@ -103,7 +103,7 @@ object SMGKubeClient {
       } else podName
       if (kind == "Job" && kind.matches("-\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d$"))
         stableName = stableName.split("-").dropRight(1).mkString("-")
-      OpenMetricsStat.groupIndexUid(stableName, groupIndex)
+      OpenMetricsParser.groupIndexUid(stableName, groupIndex)
     }
   }
 

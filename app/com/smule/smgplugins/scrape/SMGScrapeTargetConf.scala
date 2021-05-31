@@ -29,11 +29,12 @@ case class SMGScrapeTargetConf(
                                 regexReplaces: Seq[RegexReplaceConf],
                                 labelsInUids: Boolean,
                                 extraLabels: Map[String,String],
-                                rraDefAgg: Option[String],
-                                rraDefDtl: Option[String],
+                                rraDef: Option[String],
                                 needParse: Boolean
                               ) {
-   lazy val inspect: String = s"uid=$uid humanName=$humanName interval=$interval command=$command " +
+  val maxUidLen: Int = 180 // TODO make this a conf?
+
+  lazy val inspect: String = s"uid=$uid humanName=$humanName interval=$interval command=$command " +
      s"timeout=$timeoutSec confOutput=$confOutput parentPfId=$parentPfId labelsInUids=$labelsInUids " +
      s"filter: ${filter.map(_.humanText).getOrElse("None")}"
 
@@ -87,11 +88,8 @@ object SMGScrapeTargetConf {
       in.extraLabels.foreach { case (k,v) => elMap.put(k,v)}
       ret.put("extra_labels", elMap)
     }
-    if (in.rraDefAgg.isDefined){
-      ret.put("rra_agg", in.rraDefAgg.get)
-    }
-    if (in.rraDefDtl.isDefined){
-      ret.put("rra_dtl", in.rraDefDtl.get)
+    if (in.rraDef.isDefined){
+      ret.put("rra_def", in.rraDef.get)
     }
     if (!in.needParse)
       ret.put("need_parse", "false")
@@ -115,6 +113,10 @@ object SMGScrapeTargetConf {
      "scrape-target." + uid,
       ymap.toMap.map(t => (t._1, t._2.toString))
     )
+    val rraDef: Option[String] = if (ymap.contains("rra_def"))
+      ymap.get("rra_def").map(_.toString)
+    else
+      ymap.get("rra_agg").map(_.toString) // backwards compatible
     Some(
       SMGScrapeTargetConf(
         uid = uid,
@@ -138,8 +140,7 @@ object SMGScrapeTargetConf {
         extraLabels = ymap.get("extra_labels").map{ o: Object =>
           yobjMap(o).map{case (k,v) => (k,v.toString)}.toMap
         }.getOrElse(Map[String,String]()),
-        rraDefAgg = ymap.get("rra_agg").map(_.toString),
-        rraDefDtl = ymap.get("rra_dtl").map(_.toString),
+        rraDef = rraDef,
         needParse = ymap.getOrElse("need_parse", "true").toString != "false"
       )
     )

@@ -3,19 +3,18 @@ package com.smule.smg
 
 import java.io.{File, StringWriter}
 import java.util.concurrent.TimeUnit
-
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.smule.smg.config.{SMGAutoIndex, SMGConfigService}
 import com.smule.smg.core._
 import com.smule.smg.grapher._
-import com.smule.smg.openmetrics.OpenMetricsStat
+import com.smule.smg.openmetrics.{OpenMetricsGroup, OpenMetricsParser, OpenMetricsRow}
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.{SMGRrdFetch, SMGRrdFetchAgg, SMGRrdFetchParams, SMGRrdRow}
 import com.smule.smg.search.SMGSearchCache
-import javax.inject.{Inject, Singleton}
 
+import javax.inject.{Inject, Singleton}
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.Duration
@@ -581,17 +580,17 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
                                 typ: String = "gauge",
                                 labels: Seq[(String,String)] = Seq(),
                                 tsms: Option[Long] = None
-                               ): OpenMetricsStat = {
-    OpenMetricsStat(
-      smgUid = OpenMetricsStat.labelUid(name, labels),
+                               ): OpenMetricsGroup = {
+    OpenMetricsGroup(
       metaKey = Some(name),
       metaType = Some(typ),
       metaHelp = Some(help),
-      name = name,
-      labels = labels,
-      value = value,
-      tsms = tsms,
-      groupIndex = None
+      rows = Seq(OpenMetricsRow(
+        name = name,
+        labels = labels,
+        value = value,
+        tsms = tsms
+      ))
     )
   }
 
@@ -604,8 +603,8 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     writer.toString
   }
 
-  def getSmgMetrics: Seq[OpenMetricsStat] = {
-    val ret = ListBuffer[OpenMetricsStat]()
+  def getSmgMetrics: Seq[OpenMetricsGroup] = {
+    val ret = ListBuffer[OpenMetricsGroup]()
     val versBuildArr = configSvc.smgVersionStr.split("-")
     val smgVers = Try(versBuildArr(0).replaceAll("[^\\d\\.]", "").toDouble).getOrElse(0.0)
     val buildNum = Try(versBuildArr.last.toInt).getOrElse(0)
@@ -668,5 +667,5 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     ret.toList
   }
 
-  def getMetrics: String = getJvmMetricsStr + OpenMetricsStat.dumpStats(getSmgMetrics).mkString("\n") + "\n"
+  def getMetrics: String = getJvmMetricsStr + OpenMetricsParser.dumpStats(getSmgMetrics).mkString("\n") + "\n"
 }

@@ -3,7 +3,6 @@ package com.smule.smg
 import com.smule.smg.config.SMGAutoIndex
 import com.smule.smg.core.{SMGAggGroupBy, SMGFilter, SMGIndex, SMGObjectView}
 import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView, SMGImageViewsGroup}
-import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.{SMGRrdFetchParams, SMGRrdRow}
 import com.smule.smg.search.SMGSearchCache

@@ -1,7 +1,7 @@
 
 import com.smule.smg.core.{SMGFileUtil, SMGLogger}
-import com.smule.smg.openmetrics.OpenMetricsStat
-import com.smule.smgplugins.scrape.{SMGScrapeCommands, SMGScrapeObjectGen, SMGScrapePluginConfParser, SMGYamlConfigGen}
+import com.smule.smg.openmetrics.OpenMetricsParser
+import com.smule.smgplugins.scrape.{SMGScrapeCommands, SMGScrapeObjectsGen, SMGScrapePluginConfParser, SMGYamlConfigGen}
 import helpers.TestConfigSvc
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
@@ -46,8 +46,8 @@ class SMGScrapeSpec extends Specification {
       val cs = new TestConfigSvc()
       val parser = new SMGScrapePluginConfParser("scrape", "smgconf/scrape-plugin.yml", log)
       val txt = SMGFileUtil.getFileContents("test-data/metrics.txt")
-      val parsed = OpenMetricsStat.parseText(txt, labelsInUid = false, Some(log))
-      val ogen = new SMGScrapeObjectGen(cs, parser.conf.targets.head, parsed, log)
+      val parsed = OpenMetricsParser.parseText(txt, Some(log))
+      val ogen = new SMGScrapeObjectsGen(cs, parser.conf.targets.head, parsed, log)
       val res = ogen.generateSMGObjects()
 
       val cgen = SMGYamlConfigGen

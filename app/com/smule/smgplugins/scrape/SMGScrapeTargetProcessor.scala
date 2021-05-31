@@ -2,10 +2,9 @@ package com.smule.smgplugins.scrape
 
 import java.io.File
 import java.nio.file.{Files, Paths}
-
 import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core._
-import com.smule.smg.openmetrics.OpenMetricsStat
+import com.smule.smg.openmetrics.{OpenMetricsGroup, OpenMetricsParser}
 
 
 class SMGScrapeTargetProcessor(pluginConf: SMGScrapePluginConf,
@@ -25,10 +24,10 @@ class SMGScrapeTargetProcessor(pluginConf: SMGScrapePluginConf,
 
   private def getYamlText(tgt: SMGScrapeTargetConf, res: CommandResult): String = {
     val parsed = if (tgt.needParse)
-      OpenMetricsStat.parseText(res.asStr, tgt.labelsInUids, Some(log))
+      OpenMetricsParser.parseText(res.asStr, Some(log))
     else
       res.data.asInstanceOf[OpenMetricsResultData].stats
-    val ogen = new SMGScrapeObjectGen(smgConfSvc, tgt, parsed, log)
+    val ogen = new SMGScrapeObjectsGen(smgConfSvc, tgt, parsed, log)
     val objs = ogen.generateSMGObjects()
     val cgen = SMGYamlConfigGen
     val out = new StringBuilder()

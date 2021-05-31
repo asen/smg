@@ -10,7 +10,6 @@ import com.smule.smg.core._
 import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView, SMGImageViewsGroup}
 import com.smule.smg.monitor._
 import com.smule.smg.notify.SMGMonNotifySeverity
-import com.smule.smg.openmetrics.OpenMetricsStat
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.{SMGRrd, SMGRrdFetchParams, SMGRrdRow}
 import javax.inject.{Inject, Singleton}
