@@ -151,7 +151,9 @@ class SMGScrapeObjectsGen(
     } else s"INVALID_SUMCOUNT_GROUP-$groupType" // should never happen
     val idSuffix = if (scrapeTargetConf.labelsInUids) {
       val refRow = countRow.getOrElse(sumRow.getOrElse(buckets.head))
-      val labelUid = OpenMetricsParser.labelUid(baseUid, refRow.labels)
+      val labelUid = OpenMetricsParser.groupIndexUid(
+        OpenMetricsParser.labelUid(baseUid, refRow.labels), refRow.getDupIndex
+      )
       if (labelUid.lengthCompare(scrapeTargetConf.maxUidLen) <= 0)
         labelUid
       else

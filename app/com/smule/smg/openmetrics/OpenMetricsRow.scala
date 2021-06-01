@@ -12,6 +12,8 @@ case class OpenMetricsRow(
       throw new RuntimeException("BUG: OpenMetricsRow.setDupIndex can be called only once, during parsing")
     dupIndex = Some(ix)
   }
+  def getDupIndex: Option[Int] = dupIndex
+
   def labelUid: String = OpenMetricsParser.groupIndexUid(OpenMetricsParser.labelUid(name, labels), dupIndex)
   def indexUid(idx: Int): String = OpenMetricsParser.groupIndexUid(name, Some(idx))
   lazy val labelsAsMap: Map[String, String] = labels.toMap
