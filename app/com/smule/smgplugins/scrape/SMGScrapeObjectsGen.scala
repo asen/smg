@@ -248,7 +248,7 @@ class SMGScrapeObjectsGen(
     // TODO this needs to operate on the derived rates vs absolute value
     if (sumObj.nonEmpty && countObj.nonEmpty){
       //an average object - dividing sum/count using rpn
-      val ouid = smgBaseUid + s".${groupType}_avg"
+      val ouid = smgBaseUid + s".${groupType}_average"
       val myVars = List(Map("label" -> "avg"))
       val myLabels = sumRow.get.labelsAsMap ++ countRow.get.labelsAsMap
       ret.objects += SMGRrdAggObject(id = ouid,
