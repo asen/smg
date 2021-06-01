@@ -14,36 +14,6 @@ import scala.collection.mutable.ListBuffer
 
 class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLoggerApi) {
 
-  private def parseNodeMetricConf(ymap: mutable.Map[String, Object]): Option[SMGKubeNodeMetricsConf] = {
-    if (!ymap.contains("uid")){
-      return None
-    }
-    val uid = ymap("uid").toString
-    val notifyConf = SMGMonNotifyConf.fromVarMap(
-      // first two technically unused
-      SMGMonAlertConfSource.OBJ,
-      pluginId + "." + uid,
-      ymap.toMap.map(t => (t._1, t._2.toString))
-    )
-
-    Some(
-      SMGKubeNodeMetricsConf(
-        uid = uid,
-        humanName = ymap.get("name").map(_.toString),
-        interval = ymap.get("interval").map(_.asInstanceOf[Int]),
-        portAndPath = ymap.get("port_path").map(_.toString).getOrElse("/metrics"),
-        proto = ymap.get("proto").map(_.toString),
-        filter = if (ymap.contains("filter")){
-          Some(SMGFilter.fromYamlMap(yobjMap(ymap("filter")).toMap))
-        } else None,
-        regexReplaces = ymap.get("regex_replaces").map { yo: Object =>
-          yobjList(yo).flatMap { o =>  RegexReplaceConf.fromYamlObject(yobjMap(o)) }
-        }.getOrElse(Seq()),
-        labelsInUids = false, // TODO?
-        notifyConf = notifyConf)
-    )
-  }
-
   private def parseClusterConf(ymap: mutable.Map[String, Object]): Option[SMGKubeClusterConf] = {
     if (!ymap.contains("uid")){
       return None
@@ -67,7 +37,7 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
         if (m.contains("template")) {
           nodeAutoconfs += m.toMap
         } else {
-          val ret = parseNodeMetricConf(m)
+          val ret = SMGKubeNodeMetricsConf.fromYamlMap(m, pluginId)
           if (ret.isDefined)
             nodeMetrics += ret.get
         }

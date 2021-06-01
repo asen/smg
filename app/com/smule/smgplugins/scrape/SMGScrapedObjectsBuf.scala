@@ -22,4 +22,11 @@ case class SMGScrapedObjectsBuf() {
     aggObjects ++= other.aggObjects
     indexes ++= other.indexes
   }
+
+  // sort indexes by id, in-place
+  def sortIndexes(): Unit = {
+    val sorted = indexes.sortBy(_.id).toList
+    indexes.clear()
+    indexes ++= sorted
+  }
 }

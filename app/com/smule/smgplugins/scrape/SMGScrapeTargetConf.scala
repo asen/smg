@@ -30,7 +30,8 @@ case class SMGScrapeTargetConf(
                                 labelsInUids: Boolean,
                                 extraLabels: Map[String,String],
                                 rraDef: Option[String],
-                                needParse: Boolean
+                                needParse: Boolean,
+                                sortIndexes: Boolean
                               ) {
   val maxUidLen: Int = 180 // TODO make this a conf?
 
@@ -93,6 +94,8 @@ object SMGScrapeTargetConf {
     }
     if (!in.needParse)
       ret.put("need_parse", "false")
+    if (in.sortIndexes)
+      ret.put("sort_indexes", "true")
     ret
   }
 
@@ -141,7 +144,8 @@ object SMGScrapeTargetConf {
           yobjMap(o).map{case (k,v) => (k,v.toString)}.toMap
         }.getOrElse(Map[String,String]()),
         rraDef = rraDef,
-        needParse = ymap.getOrElse("need_parse", "true").toString != "false"
+        needParse = ymap.getOrElse("need_parse", "true").toString != "false",
+        sortIndexes = ymap.getOrElse("sort_indexes", "false").toString == "true"
       )
     )
   }

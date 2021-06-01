@@ -494,6 +494,8 @@ class SMGScrapeObjectsGen(
         ret.mergeOther(grpRet)
       }
     }
+    if (scrapeTargetConf.sortIndexes)
+      ret.sortIndexes()
     ret
   }
 }

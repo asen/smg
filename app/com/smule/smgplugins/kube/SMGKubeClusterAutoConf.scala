@@ -24,7 +24,9 @@ case class SMGKubeClusterAutoConf(
                                    reCheckBackoff: Long,
                                    tryHttps: Boolean,
                                    forceHttps: Boolean,
-                                   disableCheck: Boolean
+                                   disableCheck: Boolean,
+                                   labelsInUids: Boolean,
+                                   sortIndexes: Boolean
                                  )
 
 object SMGKubeClusterAutoConf {
@@ -61,7 +63,9 @@ object SMGKubeClusterAutoConf {
         getOrElse(defaultRecheckBackoff),
       tryHttps = scm.get("try_https").map(_.toString).getOrElse("true") != "false",
       forceHttps = scm.get("force_https").map(_.toString).getOrElse("false") == "true",
-      disableCheck = scm.getOrElse("disable_check", "false").toString == "true"
+      disableCheck = scm.getOrElse("disable_check", "false").toString == "true",
+      labelsInUids = scm.getOrElse("labels_in_uids", "false").toString == "true",
+      sortIndexes = scm.getOrElse("sort_indexes", "false").toString == "true"
     )
     Some(ret)
   }

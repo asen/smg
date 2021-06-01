@@ -58,7 +58,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       labelsInUids = cmConf.labelsInUids,
       extraLabels = Map("smg_target_host"-> targetHost, "smg_target_port_path" -> cmConf.portAndPath),
       rraDef = cConf.rraDef,
-      needParse = cConf.needParse
+      needParse = cConf.needParse,
+      sortIndexes = cmConf.sortIndexes
     )
     Some(ret)
   }
@@ -217,12 +218,13 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         idPrefix = cConf.idPrefix,
         notifyConf = cConf.notifyConf,
         regexReplaces = cConf.regexReplaces ++ autoConf.regexReplaces,
-        labelsInUids = false,
+        labelsInUids = autoConf.labelsInUids,
         extraLabels = Map("smg_target_type"-> autoConf.targetType.toString,
           "smg_target_host"-> ipAddr,
           "smg_target_port" -> kubePort.port.toString) ++ nsObject.labels,
         rraDef = cConf.rraDef,
-        needParse = cConf.needParse
+        needParse = cConf.needParse,
+        sortIndexes = autoConf.sortIndexes
       )
       Some(ret)
     } catch { case t: Throwable =>
@@ -553,7 +555,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       labelsInUids = false,
       extraLabels = Map("smg_target_type"-> "kubectl-top-nodes"),
       rraDef = cConf.rraDef,
-      needParse = cConf.needParse
+      needParse = cConf.needParse,
+      sortIndexes = false
     )
     val topPodsPfId = cConf.uidPrefix + KUBECTL_TOP_PODS_PF_NAME
 
@@ -574,7 +577,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       labelsInUids = false,
       extraLabels = Map("smg_target_type"-> "kubectl-top-pods"),
       rraDef = cConf.rraDef,
-      needParse = cConf.needParse
+      needParse = cConf.needParse,
+      sortIndexes = false
     )
     ret += SMGScrapeTargetConf(
       uid = uidPx + "conts",
@@ -593,7 +597,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       labelsInUids = false,
       extraLabels = Map("smg_target_type"-> "kubectl-top-conts"),
       rraDef = cConf.rraDef,
-      needParse = cConf.needParse
+      needParse = cConf.needParse,
+      sortIndexes = false
     )
     ret.toList
   }
