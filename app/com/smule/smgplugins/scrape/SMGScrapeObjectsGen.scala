@@ -345,10 +345,11 @@ class SMGScrapeObjectsGen(
     val hasManyGroups = sumCountGroups.lengthCompare(1) > 0
     var myParentIndexId = parentIndexId
     if (hasManyGroups) { // extra index if many groups
-      val smgBaseUid = idPrefix + grp.metaKey.getOrElse("INVALID")
+      val metaKey = grp.metaKey.getOrElse("INVALID")
+      val smgBaseUid = idPrefix + metaKey
       ret.indexes += myIndex(
         idxId = smgBaseUid,
-        title = grp.title(scrapeTargetConf.humanName, smgBaseUid, None) + s" - ${grp.metaType.getOrElse("INVALID")}",
+        title = grp.title(scrapeTargetConf.humanName, metaKey, None) + s" - ${grp.metaType.getOrElse("INVALID")}",
         flt = SMGFilter.fromPrefixLocal(smgBaseUid + "."),
         desc = grp.metaHelp,
         parentIndexId = Some(parentIndexId),
