@@ -191,10 +191,13 @@ class SMGScrapeObjectsGen(
         labels = myLabels
       )
       if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj)) {
-        ret.rrdObjects += retObj
+        ret.objects += retObj
         indexCols += 1
       }
     }
+
+    var sumObj: Option[SMGRrdObject] = None
+    var countObj: Option[SMGRrdObject] = None
 
     // one more graph for sum
     if (sumRow.nonEmpty) {
@@ -213,8 +216,9 @@ class SMGScrapeObjectsGen(
         labels = myLabels
       )
       if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj)) {
-        ret.rrdObjects += retObj
+        ret.objects += retObj
         indexCols += 1
+        sumObj = Some(retObj)
       }
     }
 
@@ -234,41 +238,39 @@ class SMGScrapeObjectsGen(
         labels = myLabels
       )
       if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj)) {
-        ret.rrdObjects += retObj
+        ret.objects += retObj
         indexCols += 1
+        countObj = Some(retObj)
       }
     }
 
     // an extra average graph if both sum/count available
-    if (sumRow.nonEmpty && countRow.nonEmpty) {
-      // first a pre-fetch to get just the sum/count
-      val parsePf = parentPfIds.headOption
-      val sumCountPfId = smgBaseUid + ".get_sumcount"
-      ret.preFetches += myPreFetchCommand(
-        pfId = sumCountPfId,
-        cmd = s":scrape get ${sumRow.get.labelUid}, ${countRow.get.labelUid}",
-        desc = None,
-        preFetch = parsePf
-      )
-
+    // TODO this needs to operate on the derived rates vs absolute value
+    if (sumObj.nonEmpty && countObj.nonEmpty){
       //an average object - dividing sum/count using rpn
       val ouid = smgBaseUid + s".${groupType}_avg"
       val myVars = List(Map("label" -> "avg"))
       val myLabels = sumRow.get.labelsAsMap ++ countRow.get.labelsAsMap
-      ret.rrdObjects += myRrdObject(
-        ouid = ouid,
-        parentPfIds = sumCountPfId :: parentPfIds.toList,
-        cmd = ":cc rpn $ds0,$ds1,/",
+      ret.objects += SMGRrdAggObject(id = ouid,
+        ous = Seq(sumObj.get, countObj.get),
+        aggOp = "RPN:$ds0,$ds1,/",
         vars = myVars,
         title = grp.title(scrapeTargetConf.humanName, baseUid, titleGroupIndexId) + s" ($groupType average)",
-        rrdType = rrdType,
-        labels = myLabels
+        rrdType = "GAUGE",
+        interval = scrapeTargetConf.interval,
+        dataDelay = 0,
+        stack = false,
+        rrdFile = None, //TODO ?
+        rraDef = getRraDef(scrapeTargetConf.rraDef),
+        notifyConf = scrapeTargetConf.notifyConf,
+        rrdInitSource = None,
+        labels = myLabels ++ scrapeTargetConf.extraLabels
       )
       indexCols += 1
     }
 
     // add an index
-    if (ret.rrdObjects.nonEmpty) {
+    if (ret.objects.nonEmpty) {
       val retIx = myIndex(
         idxId = smgBaseUid,
         title = grp.title(scrapeTargetConf.humanName, baseUid, titleGroupIndexId),
@@ -419,11 +421,11 @@ class SMGScrapeObjectsGen(
           labels = myLabels
         )
         if (scrapeTargetConf.filter.isEmpty || scrapeTargetConf.filter.get.matches(retObj))
-          ret.rrdObjects += retObj
+          ret.objects += retObj
       }
 
       // add an index
-      if (ret.rrdObjects.nonEmpty) {
+      if (ret.objects.nonEmpty) {
         val smgBaseUid = idPrefix + baseUid
         val filterDotSuffix = if (hasMany) "." else ""
         ret.indexes += myIndex(

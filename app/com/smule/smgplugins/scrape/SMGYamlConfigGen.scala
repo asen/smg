@@ -1,9 +1,9 @@
 package com.smule.smgplugins.scrape
 
 import java.util
-
 import com.smule.smg.config.SMGConfIndex
-import com.smule.smg.core.{SMGFilter, SMGPreFetchCmd, SMGRrdAggObject, SMGRrdObject}
+import com.smule.smg.core.{SMGFilter, SMGObjectBase, SMGObjectView, SMGPreFetchCmd, SMGRrdAggObject, SMGRrdObject}
+import com.smule.smg.grapher.SMGraphObject
 import com.smule.smg.notify.SMGMonNotifyConf
 import org.yaml.snakeyaml.Yaml
 
@@ -24,12 +24,17 @@ object SMGYamlConfigGen {
     ret
   }
 
-  def rrdObjectsToYamlList(objs: Seq[SMGRrdObject]): util.List[Object] = {
-    smgObjectsToYamlList(objs, rrdObjectToYamlObj)
+  private def smgObjectToYamlObject(o: SMGObjectBase): Object = {
+    o match {
+      case x: SMGRrdObject => rrdObjectToYamlObj(x)
+      case x: SMGRrdAggObject => rrdAggObjectToYamlObj(x)
+      // TODO case x: SMGraphObject => _
+      case x => throw new RuntimeException(s"BUG: smgObjectToYamlObject called for invalid type: ${x.getClass}: $x")
+    }
   }
 
-  def rrdAggObjectsToYamlList(objs: Seq[SMGRrdAggObject]): util.List[Object] = {
-    smgObjectsToYamlList(objs, rrdAggObjectToYamlObj)
+  def rrdObjectsToYamlList(objs: Seq[SMGObjectBase]): util.List[Object] = {
+    smgObjectsToYamlList(objs, smgObjectToYamlObject)
   }
 
   def preFetchesToYamlList(objs: Seq[SMGPreFetchCmd]): util.List[Object] = {

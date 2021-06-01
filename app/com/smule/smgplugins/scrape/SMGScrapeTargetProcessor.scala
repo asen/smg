@@ -49,19 +49,12 @@ class SMGScrapeTargetProcessor(pluginConf: SMGScrapePluginConf,
     } else
       out.append(s"\n\n### no pre fetch commands\n\n")
 
-    if (objs.rrdObjects.nonEmpty) {
-      out.append(s"\n\n### rrd objects\n\n")
-      val objsYamlTxt = cgen.yamlObjToStr(cgen.rrdObjectsToYamlList(objs.rrdObjects))
+    if (objs.objects.nonEmpty) {
+      out.append(s"\n\n### rrd/agg objects\n\n")
+      val objsYamlTxt = cgen.yamlObjToStr(cgen.rrdObjectsToYamlList(objs.objects))
       out.append(objsYamlTxt)
     } else
       out.append(s"\n\n### no rrd objects\n\n")
-
-    if (objs.aggObjects.nonEmpty) {
-      out.append(s"\n\n### rrd aggregate objects\n\n")
-      val aggObjsYamlTxt = cgen.yamlObjToStr(cgen.rrdAggObjectsToYamlList(objs.aggObjects))
-      out.append(aggObjsYamlTxt)
-    } else
-      out.append(s"\n\n### no rrd aggregate objects\n\n")
 
     if (objs.indexes.nonEmpty) {
       out.append(s"\n\n### index objects\n\n")

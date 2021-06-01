@@ -54,7 +54,7 @@ class SMGScrapeSpec extends Specification {
       val yamlPfsList = cgen.yamlObjToStr(cgen.preFetchesToYamlList(res.preFetches))
       log.info(s"PREFETCH_YAMLS:\n$yamlPfsList")
       log.info("============================================")
-      val yamlObjsList = cgen.yamlObjToStr(cgen.rrdObjectsToYamlList(res.rrdObjects))
+      val yamlObjsList = cgen.yamlObjToStr(cgen.rrdObjectsToYamlList(res.objects))
       log.info(s"RRD_OBJ_YAMLS:\n$yamlObjsList")
       log.info("============================================")
       val yamlIdxList = cgen.yamlObjToStr(cgen.confIndexesToYamlList(res.indexes))
