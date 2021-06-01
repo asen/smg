@@ -124,6 +124,8 @@ class SMGScrapeObjectsGen(
     disableHeatmap = false
   )
 
+  private val sumCountGroupBucketLabels = Seq("le")
+
   private def processSumCountGroup(
                                     grp: OpenMetricsGroup,
                                     idPrefix: String,
@@ -167,8 +169,10 @@ class SMGScrapeObjectsGen(
       val ouid = smgBaseUid + s".${groupType}_buckets"
       val scrapeGetParams = buckets.map(_.labelUid).mkString(" ")
       val bucketVars = buckets.zipWithIndex.map { case (row, i) =>
+        var lblOpt = row.labels.find(t => sumCountGroupBucketLabels.contains(t._1))
+        if (lblOpt.isEmpty) lblOpt = row.labels.lastOption
         Map(
-          "label" -> row.labels.lastOption.
+          "label" -> lblOpt.
             map(t => OpenMetricsParser.safeUid(s"${t._1}-${t._2}")).getOrElse(s"bucket_$i")
         )
       }.toList
