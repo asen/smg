@@ -1,12 +1,5 @@
 package com.smule.smg.openmetrics
 
-import com.smule.smg.config.SMGConfigParser
-import com.smule.smg.core.SMGLoggerApi
-
-import scala.collection.immutable.StringOps
-import scala.collection.mutable.ListBuffer
-import scala.util.matching.Regex
-
 case class OpenMetricsGroup(
                              metaKey: Option[String],
                              metaType: Option[String],

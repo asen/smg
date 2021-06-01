@@ -147,6 +147,17 @@ object OpenMetricsParser {
     val rows = lines.flatMap { ln =>
       parseLine(ln, log)
     }
+    // handle duplicate normalized ids, e.g. with vitess stats one can see:
+    //    vtgate_vttablet_call_error_count{db_type="replica",...,shard_name="cc-]"} 1
+    //    vtgate_vttablet_call_error_count{db_type="replica",...,shard_name="cc-}"} 1
+    // these need consistent deduplication, for now relying on consitent ordering and indexes for that
+    rows.groupBy(_.labelUid).foreach { case (_, dups) =>
+      if (dups.lengthCompare(1) > 0) {
+        dups.zipWithIndex.foreach { case (row, ix) =>
+          row.setDupIndex(ix)
+        }
+      }
+    }
     OpenMetricsGroup(metaKey, metaType, metaHelp, rows)
   }
 
