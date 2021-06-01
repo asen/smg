@@ -310,12 +310,12 @@ class SMGScrapeObjectsGen(
     while (hasMore){
       val curGroup = ListBuffer[OpenMetricsRow]()
       curGroup ++= myRows.takeWhile(r => !isSumCountName(r.name))
+      myRows = myRows.drop(curGroup.size)
       var nextName: String = myRows.headOption.map(_.name).getOrElse("")
       if (curGroup.isEmpty && !isSumCountName(nextName)){
         log.warn(s"SMGScrapeObjectGen.processSumCountGroups: ${grp.metaKey} empty group with no sum/count")
         hasMore = false
       } else {
-        myRows = myRows.drop(curGroup.size)
         // also get _sum and _count, do not assume specific order or existence of both
         val sumCount = ListBuffer[OpenMetricsRow]()
         if (isSumCountName(nextName)) {
