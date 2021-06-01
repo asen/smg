@@ -1,0 +1,26 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%
+  // Configure this with a command like this:
+  // command: 'curl -sS -f -H 'Authorization: Bearer <token>' https://%node_host%:%port%/metrics/cadvisor'
+  // runtime_data: true
+%>
+<%@ val command: String %>
+<%@ val node_name: String %>
+<%@ val node_host: String %>
+<%@ val data: Seq[String] %>
+<%@ val id_prefix: String = "host." %>
+<%@ val title_prefix: String = "Host " %>
+<%@ val interval: Int = 60 %>
+<%@ val rra_def: String = "" %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val desc: String = "" %>
+<%@ val filter_rxx: String = "" %>
+<%
+  // parse /metrics output
+  val groups = com.smule.smg.openmetrics.OpenMetricsParser.parseText(data.mkString("\n"), None)
+  val parsed = groups.flatMap { grp => grp.rows.map { row => (grp, row) } }
+  val parsedByUid = parsed.groupBy(_._2.labelUid)
+
+%>

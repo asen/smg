@@ -124,7 +124,7 @@ class SMGScrapeObjectsGen(
     disableHeatmap = false
   )
 
-  private val sumCountGroupBucketLabels = Seq("le")
+  private val sumCountGroupBucketLabels = Seq("le", "quantile")
 
   private def processSumCountGroup(
                                     grp: OpenMetricsGroup,
