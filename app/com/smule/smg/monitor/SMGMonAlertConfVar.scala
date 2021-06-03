@@ -67,12 +67,14 @@ object SMGMonAlertConfVar {
     "alert-warn-lte",
     "alert-warn-lt",
     "alert-warn-eq",
+    "alert-warn-neq",
     "alert-crit",
     "alert-crit-gte",
     "alert-crit-gt",
     "alert-crit-lte",
     "alert-crit-lt",
-    "alert-crit-eq"
+    "alert-crit-eq",
+    "alert-crit-neq"
   )
 
   private val PLUGIN_ALERT_KEY_PX = "alert-p-"

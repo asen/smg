@@ -11,6 +11,7 @@ case class SMGMonAlertThresh(value: Double, op: String) {
       case "lte" => if (fetchedValue <= value) Some(s"${numFmt(fetchedValue)} <= ${numFmt(value)}") else None
       case "lt"  => if (fetchedValue < value) Some(s"${numFmt(fetchedValue)} < ${numFmt(value)}") else None
       case "eq"  => if (fetchedValue == value) Some(s"${numFmt(fetchedValue)} == ${numFmt(value)}") else None
+      case "neq"  => if (fetchedValue == value) Some(s"${numFmt(fetchedValue)} != ${numFmt(value)}") else None
       case badop: String => {
         SMGLogger.warn("SMGMonAlertThresh: invalid op: " + badop)
         None

@@ -2085,12 +2085,14 @@ alert keywords are defined:
     alert-warn-lte: NUM  # warning alert if value is less than or equal to NUM
     alert-warn-lt: NUM   # warning alert if value is less than NUM
     alert-warn-eq: NUM   # warning alert if value is equal to NUM
+    alert-warn-neq: NUM  # warning alert if value is equal to NUM
     alert-crit: NUM      # same as alert-crit-gte
     alert-crit-gte: NUM  # critical alert if value greater than or equal to NUM
     alert-crit-gt: NUM   # critical alert if value greater than NUM
     alert-crit-lte: NUM  # critical alert if value is less than or equal to NUM
     alert-crit-lt: NUM   # critical alert if value is less than NUM
     alert-crit-eq: NUM   # critical alert if value is equal to NUM
+    alert-crit-neq: NUM   # critical alert if value is equal to NUM
     alert-p-<pluginId>-<checkId>: # configure a plugin-implemented check for the value
 
 The built-in "mon" plugin implements the following three checks
