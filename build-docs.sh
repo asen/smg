@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
-if which pandoc >/dev/null ; then
+if which pandoc >/dev/null 2>&1 && ! ( pandoc -v | grep "pandoc [0-1]\." >/dev/null ) ; then
+  echo "build-docs: Using pandoc (version 2.x or above)"
   MARKDOWN="pandoc -f markdown"
 else
+  echo "build-docs: Using smgscripts/Markdown.pl (pandoc not available or version below 2)"
   MARKDOWN="smgscripts/Markdown.pl"
 fi
 

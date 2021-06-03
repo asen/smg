@@ -1170,8 +1170,8 @@ reverse proxy in front).
 - **$rra\_def**: - this is another global definition which represents
  an object instead of simple name -> value pair. Whenever rrdtool
  creates a new rrd file it must get a set of definitions for Round
- Robin Archives (RRAs, explained better
- [here](http://oss.oetiker.ch/rrdtool/tut/rrd-beginners.en.html)). A
+ Robin Archives ( RRAs, explained better
+ [here](http://oss.oetiker.ch/rrdtool/tut/rrd-beginners.en.html) ). A
  $rra\_def has an **id** and a list of RRA definitions under the
  **rra** key. The actual RRA definitions are strings and defined using
  rrdtool syntax. Here is how the default SMG RRA for 1 minute interval
@@ -1259,7 +1259,7 @@ ids, to be executed on any (global or object-specific) warning errors
 ids, to be executed on any anomaly (spike/drop) errors. Be warned
 that this can get noisy on large setups.
 
-- **\$notify-baseurl**: Base url to be used in alert notifications links,
+- **$notify-baseurl**: Base url to be used in alert notifications links,
 default is http://localhost:9000 (so you probaly want that set if you
 intend to use alert notifications). This can also be pointed to a
 different (master) SMG instance URL where the current one is
