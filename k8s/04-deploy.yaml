@@ -18,7 +18,7 @@ spec:
       containers:
         # The SMG container
         - name: smg
-          image: "gcr.io/asen-smg/smg-1.1:latest"
+          image: "gcr.io/asen-smg/smg-1.3:latest"
           ports:
             - containerPort: 9000
             - containerPort: 9001
@@ -29,10 +29,6 @@ spec:
               mountPath: /etc/smg/kube-clusters.d
             - name: smg-data-volume
               mountPath: /opt/smg/data
-            # - name: smg-scrape-targets-volume
-            #   mountPath: /etc/smg/scrape-targets.d
-            # - name: smg-scrape-private-volume
-            #   mountPath: /etc/smg/scrape-private.d
             - name: rrdcached-sock-volume
               mountPath: /var/rrdtool/rrdcached
             - name: smg-sa-token-volume
@@ -41,9 +37,8 @@ spec:
               mountPath: /opt/smg/inst/smg/public/smg
         # a rrdcached container (same image but runs rrdcached)
         - name: rrdcached
-          image: "gcr.io/asen-smg/smg-1.1:latest"
-          command: [ "/usr/bin/rrdcached" ]
-          args: ["-g", "-l", "unix:/var/rrdtool/rrdcached/rrdcached.sock", "-m", "664", "-b", "/var/rrdtool/rrdcached"]
+          image: "gcr.io/asen-smg/smg-1.3:latest"
+          command: [ "/run-rrdcached.sh" ]
           volumeMounts:
             - name: smg-data-volume
               mountPath: /opt/smg/data
@@ -51,25 +46,26 @@ spec:
               mountPath: /var/rrdtool/rrdcached
         # an nginx container to relieve SMG from serving images
         - name: nginx
-          image: nginx:1.18.0
+          image: "gcr.io/asen-smg/smg-1.3:latest"
+          command: [ "/run-nginx.sh" ]
           ports:
             - containerPort: 9080
               name: nginx
           volumeMounts:
-            - name: smg-nginx-conf-volume
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
-              readOnly: true
             - name: smg-images-volume
               mountPath: /usr/share/nginx/html/smgimages
-        # one more container to watch for changes in conf.d and reload config
+        # one more container to watch for changes in conf.d and kube-clusters.d and reload config
         - name: watch
-          image: "weaveworks/watch:master-5b2a6e5"
-          imagePullPolicy: IfNotPresent
-          args: ["-v", "-t", "-p=/etc/smg/conf.d", "curl", "-X", "POST", "--fail", "-o", "-", "-sS", "http://localhost:9000/reload"]
+          image: "gcr.io/asen-smg/smg-1.3:latest"
+          command: [ "/run-inotify-reload.sh" ]
+          env:
+            - name: SMG_DIRS_TO_WATCH
+              value: "/etc/smg/conf.d /etc/smg/kube-clusters.d"
           volumeMounts:
             - name: smg-config-volume
               mountPath: /etc/smg/conf.d
+            - name: smg-kube-config-volume
+              mountPath: /etc/smg/kube-clusters.d
       volumes:
         - name: smg-config-volume
           configMap:
@@ -80,24 +76,13 @@ spec:
         - name: smg-data-volume
           persistentVolumeClaim:
             claimName: smg-data-vol1-claim
-        # - name: smg-scrape-targets-volume
-        #   persistentVolumeClaim:
-        #     claimName: smg-conf-scrape-targets-vol1-claim
-        # - name: smg-scrape-private-volume
-        #   persistentVolumeClaim:
-        #     claimName: smg-conf-scrape-private-vol1-claim
         - name: rrdcached-sock-volume
           emptyDir: {}
         - name: smg-sa-token-volume
           secret:
             secretName: smg-sa-token
-        - name: smg-nginx-conf-volume
-          configMap:
-            name: smg-nginx-configmap
         # a shared between nginx and SMG dir, so that nginx can serve images
         - name: smg-images-volume
           emptyDir: {}
       # nodeSelector:
-      #   useLabelToPintToNode: havingTheVolume
-
-
+      #   useLabelToPintToNode: havingTheVolumes

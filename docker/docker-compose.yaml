@@ -1,0 +1,37 @@
+#version: "3.9"
+services:
+  smg:
+    image: "gcr.io/asen-smg/smg-1.3:latest"
+    ports:
+    - "9000:9000"
+    volumes:
+    - /etc/smg/conf.d:/etc/smg/conf.d
+    - /opt/smg/data:/opt/smg/data
+    - ./000-rrdcached.yml:/etc/smg/000-rrdcached.yml
+    - rrdcached-vol:/var/rrdtool/rrdcached
+    - images-vol:/opt/smg/inst/smg/public/smg
+    command:  ["/opt/smg/inst/smg/start-smg.sh", "--wait", "1G"]
+  rrdcached:
+    image: "gcr.io/asen-smg/smg-1.3:latest"
+    volumes:
+    - /opt/smg/data:/opt/smg/data
+    - rrdcached-vol:/var/rrdtool/rrdcached
+    command:  [ "/run-rrdcached.sh" ]
+  nginx:
+    image: "gcr.io/asen-smg/smg-1.3:latest"
+    ports:
+    - "9080:9080"
+    volumes:
+    - images-vol:/usr/share/nginx/html/smgimages
+    command:  [ "/run-nginx.sh" , "-c", "/etc/nginx/nginx-compose.conf" ]
+  inotify-reload:
+    volumes:
+    - /etc/smg/conf.d:/etc/smg/conf.d
+#    - ./000-rrdcached.yml:/etc/smg/000-rrdcached.yml
+    image: "gcr.io/asen-smg/smg-1.3:latest"
+    environment:
+    - SMG_RELOAD_HOST=smg
+    command:  [ "/run-inotify-reload.sh" ]
+volumes:
+  rrdcached-vol: {}
+  images-vol: {}

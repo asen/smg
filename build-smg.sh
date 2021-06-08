@@ -53,9 +53,9 @@ fi
 
 sbt stage
 
-rm -rf target/universal/stage/{smgconf,smgscripts}
+rm -rf target/universal/stage/{smgconf,smgscripts,docker,k8s}
 
-cp -r Dockerfile smgconf smgscripts target/universal/stage/
+cp -r Dockerfile smgconf smgscripts docker k8s target/universal/stage/
 
 mkdir -p target/universal/stage/{smgrrd/jmx,logs,public/smg,run}
 
