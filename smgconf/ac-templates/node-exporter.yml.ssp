@@ -17,6 +17,8 @@
 <%@ val notify_fail: String = "" %>
 <%@ val desc: String = "" %>
 <%@ val add_ping: Boolean = true %>
+<%@ val ping_timeout: Int = 5 %>
+<%@ val metrics_timeout: Int = 10 %>
 <%@ val extra_labels: Map[String,String] = Map() %>
 <%@ val net_dvc_filters: Seq[String] = Seq(
   "node_network_up=1",
@@ -164,7 +166,7 @@
   desc: "Check that host <%= node_name %> is up"
   command: "ping -W 2 -n -c 1 <%= node_host %> > /dev/null || ping -W 2 -n -c 1 <%= node_host %> > /dev/null"
   ignorets: true
-  timeout: 5
+  timeout: <%= ping_timeout %>
 #if (pre_fetch != "")
   pre_fetch: <%= pre_fetch %>
 #end
@@ -187,18 +189,17 @@
 #if (notify_fail != "")
   notify-fail: <%= notify_fail %>
 #end
-  timeout: 10
+  timeout: <%= metrics_timeout %>
 
 - type: $pre_fetch
   id: <%= id_prefix %><%= node_name %>.metrics.parse
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics
   desc: "Parse system metrics from <%= node_name %>"
   pass_data: true
-  command: ":scrape parse :lbluid"
+  command: ":scrape parse"
 #if (notify_fail != "")
   notify-fail: <%= notify_fail %>
 #end
-  timeout: 5
 
 - ^<%= id_prefix %><%= node_name %>:
   title: "<%= title_prefix %><%= node_name %>"
