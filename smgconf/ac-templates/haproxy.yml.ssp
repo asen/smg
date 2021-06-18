@@ -203,10 +203,10 @@
   vars:
   - label: up/down
 
-- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.hrsp
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.ok_hrsp
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
-  command: ":cc csv get -e0 <%= row_matchers %> hrsp_1xx hrsp_2xx hrsp_3xx hrsp_4xx hrsp_5xx hrsp_other"
-  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> response codes (hrsp)"
+  command: ":cc csv get -e0 <%= row_matchers %> hrsp_1xx hrsp_2xx hrsp_3xx"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Ok HTTP response codes (hrsp below 400)"
   interval: <%= interval %>
   rrd_type: DERIVE
   vars:
@@ -216,6 +216,14 @@
     mu: rsp/sec
   - label: hrsp_3xx
     mu: rsp/sec
+
+- id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.bad_hrsp
+  pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
+  command: ":cc csv get -e0 <%= row_matchers %> hrsp_4xx hrsp_5xx hrsp_other"
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Bad HTTP response codes (hrsp 400 and above)"
+  interval: <%= interval %>
+  rrd_type: DERIVE
+  vars:
   - label: hrsp_4xx
     mu: rsp/sec
   - label: hrsp_5xx

@@ -197,8 +197,8 @@
   - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.updown
 #end
 
-- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.hrsp
-  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> response codes (hrsp), sum from <%= real_members_desc %>"
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.ok_hrsp
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Ok HTTP response codes (hrsp below 400), sum from <%= real_members_desc %>"
   interval: <%= interval %>
   rrd_type: DERIVE
   vars:
@@ -208,6 +208,17 @@
     mu: rsp/sec
   - label: hrsp_3xx
     mu: rsp/sec
+  op: SUM
+  ids:
+#for (lbh <- member_names)
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.ok_hrsp
+#end
+
+- id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.bad_hrsp
+  title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Bad HTTP response codes (hrsp 400 and above), sum from <%= real_members_desc %>"
+  interval: <%= interval %>
+  rrd_type: DERIVE
+  vars:
   - label: hrsp_4xx
     mu: rsp/sec
   - label: hrsp_5xx
@@ -217,7 +228,7 @@
   op: SUM
   ids:
 #for (lbh <- member_names)
-  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.hrsp
+  - <%= id_prefix %><%= lbh %>.<%= px %>.<%= itm %>.bad_hrsp
 #end
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.denerrwarn
