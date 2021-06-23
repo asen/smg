@@ -1,7 +1,8 @@
 # This should be used from within the staged build dir after ./build-smg.sh
 # see ./build-smg.sh and ./build-docker.sh
 
-FROM centos:8
+# FROM centos:8
+FROM rockylinux/rockylinux:8
 
 RUN yum install -y gcc make cairo-devel pango-devel libxml2-devel freetype-devel perl-ExtUtils-MakeMaker \
     java-11-openjdk-devel socat
