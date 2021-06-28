@@ -2,7 +2,7 @@
 # see ./build-smg.sh and ./build-docker.sh
 
 # FROM centos:8
-FROM rockylinux/rockylinux:8
+FROM docker.io/rockylinux/rockylinux:8
 
 RUN yum install -y gcc make cairo-devel pango-devel libxml2-devel freetype-devel perl-ExtUtils-MakeMaker \
     java-11-openjdk-devel socat
