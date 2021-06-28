@@ -80,6 +80,13 @@ which keeps persistent connections to the target Java JMX servers. It is
 also possible to create custom actions attached to graphs using plugins
 including e.g. visualizations. SMG comes with javascript-based "Zoom" 
 functionality based on the open source plot.ly JS graphing library.
+* Support for OpenMetrics (Prometheus) /metrics end-points scrapping and
+graphs via the Scrape plugin. In addition it is now possible to monitor
+back-end services (like redis/mysql etc) natively using the Autoconf plugin -
+based on templates. This replaces the need to run Prometheus "exporters" and
+can use native clients to get stats from the monitored service. All this
+can be used with the Kube plugin and K8s annotations for a complete monitoring
+solution including alerts and graphs.
 
 See concepts overview below for more details.
 
@@ -2436,7 +2443,7 @@ object commands. Subcommands:
     representation. Must be defined as a child of a command outputting metrcis
     data (text), so in theory it doesn't *have* to be retreived over HTTP. The
     internal representation converts all metrics (lines) to a map of key ->
-    value pairs where the key is the generated from the metrics name and all
+    value pairs where the key is generated from the metrics name and all
     labels (these have to be unique for Prometheus to work too). Also check
     :scrape get below.
   - :scrape fetch \[:secure\] \[:tokenf /path/to/token_file\] <url> - a combined
