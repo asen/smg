@@ -22,7 +22,7 @@ my_mkdir $LOCAL_DATA_DIR
 
 # -v host_dir:container_dir
 docker run --name smg -p 9000:9000  \
-  -v $LOCAL_CONFD_DIR:/etc/smg/conf.d -v $LOCAL_DATA_DIR:/opt/smg/data \
+  -v $LOCAL_CONFD_DIR:/etc/smg/conf.d:z -v $LOCAL_DATA_DIR:/opt/smg/data:z \
   $IMAGE_NAME:latest
 
 # kill in another window:

@@ -5,8 +5,8 @@ services:
     ports:
     - "9000:9000"
     volumes:
-    - /etc/smg/conf.d:/etc/smg/conf.d
-    - /opt/smg/data:/opt/smg/data
+    - /etc/smg/conf.d:/etc/smg/conf.d:z
+    - /opt/smg/data:/opt/smg/data:z
     - ./000-rrdcached.yml:/etc/smg/000-rrdcached.yml
     - rrdcached-vol:/var/rrdtool/rrdcached
     - images-vol:/opt/smg/inst/smg/public/smg
