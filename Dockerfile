@@ -32,11 +32,6 @@ COPY docker/nginx-proxy.conf /etc/nginx/nginx.conf
 COPY docker/nginx-proxy-compose.conf /etc/nginx/nginx-compose.conf
 COPY docker/run-*.sh /
 
-RUN mkdir -p /etc/smg/conf.d
-# RUN mkdir -p /etc/smg/kube-clusters.d
-# RUN mkdir -p /etc/smg/scrape-private.d
-# RUN mkdir -p /etc/smg/scrape-targets.d
-
 RUN mkdir -p /etc/smg/conf.d && \
     mkdir -p /opt/smg/data/conf/scrape-private.d  && \
     mkdir -p /opt/smg/data/conf/scrape-targets.d && \

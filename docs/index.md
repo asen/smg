@@ -25,10 +25,13 @@
     1. [Bundled Plugins configuration](#plugins-conf)
 
 1. [Running and troubleshooting](#running)
-    1. [Pre requisites](#pre-reqs)
-    1. [Installation from .tgz bundle](#install-tgz)
-        1. [Installation from sources](#install-src)
-    1. Frontend http server
+    1. [Run in a container](#docker-mode)
+    1. [Run in k8s](#k8s-mode)
+    1. [Run in classic mode](#classic-mode)
+        1. [Pre requisites](#pre-reqs)
+        1. [Installation from .tgz bundle](#install-tgz)
+            1. [Installation from sources](#install-src)
+        1. Frontend http server
     1. Tweaking SMG for performance
 1. [Developer documentation](dev/index.md)
 
@@ -2406,7 +2409,53 @@ object commands. Subcommands:
         :jmx get host:port java.lang:type=Memory HeapMemoryUsage:used HeapMemoryUsage:committed
     </pre>
 
+- **scrape** - Plugin to natively handle metrics exposed in OpenMetrics
+  (Prometehus) format.
+  See smgconf/scrape-plugin.yml for example target configuration 
+  (the local SMG instance).
+  The Scrape plugin implements SMG objects config generation based on
+  Prometheus/OpenMetrics URL (or data). So (just like Prometheus) it
+  is possible to configure only scrape targets (/metrcis URLs) and
+  the included stats will be auto discovered by SMG.
+  Scrape needs a SMG conf output dir which it can manage (add/remove confs)
+  if told to do so. That directory MUST be included by the regular SMG conf
+  (/etc/smg/config.yml). This is the case with the "official" docker
+  image/config.
+  Scrape defines the following plugin commands (used by the generated SMG
+  conf):
+  - :scrape http <url> - a plain http(s) call to GET a http response from the
+    provided url, can also be done with curl instead. This command accepts two
+    options:
+    - :scrape http :secure <url> - by default it will ignore ssl cert errors
+      unless :secure is specified.
+    - :scrape http :tokenf /path/to/token_file <url> - the contents of the
+      token_file will be used as an "Authorization: Bearer <token>" value.
+      Useful when deployed in k8s and need to access protected resources for
+      monitoring via ServiceAccount
+  - :scrape parse - parse the output of an :http (or curl) command into internal
+    representation. Must be defined as a child of a command outputting metrcis
+    data (text), so in theory it doesn't *have* to be retreived over HTTP. The
+    internal representation converts all metrics (lines) to a map of key ->
+    value pairs where the key is the generated from the metrics name and all
+    labels (these have to be unique for Prometheus to work too). Also check
+    :scrape get below.
+  - :scrape fetch \[:secure\] \[:tokenf /path/to/token_file\] <url> - a combined
+    :http and :parse command - get the metrics URL and parse the data in one shot.
+    Fetch supports the same :secure and :tokenf options and also requires an URL
+    argument
+  - :scrape get <uid1> \[<uid2>...\] - retrieve a value from parsed OpenMetrics stats.
+    Must be defined as a child of either a :fetch or a :parse command. The uids are
+    generated at parse time and are predictable - it represents the metric name and
+    all labels key/values appended to it and separated by dots. "Unsafe" SMG object id
+    characters are converted to underscore. In te unlikely case of id conflict after
+    that conversion is done the conflicting uids will have an additional ._N suffix where
+    N is the position of the object in the list of conflicting uids.
+
+- **autoconf** - TODO
+    See smgconf/autoconf-plugin.yml and smgconf/ac-templates/
+
 - **kube** - TODO
+  See smgconf/kube-plugin.yml
 
 - **mon** - exposes the following alert definitions
     - alert-p-mon-anom: "change_thresh:short_period:long_period"
@@ -2419,15 +2468,41 @@ object commands. Subcommands:
         (proportion) using the provided op (lt, can be lt, lte, gt, gte) against
         the configured warning (0.7) and optional critical thresholds  
 
-- **scrape** - TODO
 
 <a name="running">
 
 ## Running and troubleshooting
 
+<a name="docker-mode" />
+
+### Run in a container
+
+* mkdir -p /opt/smg/data /etc/smg/conf.d
+
+* docker run -d --name smg -p 9000:9000 -v /opt/smg/data -v /etc/smg/conf.d/ \
+  gcr.io/asen-smg/smg-1.2:latest
+
+* Point your browser to http://$DOCKER_HOST:9000 (the local metrics stats should
+  show up in a minute or two)
+
+* Then add stuff under /etc/smg/conf.d and to reload conig use one of:
+    * docker exec smg /opt/smg/inst/smg/smgscripts/reload-conf.sh
+    * curl -X POST http://$DOCKER_HOST:9000/reload
+
+<a name="k8s-mode" />
+
+### Run in k8s
+
+Check the k8s/ dir for example deployment yamls, including in-cluster monitoring
+with auto-discovery (similar to Prometheus)
+
+<a name="classic-mode" />
+
+### Classic mode
+
 <a name="pre-reqs" />
 
-### Pre-requisites
+#### Pre-requisites
 
 SMG needs the following software to run.
 
@@ -2450,7 +2525,7 @@ is optional (check the [$rrd\_socket global config option](#rrd_socket))
 it is highly recommended if you plan to do tens of thousands of
 updates every minute.
 
-- **Java 8+** - SMG is written in Scala and needs a JVM (Java 8+) to
+- **Java 11+** - SMG is written in Scala and needs a JVM (Java 11+) to
 run. One must set the **JAVA_HOME** environment variable pointed to that
 before launching SMG.
 
@@ -2476,7 +2551,7 @@ option](#img_dir)):
 
 <a name="install-tgz" />
 
-### Installation from .tgz bundle
+#### Installation from .tgz bundle
 
 SMG comes as a pre-built tgz archive named like _smg-$VERSION.tgz_
 (e.g. smg-0.3.tgz). You can unpack that anywhere which will be
@@ -2545,7 +2620,7 @@ instructions.
 
 
 
-### Reverse proxy
+#### Reverse proxy
 
 - see the k8s/ deployment with nginx in front of the Play app
 - example apache Reverse proxy conf

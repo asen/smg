@@ -18,7 +18,7 @@ spec:
       containers:
         # The SMG container
         - name: smg
-          image: "gcr.io/asen-smg/smg-1.3:latest"
+          image: "gcr.io/asen-smg/smulegrapher:latest"
           ports:
             - containerPort: 9000
             - containerPort: 9001
@@ -37,7 +37,7 @@ spec:
               mountPath: /opt/smg/inst/smg/public/smg
         # a rrdcached container (same image but runs rrdcached)
         - name: rrdcached
-          image: "gcr.io/asen-smg/smg-1.3:latest"
+          image: "gcr.io/asen-smg/smulegrapher:latest"
           command: [ "/run-rrdcached.sh" ]
           volumeMounts:
             - name: smg-data-volume
@@ -46,7 +46,7 @@ spec:
               mountPath: /var/rrdtool/rrdcached
         # an nginx container to relieve SMG from serving images
         - name: nginx
-          image: "gcr.io/asen-smg/smg-1.3:latest"
+          image: "gcr.io/asen-smg/smulegrapher:latest"
           command: [ "/run-nginx.sh" ]
           ports:
             - containerPort: 9080
@@ -56,7 +56,7 @@ spec:
               mountPath: /usr/share/nginx/html/smgimages
         # one more container to watch for changes in conf.d and kube-clusters.d and reload config
         - name: watch
-          image: "gcr.io/asen-smg/smg-1.3:latest"
+          image: "gcr.io/asen-smg/smulegrapher:latest"
           command: [ "/run-inotify-reload.sh" ]
           env:
             - name: SMG_DIRS_TO_WATCH

@@ -28,14 +28,23 @@ Docs on github: https://github.com/asen/smg/blob/master/docs/index.md
 
 Binary releases available here: https://github.com/asen/smg/releases
 
-Docker image: gcr.io/asen-smg/smg-1.2:latest
+Docker image: gcr.io/asen-smg/smulegrapher:latest
+
+Note - SMG uses a "fat" docker image (currently based on RockyLinux, one of the
+seemingly viable Centos 8 replacements). In order to monitor stuff via native
+protocols it needs the respective clients available, so the image has all sorts
+of clients bundled in. This also makes it a convenient "troubleshooting" image -
+get a shell inside the container and start troubleshooting using the available
+clients. Check the Dockerfile for what is installed and you can easily build
+your own image based of the upstream image.
+
 
 ## Run in container
 
 * mkdir -p /opt/smg/data /etc/smg/conf.d
 
 * docker run -d --name smg -p 9000:9000 -v /opt/smg/data -v /etc/smg/conf.d/ \
-    gcr.io/asen-smg/smg-1.2:latest
+  gcr.io/asen-smg/smulegrapher:latest
 
 * Point your browser to http://$DOCKER_HOST:9000 (the local metrics stats should
 show up in a minute or two)
@@ -140,7 +149,7 @@ installed if different).
 
 Start your Dockerfile with
 
-    FROM gcr.io/asen-smg/smg-1.2:latest
+    FROM gcr.io/asen-smg/smulegrapher:latest
 
 Or check the Dockerfile and build-docker.sh files in the root project dir to build your own from scratch.
 

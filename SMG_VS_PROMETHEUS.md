@@ -8,25 +8,27 @@ objective in this comparison one can expect some bias towards SMG
 
 * Both work by polling monitored tagets periodically as the monitoring 
 strategy
+
 * Both use configuration files (+ auto configuration) to determine what to 
 monitor
     * That makes it easy to configure monitoring targets automatically whether 
 via a service discovery system or configuration management like 
-chef/ansible/puppet.
-* Both can auto discover kubernetes objects to monitor (SMG - since 
-recently). The reality of how this works however is that they will get 
-the list of all end-points from the Kubernetes API and simply try a 
-http GET /metrics request on any port which is listening in the cluster 
-(no matter whether the service on that port is http or not) and if it gets 
-a valid Prometheus (a.k.a. OpenMetrics) response the endpoint will be 
-monitored automatically going forward.
+chef/ansible/puppet. And/or Kubernetes.
+
+* Both can auto discover kubernetes objects to monitor. This can work by
+  either telling them to scrape all k8s pods/endpoints/svcs and see if
+  they respond to a http /metrics endpoint or better - to use k8s annotations
+  on the k8s objects we want monitored. With the later option SMG can be told
+  to use a custom "template" (instead of strictly an OpenMetrics URL) and for
+  example it is possible to monitor services like redis/mysql/haproxy without
+  the need to run prometheus exportes to get their native stats.
 
 ### Differences
 
 * Prometheus is written in Golang, SMG - in Scala (and runs on Java)
 * SMG (created end of 2014 and open sourced in 2016) is actually older than 
 Prometheus.
-* Prometheus has a large community support where SMG can be still considered 
+* Prometheus has a large community support where SMG can still be considered 
 a single-person project (users and contributors - welcome ;)).
 
 #### Data storage
@@ -40,9 +42,9 @@ of that by default SMG keeps up to 4 years of historical data for stats
 (with 2 weeks at maximum resolution) without very high storage demands.
 
 * Prometheus can write its data to external databases (like InfluxDB) via 
-"adapters". SMG currently can not do that but there is a work-in-progress 
-plugin to support InfluxDb writes (which is actually very simple to do in 
-Prometheus-compatible manner).
+"adapters". SMG also has an InfluxDb plugin which can forward all metrics data
+to an influxdb bucket URL but SMG itself can not use InfluxDb to read and visualize
+data from there (one can use e.g. Grafana) 
 
 * Note that any solution with external data store would require its own 
 data retention solution (ideally - by summarizing older data over longer 

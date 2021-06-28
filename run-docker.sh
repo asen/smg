@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-export VERSION=${VERSION:-1.3}
-IMAGE_NAME=${IMAGE_NAME:-gcr.io/asen-smg/smg-$VERSION}
+IMAGE_NAME=${IMAGE_NAME:-gcr.io/asen-smg/smulegrapher}
 
 # these dirs below assume you have permissions to write to them
 # change the local dirs if thats not the case
