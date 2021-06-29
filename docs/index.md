@@ -2487,7 +2487,7 @@ object commands. Subcommands:
 * mkdir -p /opt/smg/data /etc/smg/conf.d
 
 * docker run -d --name smg -p 9000:9000 -v /opt/smg/data -v /etc/smg/conf.d/ \
-  gcr.io/asen-smg/smg-1.2:latest
+  gcr.io/asen-smg/smulegrapher:latest
 
 * Point your browser to http://$DOCKER_HOST:9000 (the local metrics stats should
   show up in a minute or two)
@@ -2567,9 +2567,9 @@ the SMG installation dir. Here are example commands to unpack SMG in
 
 <pre>
 # cd /opt
-# wget sfw:8080/sfw/smg-0.3.tgz
-# tar -xf smg-0.3.tgz
-# mv smg-0.3 smg
+# wget https://github.com/asen/smg/releases/download/v1.3/smg-1.3.tgz
+# tar -xf smg-*.tgz
+# mv smg-* smg # (or ln -s smg-* smg)
 </pre>
 
 SMG comes with start and stop and scripts which in the above example
