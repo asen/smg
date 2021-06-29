@@ -66,4 +66,6 @@ RUN ln -s /opt/smg/inst/smg/start-smg.sh /start-smg.sh
 EXPOSE 9000
 EXPOSE 9001
 ENV APP_HOME /opt/smg/inst/smg
+
+ENTRYPOINT ["/run-entrypoint.sh"]
 CMD ["/start-smg.sh", "--wait"]

@@ -12,19 +12,20 @@ services:
     - images-vol:/opt/smg/inst/smg/public/smg
     environment:
       SMG_MEMORY: "512M"
+    command:  [ "smg" ]
   rrdcached:
     image: "gcr.io/asen-smg/smulegrapher:latest"
     volumes:
     - /opt/smg/data:/opt/smg/data
     - rrdcached-vol:/var/rrdtool/rrdcached
-    command:  [ "/run-rrdcached.sh" ]
+    command:  [ "rrdcached" ]
   nginx:
     image: "gcr.io/asen-smg/smulegrapher:latest"
     ports:
     - "9080:9080"
     volumes:
     - images-vol:/usr/share/nginx/html/smgimages
-    command:  [ "/run-nginx.sh" , "-c", "/etc/nginx/nginx-compose.conf" ]
+    command:  [ "nginx" , "-c", "/etc/nginx/nginx-compose.conf" ]
   inotify-reload:
     volumes:
     - /etc/smg/conf.d:/etc/smg/conf.d:z
@@ -32,7 +33,7 @@ services:
     image: "gcr.io/asen-smg/smulegrapher:latest"
     environment:
     - SMG_RELOAD_HOST=smg
-    command:  [ "/run-inotify-reload.sh" ]
+    command:  [ "inotify" ]
 volumes:
   rrdcached-vol: {}
   images-vol: {}
