@@ -47,6 +47,7 @@ JMX_OPTS="$JMX_BIND_OPT -J-Dcom.sun.management.jmxremote.port=9001 \
 JAVA_11_KUBE_TLS_OPT="-J-Djdk.tls.client.protocols=TLSv1.2"
 
 bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS $JAVA_11_KUBE_TLS_OPT \
+    -J-XX:+ExitOnOutOfMemoryError \
     -Dplay.crypto.secret=fabe980f8f27865e11eeaf9e4ff4fc65 \
     -Dhttp.port=$HTTP_PORT $BIND_OPT \
     -Dakka.http.parsing.max-uri-length=2m \

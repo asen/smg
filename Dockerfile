@@ -61,7 +61,9 @@ COPY . /opt/smg/inst/smg
 
 #RUN ln -s /opt/smg/inst/smg/logs /var/log/smg
 
+RUN ln -s /opt/smg/inst/smg/start-smg.sh /start-smg.sh
+
 EXPOSE 9000
 EXPOSE 9001
 ENV APP_HOME /opt/smg/inst/smg
-CMD ["/opt/smg/inst/smg/start-smg.sh", "--wait"]
+CMD ["/start-smg.sh", "--wait"]

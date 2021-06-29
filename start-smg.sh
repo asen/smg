@@ -7,10 +7,13 @@ if [ "$1" == "$WAIT_OPT" ] ; then
   shift
 fi
 
-APP_HOME=`dirname $0`
-JVM_MEM=${1:-"8g"}
-HTTP_PORT=${2:-"9000"}
-BIND_ADDRESS=$3
+APP_HOME=${APP_HOME:-`dirname $0`}
+SMG_MEMORY=${SMG_MEMORY:-"8G"}
+SMG_HTTP_PORT=${SMG_HTTP_PORT:-"9000"}
+
+JVM_MEM=${1:-"$SMG_MEMORY"}
+HTTP_PORT=${2:-"$SMG_HTTP_PORT"}
+BIND_ADDRESS=${3:-"$SMG_BIND_ADDRESS"}
 if [ "$BIND_ADDRESS" == "" ] ; then
   BIND_OPT=""
   JMX_BIND_OPT=""
@@ -63,6 +66,7 @@ if [ "$WAIT" == "$WAIT_OPT" ] ; then
 fi
 
 COMMAND="bin/smg $APP_CONF -J-Xmx$JVM_MEM $GC_OPTS $JMX_OPTS $JAVA_11_KUBE_TLS_OPT $LOGGER_OPT \
+    -J-XX:+ExitOnOutOfMemoryError \
     -Dplay.crypto.secret=fabe980f8f27865e11eeaf9e4ff4fc65 \
     -Dhttp.port=$HTTP_PORT $BIND_OPT \
     -Dakka.http.parsing.max-uri-length=2m \

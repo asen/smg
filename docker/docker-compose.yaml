@@ -10,7 +10,8 @@ services:
     - ./000-rrdcached.yml:/etc/smg/000-rrdcached.yml
     - rrdcached-vol:/var/rrdtool/rrdcached
     - images-vol:/opt/smg/inst/smg/public/smg
-    command:  ["/opt/smg/inst/smg/start-smg.sh", "--wait", "1G"]
+    environment:
+      SMG_MEMORY: "512M"
   rrdcached:
     image: "gcr.io/asen-smg/smulegrapher:latest"
     volumes:
@@ -26,7 +27,7 @@ services:
     command:  [ "/run-nginx.sh" , "-c", "/etc/nginx/nginx-compose.conf" ]
   inotify-reload:
     volumes:
-    - /etc/smg/conf.d:/etc/smg/conf.d
+    - /etc/smg/conf.d:/etc/smg/conf.d:z
 #    - ./000-rrdcached.yml:/etc/smg/000-rrdcached.yml
     image: "gcr.io/asen-smg/smulegrapher:latest"
     environment:
