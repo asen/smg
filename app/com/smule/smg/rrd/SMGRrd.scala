@@ -323,6 +323,32 @@ object SMGRrd {
         else if (d1.isNaN) d0
         else d0 + d1
       }
+      case "MAX" => {
+        val d1 = evalRpn(rpn)
+        val d0 = evalRpn(rpn)
+        Math.max(d0,d1)
+      }
+      case "MAXNAN" => {
+        val d1 = evalRpn(rpn)
+        val d0 = evalRpn(rpn)
+        if (d0.isNaN && d1.isNaN) Double.NaN
+        else if (d0.isNaN) d1
+        else if (d1.isNaN) d0
+        else Math.max(d0,d1)
+      }
+      case "MIN" => {
+        val d1 = evalRpn(rpn)
+        val d0 = evalRpn(rpn)
+        Math.min(d0,d1)
+      }
+      case "MINNAN" => {
+        val d1 = evalRpn(rpn)
+        val d0 = evalRpn(rpn)
+        if (d0.isNaN && d1.isNaN) Double.NaN
+        else if (d0.isNaN) d1
+        else if (d1.isNaN) d0
+        else Math.min(d0,d1)
+      }
       case _ => cur.toDouble
     }
   }

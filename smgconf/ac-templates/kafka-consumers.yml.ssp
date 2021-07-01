@@ -1,0 +1,256 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%
+  // Configure this with a command like this:
+
+  // command: "smgscripts/kafka-consumer-groups-wrapper.sh --bootstrap-server broker1:9092,broker2:9092 --describe --all-groups"
+  // runtime_data: true
+
+  // OR
+
+  // bootstrap_servers broker1:9092,broker2:9092
+  // groups:
+  //  - group: group1
+  //    num_parts: 1
+  //    topic: my_topic1
+  //  - group: group2
+  //    num_parts: 4
+  //    topic: my_topic2
+  //    human_name: "My  group name"
+  //    warn_lag: 1000
+  //    crit_lag: 100000
+%>
+
+<%@ val command: String = "" %>
+<%@ val data: Seq[String] = Seq[String]() %>
+
+<% val runtime_data: Boolean = data.nonEmpty %>
+
+<%@ val bootstrap_servers: String = "" %>
+<%@ val groups: Seq[Map[String,Object]] = Seq() %>
+
+<%@ val kafka_cluster: String = "cluster1" %>
+<%@ val id_prefix: String = "kafka." %>
+<%@ val title_prefix: String = "Kafka " %>
+<%@ val desc: String = "" %>
+<%@ val interval: Int = 60 %>
+<%@ val timeout: Int = 30 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val notify_lag: String = "" %>
+
+<%
+  if (runtime_data) {
+    if (data.isEmpty)
+      throw new RuntimeException("kafka-consumers.yml.ssp: runtime_data is true but no data is available")
+  } else {
+    if (bootstrap_servers.isBlank || groups.isEmpty)
+      throw new RuntimeException("kafka-consumers.yml.ssp: runtime_data is false but " +
+      "no bootstrap_servers and groups are provided")
+  }
+  case class ConsumerGroup(group: String, topic: String, numParts: Int,
+      humanName: Option[String], warnLag: Option[Int], critLag: Option[Int])
+
+  //  # /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server my-kafka-host:9092 --describe --all-groups
+  //
+  //  GROUP                                TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                     HOST            CLIENT-ID
+  //  my_group                             my_topic        0          169946704841    169947588826    883985          consumer-1-ed3d559a-2691-459f-aa22-2b7513c53c06 /....           consumer-1
+  //  my_group                             my_topic        1          169946704841    169947588826    883985          consumer-1-ed3d559a-2691-459f-aa22-2b7513c53c06 /....           consumer-1
+
+  val myGroupMaps = if (runtime_data) {
+    val buf = scala.collection.mutable.ListBuffer[Map[String,Object]]()
+    var curGroup: String = ""
+    val topics = scala.collection.mutable.Map[String,Int]() // topic -> num_parts
+    data.foreach { ln =>
+      val arr = ln.split("\\s+")
+      if (arr.length > 3) {
+        if (arr(0) == "GROUP") {
+          if (curGroup != "") {
+            buf ++= topics.toSeq.sortBy(_._1).map { case (topic, numParts) =>
+              Map[String, Object](
+              "group" -> curGroup,
+              "topic"  -> topic,
+              "num_parts" -> Integer.valueOf(numParts)
+              )
+            }
+          }
+          curGroup = ""
+          topics.clear()
+        } else {
+          if (curGroup == "")
+            curGroup = arr(0)
+          else if (curGroup != arr(0))
+            throw new RuntimeException(s"Invalid runtime data received - curGroup=$curGroup != arr(0)=${arr(0)}")
+          val topic = arr(1)
+          if (topics.contains(topic))
+            topics(topic) += 1
+          else
+            topics(topic) = 1
+        }
+      } // else skip empty lines
+    }
+    if (curGroup != "") {
+      buf ++= topics.toSeq.sortBy(_._1).map { case (topic, numParts) =>
+        Map[String, Object](
+          "group" -> curGroup,
+          "topic"  -> topic,
+          "num_parts" -> Integer.valueOf(numParts)
+        )
+      }
+    }
+    buf.toList
+  } else groups
+  val myGroups = myGroupMaps.map { gm =>
+    ConsumerGroup(
+      gm("group").toString,
+      gm("topic").toString,
+      gm("num_parts").toString.toInt, //inefficient but safer than assuming Int type
+      gm.get("human_name").map(_.toString),
+      gm.get("warn_lag").map(_.toString.toInt),
+      gm.get("crit_lag").map(_.toString.toInt)
+    )
+  }
+  val groupsPfCmdArgs = myGroups.map { gm => s"--group ${gm.group}"}.mkString(" ")
+%>
+- type: $pre_fetch
+  id: <%= id_prefix %><%= kafka_cluster %>.kafka-consumer-groups
+#if (runtime_data == true)
+  command: "<%= command %>"
+#else
+  command: "smgscripts/kafka-consumer-groups-wrapper.sh --bootstrap-server <%= bootstrap_servers %> --describe <%= groupsPfCmdArgs %>"
+#end
+  timeout: <%= timeout %>
+  pass_data: true
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+- $pre_fetch:
+  id: <%= id_prefix %><%= kafka_cluster %>.kafka-consumer-groups.parse
+  pre_fetch: <%= id_prefix %><%= kafka_cluster %>.kafka-consumer-groups
+  pass_data: true
+  desc: "Parse consumer groups data as tsv"
+  command: ":cc csv parserx"
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+- ^<%= id_prefix %><%= kafka_cluster %>.all:
+  title: "<%= title_prefix %><%= kafka_cluster %> consumer groups<%= if (desc == "") "" else s" ($desc)" %>"
+  px: <%= id_prefix %><%= kafka_cluster %>.
+#if (parent_index != "")
+  parent: <%= parent_index %>
+#end
+
+#for (gconf <- myGroups)
+
+<%
+  val group = gconf.group
+  val humanName = gconf.humanName.getOrElse(group)
+  val topic = gconf.topic
+%>
+
+- ^<%= id_prefix %><%= kafka_cluster %>.<%= group %>.<%= topic %>:
+  title: "<%= title_prefix %><%= kafka_cluster %>  consumer group <%= humanName %>, topic <%= topic %>"
+  px: <%= id_prefix %><%= kafka_cluster %>.<%= group %>.<%= topic %>.
+  parent: <%= id_prefix %><%= kafka_cluster %>.all
+
+- $pre_fetch:
+  id: <%= id_prefix %><%= kafka_cluster %>.<%= group %>.<%= topic %>.parse.lags
+  pre_fetch: <%= id_prefix %><%= kafka_cluster %>.kafka-consumer-groups.parse
+  pass_data: true
+  desc: "Parse consumer groups lags out of tsv"
+  command: ":cc csv get GROUP=<%= group %> TOPIC=<%= topic %> LAG"
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+<%
+  var sumLagRpn = "$ds0"
+  var maxLagRpn = "$ds0"
+  var minLagRpn = "$ds0"
+  (1 until gconf.numParts).foreach { ix =>
+    sumLagRpn += s",$$ds${ix},+"
+    maxLagRpn += s",$$ds${ix},MAX"
+    minLagRpn += s",$$ds${ix},MIN"
+  }
+  var avgLagRpn = sumLagRpn + s",${gconf.numParts},/"
+%>
+- <%= id_prefix %><%= kafka_cluster %>.<%= group %>.<%= topic %>.sum_lag:
+  pre_fetch: <%= id_prefix %><%= kafka_cluster %>.<%= group %>.<%= topic %>.parse.lags
+  command: ":cc rpn <%= sumLagRpn %>"
+  timeout: 10
+  title: "<%= title_prefix %><%= kafka_cluster %>  consumer group <%= humanName %>, topic <%= topic %> - sum of lags"
+  interval: <%= interval %>
+  vars:
+    - label: sum_lag
+      mu: msgs
+#if (gconf.warnLag != None)
+      alert-warn-gt: <%= gconf.warnLag.get %>
+#if (notify_lag != "")
+      notify-warn: <%= notify_lag %>
+#end
+#end
+#if (gconf.critLag != None)
+      alert-crit-gt: <%= gconf.critLag.get %>
+#if (notify_lag != "")
+      notify-crit: <%= notify_lag %>
+#end
+#end
+
+- <%= id_prefix %><%= kafka_cluster %>.<%= group %>.<%= topic %>.max_lag:
+  pre_fetch: <%= id_prefix %><%= kafka_cluster %>.<%= group %>.<%= topic %>.parse.lags
+  command: ":cc rpn <%= maxLagRpn %>"
+  timeout: 10
+  title: "<%= title_prefix %><%= kafka_cluster %>  consumer group <%= humanName %>, topic <%= topic %> - max lag"
+  interval: <%= interval %>
+  vars:
+  - label: max_lag
+    mu: msgs
+
+- <%= id_prefix %><%= kafka_cluster %>.<%= group %>.<%= topic %>.lags:
+  pre_fetch: <%= id_prefix %><%= kafka_cluster %>.<%= group %>.<%= topic %>.parse.lags
+  command: ":cc rpn <%= maxLagRpn %> <%= avgLagRpn %> <%= minLagRpn %>"
+  timeout: 10
+  title: "<%= title_prefix %><%= kafka_cluster %>  consumer group <%= humanName %>, topic <%= topic %> - max lag"
+  interval: <%= interval %>
+  vars:
+  - label: max_lag
+    mu: msgs
+  - label: avg_lag
+    mu: msgs
+  - label: min_lag
+    mu: msgs
+
+
+#for (part_id <- (0 until gconf.numParts))
+
+- host.<%= id_prefix %><%= kafka_cluster %>.<%= group %>.<%= topic %>.<%= part_id %>.consumer.rate:
+  pre_fetch: <%= id_prefix %><%= kafka_cluster %>.kafka-consumer-groups.parse
+  command: ":cc csv get GROUP=<%= group %> TOPIC=<%= topic %> PARTITION=<%= part_id%> CURRENT-OFFSET"
+  timeout: 10
+  title: "<%= title_prefix %><%= kafka_cluster %>  consumer group <%= humanName %>, topic <%= topic %>, partition <%= part_id %> consumer offset (rate)"
+  interval: <%= interval %>
+  rrdType: DERIVE
+  vars:
+    - label: offset
+      mu: msgs/sec
+
+- host.<%= id_prefix %><%= kafka_cluster %>.<%= group %>.<%= topic %>.<%= part_id %>.producer.rate:
+  pre_fetch: <%= id_prefix %><%= kafka_cluster %>.kafka-consumer-groups.parse
+  command: ":cc csv get GROUP=<%= group %> TOPIC=<%= topic %> PARTITION=<%= part_id%> LOG-END-OFFSET"
+  timeout: 10
+  title: "<%= title_prefix %><%= kafka_cluster %>  consumer group <%= humanName %>, topic <%= topic %>, partition <%= part_id %> producer (log-end) offset (rate)"
+  interval: <%= interval %>
+  rrdType: DERIVE
+  vars:
+  - label: offset
+    mu: msgs/sec
+
+# part_id <- (0 until gconf.numParts)
+#end
+
+#  gconf <- myGroups
+#end

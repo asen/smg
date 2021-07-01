@@ -1,5 +1,6 @@
-import com.smule.smg.core.{SMGFileUtil, SMGLogger}
+import com.smule.smg.core.{CommandResultListString, ParentCommandData, SMGFileUtil, SMGLogger}
 import com.smule.smgplugins.autoconf.SMGTemplateProcessor
+import com.smule.smgplugins.cc.csv.SMGCsvCommands
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
@@ -38,77 +39,95 @@ class SMGAutoConfPluginSpec extends Specification{
       println(out2)
       1.equals(1)
     }
-  }
 
-  "work with redis" in {
-    val p = new SMGTemplateProcessor(log)
-    val out = p.processTemplate("smgconf/ac-templates/redis.yml.ssp", Map(
-      "node_name" -> "localhost",
-      "node_host" -> "localhost"
-    )).get
-    println("===================")
-    println(out)
-    val portRange = new util.ArrayList[String]()
-    portRange.add("6379")
-    portRange.add("6380")
-    val out2 = p.processTemplate("smgconf/ac-templates/redis.yml.ssp", Map(
-      "node_name" -> "localhost",
-      "node_host" -> "someother_host",
-      "port_range" -> portRange
-    )).get
-    println("===================")
-    println(out2)
-    1.equals(1)
-  }
+    "work with redis" in {
+      val p = new SMGTemplateProcessor(log)
+      val out = p.processTemplate("smgconf/ac-templates/redis.yml.ssp", Map(
+        "node_name" -> "localhost",
+        "node_host" -> "localhost"
+      )).get
+      println("===================")
+      println(out)
+      val portRange = new util.ArrayList[String]()
+      portRange.add("6379")
+      portRange.add("6380")
+      val out2 = p.processTemplate("smgconf/ac-templates/redis.yml.ssp", Map(
+        "node_name" -> "localhost",
+        "node_host" -> "someother_host",
+        "port_range" -> portRange
+      )).get
+      println("===================")
+      println(out2)
+      1.equals(1)
+    }
 
-  "work with linux-snmp-static" in {
-    val p = new SMGTemplateProcessor(log)
-    val out = p.processTemplate("smgconf/ac-templates/linux-snmp-static.yml.ssp", Map(
-      "node_name" -> "localhost",
-      "node_host" -> "localhost"
-    )).get
-    println("===================")
-    println(out)
-    val dd = new util.ArrayList[java.util.Map[String,Object]]()
-    val d1 = new java.util.HashMap[String,Object]()
-    d1.put("mount", "/")
-    d1.put("oid", "34")
-    dd.add(d1)
-    val out2 = p.processTemplate("smgconf/ac-templates/linux-snmp-static.yml.ssp", Map(
-      "node_name" -> "localhost",
-      "node_host" -> "someother_host",
-      "disk_drives" -> dd
-    )).get
-    println("===================")
-    println(out2)
-    1.equals(1)
-  }
+    "work with linux-snmp-static" in {
+      val p = new SMGTemplateProcessor(log)
+      val out = p.processTemplate("smgconf/ac-templates/linux-snmp-static.yml.ssp", Map(
+        "node_name" -> "localhost",
+        "node_host" -> "localhost"
+      )).get
+      println("===================")
+      println(out)
+      val dd = new util.ArrayList[java.util.Map[String,Object]]()
+      val d1 = new java.util.HashMap[String,Object]()
+      d1.put("mount", "/")
+      d1.put("oid", "34")
+      dd.add(d1)
+      val out2 = p.processTemplate("smgconf/ac-templates/linux-snmp-static.yml.ssp", Map(
+        "node_name" -> "localhost",
+        "node_host" -> "someother_host",
+        "disk_drives" -> dd
+      )).get
+      println("===================")
+      println(out2)
+      1.equals(1)
+    }
 
-//  "work with openmetrics" in {
-//    val data = SMGFileUtil.getFileLines("test-data/metrics.txt")
-//    val p = new SMGTemplateProcessor(log)
-//    val out = p.processTemplate("smgconf/ac-templates/openmetrics.yml.ssp", Map(
-//      "node_name" -> "localhost",
-//      "node_host" -> "localhost",
-//      "data" -> data
-//    )).get
-//    println("===================")
-//    println(out)
-//    1.equals(1)
-//  }
-//
-//  "work with node-cadvisor" in {
-//    val data = SMGFileUtil.getFileLines("test-data/metrics-cadvisor.txt")
-//    val p = new SMGTemplateProcessor(log)
-//    val out = p.processTemplate("smgconf/ac-templates/node-cadvisor.yml.ssp", Map(
-//      "node_name" -> "localhost",
-//      "node_host" -> "localhost",
-//      "command" -> "cat test-data/metrics-cadvisor.txt",
-//      "data" -> data
-//    )).get
-//    println("===================")
-//    println(out)
-//    1.equals(1)
-//  }
+    "work with kafka-consumers" in {
+      val data = SMGFileUtil.getFileLines("test-data/kafka-groups-ka11.txt")
+      val csv = new SMGCsvCommands(log)
+      val parsed = csv.csvCommand("csv", "parserx", 30,
+        Some(ParentCommandData(CommandResultListString(data.toList, None), None)))
+      println(parsed.data.asInstanceOf[csv.CSVParsedData].dump())
+
+      val p = new SMGTemplateProcessor(log)
+      val out = p.processTemplate("smgconf/ac-templates/kafka-consumers.yml.ssp", Map(
+        "command" -> "cat test-data/kafka-groups-ka11.txt",
+        "data" -> data
+      )).get
+      println("===================")
+      println(out)
+
+      1.equals(1)
+    }
+
+    //  "work with openmetrics" in {
+    //    val data = SMGFileUtil.getFileLines("test-data/metrics.txt")
+    //    val p = new SMGTemplateProcessor(log)
+    //    val out = p.processTemplate("smgconf/ac-templates/openmetrics.yml.ssp", Map(
+    //      "node_name" -> "localhost",
+    //      "node_host" -> "localhost",
+    //      "data" -> data
+    //    )).get
+    //    println("===================")
+    //    println(out)
+    //    1.equals(1)
+    //  }
+    //
+    //  "work with node-cadvisor" in {
+    //    val data = SMGFileUtil.getFileLines("test-data/metrics-cadvisor.txt")
+    //    val p = new SMGTemplateProcessor(log)
+    //    val out = p.processTemplate("smgconf/ac-templates/node-cadvisor.yml.ssp", Map(
+    //      "node_name" -> "localhost",
+    //      "node_host" -> "localhost",
+    //      "command" -> "cat test-data/metrics-cadvisor.txt",
+    //      "data" -> data
+    //    )).get
+    //    println("===================")
+    //    println(out)
+    //    1.equals(1)
+    //  }
+  }
 }
 

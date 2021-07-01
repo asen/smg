@@ -26,7 +26,7 @@ class SMGAutoTargetProcessor(
     ret
   }
 
-  def getTargetContext(conf: SMGAutoTargetConf): Map[String, Object] = {
+  def getTargetContext(conf: SMGAutoTargetConf): Option[Map[String, Object]] = {
     val dynMap = mutable.Map[String,Object]()
     dynMap ++= conf.staticMap
     if (conf.resolveName){
@@ -48,21 +48,25 @@ class SMGAutoTargetProcessor(
       } catch {
         case t: Throwable =>
           log.warn(s"SMGAutoTargetProcessor: Unable to retrieve " +
-            s"data from command: ${conf.command.get}")
-        None
+            s"data from command: ${conf.command.get}, target will be skipped: ${t.getMessage}")
+          None
       }
       if (data.isDefined)
         dynMap.put("data", data.get)
+      else
+        return None
     }
-    dynMap.toMap
+    Some(dynMap.toMap)
   }
 
   def processTarget(conf: SMGAutoTargetConf): Boolean = {
     val confOutputFile = conf.confOutputFile(pluginConf.confOutputDir)
     try {
-      val ctx = getTargetContext(conf)
+      val ctxOpt = getTargetContext(conf)
+      if (ctxOpt.isEmpty)
+        return false
       val templateFile = pluginConf.getTemplateFilename(conf.template)
-      val outputContentsOpt = templateProcessor.processTemplate(templateFile, ctx)
+      val outputContentsOpt = templateProcessor.processTemplate(templateFile, ctxOpt.get)
       if (outputContentsOpt.isEmpty) {
         return false
       }

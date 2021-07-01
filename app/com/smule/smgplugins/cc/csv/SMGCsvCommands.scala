@@ -9,13 +9,20 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 object SMGCsvCommands {
-  val VALID_SUB_COMMANDS = Set("parse", "get", "pget")
+  val VALID_SUB_COMMANDS = Set("parse", "parserx", "get", "pget")
   //:cc csv parse [parse opts] [format]
   //  -d|--delim <char> (default ',')
   //  -nh|--no-header  - csv has no header row
-  //  -sh|--strict-header - if set parse will abort on duplicate or missing header forgiven column
+  //  -sh|--strict-header - if set parse will abort on duplicate or missing header column
   //  -h|--headers <hdr1>,<hdr2>,...  - set custom header names based on position
   // [format] (default - DEFAULT) - apache commons csv pre-defined format name (e.g. EXCEL)
+
+  //:cc csv parserx [parse opts]
+  //  -d|--delim <regex> (default "\\s+")
+  //  -nh|--no-header  - csv has no header row
+  //  -sh|--strict-header - if set parse will abort on duplicate or missing header column
+  //  -h|--headers <hdr1>,<hdr2>,...  - set custom header names based on position
+
   //:cc csv get [get opts] <row selectors (k=v)> <val selectors>
   //  -e0|--empty-as-0 - if set non existing/empty values will return "0.0"
   //  -eN|--empty-as-nan - if set non existing/empty values will return "NaN"
@@ -69,50 +76,72 @@ class SMGCsvCommands(log: SMGLoggerApi) {
         }.toList
       }
     }
+
+    def dump(delim: String = ","): String = ((if (headers.nonEmpty) {
+      Seq(headers.toSeq.sortBy(_._2).map(_._1).mkString(delim))
+    } else Seq[String]()) ++ rows.map(_.mkString(delim))).mkString("\n")
   }
 
+  private case class MyParseOpts(
+                                  var firstRowIsHdr: Boolean = true,
+                                  var strictHdr: Boolean = false,
+                                  var delimOpt: Option[String] = None,
+                                  var headersOpt: Option[Array[String]] = None,
+                                  var params: Seq[String] = Seq()
+  )
 
-  private def myParse(inp: String, paramStr: String): CSVParsedData = {
-    var firstRowIsHdr = true
-    var strictHdr = false
-    var delimOpt: Option[Char] = None
-    var headersOpt: Option[Array[String]] = None
+  private def getMyParseOpts(paramStr: String): MyParseOpts = {
+    val ret = MyParseOpts()
     var params = paramStr.split("\\s+").toList
     while (params.nonEmpty && params.head.startsWith("-")){
       val opt = params.head
       opt match {
-        case "-nh" | "--no-header" => firstRowIsHdr = false
-        case "-sh" | "--strict-header" => strictHdr = true
+        case "-nh" | "--no-header" => ret.firstRowIsHdr = false
+        case "-sh" | "--strict-header" => ret.strictHdr = true
         case "-h" | "--headers" => {
           params = params.tail
-          val h = params.headOption.getOrElse("").split(delimOpt.getOrElse(','))
-          headersOpt = Some(h)
+          val h = params.headOption.getOrElse("").split(ret.delimOpt.getOrElse(","))
+          ret.headersOpt = Some(h)
         }
         case "-d" | "--delim" => {
           params = params.tail
-          val d = params.headOption.getOrElse("").lift(0).getOrElse(',')
-          delimOpt = Some(d)
+          val d = params.headOption.getOrElse(",")
+          ret.delimOpt = Some(d)
         }
         case _ => log.warn(s"Invalid csv parse option (ignored): $opt")
       }
       if (params.nonEmpty)
         params = params.tail
     }
-    val formatStr = params.headOption.getOrElse("")
+    ret.params = params
+    ret
+  }
+
+  private def myParse(inp: String, paramStr: String): CSVParsedData = {
+    val parseOpts = getMyParseOpts(paramStr)
+    val formatStr = parseOpts.params.headOption.getOrElse("")
     var format = if (formatStr.isBlank)
       CSVFormat.DEFAULT
     else
       Try(CSVFormat.valueOf(formatStr.strip())).getOrElse(CSVFormat.DEFAULT)
-    if (headersOpt.isDefined){
-      format = format.withHeader(headersOpt.get:_*)
+    if (parseOpts.headersOpt.isDefined){
+      format = format.withHeader(parseOpts.headersOpt.get:_*)
     } else {
-      if (firstRowIsHdr)
+      if (parseOpts.firstRowIsHdr)
         format = format.withFirstRecordAsHeader().withSkipHeaderRecord()
-      if (!strictHdr)
+      if (!parseOpts.strictHdr)
         format = format.withAllowMissingColumnNames().withAllowDuplicateHeaderNames()
     }
-    if (delimOpt.isDefined)
-      format = format.withDelimiter(delimOpt.get)
+    if (parseOpts.delimOpt.isDefined) {
+      val charDelim = if (parseOpts.delimOpt.get.lengthCompare(1) > 0){
+        log.warn(s"CSV parse command will only use the first character from the supplied delimiter: ${parseOpts.delimOpt.get}")
+        parseOpts.delimOpt.get(0)
+      } else if (parseOpts.delimOpt.get.lengthCompare(1) < 0) {
+        log.warn("CSV parse command with empty delimiter, will use the default")
+        ','
+      } else parseOpts.delimOpt.get(0)
+      format = format.withDelimiter(charDelim)
+    }
     val parser = CSVParser.parse(inp, format)
     try {
       CSVParsedData(
@@ -131,6 +160,40 @@ class SMGCsvCommands(log: SMGLoggerApi) {
       CommandResultCustom(data)
     } catch { case t: Throwable =>
       throwOnError("parse", paramStr, timeoutSec, s"CSV Parse error: ${t.getMessage}")
+    }
+  }
+
+  private def myParseRx(inp: String, paramStr: String): CSVParsedData = {
+    val parseOpts = getMyParseOpts(paramStr)
+    val myDelim = parseOpts.delimOpt.getOrElse("\\s+")
+    var lines = inp.split('\n').filter(_.nonEmpty) //TODO make stripping empty lines an option
+    val hdrs: Array[String] = if (parseOpts.headersOpt.isDefined)
+      parseOpts.headersOpt.get
+    else if (parseOpts.firstRowIsHdr) {
+      val h = lines.headOption.getOrElse("").split(myDelim)
+      if (lines.nonEmpty)
+        lines = lines.tail
+      h
+    } else if (parseOpts.strictHdr){
+      throw new RuntimeException("Strict headers requested but no header row")
+    } else Array[String]()
+    val ret = ListBuffer[Array[String]]()
+    lines.foreach { ln =>
+      ret += ln.split(myDelim)
+    }
+    CSVParsedData(
+      headers = hdrs.zipWithIndex.toMap,
+      rows = ret.toArray
+    )
+  }
+
+  private def csvParseRx(paramStr: String, timeoutSec: Int,
+                         parentData: ParentCommandData): CommandResult = {
+    try {
+      val data = myParseRx(parentData.res.asStr, paramStr)
+      CommandResultCustom(data)
+    } catch { case t: Throwable =>
+      throwOnError("parserx", paramStr, timeoutSec, s"CSV Parse error: ${t.getMessage}")
     }
   }
 
@@ -209,6 +272,7 @@ class SMGCsvCommands(log: SMGLoggerApi) {
         s"SMGCsvCommands: Invalid csv sub-command - must be one of: ${SMGCsvCommands.VALID_SUB_COMMANDS.mkString(",")}")
     subCmd match {
       case "parse" => csvParse(rem, timeoutSec, parentData.get)
+      case "parserx" => csvParseRx(rem, timeoutSec, parentData.get)
       case "get" => csvGet(rem, timeoutSec, parentData.get)
       case "pget" => csvParseAndGet(rem, timeoutSec, parentData.get)
       case _ => throwOnError(subCmd, rem, timeoutSec,
