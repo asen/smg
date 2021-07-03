@@ -7,7 +7,7 @@
 # Development setup 
 
 <ol>
-<li>Install JDK 8+</li>
+<li>Install JDK 11+</li>
 <li>Install rrdtool and coreutils (for gnu timeout command). E.g. with
 homebrew on Mac:
 <pre>
