@@ -78,7 +78,7 @@ if [ "$WAIT" == "$WAIT_OPT" ] ; then
   $COMMAND &
   ret=$?
   child=$!
-    if [ "$ret" == "0" ] ; then
+  if [ "$ret" == "0" ] ; then
     echo "Started (mem=$JVM_MEM port=$HTTP_PORT$BIND_STR)."
   else
     echo "Some error occurred ($ret)"
