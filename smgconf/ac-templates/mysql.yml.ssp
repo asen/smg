@@ -1,0 +1,434 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%
+  // Configure this with a command like this:
+  // command: "mysql -u<user> -p<pass> -h %node_host% -B -e 'select * from performance_schema.global_status'"
+  // resolve_name: true  // assumes node_name resolves to node_host, or specify node_host
+  // node_host: 1.2.3.4
+  // alternatively - provide
+  // node_name:
+  // node_host:
+  // mysql_user:
+  // mysql_password:
+%>
+
+<%@ val node_name: String %>
+
+<%@ val command: String = "" %>
+
+<%@ val node_host: String = "" %>
+<%@ val port: Int = 3306 %>
+<%@ val mysql_user: String = "root" %>
+<%@ val mysql_password: String = "" %>
+<%@ val global_status_db: String = "performance_schema" %>
+
+<%@ val id_prefix: String = "host." %>
+<%@ val title_prefix: String = "Host " %>
+<%@ val interval: Int = 60 %>
+<%@ val timeout: Int = 10 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val desc: String = "" %>
+<%@ val mysql_suffix: String = ".mysql" %>
+<%@ val innodb_details: Boolean = false %>
+<%@ val extra_details: Boolean = false %>
+
+<%
+  val myCommand = if (command.nonEmpty)
+    command
+  else {
+    val passOpt = if (mysql_password.isEmpty) "" else s"-p${mysql_password}"
+    val myHost = if (node_host == "") node_name else node_host
+    s"mysql -u${mysql_user} ${passOpt} -h ${myHost} --port ${port} -B -e 'select * from ${global_status_db}.global_status'"
+  }
+%>
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.global_status.fetch
+  command: "<%= myCommand %>"
+  timeout: <%= timeout %>
+  pass_data: true
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.global_status.downcase
+  command: "tr '[:upper:]' '[:lower:]'"
+  timeout: <%= timeout %>
+  pass_data: true
+  pre_fetch: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.global_status.fetch
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.global_status.parse
+  command: ":cc kv parse -d \\s+"
+  timeout: <%= timeout %>
+  pass_data: true
+  pre_fetch: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.global_status.downcase
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+- ^<%= id_prefix %><%= node_name %><%= mysql_suffix %>.all:
+  title: "<%= title_prefix %><%= node_name %> MySQL global_status stats - all <%= if (desc == "") "" else s" ($desc)" %>"
+  px: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.
+#if (parent_index != "")
+  parent: <%= parent_index %>
+#end
+
+<%
+  case class MyGDef(inVars: Seq[String],
+    labelStripPrefix: Option[String] = None,
+    rrdType: String = "DERIVE",
+    idPart: Option[String] = None,
+    muOpt: Option[String] = None
+  ) {
+    val mu: String = muOpt.getOrElse(if (rrdType.endsWith("DERIVE")) "ev/sec" else "")
+    val vars = inVars.map(_.toLowerCase)
+    val idSuffix: String = idPart.getOrElse(vars.headOption.getOrElse("invalid"))
+    def labels: Seq[String] = vars.map { vname =>
+      if (labelStripPrefix.isDefined)
+        vname.stripPrefix(labelStripPrefix.get)
+      else
+        vname.split("_").last
+    }
+  }
+
+  case class MyGDefGroup(
+    idPart: String,
+    titlePart: String,
+    graphs: Seq[MyGDef]
+  )
+
+  val overviewGraphs = MyGDefGroup(
+    idPart = "overview",
+    titlePart = "Overview",
+    graphs = Seq[MyGDef](
+      MyGDef(Seq("Bytes_received", "Bytes_sent"), idPart = Some("bytes"), muOpt = Some("bytes/sec")),
+      MyGDef(Seq("Queries")),
+      MyGDef(Seq("Questions")),
+      MyGDef(Seq("Connections")),
+      MyGDef(Seq("Flush_commands")),
+      MyGDef(Seq("Slow_queries")),
+      MyGDef(Seq("Aborted_clients")),
+      MyGDef(Seq("Aborted_connects")),
+      MyGDef(Seq("Connection_errors_accept")),
+      MyGDef(Seq("Connection_errors_internal")),
+      MyGDef(Seq("Connection_errors_max_connections"), labelStripPrefix = Some("Connection_errors_")),
+      MyGDef(Seq("Connection_errors_peer_address"), labelStripPrefix = Some("Connection_errors_")),
+      MyGDef(Seq("Connection_errors_select")),
+      MyGDef(Seq("Connection_errors_tcpwrap")),
+      MyGDef(Seq("Innodb_rows_deleted")),
+      MyGDef(Seq("Innodb_rows_inserted")),
+      MyGDef(Seq("Innodb_rows_read")),
+      MyGDef(Seq("Innodb_rows_updated")),
+      MyGDef(Seq("Innodb_buffer_pool_pages_dirty")),
+      MyGDef(Seq("Innodb_buffer_pool_pages_flushed")),
+      MyGDef(Seq("Innodb_buffer_pool_reads")),
+      MyGDef(Seq("Innodb_checkpoint_age")),
+      MyGDef(Seq("Innodb_log_writes")),
+      MyGDef(Seq("Innodb_data_reads")),
+      MyGDef(Seq("Innodb_data_writes")),
+      MyGDef(Seq("Innodb_data_pending_reads", "Innodb_data_pending_writes"), rrdType = "GAUGE", idPart = Some("pending_rw")),
+      MyGDef(Seq("Innodb_os_log_pending_writes", "Innodb_os_log_pending_fsyncs"), rrdType = "GAUGE", idPart = Some("os_log_pending")),
+      MyGDef(Seq("Created_tmp_disk_tables")),
+      MyGDef(Seq("Created_tmp_files")),
+      MyGDef(Seq("Created_tmp_tables")),
+      MyGDef(Seq("Max_used_connections"), rrdType = "GAUGE"),
+      MyGDef(Seq("Threadpool_idle_threads"), rrdType = "GAUGE"),
+      MyGDef(Seq("Threadpool_threads"), rrdType = "GAUGE"),
+
+      MyGDef(Seq("Threads_cached"), rrdType = "GAUGE"),
+      MyGDef(Seq("Threads_connected"), rrdType = "GAUGE"),
+      MyGDef(Seq("Threads_created")),
+      MyGDef(Seq("Threads_running"), rrdType = "GAUGE"),
+      MyGDef(Seq("Uptime"))
+      )
+  )
+  val handlerGraphs = MyGDefGroup(
+    idPart = "handler",
+    titlePart = "Handler counters",
+    graphs = Seq[MyGDef](
+      MyGDef(Seq("Handler_commit")),
+      MyGDef(Seq("Handler_delete")),
+      MyGDef(Seq("Handler_discover")),
+      MyGDef(Seq("Handler_external_lock")),
+      MyGDef(Seq("Handler_mrr_init")),
+      MyGDef(Seq("Handler_prepare")),
+      MyGDef(Seq("Handler_read_first")),
+      MyGDef(Seq("Handler_read_key")),
+      MyGDef(Seq("Handler_read_last")),
+      MyGDef(Seq("Handler_read_next")),
+      MyGDef(Seq("Handler_read_prev")),
+      MyGDef(Seq("Handler_read_rnd")),
+      MyGDef(Seq("Handler_read_rnd_next")),
+      MyGDef(Seq("Handler_rollback")),
+      MyGDef(Seq("Handler_savepoint")),
+      MyGDef(Seq("Handler_savepoint_rollback")),
+      MyGDef(Seq("Handler_update")),
+      MyGDef(Seq("Handler_write"))
+      )
+  )
+
+  val innoDbGraphs = MyGDefGroup(
+    idPart = "innodb",
+    titlePart = "Innodb stats",
+    graphs = Seq[MyGDef](
+      MyGDef(Seq("Innodb_background_log_sync")),
+      MyGDef(Seq("Innodb_buffer_pool_pages_data"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_buffer_pool_bytes_data"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_buffer_pool_bytes_dirty"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_buffer_pool_pages_free"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_buffer_pool_pages_LRU_flushed")),
+      MyGDef(Seq("Innodb_buffer_pool_pages_made_not_young")),
+      MyGDef(Seq("Innodb_buffer_pool_pages_made_young")),
+      MyGDef(Seq("Innodb_buffer_pool_pages_misc"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_buffer_pool_pages_old"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_buffer_pool_pages_total"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_buffer_pool_read_ahead_rnd")),
+      MyGDef(Seq("Innodb_buffer_pool_read_ahead")),
+      MyGDef(Seq("Innodb_buffer_pool_read_ahead_evicted")),
+      MyGDef(Seq("Innodb_buffer_pool_read_requests")),
+      MyGDef(Seq("Innodb_buffer_pool_wait_free")),
+      MyGDef(Seq("Innodb_buffer_pool_write_requests")),
+      MyGDef(Seq("Innodb_checkpoint_max_age"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_data_fsyncs")),
+      MyGDef(Seq("Innodb_data_pending_fsyncs"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_data_read")),
+      MyGDef(Seq("Innodb_data_written")),
+      MyGDef(Seq("Innodb_dblwr_pages_written")),
+      MyGDef(Seq("Innodb_dblwr_writes")),
+      MyGDef(Seq("Innodb_ibuf_free_list"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_ibuf_segment_size"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_log_waits")),
+      MyGDef(Seq("Innodb_log_write_requests")),
+//      MyGDef(Seq("Innodb_lsn_current")),
+//      MyGDef(Seq("Innodb_lsn_flushed")),
+//      MyGDef(Seq("Innodb_lsn_last_checkpoint")),
+      MyGDef(Seq("Innodb_master_thread_active_loops")),
+      MyGDef(Seq("Innodb_master_thread_idle_loops")),
+      MyGDef(Seq("Innodb_max_trx_id"), rrdType = "GAUGE"),
+//      MyGDef(Seq("Innodb_mem_adaptive_hash")),
+//      MyGDef(Seq("Innodb_mem_dictionary")),
+//      MyGDef(Seq("Innodb_oldest_view_low_limit_trx_id")),
+
+      MyGDef(Seq("Innodb_os_log_fsyncs")),
+      MyGDef(Seq("Innodb_os_log_written")),
+
+      MyGDef(Seq("Innodb_page_size"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_pages_created")),
+      MyGDef(Seq("Innodb_pages_read")),
+      MyGDef(Seq("Innodb_pages0_read")),
+      MyGDef(Seq("Innodb_pages_written")),
+//      MyGDef(Seq("Innodb_purge_trx_id")),
+//      MyGDef(Seq("Innodb_purge_undo_no")),
+
+      MyGDef(Seq("Innodb_row_lock_current_waits"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_row_lock_time")),
+      MyGDef(Seq("Innodb_row_lock_time_avg"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_row_lock_time_max"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_row_lock_waits")),
+
+      MyGDef(Seq("Innodb_num_open_files"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_truncated_status_writes")),
+      MyGDef(Seq("Innodb_available_undo_logs"), rrdType = "GAUGE"),
+      MyGDef(Seq("Innodb_secondary_index_triggered_cluster_reads")),
+      MyGDef(Seq("Innodb_secondary_index_triggered_cluster_reads_avoided")),
+      MyGDef(Seq("Innodb_buffered_aio_submitted"))
+
+//      MyGDef(Seq("Innodb_scan_pages_contiguous")),
+//      MyGDef(Seq("Innodb_scan_pages_disjointed")),
+//      MyGDef(Seq("Innodb_scan_pages_total_seek_distance")),
+//      MyGDef(Seq("Innodb_scan_data_size")),
+//      MyGDef(Seq("Innodb_scan_deleted_recs_size")),
+
+//      MyGDef(Seq("Innodb_scrub_background_page_reorganizations")),
+//      MyGDef(Seq("Innodb_scrub_background_page_splits")),
+//      MyGDef(Seq("Innodb_scrub_background_page_split_failures_underflow")),
+//      MyGDef(Seq("Innodb_scrub_background_page_split_failures_out_of_filespace")),
+//      MyGDef(Seq("Innodb_scrub_background_page_split_failures_missing_index")),
+//      MyGDef(Seq("Innodb_scrub_background_page_split_failures_unknown")),
+//      MyGDef(Seq("Innodb_scrub_log")),
+
+//      MyGDef(Seq("Innodb_encryption_rotation_pages_read_from_cache")),
+//      MyGDef(Seq("Innodb_encryption_rotation_pages_read_from_disk")),
+//      MyGDef(Seq("Innodb_encryption_rotation_pages_modified")),
+//      MyGDef(Seq("Innodb_encryption_rotation_pages_flushed")),
+//      MyGDef(Seq("Innodb_encryption_rotation_estimated_iops")),
+//      MyGDef(Seq("Innodb_encryption_key_rotation_list_length")),
+//      MyGDef(Seq("Innodb_encryption_n_merge_blocks_encrypted")),
+//      MyGDef(Seq("Innodb_encryption_n_merge_blocks_decrypted")),
+//      MyGDef(Seq("Innodb_encryption_n_rowlog_blocks_encrypted")),
+//      MyGDef(Seq("Innodb_encryption_n_rowlog_blocks_decrypted")),
+//      MyGDef(Seq("Innodb_num_pages_encrypted")),
+//      MyGDef(Seq("Innodb_num_pages_decrypted"))
+      )
+  )
+
+  val extraGraphs = MyGDefGroup(
+    idPart = "extra",
+    titlePart = "Extra stats",
+    graphs = Seq[MyGDef](
+      MyGDef(Seq("Delayed_errors")),
+      MyGDef(Seq("Delayed_insert_threads")),
+      MyGDef(Seq("Delayed_writes")),
+
+      MyGDef(Seq("Key_blocks_not_flushed")),
+      MyGDef(Seq("Key_blocks_unused")),
+      MyGDef(Seq("Key_blocks_used")),
+      MyGDef(Seq("Key_read_requests")),
+      MyGDef(Seq("Key_reads")),
+      MyGDef(Seq("Key_write_requests")),
+      MyGDef(Seq("Key_writes")),
+
+      MyGDef(Seq("Locked_connects")),
+
+      MyGDef(Seq("Max_execution_time_exceeded")),
+      MyGDef(Seq("Max_execution_time_set")),
+      MyGDef(Seq("Max_execution_time_set_failed")),
+
+//      MyGDef(Seq("Not_flushed_delayed_rows")),
+//      MyGDef(Seq("Ongoing_anonymous_transaction_count")),
+      MyGDef(Seq("Open_files"), rrdType = "GAUGE"),
+      MyGDef(Seq("Open_streams"), rrdType = "GAUGE"),
+      MyGDef(Seq("Open_table_definitions"), rrdType = "GAUGE"),
+      MyGDef(Seq("Open_tables"), rrdType = "GAUGE"),
+      MyGDef(Seq("Opened_files")),
+      MyGDef(Seq("Opened_table_definitions")),
+      MyGDef(Seq("Opened_tables")),
+
+      MyGDef(Seq("Prepared_stmt_count")),
+
+      MyGDef(Seq("Qcache_free_blocks")),
+      MyGDef(Seq("Qcache_free_memory")),
+      MyGDef(Seq("Qcache_hits")),
+      MyGDef(Seq("Qcache_inserts")),
+      MyGDef(Seq("Qcache_lowmem_prunes")),
+      MyGDef(Seq("Qcache_not_cached")),
+      MyGDef(Seq("Qcache_queries_in_cache")),
+      MyGDef(Seq("Qcache_total_blocks")),
+
+
+      MyGDef(Seq("Select_full_join")),
+      MyGDef(Seq("Select_full_range_join")),
+      MyGDef(Seq("Select_range")),
+      MyGDef(Seq("Select_range_check")),
+      MyGDef(Seq("Select_scan")),
+
+      MyGDef(Seq("Slave_open_temp_tables")),
+      MyGDef(Seq("Slow_launch_threads")),
+
+
+      MyGDef(Seq("Sort_merge_passes")),
+      MyGDef(Seq("Sort_range")),
+      MyGDef(Seq("Sort_rows")),
+      MyGDef(Seq("Sort_scan")),
+      MyGDef(Seq("Table_locks_immediate")),
+      MyGDef(Seq("Table_locks_waited")),
+      MyGDef(Seq("Table_open_cache_hits")),
+      MyGDef(Seq("Table_open_cache_misses")),
+      MyGDef(Seq("Table_open_cache_overflows")),
+      MyGDef(Seq("Tc_log_max_pages_used")),
+      MyGDef(Seq("Tc_log_page_size")),
+      MyGDef(Seq("Tc_log_page_waits"))
+
+    //  MyGDef(Seq("Binlog_snapshot_position")),
+//  MyGDef(Seq("Binlog_cache_disk_use")),
+//  MyGDef(Seq("Binlog_cache_use")),
+//  MyGDef(Seq("Binlog_stmt_cache_disk_use")),
+//  MyGDef(Seq("Binlog_stmt_cache_use")),
+//  MyGDef(Seq("Com_stmt_reprepare")),
+
+//  MyGDef(Seq("Performance_schema_accounts_lost")),
+//  MyGDef(Seq("Performance_schema_cond_classes_lost")),
+//  MyGDef(Seq("Performance_schema_cond_instances_lost")),
+//  MyGDef(Seq("Performance_schema_digest_lost")),
+//  MyGDef(Seq("Performance_schema_file_classes_lost")),
+//  MyGDef(Seq("Performance_schema_file_handles_lost")),
+//  MyGDef(Seq("Performance_schema_file_instances_lost")),
+//  MyGDef(Seq("Performance_schema_hosts_lost")),
+//  MyGDef(Seq("Performance_schema_index_stat_lost")),
+//  MyGDef(Seq("Performance_schema_locker_lost")),
+//  MyGDef(Seq("Performance_schema_memory_classes_lost")),
+//  MyGDef(Seq("Performance_schema_metadata_lock_lost")),
+//  MyGDef(Seq("Performance_schema_mutex_classes_lost")),
+//  MyGDef(Seq("Performance_schema_mutex_instances_lost")),
+//  MyGDef(Seq("Performance_schema_nested_statement_lost")),
+//  MyGDef(Seq("Performance_schema_prepared_statements_lost")),
+//  MyGDef(Seq("Performance_schema_program_lost")),
+//  MyGDef(Seq("Performance_schema_rwlock_classes_lost")),
+//  MyGDef(Seq("Performance_schema_rwlock_instances_lost")),
+//  MyGDef(Seq("Performance_schema_session_connect_attrs_lost")),
+//  MyGDef(Seq("Performance_schema_socket_classes_lost")),
+//  MyGDef(Seq("Performance_schema_socket_instances_lost")),
+//  MyGDef(Seq("Performance_schema_stage_classes_lost")),
+//  MyGDef(Seq("Performance_schema_statement_classes_lost")),
+//  MyGDef(Seq("Performance_schema_table_handles_lost")),
+//  MyGDef(Seq("Performance_schema_table_instances_lost")),
+//  MyGDef(Seq("Performance_schema_table_lock_stat_lost")),
+//  MyGDef(Seq("Performance_schema_thread_classes_lost")),
+//  MyGDef(Seq("Performance_schema_thread_instances_lost")),
+//  MyGDef(Seq("Performance_schema_users_lost")),
+
+//  MyGDef(Seq("Ssl_accept_renegotiates")),
+//  MyGDef(Seq("Ssl_accepts")),
+//  MyGDef(Seq("Ssl_callback_cache_hits")),
+//  MyGDef(Seq("Ssl_client_connects")),
+//  MyGDef(Seq("Ssl_connect_renegotiates")),
+//  MyGDef(Seq("Ssl_ctx_verify_depth")),
+//  MyGDef(Seq("Ssl_ctx_verify_mode")),
+//  MyGDef(Seq("Ssl_default_timeout")),
+//  MyGDef(Seq("Ssl_finished_accepts")),
+//  MyGDef(Seq("Ssl_finished_connects")),
+//  MyGDef(Seq("Ssl_session_cache_hits")),
+//  MyGDef(Seq("Ssl_session_cache_misses")),
+//  MyGDef(Seq("Ssl_session_cache_overflows")),
+//  MyGDef(Seq("Ssl_session_cache_size")),
+//  MyGDef(Seq("Ssl_session_cache_timeouts")),
+//  MyGDef(Seq("Ssl_sessions_reused")),
+//  MyGDef(Seq("Ssl_used_session_cache_entries")),
+//  MyGDef(Seq("Ssl_verify_depth")),
+//  MyGDef(Seq("Ssl_verify_mode")),
+    )
+  )
+
+  val groups = scala.collection.mutable.ListBuffer[MyGDefGroup](overviewGraphs, handlerGraphs)
+  if (innodb_details)
+    groups += innoDbGraphs
+  if (extra_details)
+    groups += extraGraphs
+%>
+
+#for (grp <- groups)
+# <%= grp.idPart %>
+
+- ^<%= id_prefix %><%= node_name %><%= mysql_suffix %>.<%= grp.idPart %>:
+  title: "<%= title_prefix %><%= node_name %> MySQL global_status stats - <%= grp.titlePart %> <%= if (desc == "") "" else s" ($desc)" %>"
+  px: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.<%= grp.idPart %>.
+  parent: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.all
+
+#for (g <- grp.graphs)
+## <%= g.idSuffix %>
+
+- id: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.<%= grp.idPart %>.<%= g.idSuffix %>
+  interval: <%= interval %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.global_status.parse
+  command: ":cc kv get <%= g.vars.mkString(" ") %>"
+  timeout: <%= timeout %>
+  rrd_type: <%= g.rrdType %>
+  title: "<%= title_prefix %><%= node_name %> - MySQL global_status <%= grp.titlePart %> - <%= g.inVars.mkString(", ") %>"
+  vars:
+#for (lbl <- g.labels)
+  - label: <%= lbl %>
+#if (g.mu != "")
+    mu: <%= g.mu %>
+#end #end
+# # end for (g <- grp.graphs)
+#end
+# # end for (grp <- groups)
+#end
