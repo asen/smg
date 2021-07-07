@@ -49,5 +49,13 @@ autoconf:
 #        port_range:
 #          - "6379"
 
+#    - output: local-mysql-.yml
+#      template: mysql
+#      node_name: localhost
+#      context:
+#        mysql_password: mysql
+#        innodb_details: true
+#        extra_details: true
+
     - include: "/etc/smg/autoconf.d/*.{yml,yaml}"
     - include: "/opt/smg/data/conf/autoconf.d/*.{yml,yaml}"

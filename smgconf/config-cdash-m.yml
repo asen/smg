@@ -22,6 +22,14 @@
       height: 600
       ix: jmx.premote
       limit: 2
+    - id: links
+      title: Useful links
+      type: LinksPanel
+      width: 350
+      links:
+        - text: google
+          url: "https://www.google.com"
+#          target: "_blank"
     - id: group1
       type: Container
       width: 700
