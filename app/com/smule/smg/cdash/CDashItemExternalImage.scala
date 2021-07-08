@@ -10,8 +10,8 @@ case class CDashItemExternalImage(conf: CDashConfigItem, src: String) extends CD
   private val linkOpenTag = linkUrl.map(s => s"<a href='$s'>").getOrElse("")
   private val linkCloseTag = linkUrl.map(s => s"</a>").getOrElse("")
   override def htmlContent: String = {
-    val heightS = imgHeight.map(s => s" height='${s}'")
-    val widthS = imgWidth.map(s => s" width='${s}'")
+    val heightS = imgHeight.map(s => s" height='${s}'").getOrElse("")
+    val widthS = imgWidth.map(s => s" width='${s}'").getOrElse("")
     linkOpenTag +
       s"<img src='$src' alt='${alt.getOrElse(src)}'${heightS}${widthS} />" +
       linkCloseTag
