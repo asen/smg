@@ -2,5 +2,5 @@ package com.smule.smg.cdash
 
 object CDashItemType extends Enumeration {
   val IndexGraphs, IndexStates, MonitorProblems, MonitorLog, Plugin, LinksPanel,
-  External, Error, Container = Value
+  External, ExternalImage, Error, Container = Value
 }

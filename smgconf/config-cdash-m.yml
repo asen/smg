@@ -30,6 +30,16 @@
         - text: google
           url: "https://www.google.com"
 #          target: "_blank"
+    - id: google
+      title: Google
+      type: ExternalImage
+      width: 350
+      height: 370
+      img_width: 350
+      img_height: 200
+      alt: "google com"
+      src: "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_160x56dp.png"
+      link: "https://www.google.com/"
     - id: group1
       type: Container
       width: 700

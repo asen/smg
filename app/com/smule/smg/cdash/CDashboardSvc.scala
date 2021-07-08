@@ -44,6 +44,7 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
       case CDashItemType.MonitorLog => getMonitorLogs(itm)
       case CDashItemType.Plugin => getPlugin(itm)
       case CDashItemType.External => getExternal(itm)
+      case CDashItemType.ExternalImage => getExternalImage(itm)
       case CDashItemType.LinksPanel => getLinksPanel(itm)
     }
   }
@@ -187,6 +188,13 @@ class CDashboardSvc @Inject()(configSvc: SMGConfigService,
     val url = itm.getDataStr("url").getOrElse("ERROR")
     Future {
       CDashItemExternal(itm, url)
+    }
+  }
+
+  private def getExternalImage(itm: CDashConfigItem): Future[CDashItem] = {
+    val src: String = itm.getDataStr("src").getOrElse("ERROR_IMAGE_NEEDS_SRC")
+    Future {
+      CDashItemExternalImage(itm, src)
     }
   }
 
