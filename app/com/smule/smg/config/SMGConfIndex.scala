@@ -42,22 +42,22 @@ case class SMGConfIndex(id: String,
     * @param yamlMap - yaml Map to build the object from
     */
   def this(id: String, yamlMap: Map[String,Object]) {
-    this(id,
-      yamlMap.getOrElse("title", id).toString,
-      SMGFilter.fromYamlMap(yamlMap),
-      if (yamlMap.contains("cols")) Some(yamlMap("cols").asInstanceOf[Int]) else None,
-      if (yamlMap.contains("rows")) Some(yamlMap("rows").asInstanceOf[Int]) else None,
-      if (yamlMap.contains("agg_op")) Some(yamlMap("agg_op").toString) else None,
-      yamlMap.getOrElse("xagg", "false").toString == "true",
-      if (yamlMap.contains("gb")) SMGAggGroupBy.gbVal(yamlMap("gb").toString) else None,
-      if (yamlMap.contains("gbp")) Some(yamlMap("gbp").toString) else None,
-      if (yamlMap.contains("period")) Some(yamlMap("period").toString) else None,
-      if (yamlMap.contains("desc")) Some(yamlMap("desc").toString) else None,
-      if (yamlMap.contains("parent"))
+    this(id = id,
+      title = yamlMap.getOrElse("title", id).toString,
+      flt = SMGFilter.fromYamlMap(yamlMap),
+      cols = if (yamlMap.contains("cols")) Some(yamlMap("cols").asInstanceOf[Int]) else None,
+      rows = if (yamlMap.contains("rows")) Some(yamlMap("rows").asInstanceOf[Int]) else None,
+      aggOp = if (yamlMap.contains("agg_op")) Some(yamlMap("agg_op").toString) else None,
+      xRemoteAgg = yamlMap.getOrElse("xagg", "false").toString == "true",
+      aggGroupBy = if (yamlMap.contains("gb")) SMGAggGroupBy.gbVal(yamlMap("gb").toString) else None,
+      gbParam = if (yamlMap.contains("gbp")) Some(yamlMap("gbp").toString) else None,
+      period = if (yamlMap.contains("period")) Some(yamlMap("period").toString) else None,
+      desc = if (yamlMap.contains("desc")) Some(yamlMap("desc").toString) else None,
+      parentId = if (yamlMap.contains("parent"))
         Some(yamlMap("parent").asInstanceOf[String]) else None,
-      if (yamlMap.contains("children"))
+      childIds = if (yamlMap.contains("children"))
         yamlMap("children").asInstanceOf[java.util.ArrayList[String]].asScala else Seq[String](),
-      yamlMap.getOrElse("dhmap", "false").toString == "true"
+      disableHeatmap = yamlMap.getOrElse("dhmap", "false").toString == "true"
     )
   }
 

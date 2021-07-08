@@ -1764,6 +1764,9 @@ Here is an example Index definition:
       rx: ...                    # optional filter: regex to match against rrd object id. Ignored if null (which is the default).
       rxx: ...                   # optional filter: exclude objects which ids match the supplied regex. Ignored if null (which is the default).
       trx: ...                   # optional filter: regex to match against object text representation (including title, var names etc). Ignored if null (which is the default).
+      agg_op: ...                # optional "aggregate op"
+      gb: ...                    # optional "group by" value
+      gbp: ...                   # optional "group by param" value
       parent: some.index.id      # optinal parent index id. Indexes without parent are considered top-level
       children:                  # optional list of child index ids to display under this index
         - example.index.id1
@@ -1822,6 +1825,10 @@ of _GROUP_, _STACK_, _SUM_, _SUMN_, _AVG_, _MAX_ or _MIN_ ). If that is
 specified SMG will directly apply the respective
 [aggregate operation](#concepts-aggregate-functions) to the
 graphs resulting from the filter, before display.
+
+- **gb**: (default - None) - Group By val (TODO)
+
+- **gbp**: (default - None) - Grup By "param" val (TODO)
 
 - **xagg**: (default - false) - By default, when SMG is executing
 aggregate operations it will execute them "per-remote" - result
