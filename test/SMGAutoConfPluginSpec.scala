@@ -102,19 +102,21 @@ class SMGAutoConfPluginSpec extends Specification{
       1.equals(1)
     }
 
-    //  "work with openmetrics" in {
-    //    val data = SMGFileUtil.getFileLines("test-data/metrics.txt")
-    //    val p = new SMGTemplateProcessor(log)
-    //    val out = p.processTemplate("smgconf/ac-templates/openmetrics.yml.ssp", Map(
-    //      "node_name" -> "localhost",
-    //      "node_host" -> "localhost",
-    //      "data" -> data
-    //    )).get
-    //    println("===================")
-    //    println(out)
-    //    1.equals(1)
-    //  }
-    //
+    "work with openmetrics" in {
+//      val data = SMGFileUtil.getFileLines("test-data/smg-metrics.txt")
+      val data = SMGFileUtil.getFileLines("test-data/metrics.txt")
+      val p = new SMGTemplateProcessor(log)
+      val out = p.processTemplate("smgconf/ac-templates/openmetrics.yml.ssp", Map(
+        "command" -> "cat test-data/smg-metrics.txt",
+        "node_name" -> "localhost",
+        "node_host" -> "localhost",
+        "data" -> data
+      )).get
+      println("===================")
+      println(out)
+      1.equals(1)
+    }
+
     //  "work with node-cadvisor" in {
     //    val data = SMGFileUtil.getFileLines("test-data/metrics-cadvisor.txt")
     //    val p = new SMGTemplateProcessor(log)

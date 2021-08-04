@@ -9,7 +9,7 @@ scrape:
       conf_output: local-metrics.yml
 #      conf_output_backup_ext: backup
 #      command: curl -f -sS http://localhost:9000/metrics
-      command: ':scrape fetch :lbluid http://localhost:9000/metrics'
+      command: ':scrape fetch http://localhost:9000/metrics'
       need_parse: false
       interval: 60
       timeout: 30

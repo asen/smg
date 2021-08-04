@@ -667,5 +667,5 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
     ret.toList
   }
 
-  def getMetrics: String = getJvmMetricsStr + OpenMetricsParser.dumpStats(getSmgMetrics).mkString("\n") + "\n"
+  def getMetrics: String = OpenMetricsParser.dumpStats(getSmgMetrics).mkString("\n") + "\n" + getJvmMetricsStr
 }

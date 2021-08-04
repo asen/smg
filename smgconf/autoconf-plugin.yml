@@ -10,6 +10,17 @@ autoconf:
 # XXX This setting is special, not subject to reload. false means allow_reload (and is the default)
   prevent_template_reload: false
   targets:
+#    - output: localhost-smg-stats.yml
+#      template: openmetrics
+#      node_name: localhost
+#      runtime_data: true
+#      runtime_data_timeout_sec: 30
+#      command: "curl -sS -f 'http://localhost:9000/metrics'"
+#      context:
+#        metrics_name: "smg-openmetrics"
+#        metrics_hname: "SMG OpenMetrics"
+#        labels_in_uids: true
+
 #    - output: localhost-haproxy-stats.yml
 #      template: haproxy
 #      node_name: localhost
