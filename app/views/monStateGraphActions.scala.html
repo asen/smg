@@ -1,0 +1,72 @@
+@import com.smule.smg.monitor.SMGMonState
+@(gObjId: Option[String], mss: Seq[SMGMonState])
+
+@if(!mss.isEmpty){
+<div>
+  @if(mss.exists{ms => !ms.isOk && !ms.isAcked}){
+  [
+  <form style="display: inline-block;" method="POST" action="/monitor/ackList">
+    <input type="hidden" name="ids" value="@{mss.filter{ms => !ms.isOk  && !ms.isAcked}.map(ms => ms.id).mkString(",")}">
+    @defining(java.util.UUID.randomUUID.toString) { formUUID =>
+    <input id="curl_@{formUUID}" type="hidden" name="curl" value="">
+    <input type="submit"
+           title="Acknowledge existing problem(s) (disabling alerts)"
+           value="Ack"
+           onclick='document.getElementById("curl_@{formUUID}").value = window.location.href'>
+    }
+  </form>
+  ]
+  }
+  @if(mss.exists{ms => !ms.isOk && ms.isAcked}){
+    @if(mss.forall{ms => ms.isOk || ms.isAcked}) {
+    [ Acknowledged ]
+    }
+  @if(gObjId.isDefined){
+  [
+  <form style="display: inline-block;" method="GET" action="/monitor/unack">
+    <input type="hidden" name="id" value="@{gObjId.get}">
+    @defining(java.util.UUID.randomUUID.toString) { formUUID =>
+    <input id="curl_@{formUUID}" type="hidden" name="curl" value="">
+    <input type="submit"
+           title="Remove problem(s) acknowledgements"
+           value="Unack"
+           onclick='document.getElementById("curl_@{formUUID}").value = window.location.href'>
+    }
+  </form>
+  ]
+  }
+  }
+
+  @if(mss.exists{ms => ms.isSilenced}){
+    @if(mss.forall{ms => ms.isSilenced}) {
+    [ Silenced @{mss.maxBy(x => - x.silencedUntil.getOrElse(0)).silencedUntilStr} ]
+    }
+  [
+  <form style="display: inline-block;" method="POST" action="/monitor/slncList">
+    <input type="hidden" name="ids" value="@{mss.map(ms => ms.id).mkString(",")}">
+    <input type="hidden" name="action" value="unsilence">
+    @defining(java.util.UUID.randomUUID.toString) { formUUID =>
+    <input id="curl_@{formUUID}" type="hidden" name="curl" value="">
+    <input type="submit"
+           title="Remove silencing of state(s) (re-enabling alerts)"
+           value="Unsilence"
+           onclick='document.getElementById("curl_@{formUUID}").value = window.location.href'>
+    }
+  </form>
+  ]
+  }
+  [
+  <form style="display: inline-block;" method="POST" action="/monitor/slncList">
+    <input type="hidden" name="ids" value="@{mss.map(ms => ms.id).mkString(",")}">
+    @defining(java.util.UUID.randomUUID.toString) { formUUID =>
+    <input id="curl_@{formUUID}" type="hidden" name="curl" value="">
+    <input type="submit"
+           title="Silence state problem(s) (disabling alerts) for the specified time period"
+           value="Silence for"
+           onclick='document.getElementById("curl_@{formUUID}").value = window.location.href'>
+    }
+    <input type="text" name="slunt" value="2h" size="6" />
+  </form>
+  ]
+</div>
+}

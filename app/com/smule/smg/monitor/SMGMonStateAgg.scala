@@ -64,7 +64,7 @@ object SMGMonStateAgg {
   def aggByParentId(lst: Seq[SMGMonState]): Map[String, SMGMonState]= {
     val ret = lst.filter(_.parentId.isDefined).groupBy(_.parentId.get).map { t =>
       val pid = t._1
-      val msa = SMGMonStateAgg(pid, t._2, s"rx=$pid")
+      val msa = SMGMonStateAgg(pid, t._2, s"prx=^${pid}$$")
       (pid,msa)
     }
     ret

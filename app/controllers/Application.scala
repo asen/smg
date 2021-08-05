@@ -1113,7 +1113,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorAckList(): Action[AnyContent] = Action.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val ids = params("ids").head.split(",")
-    val curl = params("curl").headOption.getOrElse("")
+    val curl = params.getOrElse("curl", Seq(request.headers.get("referer")).flatten).headOption.getOrElse("")
     val redirectUrl = if (curl.isBlank) "/" else curl
     monitorApi.acknowledgeList(ids).map { ret =>
       Redirect(redirectUrl).flashing( if (ret) {
@@ -1127,10 +1127,14 @@ class Application  @Inject() (actorSystem: ActorSystem,
   def monitorSilenceList(): Action[AnyContent] = Action.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val ids = params("ids").head.split(",")
-    val curl = params("curl").headOption.getOrElse("")
+    val curl = params.getOrElse("curl", Seq(request.headers.get("referer")).flatten).headOption.getOrElse("")
     val redirectUrl = if (curl.isBlank) "/" else curl
-    val slunt = params("slunt").head
-    val untilTss = SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
+    val slunt = params.get("slunt").map(_.head).getOrElse("0")
+    val isUnsilence = params.getOrElse("action", Seq()).headOption.getOrElse("") == "unsilence"
+    val untilTss = if (isUnsilence)
+      SMGState.tssNow - 1
+    else
+      SMGState.tssNow + SMGRrd.parsePeriod(slunt).getOrElse(0)
     monitorApi.silenceList(ids, untilTss).map { ret =>
       Redirect(redirectUrl).flashing( if (ret) {
         "success" -> s"Silenced ${ids.length} objects until ${SMGState.formatTss(untilTss)}"
