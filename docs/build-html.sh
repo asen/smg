@@ -9,10 +9,10 @@ fi
 
 pandoc --toc -s -f markdown --toc-depth=4 \
     --metadata title='The History and Evolution of a Monitoring System' \
-    History_and_Evolution.md > html/History_and_Evolution.html
+    History_and_Evolution.md > History_and_Evolution.html
 
 pandoc --toc -s -f markdown --toc-depth=4 \
     --metadata title='Smule Grapher (SMG)' \
-    index.md > html/index.html
+    index.md > index.html
 
 echo "build-html.sh: Done"

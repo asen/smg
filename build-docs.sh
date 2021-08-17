@@ -6,12 +6,12 @@ if [ "$OUTBASEDIR" == "" ] ; then
     exit 1
 fi
 OUTDIR=$OUTBASEDIR/docs
-SRCDIR=docs/html
+SRCDIR=docs
 
 rm -rf $OUTDIR/*
 mkdir -p $OUTDIR
 
-for fn in `ls -1 $SRCDIR/` ; do
-    /bin/cp -vf $SRCDIR/$fn $OUTDIR/
+for fn in `ls -1 $SRCDIR/*.html` ; do
+    /bin/cp -vf $fn $OUTDIR/
 done
 
