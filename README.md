@@ -13,12 +13,11 @@ Intended to be a simple to maintain but scalable monitoring system for
 people who prefer to generate their configs over clicking on UI to set 
 it up.
 
-Recently it seems that Prometheus is taking over the monitoring world. 
-Check the [SMG_VS_PROMETHEUS.md](SMG_VS_PROMETHEUS.md) file for a 
-(possibly opinionated) comparison. 
+Recently it seems that Prometheus is taking over the monitoring world. Check the [SMG_VS_PROMETHEUS.md](SMG_VS_PROMETHEUS.md) file for a (possibly opinionated) comparison.
 
-Check the docs/ dir (or Docs link in a running SMG instance) for more 
-information including configuration reference.
+There is now also a (long) document explaining the [history of evolution of SMG](https://asen.github.io/smg/History_and_Evolution.html) including the "use cases" SMG was built to address.
+
+Check the [github pages documentation](https://asen.github.io/smg/) (or Docs link in a running SMG instance) for more information including configuration reference.
 
 Live demo: http://smg1.ace-tek.net/
 
