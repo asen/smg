@@ -498,11 +498,11 @@ Global for SMG variables are defined as a name -> value pairs where the name is 
 
 - **$rrd\_graph\_font**: _"DEFAULT:0:monospace"_ - the graph font string passed to rrdtool when graphing
 
-- **$rrd\_graph\_dppp**: _3_ _(advanced)_ - how many data points are represented in a singe "width" pixel. Used to estimate displayed graph resolution/step
+- **$rrd\_graph\_dppp**: _3_ _(advanced)_ - how many data points are represented in a singe "width" pixel. Used to estimate displayed graph resolution (step)
 
-- **$rrd\_graph\_dppi**: _None_ _(advanced)_ - how many data points can be represented in a singe image. If this is set **$rrd\_graph\_dppp** is ignored. Used to estimate displayed graph resolution/step
+- **\$rrd\_graph\_dppi**: _None_ _(advanced)_ - how many data points can be represented in a singe image. If this is set **$rrd\_graph\_dppp** is ignored. Used to estimate displayed graph resolution/step
 
-- **$rrd\_graph\_padding**: _83_ _(advanced)_ - the padding (in pixels) rrdtool adds to the configured **$rrd\_graph\_width** for the resulting image size. Used to estimate html cell widths.
+- **\$rrd\_graph\_padding**: _83_ _(advanced)_ - the padding (in pixels) rrdtool adds to the configured **$rrd\_graph\_width** for the resulting image size. Used to estimate html cell widths.
 
 - **$rrd\_max\_args\_len**: _25000_ _(advanced)_ - The maximum length of a rrdtool command. If a resulting command exceeds that the rrdtool arguments will be passed via stdin instead of command-line args as it is by default.
 
@@ -635,7 +635,7 @@ Global for SMG variables are defined as a name -> value pairs where the name is 
 
 - **$notify-anom**: a comma separated list of $notify-command ids, to be executed on any anomaly (spike/drop) errors. Be warned that this can get noisy on large setups.
 
-- **$notify-baseurl**: Base url to be used in alert notifications links, default is http://localhost:9000 (so you probaly want that set if you intend to use alert notifications). This can also be pointed to a different (master) SMG instance URL where the current one is configured. Set **$notify-remote** to be the id of the current instance as defined in the master config in that case.
+- **\$notify-baseurl**: Base url to be used in alert notifications links, default is http://localhost:9000 (so you probaly want that set if you intend to use alert notifications). This can also be pointed to a different (master) SMG instance URL where the current one is configured. Set **$notify-remote** to be the id of the current instance as defined in the master config in that case.
 
 - **$notify-remote**: See $notify-baseurl above, default is none/local.
 
@@ -778,9 +778,9 @@ Most properties are optional except:
 
     - **mu**: ("measurement units") - what string to display after the number (avg/max etc) values in the graph legend, e.g. "bps" (for bits per secod). rrdtool (and thus SMG) will automatically use scale modifiers like M (for mega-), m (for milli-) etc. so bps would become Mbps for megabits per second.
 
-    - **min**: (default _0_) - minimal accepted rrd value. Values below that will be ignored and NaN will be recorded
+    - **min**: (default _0_) - minimal accepted rrd value. Values below that will be ignored and NaN will be recorded. Set to _U_ if you want to record negatve values.
 
-    - **max**: (default _U_ for unlimited) - maximal accepted rrd value. Values above that will be ignored and NaN will be recorded instead. This is rarely needed for GAUGE type graphs but is almost **always** needed for COUNTER graphs. rrdtool will use the max value to detect counter overflows where the delta is usually resulting in a huge integer (if unsigned, otherwise - negative) value. If that value is above the max rrdtool will ignore it and record a NaN.
+    - **max**: (default _U_ for unlimited) - maximal accepted rrd value. Values above that will be ignored and NaN will be recorded instead. This is rarely needed for GAUGE type graphs but is almost **always** needed for COUNTER graphs. rrdtool will use the max value to detect counter overflows where the delta is usually resulting in a huge integer (if unsigned, otherwise - negative) value. If that value is above the max rrdtool will ignore it and record a NaN. Use the DERIVE type (with the default min=0) to always ignore counter overflows (negative values).
 
     - **maxy**: (default _None_ - auto scaling) - set the upper limit on the displayed graph.
 

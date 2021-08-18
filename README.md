@@ -13,17 +13,15 @@ Intended to be a simple to maintain but scalable monitoring system for
 people who prefer to generate their configs over clicking on UI to set 
 it up.
 
-Recently it seems that Prometheus is taking over the monitoring world. Check the [SMG_VS_PROMETHEUS.md](SMG_VS_PROMETHEUS.md) file for a (possibly opinionated) comparison.
+Docs (including configuration reference) on github pages: https://asen.github.io/smg/
 
-There is now also a (long) document explaining the [history of evolution of SMG](https://asen.github.io/smg/History_and_Evolution.html) including the "use cases" SMG was built to address.
+A (long) document explaining the history and evolution of SMG: https://asen.github.io/smg/History_and_Evolution.html
 
-Check the [github pages documentation](https://asen.github.io/smg/) (or Docs link in a running SMG instance) for more information including configuration reference.
+(with more details on how it works but also why it works that way)
 
 Live demo: http://smg1.ace-tek.net/
 
 Live demo configs: http://smg1.ace-tek.net/etc/smg/
-
-Docs on github: https://github.com/asen/smg/blob/master/docs/index.md
 
 Binary releases available here: https://github.com/asen/smg/releases
 
@@ -37,6 +35,8 @@ get a shell inside the container and start troubleshooting using the available
 clients. Check the Dockerfile for what is installed and you can easily build
 your own image based of the upstream image.
 
+
+Recently it seems that Prometheus is taking over the monitoring world. Check the [SMG_VS_PROMETHEUS.md](SMG_VS_PROMETHEUS.md) file for a (possibly opinionated) comparison.
 
 ## Run in container
 
