@@ -37,7 +37,7 @@ clients. Check the Dockerfile for what is installed and you can easily build
 your own image based of the upstream image.
 
 
-Recently it seems that Prometheus is taking over the monitoring world. Check the [SMG_VS_PROMETHEUS.md](SMG_VS_PROMETHEUS.md) file for a (possibly opinionated) comparison.
+Recently it seems that Prometheus is taking over the monitoring world. Check the [SMG_VS_PROMETHEUS.md](SMG_VS_PROMETHEUS.md) file for a (possibly opinionated) comparison. And more detailed (and opinionated) info can be found in the ["History and Evolution" doc](https://asen.github.io/smg/History_and_Evolution.html#some-notes-on-prometheus).
 
 ## Run in container
 
