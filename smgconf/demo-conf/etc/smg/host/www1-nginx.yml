@@ -1,0 +1,32 @@
+
+- $pre_fetch:
+  id: host.www1.nginx.status
+  command: "curl -s -f http://172.30.0.61/nginx_status >/tmp/nginx_status-172.30.0.61.out"
+  timeout: 15
+  pre_fetch: host.www1.ping
+
+# Active connections: 13591 
+# server accepts handled requests
+#  62085883 62085883 188574666 
+# Reading: 0 Writing: 2101 Waiting: 11480 
+
+- host.www1.nginx.conns:
+  pre_fetch: host.www1.nginx.status
+  command: "grep 'Active connections:' /tmp/nginx_status-172.30.0.61.out | cut -d ' ' -f 3"
+  rrd_type: GAUGE
+  timeout: 5
+  title: "www1 - Nginx Connections"
+  interval: 60
+  vars:
+    - label: conns
+
+- host.www1.nginx.reqs:
+  pre_fetch: host.www1.nginx.status
+  command: "grep -A1 'handled requests' /tmp/nginx_status-172.30.0.61.out | tail -n1 | awk '{print $3}'"
+  rrd_type: DERIVE
+  timeout: 5
+  title: "www1 - Nginx Req/s"
+  interval: 60
+  vars:
+    - label: reqs
+      mu: "req/s"

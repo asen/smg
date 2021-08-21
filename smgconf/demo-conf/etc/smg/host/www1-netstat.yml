@@ -1,0 +1,105 @@
+
+# 394335 times the listen queue of a socket overflowed
+# 2370936147 TCP data loss events
+# TCPLostRetransmit: 190657503
+# 13774 packets collapsed in receive queue due to low socket buffer
+# 503160 connections reset due to unexpected data
+# 7002703 connections reset due to early user close
+# 27372172 connections aborted due to timeout
+
+- $pre_fetch:
+  id: host.www1.ssh.netstat
+  command: "/opt/smg/scripts/cache_output.sh 172.30.0.61 'netstat -s' /tmp/cache_netstat-s/www1.out"
+  timeout: 10
+  pre_fetch: host.www1.ping
+
+
+- host.www1.netstat.lqsockovrf:
+  pre_fetch: host.www1.ssh.netstat
+  command: "/opt/smg/scripts/netstat_cached.sh /tmp/cache_netstat-s/www1.out 'times the listen queue of a socket overflowed'"
+  title: "www1 - netstat: times the listen queue of a socket overflowed"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: "lq sock ovrf"
+      mu: "events/s"
+      alert-warn-gt: 0
+      alert-crit-gt: 100
+
+
+- host.www1.netstat.tcpdlossevts:
+  pre_fetch: host.www1.ssh.netstat
+  command: "/opt/smg/scripts/netstat_cached.sh /tmp/cache_netstat-s/www1.out 'TCP data loss events'"
+  title: "www1 - netstat: TCP data loss events"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: "TCP data loss"
+      mu: "events/sec"
+
+
+- host.www1.netstat.tcplostretran:
+  pre_fetch: host.www1.ssh.netstat
+  command: "/opt/smg/scripts/netstat_cached.sh /tmp/cache_netstat-s/www1.out 'TCPLostRetransmit:'"
+  title: "www1 - netstat: TCPLostRetransmit:"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: "TCPLostRetransmit"
+      mu: "events/sec"
+
+
+- host.www1.netstat.pckcollaplsb:
+  pre_fetch: host.www1.ssh.netstat
+  command: "/opt/smg/scripts/netstat_cached.sh /tmp/cache_netstat-s/www1.out 'packets collapsed in receive queue due to low socket buffer'"
+  title: "www1 - netstat: packets collapsed in receive queue due to low socket buffer"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: "packets collapsed"
+      mu: "packets/s"
+
+
+- host.www1.netstat.conrstunexpd:
+  pre_fetch: host.www1.ssh.netstat
+  command: "/opt/smg/scripts/netstat_cached.sh /tmp/cache_netstat-s/www1.out 'connections reset due to unexpected data'"
+  title: "www1 - netstat: connections reset due to unexpected data"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: "rst conns data"
+      mu: "conns/s"
+
+
+- host.www1.netstat.conrstusrcl:
+  pre_fetch: host.www1.ssh.netstat
+  command: "/opt/smg/scripts/netstat_cached.sh /tmp/cache_netstat-s/www1.out 'connections reset due to early user close'"
+  title: "www1 - netstat: connections reset due to early user close"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: "rst conns user"
+      mu: "conns/s"
+
+
+- host.www1.netstat.conabrttmt:
+  pre_fetch: host.www1.ssh.netstat
+  command: "/opt/smg/scripts/netstat_cached.sh /tmp/cache_netstat-s/www1.out 'connections aborted due to timeout'"
+  title: "www1 - netstat: connections aborted due to timeout"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: "rst conns tmt"
+      mu: "conns/s"
+
+
+- host.www1.netstat.pckprunedsbo:
+  pre_fetch: host.www1.ssh.netstat
+  command: "/opt/smg/scripts/netstat_cached.sh /tmp/cache_netstat-s/www1.out 'packets pruned from receive queue because of socket buffer overrun'"
+  title: "www1 - netstat: packets pruned from receive queue because of socket buffer overrun"
+  rrdType: COUNTER
+  interval: 60
+  vars:
+    - label: "packets pruned"
+      mu: "packets/s"
+

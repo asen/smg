@@ -1,0 +1,21 @@
+
+- $pre_fetch:
+  id: host.smg1.nginx.log.sleep
+  delay: 10
+  command: "echo 0"
+
+- host.smg1.nginx.log.hits:
+  pre_fetch: host.smg1.nginx.log.sleep
+  command: "/opt/smg/scripts/nginx-log-hits.sh 172.30.0.67"
+  title: "smg1 - Nginx log hits hourly"
+  interval: 3600
+  vars:
+    - label: "hits/hr"
+
+- host.smg1.nginx.log.ips:
+  pre_fetch: host.smg1.nginx.log.sleep
+  command: "/opt/smg/scripts/nginx-log-ips.sh 172.30.0.67"
+  title: "smg1 - Nginx log unique IPs hourly"
+  interval: 3600
+  vars:
+    - label: "ips/hr"

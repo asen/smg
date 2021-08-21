@@ -1,0 +1,49 @@
+## This is an example SMG configuration file.
+## Note: all paths below are relative to the SMG install dir (use absolute paths to be sure)
+
+## The commented out global values are all optional and show their default values
+
+## Graph properties
+#- $rrd_graph_width: 607
+#- $rrd_graph_height: 152
+#- $rrd_graph_font: "DEFAULT:0:monospace"
+
+## rrdtool executable
+#- $rrd_tool: rrdtool
+
+## path to rrdcached socket, if used.
+#- $rrd_socket: /path/to/socket.fn
+
+## Don't change img_dir unless you setup a http reverse proxy + web server to serve them
+- $img_dir: "/opt/smg/images"
+
+## Directory where to store rrd files. Recommended to point outside SMG dir and do regular backups.
+- $rrd_dir: "/opt/smg/rrd"
+
+## Monitor logs outpt dir. May want to point outside SMG install dir if one cares about these and upgrades
+- $monlog_dir: "/opt/smg/monlog"
+
+## Monitor state outout dir. May want to point outside SMG install dir if one cares about these and upgrades
+- $monstate_dir: "/opt/smg/monstate"
+
+- $index-tree-levels: 2
+
+## Directory where to store cached remote rrd files. Leave alone if uncertain.
+#- $rrd_cache_dir: "smgrrd"
+
+- $include: "/opt/smg/data/conf/autoconf-private.d/*.yml"
+
+## Include the drop-in dir for hosts graphs
+- $include: "/etc/smg/host/*.yml"
+
+## Replace the above with this on Mac
+#- $include: "smgconf/templ-mac-localhost.yml"
+
+## Other includes as needed
+#- $include: "smgconf/templ-linux-naive.yml"
+#- $include: "smgconf/config-alerts.yml"
+
+# drop-in dir to add more confs - create a yml there and run smgscripts/reload-conf.sh.
+- $include: "/etc/smg/cust/*.yml"
+
+- $include: "/opt/smg/data/conf/scrape-private.d/*.yml"

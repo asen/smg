@@ -1,0 +1,159 @@
+
+- $pre_fetch:
+  id: openweathermap-sf.fetch
+  command: "/opt/smg/scripts/openweathermap-sf.sh >/tmp/openweathermap-sf.out"
+
+# {"cnt":2,"list":[
+#
+# {"coord":{"lon":23.32,"lat":42.7},"sys":{"type":1,"id":5444,"message":0.0031,"country":"BG",
+# "sunrise":1516686542,"sunset":1516721325},
+# "weather":[{"id":803,"main":"Clouds","description":"broken clouds","icon":"04d"}],
+# "main":{"temp":1,"pressure":1021,"humidity":74,"temp_min":1,"temp_max":1},"visibility":8000,
+# "wind":{"speed":1.5,"deg":360},"clouds":{"all":75},"dt":1516716000,"id":727011,"name":"Sofia"},
+#
+# {"coord":{"lon":-122.42,"lat":37.77},"sys":{"type":1,"id":392,"message":0.0049,"country":"US",
+# "sunrise":1516720784,"sunset":1516757047},
+# "weather":[{"id":701,"main":"Mist","description":"mist","icon":"50n"},
+# {"id":741,"main":"Fog","description":"fog","icon":"50n"}],
+# "main":{"temp":6.83,"pressure":1024,"humidity":87,"temp_min":5,"temp_max":8},"visibility":14484,
+# "wind":{"speed":2.22,"deg":63.5005},"clouds":{"all":1},"dt":1516716000,"id":5391959,"name":"San Francisco"}
+#
+# ]}
+
+- ^openweathermap:
+  title: "Weather in San Francisco, US and Sofia, BG"
+  px: openweathermap.
+  period: 1w
+
+# San Francisco USA
+
+- ^openweathermap.ussf:
+  title: "Weather in San Francisco, US"
+  px: openweathermap.ussf.
+  parent: openweathermap
+  period: 1w
+
+- openweathermap.ussf.temp:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Temperature in San Francisco"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" main:temp_max main:temp main:temp_min'
+  vars:
+    - label: temp_max
+      mu: C
+      min: -275
+    - label: temp
+      mu: C
+      min: -275
+    - label: temp_min
+      mu: C
+      min: -275
+
+- openweathermap.ussf.pressure:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Pressure in San Francisco"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" main:pressure'
+  vars:
+    - label: pressure
+
+- openweathermap.ussf.humidity:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Pressure in San Francisco"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" main:humidity'
+  vars:
+    - label: humidity
+      mu: "%"
+
+- openweathermap.ussf.visibility:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Visibility in San Francisco"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" visibility'
+  vars:
+    - label: visibility
+
+- openweathermap.ussf.wind_speed:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Wind speed in San Francisco"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" wind:speed'
+  vars:
+    - label: speed
+      mu: m/s
+
+- openweathermap.ussf.wind_deg:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Wind direction in San Francisco"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" wind:deg'
+  vars:
+    - label: deg
+
+
+# Sofia BG
+
+- ^openweathermap.bgsf:
+  title: "Weather in Sofia, BG"
+  px: openweathermap.bgsf.
+  parent: openweathermap
+  period: 1w
+
+- openweathermap.bgsf.temp:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Temperature in Sofia"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" main:temp_max main:temp main:temp_min'
+  vars:
+    - label: temp_max
+      mu: C
+      min: -275
+    - label: temp
+      mu: C
+      min: -275
+    - label: temp_min
+      mu: C
+      min: -275
+
+- openweathermap.bgsf.pressure:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Pressure in Sofia"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" main:pressure'
+  vars:
+    - label: pressure
+
+- openweathermap.bgsf.humidity:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Pressure in Sofia"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" main:humidity'
+  vars:
+    - label: humidity
+      mu: "%"
+
+- openweathermap.bgsf.visibility:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Visibility in Sofia"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" visibility'
+  vars:
+    - label: visibility
+
+- openweathermap.bgsf.wind_speed:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Wind speed in Sofia"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" wind:speed'
+  vars:
+    - label: speed
+      mu: m/s
+
+- openweathermap.bgsf.wind_deg:
+  interval: 1800
+  pre_fetch: openweathermap-sf.fetch
+  title: "Wind direction in Sofia"
+  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" wind:deg'
+  vars:
+    - label: deg

@@ -1,0 +1,27 @@
+
+- output: smg1-.yml
+  template: node-exporter
+  node_name: smg1
+  resolve_name: false
+  runtime_data: true
+  command: 'curl -sS -f http://%node_host%:9100/metrics'
+  context:
+    node_host: 172.30.0.67
+    parent_index: hosts
+
+- output: smg1-jmx.yml
+  template: jmx-jvm
+  node_name: smg1
+  context:
+    node_host: 127.0.0.1
+    port: 9001
+    app_type: smg
+    parent_index: host.smg1
+
+- output: smg1-nginx.yml
+  template: nginx-status
+  node_name: smg1
+  command: "curl -sS -f 'http://%node_host%/nginx_status'"
+  context:
+    node_host: 127.0.0.1
+    parent_index: host.smg1

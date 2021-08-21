@@ -1,0 +1,26 @@
+
+- ~all.alert.spikes:
+#  rxx: "(sysload)$"
+  alerts:
+    - label: 0
+      alert-p-mon-anom: "1.5:30m:30h"
+    - label: 1
+      alert-p-mon-anom: "1.5:30m:30h"
+    - label: 2
+      alert-p-mon-anom: "1.5:30m:30h"
+    - label: 3
+      alert-p-mon-anom: "1.5:30m:30h"
+    - label: 4
+      alert-p-mon-anom: "1.5:30m:30h"
+    - label: 5
+      alert-p-mon-anom: "1.5:30m:30h"
+    - label: 6
+      alert-p-mon-anom: "1.5:30m:30h"
+    - label: 7
+      alert-p-mon-anom: "1.5:30m:30h"
+    - label: 8
+      alert-p-mon-anom: "1.5:30m:30h"
+    - label: 9
+      alert-p-mon-anom: "1.5:30m:30h"
+    - label: 10
+      alert-p-mon-anom: "1.5:30m:30h"
