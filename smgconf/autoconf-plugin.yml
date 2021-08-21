@@ -68,5 +68,13 @@ autoconf:
 #        innodb_details: true
 #        extra_details: true
 
+#    - output: localhost-jmx-.yml
+#      template: jmx-jvm
+#      node_name: localhost
+#      context:
+#        node_host: 127.0.0.1
+#        port: 9001
+#        app_type: smg
+
     - include: "/etc/smg/autoconf.d/*.{yml,yaml}"
     - include: "/opt/smg/data/conf/autoconf.d/*.{yml,yaml}"

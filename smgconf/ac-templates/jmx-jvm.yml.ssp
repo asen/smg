@@ -1,0 +1,77 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%@ val node_name: String %>
+<%@ val node_host: String %>
+<%@ val port: Int %>
+<%@ val id_prefix: String = "host." %>
+<%@ val title_prefix: String = "Host " %>
+<%@ val app_type: String = "java" %>
+<%@ val interval: Int = 60 %>
+<%@ val timeout: Int = 30 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val desc: String = "" %>
+<%
+  val host_port = s"${node_host}:${port}"
+%>
+
+- type: pre_fetch
+  id: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>
+  desc: "Connect to/check JMX on <%= node_name %> (<%= host_port %>)"
+  command: :jmx con <%= host_port %>
+  timeout: <%= timeout %>
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+
+- id: ^<%= id_prefix %><%= node_name %>.jmx.<%= app_type %>
+  title: "<%= title_prefix %><%= node_name %> JMX <%= app_type %> JVM stats"
+#if (desc != "")
+  desc: "<%= desc %>"
+#end
+  px: "<%= id_prefix %><%= node_name %>.jmx.<%= app_type %>"
+#if (parent_index != "")
+  parent: <%= parent_index %>
+#end
+
+- id: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>.jvm.heapMem
+  title: "<%= title_prefix %><%= node_name %> <%= app_type %> JVM heapMem usage"
+  pre_fetch: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>
+  command: :jmx get <%= host_port %> java.lang:type=Memory HeapMemoryUsage:used HeapMemoryUsage:committed
+  rrd_type: GAUGE
+  vars:
+  - label: used
+    mu: B
+  - label: committed
+    mu: B
+
+- id: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>.jvm.threadCount
+  title: "<%= title_prefix %><%= node_name %> <%= app_type %> JVM threads count"
+  pre_fetch: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>
+  command: :jmx get <%= host_port %> java.lang:type=Threading ThreadCount DaemonThreadCount
+  rrd_type: GAUGE
+  vars:
+  - label: thread cnt
+  - label: daemon thread cnt
+
+- id: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>.jvm.nioBufferPoolDirect
+  title: "<%= title_prefix %><%= node_name %> <%= app_type %> JVM nio direct BufferPool mem used"
+  pre_fetch: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>
+  command: :jmx get <%= host_port %> java.nio:type=BufferPool,name=direct  MemoryUsed TotalCapacity
+  rrd_type: GAUGE
+  vars:
+  - label: mem used
+    mu: B
+  - label: tl cap
+    mu: B
+
+- id: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>.jvm.nioBufferPoolDirectCnt
+  title: "<%= title_prefix %><%= node_name %> <%= app_type %> JVM nio direct BufferPool count"
+  pre_fetch: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>
+  command: :jmx get <%= host_port %> java.nio:type=BufferPool,name=direct  Count
+  rrd_type: GAUGE
+  vars:
+  - label: count
