@@ -89,7 +89,7 @@ class SMGAutoTargetProcessor(
   }
 
   // remove all files not part of targets
-  private def cleanupOwnedDir(dir: String, ownedFiles: Seq[String]): Boolean = {
+  def cleanupOwnedDir(dir: String, ownedFiles: Seq[String]): Boolean = {
     // find the set of all files and remove the supplied ownedFile set
     val ownedFilesInDir = ownedFiles.withFilter { fn =>
       fn.startsWith(dir) && {
@@ -115,31 +115,5 @@ class SMGAutoTargetProcessor(
       true
     } else
       false
-  }
-
-  // for each target:
-  //   1. run command
-  //   2. parse output
-  //   3. generate yaml from output
-  // return true if anything changed (and conf needs reload)
-  def run(): Boolean = {
-    // TODO for now processing one target at a time to save the cpu for normal polling
-    // may consider async processing (via an Actor in the future)
-    var needReload: Boolean = false
-    pluginConf.targets.foreach { targetConf =>
-      log.debug(s"SMGAutoTargetProcessor: Processing target conf: ${targetConf.uid}: conf=$targetConf")
-      val targetReload = processTarget(targetConf)
-      if (targetReload) {
-        log.info(s"SMGAutoTargetProcessor: Done processing target conf: ${targetConf.uid}: " +
-          s"targetReload=$targetReload needReload=$needReload")
-        needReload = true
-      }
-    }
-    if (pluginConf.confOutputDir.isDefined && pluginConf.confOutputDirOwned){
-      if (cleanupOwnedDir(pluginConf.confOutputDir.get,
-        pluginConf.targets.map(_.confOutputFile(pluginConf.confOutputDir))))
-        needReload = true
-    }
-    needReload
   }
 }

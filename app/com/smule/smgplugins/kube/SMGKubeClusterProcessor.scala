@@ -379,6 +379,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val staticUid = contextMap.remove("uid").map(_.toString)
       val staticNodeName = contextMap.remove("node_name").map(_.toString)
       val staticResolveName = contextMap.get("resolve_name").map(_.toString)
+      val staticRegenDelay = contextMap.get("regen_delay").flatMap(x => Try(x.toString.toInt).toOption)
 
       val commandOpt = contextMap.remove("command").map(_.toString)
       val runtimeDataOpt = contextMap.get("runtime_data").map(_.toString)
@@ -425,6 +426,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         runtimeData = runtimeDataOpt.contains("true"),
         runtimeDataTimeoutSec = runtimeDataTimeoutSecOpt,
         resolveName = staticResolveName.contains("true"),
+        regenDelay = staticRegenDelay,
         nodeName = Some(nodeName),
         command = commandOpt,
         context = contextMap.toMap

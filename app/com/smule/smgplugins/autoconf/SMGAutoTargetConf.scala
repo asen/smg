@@ -20,6 +20,8 @@ case class SMGAutoTargetConf(
                               runtimeData: Boolean,
                               runtimeDataTimeoutSec: Option[Int],
                               resolveName: Boolean,
+                              //minimal delay between conf re-gen.
+                              regenDelay: Option[Int],
                               // the two special attributes
                               nodeName: Option[String],
                               command: Option[String],
@@ -33,7 +35,7 @@ case class SMGAutoTargetConf(
   val confOutput: String = if (output.isDefined)
     output.get
   else
-    uid.get + ".yml" // XXX this wuld throw on empty uid but our parser prevents that case
+    uid.get + ".yml" // XXX this would throw on empty uid but our parser prevents that case
 
   def confOutputFile(confDir: Option[String]): String = {
     if (confDir.isDefined && !Paths.get(confOutput).isAbsolute){
@@ -123,6 +125,7 @@ object SMGAutoTargetConf {
         runtimeData = runtimeData,
         runtimeDataTimeoutSec = ymap.get("runtime_data_timeout_sec").map(_.asInstanceOf[Int]),
         resolveName = ymap.contains("resolve_name") && ymap("resolve_name").toString == "true",
+        regenDelay = ymap.get("regen_delay").map(_.asInstanceOf[Int]),
         nodeName = ymap.get("node_name").map(_.toString),
         command = ymap.get("command").map(_.toString),
         context = if (ymap.contains("context")) yobjMap(ymap("context")).toMap else Map()
