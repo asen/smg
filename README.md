@@ -19,9 +19,9 @@ A (long) document explaining the history and evolution of SMG: https://asen.gith
 
 (with more details on how it works but also why it works that way)
 
-Live demo: http://smg1.ace-tek.net/
+Live demo: https://smg1.ace-tek.net/
 
-Live demo configs: http://smg1.ace-tek.net/etc/smg/
+Live demo configs: https://smg1.ace-tek.net/etc/smg/
 These are also part of the git repo now - check [smgconf/demo-conf](smgconf/demo-conf)
 
 Binary releases available here: https://github.com/asen/smg/releases
