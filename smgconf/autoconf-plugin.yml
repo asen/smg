@@ -71,6 +71,7 @@ autoconf:
 #    - output: localhost-jmx-.yml
 #      template: jmx-jvm
 #      node_name: localhost
+#      regen_delay: 120
 #      context:
 #        node_host: 127.0.0.1
 #        port: 9001
