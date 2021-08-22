@@ -1,0 +1,213 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%
+  // regen_delay: 7200 # this can be slow - run every 2h
+  // Configure like this:
+  // node_name: racksw01
+  // node_host: 10.0.0.50  # or resolve_name: true
+  // regen_delay: 1800 # this can be slow - run every 30 min
+%>
+<%@ val node_name: String %>
+<%@ val node_host: String %>
+<%@ val id_prefix: String = "host-sw." %>
+<%@ val title_prefix: String = "Network Switch " %>
+<%@ val interval: Int = 60 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val desc: String = "" %>
+<%@ val add_ping: Boolean = true %>
+<%@ val snmp_community: String = "public" %>
+<%@ val snmp_walk_command: String = "snmpwalk -v 2c -c %snmp_community%" %>
+<%@ val snmp_get_command: String = "snmpget -v 2c -c %snmp_community% -Oe" %>
+<%@ val snmp_timeout: Int = 15 %>
+<%@ val default_speed: Long = 10000L %>
+<%@ val max_pf_count: Int = 10 %>
+<%@ val index_rows: Int = 60 %>
+<%@ val skip_descs: Seq[String] = Seq("Nu0") %>
+<%@ val check_abs: Boolean = true %>
+<%@ val skip_abs_check_desc_rxs: Seq[String] = Seq("Vlan.*") %>
+<%
+  import com.smule.smg.core.SMGCmd
+  import scala.util.Try
+
+  // All the data we need for given port to define its rrd objects
+  // XXX using Strings instead of numbers to avoid scalate outputting numbers in
+  // human-friendly format (e.g. 1000000 becomes 1,000,000) and we don't want that
+  case class PortData(
+    ethid: String,
+    desc: String,
+    aka: String,
+    speed: String,
+    checkAbs: Boolean,
+    alertWarnGt: String,
+    alertCritGt: String
+  )
+
+  def runCmd(cmd: String): List[String] = {
+    SMGCmd(cmd).run()
+  }
+
+  val skipDescsSet = skip_descs.toSet
+  val snmpwalk = snmp_walk_command.replaceAll("%snmp_community%", snmp_community)
+  val snmpget = snmp_get_command.replaceAll("%snmp_community%", snmp_community)
+
+  def myParseSnmpLine(ln: String): Option[(Int,String)] = {
+  //  IF-MIB::ifName.1 = STRING: Ethernet1
+  //  IF-MIB::ifName.2 = STRING: Ethernet2
+    val arr = ln.split("\\s+=\\s+", 2)
+    val ifIxOpt = Try(arr(0).split('.').last.toInt).toOption
+    ifIxOpt.map { ifIx: Int =>
+      val value = arr.lift(1).getOrElse("").split(": ", 2).last
+      (ifIx, value)
+    }
+  }
+
+  // get all values we care about using a few snmpwalks
+  val allIndexes = runCmd(s"${snmpwalk} ${node_host} ifIndex").flatMap { ln => myParseSnmpLine(ln) }.
+    flatMap{ s => Try(s._2.toInt).toOption }.toList
+  val allNames = runCmd(s"${snmpwalk} ${node_host} ifName").flatMap { ln => myParseSnmpLine(ln) }.toMap
+  val allHCInOctets = runCmd(s"${snmpwalk} ${node_host} ifHCInOctets").flatMap { ln =>  myParseSnmpLine(ln) }.toMap
+  val allAliases = runCmd(s"${snmpwalk} ${node_host} ifAlias").flatMap { ln => myParseSnmpLine(ln) }.toMap
+  val allHighSpeeds = runCmd(s"${snmpwalk} ${node_host} ifHighSpeed").flatMap { ln => myParseSnmpLine(ln) }.toMap
+
+  // an ordered list of the ifIndexes we will actually generate configs for, preserving order
+  val liveIndexes = scala.collection.mutable.ListBuffer[PortData]()
+  allIndexes.foreach { ethid =>
+    val desc = allNames.getOrElse(ethid, "")
+    val octets = Try(allHCInOctets.getOrElse(ethid, "").toLong).toOption
+    val exists = octets.isDefined
+    if (exists && !skipDescsSet.contains(desc)){
+      val aka = allAliases.getOrElse(ethid, "")
+      var speed = Try(
+        allHighSpeeds.getOrElse(ethid, "").toLong
+      ).getOrElse(0L)
+      if (speed == 0L) {
+        speed = default_speed
+      }
+      val realSpeed = speed * 125000L
+      val checkAbs = check_abs && !skip_abs_check_desc_rxs.exists { rx => desc.matches(rx) }
+      val portData = PortData(
+        ethid = ethid.toString,
+        desc = desc,
+        aka = if (aka == "") "unknown" else aka,
+        speed = realSpeed.toString,
+        checkAbs = checkAbs,
+        alertWarnGt = ((realSpeed * 100L) / 95L).toString, // 0.95 * realSpeed,
+        alertCritGt = ((realSpeed * 100L) / 99L).toString // 0.99 * realSpeed
+      )
+      liveIndexes += portData
+    }
+  }
+%>
+
+#if (add_ping)
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.ping
+  desc: "Check that <%= title_prefix %><%= node_name %> is up"
+  command: "ping -W 2 -n -c 1 <%= node_host %> > /dev/null || ping -W 2 -n -c 1 <%= node_host %> > /dev/null"
+  ignorets: true
+  timeout: 5
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+#end
+
+- ^<%= id_prefix %><%= node_name %>:
+  title: "<%= title_prefix %><%= node_name %>"
+#if (parent_index != "")
+  parent: <%= parent_index %>
+#end
+  px: "<%= id_prefix %><%= node_name %>."
+  rows: <%= index_rows %>
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.snmp
+  desc: "Check that SNMP is up on <%= title_prefix %><%= node_name %>"
+#if (!add_ping)
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+#end
+  command: "snmpget -v2c -c<%= snmp_community %> <%= node_host %> sysDescr.0"
+#if (add_ping)
+  pre_fetch: <%= id_prefix %><%= node_name %>.ping
+#end
+  ignorets: true
+  timeout: 10
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+#for ( grpAndIx <- liveIndexes.grouped(max_pf_count).zipWithIndex )
+<%
+  val grpLst = grpAndIx._1
+  val grpIx = grpAndIx._2
+  val snmpOids = grpLst.map { pd =>
+    val oid = pd.ethid
+    s"ifHCInOctets.${oid} ifHCOutOctets.${oid} ifOperStatus.${oid}"
+  }.mkString(" ")
+%>
+
+### group <%= grpIx %>
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.eth.group<%= grpIx %>.snmp
+  desc: "Fetch stats from <%= title_prefix %><%= node_name %> via SNMP (group <%= grpIx %>)"
+  command: "<%= snmpget %> <%= node_host %> <%= snmpOids %>"
+  pass_data: true
+  timeout: <%= snmp_timeout %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.snmp
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.eth.group<%= grpIx %>.snmp.parse
+  desc: "Parse SNMP stats from <%= title_prefix %><%= node_name %> (group <%= grpIx %>)"
+  command: ":cc snmpp parse"
+  pass_data: true
+  timeout: <%= snmp_timeout %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.eth.group<%= grpIx %>.snmp
+
+#for (portData <- grpLst)
+<%
+  val ethid = portData.ethid
+%>
+### ethid = <%= ethid %>
+
+- id: <%= id_prefix %><%= node_name %>.eth<%= ethid %>.netio
+  pre_fetch: <%= id_prefix %><%= node_name %>.eth.group<%= grpIx %>.snmp.parse
+  command: ":cc snmpp get ifHCInOctets.<%= ethid %> ifHCOutOctets.<%= ethid %>"
+  title: "<%= title_prefix %><%= node_name %>: <%= portData.desc %>: <%= portData.aka %> - traffic in bits per sec"
+  rrdType: COUNTER
+  interval: <%= interval %>
+  vars:
+  - label: in
+    mu: "bps"
+    max: <%= portData.speed %>
+    cdef: "$ds,8,*"
+#if (portData.checkAbs)
+    alert-warn-gt: <%= portData.alertWarnGt %>
+    alert-crit-gt: <%= portData.alertCritGt %>
+#end
+  - label: out
+    mu: "bps"
+    max: <%= portData.speed %>
+    cdef: "$ds,8,*"
+#if (portData.checkAbs)
+    alert-warn-gt: <%= portData.alertWarnGt %>
+    alert-crit-gt: <%= portData.alertCritGt %>
+#end
+
+- id: <%= id_prefix %><%= node_name %>.eth<%= ethid %>.oper_status
+  pre_fetch: <%= id_prefix %><%= node_name %>.eth.group<%= grpIx %>.snmp.parse
+  command: ":cc snmpp get ifOperStatus.<%= ethid %>"
+  title: "<%= title_prefix %><%= node_name %>: <%= portData.desc %>: <%= portData.aka %> - (ifOperStatus - 1=up, 2=down, 3=tesing, 4=unknown, 5=dormant 6=notPresent 7=lowerLayerDown)"
+  rrd_type: GAUGE
+  interval: <%= interval %>
+  vars:
+  - label: ifOperStatus
+
+#end
+
+#end

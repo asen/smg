@@ -69,7 +69,7 @@ class SMGAutoConfPlugin (
   private def needUpdate(targetConf: SMGAutoTargetConf, tssNow: Int, rand: Random): Boolean = {
     val lastUpdated = confFilesLastUpdatedTs.get(targetConf.confOutput)
     val timeSinceLastUpdate = tssNow - lastUpdated.getOrElse(tssNow)
-    val ret = if (timeSinceLastUpdate > 0 && targetConf.regenDelay.isDefined) {
+    if (timeSinceLastUpdate > 0 && targetConf.regenDelay.isDefined) {
       val regenDelay = targetConf.regenDelay.get
       if (regenDelay >= -1) {
         regenDelay <= timeSinceLastUpdate
@@ -78,10 +78,6 @@ class SMGAutoConfPlugin (
         randomRegenDelay <= timeSinceLastUpdate
       }
     } else true
-    if (ret) {
-      confFilesLastUpdatedTs.put(targetConf.confOutput, tssNow)
-    }
-    ret
   }
 
   // for each target:
@@ -104,6 +100,8 @@ class SMGAutoConfPlugin (
             s"targetReload=$targetReload needReload=$needReload")
           needReload = true
         }
+        //only update last updated on success
+        confFilesLastUpdatedTs.put(targetConf.confOutput, tssNow)
       } else {
         log.debug(s"SMGAutoConfPlugin: Skipping target conf: ${targetConf.confOutput} due to " +
           s"regenDelay=${targetConf.regenDelay.getOrElse(0)}: conf=$targetConf")

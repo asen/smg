@@ -77,5 +77,13 @@ autoconf:
 #        port: 9001
 #        app_type: smg
 
+#    - output: my-router-.yml
+#      template: netsw-snmp
+#      node_name: my-router
+#      regen_delay: 3600
+#      context:
+#        node_host: 192.168.1.1
+#        snmp_community: public
+
     - include: "/etc/smg/autoconf.d/*.{yml,yaml}"
     - include: "/opt/smg/data/conf/autoconf.d/*.{yml,yaml}"
