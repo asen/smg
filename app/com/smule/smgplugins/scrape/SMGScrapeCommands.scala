@@ -2,7 +2,9 @@ package com.smule.smgplugins.scrape
 
 import com.smule.smg.core._
 import com.smule.smg.openmetrics.OpenMetricsParser
-import com.smule.smgplugins.scrape.SMGScrapeCommands.{FETCH_OPTION_BEARER_TOKEN_FILE, FETCH_OPTION_SECURE_TLS, PARSE_OPTION_LABEL_UIDS}
+import com.smule.smgplugins.scrape.SMGScrapeCommands.{FETCH_OPTION_BEARER_TOKEN_FILE, FETCH_OPTION_SECURE_TLS, GET_OPTION_DEFAULT, GET_OPTION_ERROR_ON_MISSING, PARSE_OPTION_LABEL_UIDS}
+
+import scala.util.Try
 
 object SMGScrapeCommands {
   val VALID_COMMANDS = Set("fetch", "http", "parse", "get")
@@ -10,6 +12,10 @@ object SMGScrapeCommands {
 
   val FETCH_OPTION_SECURE_TLS = ":secure"
   val FETCH_OPTION_BEARER_TOKEN_FILE = ":tokenf"
+
+  val GET_OPTION_ERROR_ON_MISSING = ":err"
+  val GET_OPTION_DEFAULT = ":default"
+
 }
 
 class SMGScrapeCommands(log: SMGLoggerApi) {
@@ -125,23 +131,41 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
     if (parentData.isEmpty)
       throwOnError("get", paramStr, timeoutSec, "Did not get parsed parentData to get data from")
     val parsedData = parentData.get.res.data.asInstanceOf[OpenMetricsResultData]
-    val keys = paramStr.strip().split("\\s*[, ]\\s*")
+
+    var myParamStr = paramStr.strip()
+    var errOpt: Boolean = false
+    var defaultValue: Option[Double] = None
+    while (myParamStr.startsWith(":")) {
+      var arr = myParamStr.split("\\s+", 2)
+      arr(0) match {
+        case GET_OPTION_ERROR_ON_MISSING => errOpt = true
+        case GET_OPTION_DEFAULT =>
+          arr = arr.lift(1).getOrElse("").split("\\s+", 2)
+          defaultValue = Some(Try(arr(0).toDouble).getOrElse(Double.NaN))
+      }
+      myParamStr = arr.lift(1).getOrElse("").stripLeading()
+    }
+    val keys = myParamStr.split("\\s*[, ]\\s*")
     var conflictingTsms = false
     var tsms: Option[Long] = None
     val ret = keys.map { k =>
       val opt = parsedData.byUid.get(k)
       if (opt.isEmpty) {
-        throwOnError("get", paramStr, timeoutSec, s"Key not found in metrics data: ${k}")
+        if (errOpt)
+          throwOnError("get", paramStr, timeoutSec, s"Key not found in metrics data: ${k}")
+        else
+          defaultValue.getOrElse(Double.NaN)
+      } else {
+        val newTsms = opt.get.tsms
+        if (tsms.isEmpty && !conflictingTsms)
+          tsms = newTsms
+        else if (tsms != newTsms) {
+          log.warn(s"SMGScrapeCommands.commandGet: Conflicting timestamps in get: $paramStr")
+          conflictingTsms = true
+          tsms = None
+        }
+        opt.get.value
       }
-      val newTsms = opt.get.tsms
-      if (tsms.isEmpty && !conflictingTsms)
-        tsms = newTsms
-      else if (tsms != newTsms) {
-        log.warn(s"SMGScrapeCommands.commandGet: Conflicting timestamps in get: $paramStr")
-        conflictingTsms = true
-        tsms = None
-      }
-      opt.get.value
     }
     val mytss = tsms.map(x => (x / 1000).toInt)
     CommandResultListDouble(ret.toList, if (mytss.isDefined) mytss else parentData.flatMap(_.useTss))
