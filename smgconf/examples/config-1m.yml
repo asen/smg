@@ -73,6 +73,11 @@
     - localhost.sysload
     - localhost.sysload2
 
+- +localhost.filter-agg:
+  op: SUM
+  filter:
+    rx: "^localhost.sysload2?$"
+
 - localhost.sysload:
   pre_fetch: host.localhost.up
   command: "smgscripts/mac_localhost_sysload.sh"

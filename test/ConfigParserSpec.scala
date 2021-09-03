@@ -17,7 +17,7 @@ class ConfigParserSpec extends Specification {
   "SMGConfigParser.fetchCommandsTree" should {
     "work" in {
       val cp = new SMGConfigParser(log)
-      val c = cp.getNewConfig(Seq(), "smgconf/config-dev.yml")
+      val c = cp.getNewConfig(Seq(), "smgconf/examples/config-dev.yml")
       log.info(c.humanDesc)
       // TODO verify that globals and objects are parsed correctly
       c.allErrors.size mustEqual 0

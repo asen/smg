@@ -830,7 +830,7 @@ In addition to the "regular" RRD Objects described above, one can define "aggreg
 <pre>
 - id: +agg.hosts.sysload                                # aggregate rrd object id, must start with + char
   op: AVG                                               # mandatory aggregate function to apply
-  ids:                                                  # mandatory list of object ids
+  ids:                                                  # list of object ids, either that or a filter must be specified
     - host.host1.sysload                                # regular rrd object id, currently must be defined before this object in the config
     - host.host2.sysload                                # regular rrd object id, currently must be defined before this object in the config
   interval: 60                                          # optional - default is the interval of the first object listed in the ids list
@@ -853,6 +853,8 @@ In addition to the "regular" RRD Objects described above, one can define "aggreg
 </pre>
 
 As mentioned in the yaml comments above, some of the properties of the aggregate object will be assumed from the first object vars list, unless explicitly defined. It is up to the config to ensure that the list of objects to aggregate is compatible (and meaningful).
+
+As of v1.4+ SMG also supports supplying _filter_ property instead of ids list (technically - it is possible to use and combine both). The filter property value is a map representing a standard (regex-based) SMG Filter which in turn is applied at config generation time to the entire list of RRD objects defined in the config. Note that this filter can only work with local objects.
 
 <a name="view-objects" />
 

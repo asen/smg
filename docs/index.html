@@ -851,7 +851,7 @@ Alternate (new) syntax:
 <pre>
 - id: +agg.hosts.sysload                                # aggregate rrd object id, must start with + char
   op: AVG                                               # mandatory aggregate function to apply
-  ids:                                                  # mandatory list of object ids
+  ids:                                                  # list of object ids, either that or a filter must be specified
     - host.host1.sysload                                # regular rrd object id, currently must be defined before this object in the config
     - host.host2.sysload                                # regular rrd object id, currently must be defined before this object in the config
   interval: 60                                          # optional - default is the interval of the first object listed in the ids list
@@ -873,6 +873,7 @@ Alternate (new) syntax:
     - label: sl15min                                    # a 3d variable def
 </pre>
 <p>As mentioned in the yaml comments above, some of the properties of the aggregate object will be assumed from the first object vars list, unless explicitly defined. It is up to the config to ensure that the list of objects to aggregate is compatible (and meaningful).</p>
+<p>As of v1.4+ SMG also supports supplying <em>filter</em> property instead of ids list (technically - it is possible to use and combine both). The filter property value is a map representing a standard (regex-based) SMG Filter which in turn is applied at config generation time to the entire list of RRD objects defined in the config. Note that this filter can only work with local objects.</p>
 <p><a name="view-objects" /></p>
 <h3 id="view-objects">View objects</h3>
 <p>As mentioned in the <a href="#concepts-view-objects">concepts overview</a> every RRD object is implicitly also a View object. Additional View objects can be defined in the configuration by referencing existing RRD objects too. These have two main purposes:</p>

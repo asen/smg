@@ -3,8 +3,8 @@ package com.smule.smg.config
 import java.io.File
 import java.nio.file.{FileSystems, PathMatcher}
 import java.util
-
 import com.smule.smg.cdash.{CDashConfigItem, CDashboardConfig}
+import com.smule.smg.config.SMGConfigParser.yobjMap
 import com.smule.smg.core._
 import com.smule.smg.grapher.SMGraphObject
 import com.smule.smg.monitor._
@@ -635,39 +635,99 @@ class SMGConfigParser(log: SMGLoggerApi) {
       }
     }
 
+
+    def aggObjectOp(oid: String,
+                    ymap: mutable.Map[String, Object],
+                    confFile: String,
+                    pluginViewObjs: Map[String, SMGObjectView]): String = {
+      val confOp = ymap.getOrElse("op", "SUM")
+      confOp match {
+        case "SUMN" => "SUMN"
+        case "AVG" => "AVG"
+        case "SUM" => "SUM"
+        case "MAX" => "MAX"
+        case "MIN" => "MIN"
+        case x: String => {
+          if (x.startsWith("RPN:"))
+            x
+          else {
+            processConfigError(confFile,
+              s"createAggObject: unsupported agg op for $oid: $x (assuming SUM)", isWarn = true)
+            "SUM"
+          }
+        }
+      }
+    }
+
+    def filterObjectViews(flt: SMGFilter, pluginObjs:  Map[String, SMGObjectView]): Seq[SMGObjectView] = {
+      allViewObjectIds.flatMap { void => allViewObjectsById.get(void) }.filter { vo =>
+        flt.matches(vo)
+      } ++ pluginObjs.toSeq.map(_._2).filter { vo =>
+        flt.matches(vo)
+      }
+    }
+
+    def idsToAggObjectMembers(oid: String,
+                              ids: Seq[String],
+                              confFile: String,
+                              pluginViewObjs: Map[String, SMGObjectView]): Seq[Option[SMGObjectUpdate]] = {
+      ids.map { ovid =>
+        val ret = lookupObjectView(ovid, pluginViewObjs).flatMap(_.refObj)
+        if (ret.isEmpty) {
+          processConfigError(confFile, "createAggObject: agg object references " +
+            s"undefined object: $oid, ref id=$ovid (agg object will be ignored)")
+        }
+        ret
+      }
+    }
+
+    def filterToAggObjectMembers(oid: String,
+                                 flt: SMGFilter,
+                                 confFile: String,
+                                 pluginViewObjs: Map[String, SMGObjectView]): Seq[Option[SMGObjectUpdate]] = {
+      val ret = filterObjectViews(flt, pluginViewObjs).map(_.refObj)
+      var successRet = true
+      if (ret.nonEmpty) {
+        ret.tail.foreach { t =>
+          if (ret.head.get.vars.lengthCompare(t.get.vars.size) != 0){
+            processConfigError(confFile, "createAggObject: agg object references " +
+              s"invalid object via filter: $oid, ref id=${t.get.id}. (agg object will be ignored)")
+            successRet = false
+          }
+        }
+      } else {
+        processConfigError(confFile, "createAggObject: agg object references " +
+          s"invalid object via filter: $oid, empty filter result. (agg object will be ignored)")
+        successRet = false
+      }
+      if (successRet)
+        ret
+      else
+        Seq()
+    }
+
     def createAggObject(oid: String,
                         ymap: mutable.Map[String, Object],
                         confFile: String,
                         pluginViewObjs: Map[String, SMGObjectView]
                        ): Unit = {
       try {
-        val confOp = ymap.getOrElse("op", "SUM")
-        val op = confOp match {
-          case "SUMN" => "SUMN"
-          case "AVG" => "AVG"
-          case "SUM" => "SUM"
-          case "MAX" => "MAX"
-          case "MIN" => "MIN"
-          case x: String => {
-            if (x.startsWith("RPN:"))
-              x
-            else {
-              processConfigError(confFile,
-                s"processAggObject: unsupported agg op for $oid: $x (assuming SUM)", isWarn = true)
-              "SUM"
-            }
-          }
-        }
-        if (ymap.contains("ids")) {
-          val ids = ymap("ids").asInstanceOf[util.ArrayList[String]].asScala.toList
-          val objOpts = ids.map { ovid =>
-            val ret = lookupObjectView(ovid, pluginViewObjs).flatMap(_.refObj)
-            if (ret.isEmpty) {
-              processConfigError(confFile, "processAggObject: agg object references " +
-                s"undefined object: $oid, ref id=$ovid (agg object will be ignored)")
-            }
-            ret
-          }
+        val op = aggObjectOp(oid, ymap, confFile, pluginViewObjs)
+
+        if (ymap.contains("ids") || ymap.contains("filter")) {
+
+          val idObjOpts = if (ymap.contains("ids")){
+            val ids = ymap("ids").asInstanceOf[util.ArrayList[String]].asScala.toList
+            idsToAggObjectMembers(oid, ids, confFile, pluginViewObjs)
+          } else Seq()
+
+          val fltObjOpts = if (ymap.contains("filter")){
+            val flt = SMGFilter.fromYamlMap(yobjMap(ymap("filter")).toMap)
+            filterToAggObjectMembers(oid, flt, confFile, pluginViewObjs)
+          } else Seq()
+
+          val objOpts = idObjOpts ++ fltObjOpts
+
           if (objOpts.nonEmpty && objOpts.forall(_.isDefined)) {
             val objs = objOpts.map(_.get)
             val myRraDef = getRraDef(confFile, oid, ymap)
@@ -687,7 +747,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
             if (!objs.exists { ou =>
               val ret = ou.vars.size < myVars.size
               if (ret) {
-                processConfigError(confFile, "processAggObject: agg object references " +
+                processConfigError(confFile, "createAggObject: agg object references " +
                   s"invalid object (${ou.vars.size} vars less than ${myVars.size}): $oid, ref id=${ou.id} " +
                   s"(agg object will be ignored)")
               }
@@ -717,11 +777,13 @@ class SMGConfigParser(log: SMGLoggerApi) {
           } // else - errors already logged (checking for invalid object refs)
         } else {
           processConfigError(confFile,
-            s"processAggObject: agg object definition without ids: $oid, ignoring")
+            s"createAggObject: agg object definition without ids or filter: $oid, ignoring")
         }
       } catch {
-        case t: Throwable => processConfigError(confFile,
-          s"createGraphObject: unexpected error creating Aggregate object - oid=$oid")
+        case t: Throwable =>
+          log.ex(t, "createAggObject: unexpected error creating Aggregate object - oid=$oid")
+          processConfigError(confFile,
+          s"createAggObject: unexpected error creating Aggregate object - oid=$oid")
       }
     }
 

@@ -34,12 +34,12 @@
    xsort: 1
    desc: "an index desc"
 
-- $include: "smgconf/rra_def.yml"
+- $include: "smgconf/examples/rra_def.yml"
 
-- $include: "smgconf/config-*m.yml"
+- $include: "smgconf/examples/config-*m.yml"
 #- $include: "/etc/smg/hosts/*.yml"
 
-- $include: "smgconf/config-alerts.yml"
+- $include: "smgconf/examples/config-alerts.yml"
 
 
 - $pre_fetch:
