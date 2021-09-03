@@ -124,6 +124,7 @@ class SMGAutoConfPluginSpec extends Specification{
           "node_name" -> "localhost",
           "node_host" -> "localhost",
           "command" -> "cat test-data/metrics-cadvisor.txt",
+          "need_parse" -> Boolean.box(true),
           "data" -> data
         )).get
         println("===================")

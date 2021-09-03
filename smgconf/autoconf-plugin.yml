@@ -85,5 +85,14 @@ autoconf:
 #        node_host: 192.168.1.1
 #        snmp_community: public
 
+#    - output: cadvisor-k8s-.yml
+#      template: cadvisor-k8s
+#      node_name: my-node
+#      resolve_name: false
+#      runtime_data: true
+#      command: ":scrape fetch :tokenf /etc/smg/kube-token/token https://%node_host%:%port%/metrics/cadvisor"
+#      context:
+#        node_host: 192.168.41.112
+
     - include: "/etc/smg/autoconf.d/*.{yml,yaml}"
     - include: "/opt/smg/data/conf/autoconf.d/*.{yml,yaml}"
