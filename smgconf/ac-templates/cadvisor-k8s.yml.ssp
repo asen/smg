@@ -141,6 +141,9 @@
 - id: ^<%= id_prefix %><%= node_name %>.<%= metrics_name %>.all
   title: <%= node_name %> <%= metrics_hname %> - all
   px: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.
+#if (parent_index != "")
+  parent: <%= parent_index %>
+#end
 
 #for (t <- refGroup.keyedRows)
 <%
