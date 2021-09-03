@@ -78,7 +78,7 @@
 #if (pre_fetch != "")
   pre_fetch: <%= pre_fetch %>
 #end
-  desc: "Get <%= metrics_hname %> from <%= node_name %><%= myPortDesc %>%>"
+  desc: "Get <%= metrics_hname %> from <%= node_name %><%= myPortDesc %>"
   command: "<%= command %>"
   pass_data: true
 #if (notify_fail != "")

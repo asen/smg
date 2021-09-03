@@ -117,19 +117,19 @@ class SMGAutoConfPluginSpec extends Specification{
       1.equals(1)
     }
 
-    //  "work with node-cadvisor" in {
-    //    val data = SMGFileUtil.getFileLines("test-data/metrics-cadvisor.txt")
-    //    val p = new SMGTemplateProcessor(log)
-    //    val out = p.processTemplate("smgconf/ac-templates/node-cadvisor.yml.ssp", Map(
-    //      "node_name" -> "localhost",
-    //      "node_host" -> "localhost",
-    //      "command" -> "cat test-data/metrics-cadvisor.txt",
-    //      "data" -> data
-    //    )).get
-    //    println("===================")
-    //    println(out)
-    //    1.equals(1)
-    //  }
+    "work with cadvisor" in {
+        val data = SMGFileUtil.getFileLines("test-data/metrics-cadvisor.txt")
+        val p = new SMGTemplateProcessor(log)
+        val out = p.processTemplate("smgconf/ac-templates/cadvisor-k8s.yml.ssp", Map(
+          "node_name" -> "localhost",
+          "node_host" -> "localhost",
+          "command" -> "cat test-data/metrics-cadvisor.txt",
+          "data" -> data
+        )).get
+        println("===================")
+        println(out)
+        1.equals(1)
+      }
   }
 }
 

@@ -1,0 +1,210 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%
+  // Configure this with a command like this:
+  // command: 'curl -sS -f -H 'Authorization: Bearer <token>' https://%node_host%:%port%/metrics/cadvisor'
+  // runtime_data: true
+%>
+<%@ val command: String %>
+<%@ val node_name: String %>
+<%@ val node_host: String %>
+<%@ val data: Seq[String] %>
+<%@ val id_prefix: String = "host." %>
+<%@ val title_prefix: String = "Host " %>
+<%@ val interval: Int = 60 %>
+<%@ val rra_def: String = "" %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val desc: String = "" %>
+<%@ val max_auto_var_label_len: Int = 20 %>
+<%@ val filter_rxx: String = "" %>
+<%@ val metrics_name: String = "cadvisor" %>
+<%@ val metrics_hname: String = "CAdvisor stats" %>
+<%@ val metrics_timeout: Int = 15 %>
+<%@ val key_labels: Seq[String] = Seq("namespace", "pod", "container") %>
+<%@ val key_labels_regex_replaces: Map[String, String] =
+  Map("pod" -> "(-[a-f0-9]{6,10})?-[a-z0-9]{5}$") %>
+<%@ val key_ref_metric: String = "container_processes" %>
+<%@ val filter_labels: String = "container!= container!=POD" %>
+<%@ val extra_labels: Map[String,String] = Map() %>
+<%
+  import com.smule.smg.openmetrics.OpenMetricsGroup
+
+  def varLabelFromStatName(statName: String): String = {
+    val varLabelUnderscore = statName.split('_').last
+    val varLabelDot = statName.split('.').last
+    val varLabelAuto = if (varLabelDot.nonEmpty && varLabelDot.length <= varLabelUnderscore.length)
+      varLabelDot
+    else if (varLabelUnderscore.nonEmpty)
+      varLabelUnderscore
+    else
+      ""
+    if (varLabelAuto.nonEmpty && varLabelAuto.lengthCompare(max_auto_var_label_len) <= 0)
+      varLabelAuto
+    else
+      "value"
+  }
+
+  def matchesRxx(s: String) = (filter_rxx != "") && s.matches(filter_rxx)
+
+  case class OMGWrapper(grp: OpenMetricsGroup) {
+    val filterLabels = com.smule.smg.core.SMGFilterLabels.parse(filter_labels)
+    val filteredRows = grp.rows.filter { row =>
+      filterLabels.forall(_.matches(row.labels.toMap)) && !matchesRxx(row.labelUid)
+    }
+
+    val dupCounters = scala.collection.mutable.Map[String, Int]()
+    val dupReplacements = scala.collection.mutable.Map[String, String]()
+    val keyedRows = filteredRows.map { row =>
+      val rowLabelsMap = row.labels.toMap
+      val keyValues = scala.collection.mutable.ListBuffer[String]()
+      key_labels.foreach { klbl =>
+        val kval = rowLabelsMap.getOrElse(klbl, "_")
+        val rr = key_labels_regex_replaces.get(klbl)
+        if (rr.isDefined) {
+          val replaced = dupReplacements.getOrElseUpdate(kval, {
+            val ret = kval.replaceAll(rr.get, "")
+            if (ret != kval){
+              val ixKey = keyValues.mkString(".") + "." + ret
+              val ix = dupCounters.getOrElse(ixKey, 0) + 1
+              dupCounters.put(ixKey, ix)
+              (ret + s"-_${ix}")
+            } else ret
+          })
+          keyValues += replaced
+        } else
+          keyValues += kval
+      }
+      (keyValues.mkString("."), keyValues.toList, row)
+    }.sortBy(_._1)
+  }
+
+  // parse /metrics output
+  val groups = com.smule.smg.openmetrics.OpenMetricsParser.parseText(data.mkString("\n"), None).map { g =>
+    OMGWrapper(g)
+  }
+  val refGroupOpt = groups.find { g =>
+    g.grp.metaKey.contains(key_ref_metric) || g.grp.rows.headOption.map(_.name).contains(key_ref_metric)
+  }
+  if (refGroupOpt.isEmpty){
+    throw new RuntimeException(s"cadvisor.yml.ssp: could not find reference " +
+    s"group from key_ref_metric name: ${key_ref_metric}")
+  }
+  val refGroup = refGroupOpt.get
+
+//  val parsed = groups.flatMap { g => g.grp.rows.map { row => (g.grp, row) } }
+//  val parsedByUid = parsed.groupBy(_._2.labelUid)
+
+//  val dupCountersGlobal = scala.collection.mutable.Map[String, Int]()
+%>
+
+### pre fetch commands
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.get
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+  desc: "Get <%= metrics_hname %> from <%= node_name %>"
+  command: <%= command %>
+  pass_data: true
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+  timeout: <%= metrics_timeout %>
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.parse
+  pre_fetch: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.get
+  desc: "Parse <%= metrics_hname %> from <%= node_name %>"
+  command: ":scrape parse"
+  pass_data: true
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+  timeout: <%= metrics_timeout %>
+
+# the top-level index
+- id: ^<%= id_prefix %><%= node_name %>.<%= metrics_name %>.all
+  title: <%= node_name %> <%= metrics_hname %> - all
+  px: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.
+
+#for (t <- refGroup.keyedRows)
+<%
+  val keyStr = t._1
+  val keyVals = t._2
+  val keyRow = t._3
+%>
+# keyVals = <%= keyStr %>
+- id: ^<%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= keyStr %>
+  parent: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.all
+  title: <%= node_name %> <%= metrics_hname %> - <%= keyStr %>
+  px: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= keyStr %>.
+#for (cg <- groups)
+<%
+  val matchingRows = cg.keyedRows.filter { t => keyStr == t._1 }
+%>
+#if (matchingRows.nonEmpty)
+#   grp = <%= cg.grp.metaKey.getOrElse("None") %> (<%= cg.grp.rows.size %>) matchingRows=<%= matchingRows.size %>
+<%
+  val rrdType =  cg.grp.metaType.getOrElse("gauge") match {
+    case "gauge" => "GAUGE"
+    case "counter" => "DDERIVE" // XXX DDERIVE also covers float number counters
+    case "summary" => "GAUGE"
+    case "histogram" => "DDERIVE"
+    case "untyped" => "GAUGE" // TODO ?
+    case x => "GAUGE"
+  }
+  val varLabel = varLabelFromStatName(matchingRows.head._3.name)
+  val varMu = if (rrdType == "GAUGE") "" else s"$varLabel/sec"
+
+  val commonLabels = if (matchingRows.lengthCompare(1) > 0) {
+    var common = matchingRows.head._3.labels.toSet
+    matchingRows.tail.foreach { c =>
+      common = common.intersect(c._3.labels.toSet)
+    }
+    common
+  } else Set()
+%>
+#for (mrt <- matchingRows)
+<%
+  val mrow = mrt._3
+  val extraSuffix = if (commonLabels.isEmpty)
+    ""
+  else
+    "." + com.smule.smg.openmetrics.OpenMetricsParser.safeUid(
+      (mrow.labels.toSet -- commonLabels).toSeq.map(t => s"${t._1}.${t._2}").sorted.mkString(".")
+    )
+%>
+# <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= keyStr %>.<%= mrow.name %><%= extraSuffix %> -> <%= mrow.labelUid %>
+- id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= keyStr %>.<%= mrow.name %><%= extraSuffix %>
+  pre_fetch: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.parse
+  title: "<%= node_name %> <%= metrics_hname %> - <%= keyStr %>.<%= mrow.name %><%= extraSuffix %>"
+  rrd_type: <%= rrdType %>
+#if (rra_def != "")
+  rra_def: "<%= rra_def %>"
+#end
+  interval : <%= interval %>
+  command: ":scrape get <%= mrow.labelUid %>"
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+  vars:
+  - label: "<%= varLabel %>"
+#if (varMu != "")
+    mu: "<%= varMu %>"
+#end
+#if (mrow.labels.nonEmpty || extra_labels.nonEmpty)
+  labels:
+#for (t <- mrow.labels)
+    <%= t._1 %>: "<%= t._2 %>"
+#end
+#for (t <- extra_labels.toSeq)
+    <%= t._1 %>: "<%= t._2 %>"
+#end
+#end
+
+#end
+#end
+#end
+#end

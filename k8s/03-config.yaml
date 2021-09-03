@@ -71,12 +71,11 @@ data:
           proto: https
           port_path: ":10250/metrics"
           sort_indexes: true
-        - uid: cadvisor
-          proto: https
-          port_path: ":10250/metrics/cadvisor"
-          sort_indexes: true
-          filter:
-            lbls: "container!= container!=POD"
+        - template: cadvisor-k8s
+          command: ':scrape http :tokenf /etc/smg/kube-token/token https://%node_host%:10250/metrics/cadvisor'
+          runtime_data: true
+          parent_index: cluster.skube.node
+          title_prefix: "Node "
       auto_confs:
 #        - type: service
 #          enabled: false
