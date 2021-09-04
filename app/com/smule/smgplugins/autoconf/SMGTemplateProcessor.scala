@@ -13,6 +13,7 @@ class SMGTemplateProcessor(log: SMGLoggerApi, preventReload: Boolean = false) {
   // and just get a reference to it via a static class from SMG core
   engine.classLoader = SMGConfigParser.getClass.getClassLoader
   engine.allowReload = !preventReload
+  engine.escapeMarkup = false
   log.info(s"SMGTemplateProcessor: using classLoader: ${engine.classLoader}")
 
   private def scalafyObject(o: Object): Object = {
