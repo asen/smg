@@ -163,7 +163,7 @@
     ssCpuRawWait.0 ssCpuRawInterrupt.0 ssCpuRawSoftIRQ.0
   rrd_type: DERIVE
   stack: true
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: user
     mu: "%"
@@ -194,7 +194,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
   command: ":cc snmpp get ssCpuRawUser.0 ssCpuRawSystem.0"
   rrd_type: DERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: user
     mu: "%"
@@ -206,7 +206,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.snmp.parse
   command: ":cc snmpp get ssCpuRawNice.0 ssCpuRawWait.0"
   rrd_type: DERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: nice
     mu: "%"
@@ -218,7 +218,7 @@
   command: ":cc snmpp get ssRawInterrupts.0 ssRawContexts.0"
   title: "<%= title_prefix %><%= node_name %> - Interrupts/context switches"
   rrd_type: DERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: ints
   - label: ctxs
@@ -228,7 +228,7 @@
   command: ":cc snmpp get ssIORawSent.0 ssIORawReceived.0"
   title: "<%= title_prefix %><%= node_name %> - Block Device I/O"
   rrd_type: DERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: wrtn
     mu: "blk/s"
@@ -241,7 +241,7 @@
   command: ":cc snmpp get ssSwapIn.0 ssSwapOut.0"
   title: "<%= title_prefix %><%= node_name %> - Swap I/O"
   rrd_type: GAUGE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: in
     mu: "B"
@@ -269,7 +269,7 @@
 #if (netio_max == "")
   rrd_type: DERIVE
 #end
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: in
     mu: "b/s"
@@ -301,7 +301,7 @@
   command: ":cc snmpp get tcpPassiveOpens.0 tcpActiveOpens.0"
   title: "<%= title_prefix %><%= node_name %> - Network New Connections"
   rrd_type: DERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: in
     mu: "c/s"
@@ -313,7 +313,7 @@
   command: ":cc snmpp get tcpCurrEstab.0"
   title: "<%= title_prefix %><%= node_name %> - Network Established Connections"
   rrd_type: GAUGE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: conns
 
@@ -336,7 +336,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.snmp.memswp.parse.values
   title: "<%= title_prefix %><%= node_name %> - Memory Used"
   rrd_type: GAUGE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: total used
     mu: "%"
@@ -353,7 +353,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.snmp.memswp.parse.values
   title: "<%= title_prefix %><%= node_name %> - Swap Used"
   rrd_type: GAUGE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: perc
   mu: "%"

@@ -166,7 +166,7 @@
   desc: "Check that host <%= node_name %> is up"
   command: "ping -W 2 -n -c 1 <%= node_host %> > /dev/null || ping -W 2 -n -c 1 <%= node_host %> > /dev/null"
   ignorets: true
-  timeout: <%= ping_timeout %>
+  timeout: <%= ping_timeout.toString %>
 #if (pre_fetch != "")
   pre_fetch: <%= pre_fetch %>
 #end
@@ -184,12 +184,12 @@
   pre_fetch: <%= pre_fetch %>
 #end
   desc: "Fetch system metrics from <%= node_name %>"
-  command: "<%= command %>"
+  command: '<%= command %>'
   pass_data: true
 #if (notify_fail != "")
   notify-fail: <%= notify_fail %>
 #end
-  timeout: <%= metrics_timeout %>
+  timeout: <%= metrics_timeout.toString %>
 
 - type: $pre_fetch
   id: <%= id_prefix %><%= node_name %>.metrics.parse
@@ -215,7 +215,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
   command: ":scrape get node_load1,node_load5,node_load15"
   title: "<%= title_prefix %><%= node_name %> - Load average over 1/5/15 min periods"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -226,7 +226,7 @@
 #if (extra_labels.size > 0)
   labels:
 #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
+    <%= kv._1 %>: '<%= kv._2 %>'
 #end
 #end
 
@@ -239,7 +239,7 @@
   rra_def: <%= rra_def %>
 #end
   stack: true
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
 #for (stat <- cpuUsageComponents)
   - label: <%= stat %>
@@ -264,7 +264,7 @@
   command: ":scrape get node_intr<%= totalSuffix %>,node_context_switches<%= totalSuffix %>"
   title: "<%= title_prefix %><%= node_name %> - Interrupts/context switches"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -293,7 +293,7 @@
   rrd_type: GAUGE
   command: "-"
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics.mem.values
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -321,7 +321,7 @@
   # ((ds0 - ds1 - ds2 - ds3 - ds4) * 100) / ds0
   command: ":cc rpn $ds0,-$ds1,+,-$ds2,+,-$ds3,+,-$ds4,+,100,*,$ds0,/"
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics.mem.values
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -342,7 +342,7 @@
 - id: +<%= id_prefix %><%= node_name %>._agg.blkio
   title: "<%= title_prefix %><%= node_name %> - Block Device I/O (all devices)"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -393,7 +393,7 @@
   # ((ds3 - ds2) * 100) / ds3
   command: ":cc rpn $ds1,$ds0,-,100,*,$ds1,/ $ds3,$ds2,-,100,*,$ds3,/"
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics.fs.<%= drvsafe %>.values
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -423,7 +423,7 @@
 - id: +<%= id_prefix %><%= node_name %>._agg.netio
   title: "<%= title_prefix %><%= node_name %> - Network Device I/O (all devices)"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -452,7 +452,7 @@
   command: ":scrape get node_netstat_Tcp_PassiveOpens,node_netstat_Tcp_ActiveOpens"
   title: "<%= title_prefix %><%= node_name %> - Network New Connections"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -472,7 +472,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
   command: ":scrape get node_netstat_Tcp_CurrEstab"
   title: "<%= title_prefix %><%= node_name %> - Network Established Connections"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -491,7 +491,7 @@
   command: ":scrape get node_netstat_TcpExt_SyncookiesRecv,node_netstat_TcpExt_SyncookiesSent,node_netstat_TcpExt_SyncookiesFailed"
   title: "<%= title_prefix %><%= node_name %> - Syncookies Recv/Sent/Failed"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -514,7 +514,7 @@
   command: ":scrape get node_netstat_Tcp_InErrs,node_netstat_TcpExt_ListenDrops,node_netstat_TcpExt_ListenOverflows"
   title: "<%= title_prefix %><%= node_name %> - TCP InErrs/ListenDrops/ListenOverflows"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -537,7 +537,7 @@
   command: ":scrape get node_netstat_TcpExt_TCPSynRetrans,node_netstat_Tcp_RetransSegs"
   title: "<%= title_prefix %><%= node_name %> - TCP SynRetrans/RetransSegs"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -558,7 +558,7 @@
   command: ":scrape get node_netstat_Udp_InDatagrams,node_netstat_Udp_OutDatagrams"
   title: "<%= title_prefix %><%= node_name %> - UDP4 InDatagrams/OutDatagrams"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -579,7 +579,7 @@
   command: ":scrape get node_netstat_Udp_InErrors,node_netstat_UdpLite_InErrors,node_netstat_Udp_NoPorts"
   title: "<%= title_prefix %><%= node_name %> - UDP4 InErrs/LiteInErrs/NoPorts"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -602,7 +602,7 @@
   command: ":scrape get node_netstat_Udp6_InDatagrams,node_netstat_Udp6_OutDatagrams"
   title: "<%= title_prefix %><%= node_name %> - UDP6 InDatagrams/OutDatagrams"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -623,7 +623,7 @@
   command: ":scrape get node_netstat_Udp6_InErrors,node_netstat_UdpLite6_InErrors,node_netstat_Udp6_NoPorts"
   title: "<%= title_prefix %><%= node_name %> - UDP6 InErrs/LiteInErrs/NoPorts"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -646,7 +646,7 @@
   command: ":scrape get node_netstat_IpExt_InOctets,node_netstat_IpExt_OutOctets"
   title: "<%= title_prefix %><%= node_name %> - Netstat IPV4 I/O Octets"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -667,7 +667,7 @@
   command: ":scrape get node_netstat_Ip6_InOctets,node_netstat_Ip6_OutOctets"
   title: "<%= title_prefix %><%= node_name %> - Netstat IPV6 I/O Octets"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -703,7 +703,7 @@
   command: ":scrape get <%= scrapeGetParams %>"
   rrd_type: DDERIVE
   stack: true
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -730,7 +730,7 @@
   title: "<%= title_prefix %><%= node_name %> - Block Device I/O (<%= dvc %>)"
   command: ":scrape get node_disk_written_bytes_total.device.<%= dvc %>,node_disk_read_bytes_total.device.<%= dvc %>"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end
@@ -755,7 +755,7 @@
   title: "<%= title_prefix %><%= node_name %> - Network Device I/O (<%= dvc %>)"
   command: ":scrape get node_network_receive_bytes<%= totalSuffix %>.device.<%= dvc %>,node_network_transmit_bytes<%= totalSuffix %>.device.<%= dvc %>"
   rrd_type: DDERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
 #if (rra_def != "")
   rra_def: <%= rra_def %>
 #end

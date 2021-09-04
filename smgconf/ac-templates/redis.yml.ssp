@@ -61,7 +61,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
 #end
 
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.clients
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get connected_clients"
   timeout: <%= timeout %>
@@ -71,7 +71,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   - label: clients
 
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.conn
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get total_connections_received"
   timeout: <%= timeout %>
@@ -82,7 +82,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
     mu: conns/sec
 
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.cmd
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get total_commands_processed"
   timeout: <%= timeout %>
@@ -93,7 +93,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
     mu: cmds/sec
 
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.usedmem
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get used_memory"
   timeout: <%= timeout %>
@@ -126,7 +126,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   command: ":cc csv get 0=~.* 0"
   pass_data: true
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.<%= db %>.keys
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.get_csv_<%= db %>_keys
   command: ":cc kv pget keys"
   timeout: <%= timeout %>
@@ -141,7 +141,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   command: ":cc csv get 0=~.* 1"
   pass_data: true
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.<%= db %>.expires
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.get_csv_<%= db %>_expires
   command: ":cc kv pget expires"
   timeout: <%= timeout %>
@@ -156,7 +156,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   command: ":cc csv get 0=~.* 2"
   pass_data: true
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.<%= db %>.avg_ttl
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.get_csv_<%= db %>_avg_ttl
   command: ":cc kv pget avg_ttl"
   timeout: <%= timeout %>
@@ -170,7 +170,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
 #if (!redisBelow3)
 
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.used_memory_lua
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   rrdType: GAUGE
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get used_memory_lua"
@@ -181,7 +181,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   mu: B
 
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.input_bytes
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get total_net_input_bytes"
   timeout: <%= timeout %>
@@ -192,7 +192,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
     mu: Bps
 
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.output_bytes
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get total_net_output_bytes"
   timeout: <%= timeout %>
@@ -205,7 +205,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
 #end
 
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.blockedclients
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get blocked_clients"
   timeout: <%= timeout %>
@@ -214,7 +214,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   - label: clients
 
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.io_threads_active
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get -d 0 io_threads_active"
   timeout: <%= timeout %>
@@ -223,7 +223,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   - label: threads
 
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.mem_ratio
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get -d 0 allocator_frag_ratio allocator_rss_ratio rss_overhead_ratio mem_fragmentation_ratio"
   timeout: <%= timeout %>
@@ -235,7 +235,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
   - label: mem_fragmentation
 
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.rdb_changes_since_last_save
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get rdb_changes_since_last_save"
   timeout: <%= timeout %>
@@ -248,7 +248,7 @@ val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_
 
 #for (cntr <- redis_counters)
 - id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.<%= cntr %>
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
   command: ":cc kv get -d 0 <%= cntr %>"
   timeout: <%= timeout %>

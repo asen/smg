@@ -19,7 +19,7 @@
   id: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>
   desc: "Connect to/check JMX on <%= node_name %> (<%= host_port %>)"
   command: :jmx con <%= host_port %>
-  timeout: <%= timeout %>
+  timeout: <%= timeout.toString %>
 #if (notify_fail != "")
   notify-fail: <%= notify_fail %>
 #end
@@ -41,6 +41,8 @@
   title: "<%= title_prefix %><%= node_name %> <%= app_type %> JVM heapMem usage"
   pre_fetch: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>
   command: :jmx get <%= host_port %> java.lang:type=Memory HeapMemoryUsage:used HeapMemoryUsage:committed
+  interval: <%= interval.toString %>
+  timeout: <%= timeout.toString %>
   rrd_type: GAUGE
   vars:
   - label: used
@@ -52,6 +54,8 @@
   title: "<%= title_prefix %><%= node_name %> <%= app_type %> JVM threads count"
   pre_fetch: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>
   command: :jmx get <%= host_port %> java.lang:type=Threading ThreadCount DaemonThreadCount
+  interval: <%= interval.toString %>
+  timeout: <%= timeout.toString %>
   rrd_type: GAUGE
   vars:
   - label: thread cnt
@@ -61,6 +65,8 @@
   title: "<%= title_prefix %><%= node_name %> <%= app_type %> JVM nio direct BufferPool mem used"
   pre_fetch: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>
   command: :jmx get <%= host_port %> java.nio:type=BufferPool,name=direct  MemoryUsed TotalCapacity
+  interval: <%= interval.toString %>
+  timeout: <%= timeout.toString %>
   rrd_type: GAUGE
   vars:
   - label: mem used
@@ -73,5 +79,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.jmx.<%= app_type %>
   command: :jmx get <%= host_port %> java.nio:type=BufferPool,name=direct  Count
   rrd_type: GAUGE
+  interval: <%= interval.toString %>
+  timeout: <%= timeout.toString %>
   vars:
   - label: count

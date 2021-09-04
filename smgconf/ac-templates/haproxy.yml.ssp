@@ -99,7 +99,7 @@
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.rate
   command: ":cc csv get -e0 <%= row_matchers %> rate"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
   - label: consec
@@ -108,7 +108,7 @@
   command: ":cc csv get -e0 <%= row_matchers %> stot"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sessions/sec"
   rrdType: DERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
   - label: stot
@@ -117,7 +117,7 @@
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scur
   command: ":cc csv get -e0 <%= row_matchers %> scur"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur)"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
   - label: conns
@@ -136,7 +136,7 @@
   # ($ds0 * 100) / $ds1
   command: ":cc rpn $ds0,100,*,$ds1,/"
   title:  "<%= title_prefix %><%= node_name %> <%= itm %> Cur/Limit %"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: cur/limit perc
     mu: "%"
@@ -144,7 +144,7 @@
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.qcur
   command: ":cc csv get -e0 <%= row_matchers %> qcur"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur)"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
   - label: queued conns
@@ -152,7 +152,7 @@
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.rate_max
   command: ":cc csv get -e0 <%= row_matchers %> rate_max"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate max"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
   - label: max consec
@@ -160,7 +160,7 @@
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.scur_max
   command: ":cc csv get -e0 <%= row_matchers %> smax"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur) max"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
   - label: max conns
@@ -168,7 +168,7 @@
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.qcur_max
   command: ":cc csv get -e0 <%= row_matchers %> qmax"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur) max"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   vars:
   - label: max queued conns
@@ -176,7 +176,7 @@
 - id: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.netio
   command: ":cc csv get -e0 <%= row_matchers %> bin bout"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> In/Out traffic b/s"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   rrdType: DERIVE
   vars:
@@ -199,7 +199,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.<%= px %>.<%= itm %>.updown.parse
   command: ":cc map OPEN=1 UP=1 0"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> UP(1)/DOWN(0)"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: up/down
 
@@ -207,7 +207,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   command: ":cc csv get -e0 <%= row_matchers %> hrsp_1xx hrsp_2xx hrsp_3xx"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Ok HTTP response codes (hrsp below 400)"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   rrd_type: DERIVE
   vars:
   - label: hrsp_1xx
@@ -221,7 +221,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   command: ":cc csv get -e0 <%= row_matchers %> hrsp_4xx hrsp_5xx hrsp_other"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Bad HTTP response codes (hrsp 400 and above)"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   rrd_type: DERIVE
   vars:
   - label: hrsp_4xx
@@ -235,7 +235,7 @@
   pre_fetch: <%= id_prefix %><%= node_name %>.stats.parse
   command: ":cc csv get -e0 <%= row_matchers %> dreq dresp ereq econ eresp wretr wredis"
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> denied/errors/warnings"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   rrd_type: DERIVE
   vars:
   - label: dreq

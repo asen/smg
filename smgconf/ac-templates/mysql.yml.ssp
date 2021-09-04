@@ -416,7 +416,7 @@
 ## <%= g.idSuffix %>
 
 - id: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.<%= grp.idPart %>.<%= g.idSuffix %>
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= mysql_suffix %>.global_status.parse
   command: ":cc kv get <%= g.vars.mkString(" ") %>"
   timeout: <%= timeout %>

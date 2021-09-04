@@ -70,7 +70,7 @@
 # waiting: 16
 
 - id: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.active
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.parse
   command: ":cc kv get active"
   timeout: <%= timeout %>
@@ -80,7 +80,7 @@
   - label: conns
 
 - id: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.reqs
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.parse
   command: ":cc kv get requests"
   timeout: <%= timeout %>
@@ -91,7 +91,7 @@
     mu: req/sec
 
 - id: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.conns
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.parse
   command: ":cc kv get accepts handled"
   timeout: <%= timeout %>
@@ -104,7 +104,7 @@
     mu: conn/sec
 
 - id: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.rww
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   pre_fetch: <%= id_prefix %><%= node_name %><%= nginx_suffix %>.parse
   command: ":cc kv get reading writing waiting"
   timeout: <%= timeout %>

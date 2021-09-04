@@ -80,7 +80,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.rate
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate, sum from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: consec
   op: SUM
@@ -92,7 +92,7 @@
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.stot
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sessions/sec, sum from <%= real_members_desc %>"
   rrd_type: DERIVE
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: stot
     mu: sess/sec
@@ -104,7 +104,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.scur
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur), sum from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: conns
   op: SUM
@@ -115,7 +115,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.scurlimitperc
   title:  "<%= node_name %> <%= itm %> Cur/Limit %, average from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: cur/limit perc
     mu: "%"
@@ -127,7 +127,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.qcur
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur), sum from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: queued conns
   op: SUMN
@@ -138,7 +138,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.rate_max
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Rate max, sum from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: max consec
   op: SUM
@@ -149,7 +149,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.scur_max
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Sess (scur) max, sum from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: max conns
   op: SUM
@@ -160,7 +160,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.qcur_max
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Queue (qcur) max, sum from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: max queued conns
   op: SUM
@@ -171,7 +171,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.netio
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> In/Out traffic b/s, sum from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   rrd_type: DERIVE
   vars:
   - label: in
@@ -188,7 +188,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.updown
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> UP(1)/DOWN(0), average from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   vars:
   - label: up/down
   op: AVG
@@ -199,7 +199,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.ok_hrsp
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Ok HTTP response codes (hrsp below 400), sum from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   rrd_type: DERIVE
   vars:
   - label: hrsp_1xx
@@ -216,7 +216,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.bad_hrsp
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> Bad HTTP response codes (hrsp 400 and above), sum from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   rrd_type: DERIVE
   vars:
   - label: hrsp_4xx
@@ -233,7 +233,7 @@
 
 - id: +<%= id_prefix %><%= node_name %><%= name_suffix %>.<%= px %>.<%= itm %>.denerrwarn
   title: "<%= title_prefix %><%= node_name %> <%= itm_title %> denied/errors/warnings, sum from <%= real_members_desc %>"
-  interval: <%= interval %>
+  interval: <%= interval.toString %>
   rrd_type: DERIVE
   vars:
   - label: dreq

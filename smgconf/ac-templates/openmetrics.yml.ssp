@@ -79,12 +79,12 @@
   pre_fetch: <%= pre_fetch %>
 #end
   desc: "Get <%= metrics_hname %> from <%= node_name %><%= myPortDesc %>"
-  command: "<%= command %>"
+  command: '<%= command %>'
   pass_data: true
 #if (notify_fail != "")
   notify-fail: <%= notify_fail %>
 #end
-  timeout: <%= metrics_timeout %>
+  timeout: <%= metrics_timeout.toString %>
 
 - type: $pre_fetch
   id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.parse
@@ -95,7 +95,7 @@
 #if (notify_fail != "")
   notify-fail: <%= notify_fail %>
 #end
-  timeout: <%= metrics_timeout %>
+  timeout: <%= metrics_timeout.toString %>
 
 # the top-level index
 - id: ^<%= id_prefix %><%= node_name %>.<%= metrics_name %>.all
@@ -229,7 +229,7 @@
 #if (rra_def != "")
   rra_def: "<%= rra_def %>"
 #end
-  interval : <%= interval %>
+  interval : <%= interval.toString %>
   command: ":scrape get <%= scrapeGetParams %>"
 #if (notify_fail != "")
   notify-fail: <%= notify_fail %>
@@ -265,7 +265,7 @@
 #if (rra_def != "")
   rra_def: "<%= rra_def %>"
 #end
-  interval : <%= interval %>
+  interval : <%= interval.toString %>
   command: ":scrape get <%= scrapeGetParams %>"
 #if (notify_fail != "")
   notify-fail: <%= notify_fail %>
@@ -299,7 +299,7 @@
 #if (rra_def != "")
   rra_def: "<%= rra_def %>"
 #end
-  interval : <%= interval %>
+  interval : <%= interval.toString %>
   command: ":scrape get <%= scrapeGetParams %>"
 #if (notify_fail != "")
   notify-fail: <%= notify_fail %>
@@ -333,7 +333,7 @@
 #if (rra_def != "")
   rra_def: "<%= rra_def %>"
 #end
-  interval : <%= interval %>
+  interval : <%= interval.toString %>
   op: "RPN:$ds0,$ds1,/"
   vars:
     - label: avg
@@ -444,7 +444,7 @@
 #if (rra_def != "")
   rra_def: "<%= rra_def %>"
 #end
-  interval : <%= interval %>
+  interval : <%= interval.toString %>
   command: ":scrape get <%= scrapeGetParams %>"
 #if (notify_fail != "")
   notify-fail: <%= notify_fail %>
