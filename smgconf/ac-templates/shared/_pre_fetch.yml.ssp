@@ -1,0 +1,30 @@
+### shared/_pre_fetch.yml.ssp
+<%@ val id: String %>
+<%@ val command: String %>
+<%@ val timeout: Int = 30 %>
+<%@ val pass_data: Boolean = false %>
+<%@ val pre_fetch: String = "" %>
+<%@ val desc: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val delay: Int = 0 %>
+
+# id = <%= id %>
+# command = <%= command %>
+
+- type: $pre_fetch
+  id: <%= id %>
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+  command: '<%= command %>'
+#if (desc != "")
+  desc: '<%= desc %>'
+#end
+  pass_data: <%= if (pass_data) "true" else "false" %>
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+  timeout: <%= timeout %>
+#if (delay != 0)
+  delay: <%= delay.toString %>
+#end

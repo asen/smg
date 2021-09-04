@@ -1,0 +1,61 @@
+### shared/_rrd_object.yml.ssp
+<%@ val id: String %>
+<%@ val command: String %>
+<%@ val vars: Seq[Map[String,String]] %>
+<%@ val rrd_type: String %>
+
+<%@ val title: String = "" %>
+<%@ val interval: Int = 60 %>
+<%@ val timeout: Int = 30 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val object_labels: Map[String,String] = Map() %>
+<%@ val stack: Boolean = false %>
+<%@ val delay: Int = 0 %>
+<%@ val data_delay: Int = 0 %>
+<%@ val rrd_init_source: String = "" %>
+<%@ val rra_def: String = "" %>
+# id = <%= id %>
+# command = <%= command %>
+- id: <%= id %>
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+  command: '<%= command %>'
+  interval: <%= interval.toString %>
+  timeout: <%= timeout.toString %>
+  rrd_type: <%= rrd_type %>
+#if (title != "")
+  title: '<%= title %>'
+#end
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+#if (stack)
+  stack: true
+#end
+#if (rrd_init_source != "")
+  rrd_init_source: '<%= rrd_init_source %>'
+#end
+#if (rra_def != "")
+  rra_def: '<%= rra_def %>'
+#end
+#if (delay != 0)
+  delay: <%= delay.toString %>
+#end
+#if (data_delay != 0)
+  data_delay: <%= data_delay.toString %>
+#end
+#if (object_labels.nonEmpty)
+  labels:
+#for ( (k,v) <- object_labels.toSeq )
+    <%= k %>: '<%= v %>'
+#end
+#end
+  vars:
+#for ( (vmap, ix) <- vars.zipWithIndex )
+  - label: '<%= vmap.getOrElse("label", s"ds${ix}") %>'
+#for ( (k,v) <- vmap.toSeq.sorted if k != "label" && v != "" )
+    <%= k %>: '<%= v %>'
+#end
+#end

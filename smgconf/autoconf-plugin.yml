@@ -88,11 +88,11 @@ autoconf:
 #    - output: cadvisor-k8s-.yml
 #      template: cadvisor-k8s
 #      node_name: my-node
-#      resolve_name: false
+#      resolve_name: true
 #      runtime_data: true
-#      command: ":scrape fetch :tokenf /etc/smg/kube-token/token https://%node_host%:%port%/metrics/cadvisor"
-#      context:
-#        node_host: 192.168.41.112
+#      command: ":scrape fetch :tokenf /etc/smg/kube-token/token https://%node_host%:10250/metrics/cadvisor"
+#      # context:
+#      #   node_host: 192.168.41.112
 
     - include: "/etc/smg/autoconf.d/*.{yml,yaml}"
     - include: "/opt/smg/data/conf/autoconf.d/*.{yml,yaml}"

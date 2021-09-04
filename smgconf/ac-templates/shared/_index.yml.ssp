@@ -1,0 +1,41 @@
+### shared/_index.yml.ssp
+<%@ val id: String %>
+<%@ val title: String = "" %>
+<%@ val parent: String = "" %>
+<%@ val desc: String = "" %>
+<%@ val rx: String = "" %>
+<%@ val rxx: String = "" %>
+<%@ val trx: String = "" %>
+<%@ val px: String = "" %>
+<%@ val sx: String = "" %>
+<%
+  // TODO - add everything and index supports
+%>
+# id = <%= id %>
+
+- id: ^<%= id %>
+#if (title != "")
+  title: '<%= title %>'
+#end
+#if (desc != "")
+  desc: '<%= desc %>'
+#end
+#if (parent != "")
+  parent: '<%= parent %>'
+#end
+#if (rx != "")
+  rx: '<%= rx %>'
+#end
+#if (rxx != "")
+  rxx: '<%= rxx %>'
+#end
+#if (trx != "")
+  trx: '<%= trx %>'
+#end
+#if (px != "")
+  px: '<%= px %>'
+#end
+#if (sx != "")
+  sx: '<%= sx %>'
+#end
+

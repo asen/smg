@@ -107,43 +107,38 @@
 
 ### pre fetch commands
 #if (need_parse)
-- type: $pre_fetch
-  id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.get
-#if (pre_fetch != "")
-  pre_fetch: <%= pre_fetch %>
-#end
-  desc: "Get <%= metrics_hname %> from <%= node_name %>"
-  command: '<%= command %>'
-  pass_data: true
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
-  timeout: <%= metrics_timeout %>
+
+<% render("shared/_pre_fetch.yml.ssp", Map(
+  "id" -> s"${id_prefix}${node_name}.${metrics_name}.get",
+  "command" -> command,
+  "desc" -> s"Get ${metrics_hname} from ${node_name}",
+  "pass_data" -> true,
+  "notify_fail" -> notify_fail,
+  "pre_fetch" -> pre_fetch,
+  "timeout" -> metrics_timeout
+)) %>
 
 #end
 
-- type: $pre_fetch
-  id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.parse
-  pre_fetch: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.get
-  desc: "Parse <%= metrics_hname %> from <%= node_name %>"
-#if (need_parse)
-  command: ":scrape parse"
-#else
-  command: '<%= command %>'
-#end
-  pass_data: true
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
-  timeout: <%= metrics_timeout %>
+<%
+  val pfDescPx = if (need_parse) "Parse" else "Retrieve and parse"
+  render("shared/_pre_fetch.yml.ssp", Map(
+  "id" -> s"${id_prefix}${node_name}.${metrics_name}.parse",
+  "command" -> (if (need_parse) ":scrape parse" else command),
+  "desc" -> s"${pfDescPx} ${metrics_hname} from ${node_name}",
+  "pass_data" -> true,
+  "notify_fail" -> notify_fail,
+  "pre_fetch" -> (if(need_parse) s"${id_prefix}${node_name}.${metrics_name}.get" else pre_fetch),
+  "timeout" -> metrics_timeout
+)) %>
 
 # the top-level index
-- id: ^<%= id_prefix %><%= node_name %>.<%= metrics_name %>.all
-  title: <%= node_name %> <%= metrics_hname %> - all
-  px: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.
-#if (parent_index != "")
-  parent: <%= parent_index %>
-#end
+<% render("shared/_index.yml.ssp", Map(
+  "id" -> s"${id_prefix}${node_name}.${metrics_name}.all",
+  "title" -> s"${title_prefix}${node_name} ${metrics_hname} - all",
+  "parent" -> parent_index,
+  "px" -> s"${id_prefix}${node_name}.${metrics_name}."
+)) %>
 
 #for (t <- refGroup.keyedRows)
 <%
@@ -152,10 +147,13 @@
   val keyRow = t._3
 %>
 # keyVals = <%= keyStr %>
-- id: ^<%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= keyStr %>
-  parent: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.all
-  title: <%= node_name %> <%= metrics_hname %> - <%= keyStr %>
-  px: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= keyStr %>.
+<% render("shared/_index.yml.ssp", Map(
+  "id" -> s"${id_prefix}${node_name}.${metrics_name}.${keyStr}",
+  "title" -> s"${title_prefix}${node_name} ${metrics_hname} - ${keyStr}",
+  "parent" -> s"${id_prefix}${node_name}.${metrics_name}.all",
+  "px" -> s"${id_prefix}${node_name}.${metrics_name}.${keyStr}."
+)) %>
+
 #for (cg <- groups)
 <%
   val matchingRows = cg.keyedRows.filter { t => keyStr == t._1 }
@@ -193,32 +191,22 @@
     )
 %>
 # <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= keyStr %>.<%= mrow.name %><%= extraSuffix %> -> <%= mrow.labelUid %>
-- id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= keyStr %>.<%= mrow.name %><%= extraSuffix %>
-  pre_fetch: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.parse
-  title: "<%= node_name %> <%= metrics_hname %> - <%= keyStr %>.<%= mrow.name %><%= extraSuffix %>"
-  rrd_type: <%= rrdType %>
-#if (rra_def != "")
-  rra_def: "<%= rra_def %>"
-#end
-  interval : <%= interval %>
-  command: ":scrape get <%= mrow.labelUid %>"
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
-  vars:
-  - label: "<%= varLabel %>"
-#if (varMu != "")
-    mu: "<%= varMu %>"
-#end
-#if (mrow.labels.nonEmpty || extra_labels.nonEmpty)
-  labels:
-#for (t <- mrow.labels)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#for (t <- extra_labels.toSeq)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#end
+<% render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${id_prefix}${node_name}.${metrics_name}.${keyStr}.${mrow.name}${extraSuffix}",
+  "command" -> s":scrape get ${mrow.labelUid}",
+  "title" -> s"${title_prefix}${node_name} ${metrics_hname} - ${keyStr}.${mrow.name}${extraSuffix}",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> rrdType,
+  "pre_fetch" -> s"${id_prefix}${node_name}.${metrics_name}.parse",
+  "timeout" -> metrics_timeout,
+  "rra_def" -> rra_def,
+  "interval" -> interval,
+  "timeout" -> metrics_timeout,
+  "vars" -> Seq(
+    Map( "label" -> varLabel, "mu" -> varMu )
+  ),
+  "object_labels" -> (mrow.labels.toMap ++ extra_labels)
+)) %>
 
 #end
 #end
