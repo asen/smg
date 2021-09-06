@@ -14,9 +14,9 @@
 <% if (pre_fetch != "") { %>
   pre_fetch: <%= pre_fetch %>
 <% } %>
-  command: '<%= command.replaceAll("'","\\'") %>'
+  command: '<%= command.replaceAll("'","\\\\'") %>'
 <% if (desc != "") { %>
-  desc: '<%= desc.replaceAll("'","\\'") %>'
+  desc: '<%= desc.replaceAll("'","\\\\'") %>'
 <% } %>
   pass_data: <%= if (pass_data) "true" else "false" %>
 <% if (notify_fail != "") { %>

@@ -21,12 +21,12 @@
 <% if (pre_fetch != "") { %>
   pre_fetch: <%= pre_fetch %>
 <% } %>
-  command: '<%= command.replaceAll("'","\\'") %>'
+  command: '<%= command.replaceAll("'","\\\\'") %>'
   interval: <%= interval.toString %>
   timeout: <%= timeout.toString %>
   rrd_type: <%= rrd_type %>
 <% if (title != "") { %>
-  title: '<%= title.replaceAll("'","\\'") %>'
+  title: '<%= title.replaceAll("'","\\\\'") %>'
 <% } %>
 <% if (notify_fail != "") { %>
   notify-fail: <%= notify_fail %>
@@ -62,7 +62,7 @@
 <%
   object_labels.foreach { case (k,v) =>
 %>
-    <%= k %>: '<%= v.replaceAll("'","\\'") %>'
+    <%= k %>: '<%= v.replaceAll("'","\\\\'") %>'
 <%
   } //object_labels.foreach
 } // object_labels.nonEmpty
