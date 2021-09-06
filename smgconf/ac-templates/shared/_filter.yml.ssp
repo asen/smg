@@ -36,7 +36,7 @@
 <%= identStr %>sx: '<%= sx %>'
 <% } %>
 <% if (lbls != "") { %>
-<%= identStr %>lbls: '<%= lbls %>'
+<%= identStr %>lbls: '<%= lbls.replaceAll("'","\\'") %>'
 <% } %>
 <% if (remote != "") { %>
 <%= identStr %>remote: '<%= remote %>'

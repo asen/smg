@@ -38,7 +38,7 @@
 %>
   rrd_type: <%= rrd_type %>
 <% if (title != "") { %>
-  title: '<%= title %>'
+  title: '<%= title.replaceAll("'","\\'") %>'
 <% } %>
 <% if (stack) { %>
   stack: true
@@ -59,7 +59,7 @@
   - label: '<%= vmap.getOrElse("label", s"ds${ix}") %>'
   <%
       for ( (k,v) <- vmap.toSeq.sorted if k != "label" && v != "" ) { %>
-    <%= k %>: '<%= v %>'
+    <%= k %>: <%= v %>
   <%
       } // for k,v
     } // vars.zipWithIndex.foreach
@@ -70,7 +70,7 @@
 <%
     object_labels.foreach { case (k,v) =>
 %>
-    <%= k %>: '<%= v %>'
+    <%= k %>: '<%= v.replaceAll("'","\\'") %>'
 <%
     } //object_labels.foreach
   } // object_labels.nonEmpty

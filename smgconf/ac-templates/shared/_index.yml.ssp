@@ -33,10 +33,10 @@
 # id = <%= id %>
 - id: ^<%= id %>
 <% if (title != "") { %>
-  title: '<%= title %>'
+  title: '<%= title.replaceAll("'","\\'") %>'
 <% } %>
 <% if (desc != "") { %>
-  desc: '<%= desc %>'
+  desc: '<%= desc.replaceAll("'","\\'") %>'
 <% } %>
 <% if (parent != "") { %>
   parent: '<%= parent %>'

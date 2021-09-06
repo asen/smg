@@ -21,12 +21,12 @@
 <% if (pre_fetch != "") { %>
   pre_fetch: <%= pre_fetch %>
 <% } %>
-  command: '<%= command %>'
+  command: '<%= command.replaceAll("'","\\'") %>'
   interval: <%= interval.toString %>
   timeout: <%= timeout.toString %>
   rrd_type: <%= rrd_type %>
 <% if (title != "") { %>
-  title: '<%= title %>'
+  title: '<%= title.replaceAll("'","\\'") %>'
 <% } %>
 <% if (notify_fail != "") { %>
   notify-fail: <%= notify_fail %>
@@ -52,7 +52,7 @@
   - label: '<%= vmap.getOrElse("label", s"ds${ix}") %>'
 <%
     for ( (k,v) <- vmap.toSeq.sorted if k != "label" && v != "" ) { %>
-    <%= k %>: '<%= v %>'
+    <%= k %>: <%= v %>
 <%
     } // for k,v
   } // vars.zipWithIndex.foreach
@@ -62,7 +62,7 @@
 <%
   object_labels.foreach { case (k,v) =>
 %>
-    <%= k %>: '<%= v %>'
+    <%= k %>: '<%= v.replaceAll("'","\\'") %>'
 <%
   } //object_labels.foreach
 } // object_labels.nonEmpty

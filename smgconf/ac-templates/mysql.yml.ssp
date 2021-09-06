@@ -10,17 +10,13 @@
   // mysql_user:
   // mysql_password:
 %>
-
 <%@ val node_name: String %>
-
 <%@ val command: String = "" %>
-
 <%@ val node_host: String = "" %>
 <%@ val port: Int = 3306 %>
 <%@ val mysql_user: String = "root" %>
 <%@ val mysql_password: String = "" %>
 <%@ val global_status_db: String = "performance_schema" %>
-
 <%@ val id_prefix: String = "host." %>
 <%@ val title_prefix: String = "Host " %>
 <%@ val interval: Int = 60 %>
@@ -32,7 +28,6 @@
 <%@ val mysql_suffix: String = ".mysql" %>
 <%@ val innodb_details: Boolean = false %>
 <%@ val extra_details: Boolean = false %>
-
 <%
   val myCommand = if (command.nonEmpty)
     command
