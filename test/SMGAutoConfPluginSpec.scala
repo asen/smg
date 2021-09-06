@@ -107,7 +107,7 @@ class SMGAutoConfPluginSpec extends Specification{
       val data = SMGFileUtil.getFileLines("test-data/metrics.txt")
       val p = new SMGTemplateProcessor(log)
       val out = p.processTemplate("smgconf/ac-templates/openmetrics.yml.ssp", Map(
-        "command" -> "cat test-data/smg-metrics.txt",
+        "command" -> "cat 'test-data/smg-metrics.txt'",
         "node_name" -> "localhost",
         "node_host" -> "localhost",
         "data" -> data
@@ -123,7 +123,7 @@ class SMGAutoConfPluginSpec extends Specification{
         val out = p.processTemplate("smgconf/ac-templates/cadvisor-k8s.yml.ssp", Map(
           "node_name" -> "localhost",
           "node_host" -> "localhost",
-          "command" -> "cat test-data/metrics-cadvisor.txt",
+          "command" -> "cat 'test-data/metrics-cadvisor.txt'",
           "need_parse" -> Boolean.box(true),
           "data" -> data
         )).get

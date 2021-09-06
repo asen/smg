@@ -50,7 +50,7 @@
   pre_fetch: host.localhost.up
   pass_data: true
   delay: 5.5
-  command: 'cat test-data/metrics.txt'
+  command: 'cat ''test-data/metrics.txt'''
 
 - $pre_fetch:
   id: test.parse.data
