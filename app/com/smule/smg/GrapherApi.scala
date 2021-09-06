@@ -65,6 +65,7 @@ trait GrapherApi {
     * Get a sequence of SMGObjectViews (each representing an object from which a graph image can be produced)
     * from given filter
     * @param filter - filter to use
+    * @param ixes - zero or more indexes used to apply additional filters
     * @return - sequence of matching objects
     */
   def getFilteredObjects(filter: SMGFilter, ixes: Seq[SMGIndex]): Seq[SMGObjectView]

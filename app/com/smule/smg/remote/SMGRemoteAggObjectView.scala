@@ -16,7 +16,7 @@ case class SMGRemoteAggObjectView(
                                    searchTextOpt: Option[String]
                                  ) extends SMGAggObjectView {
   override val refObj: Option[SMGObjectUpdate] = None
-  override val parentIds: Seq[String] = Seq() // TODO??
+  override val parentIds: Seq[String] = objs.flatMap { ou => ou.parentIds }.distinct
   override lazy val rrdType: String = objs.map(_.rrdType).distinct.mkString(",")
   override def searchText: String = if (searchTextOpt.isDefined) searchTextOpt.get else super.searchText
 }

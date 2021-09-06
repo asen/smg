@@ -28,7 +28,7 @@ case class SMGRrdAggObject(id: String,
                           ) extends SMGObjectView with SMGObjectUpdate with SMGFetchCommand {
 
   override val preFetch: Option[String] = None
-  override val parentIds: Seq[String] = Seq() // TODO - or all ous parents?
+  override val parentIds: Seq[String] = ous.flatMap { ou => ou.parentIds }.distinct
 
   override val graphVarsIndexes: List[Int] = vars.indices.toList
 
