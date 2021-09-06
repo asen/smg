@@ -1,0 +1,67 @@
+### shared/_filter.yml.ssp
+<%@ val rx: String = "" %>
+<%@ val rxx: String = "" %>
+<%@ val trx: String = "" %>
+<%@ val prx: String = "" %>
+<%@ val px: String = "" %>
+<%@ val sx: String = "" %>
+<%@ val lbls: String = "" %>
+<%@ val remote: String = "" %>
+<%@ val step: Int = 0 %>
+<%@ val pl: String = "" %>
+<%@ val xsort: Int = 0 %>
+<%@ val dpp: Boolean = false %>
+<%@ val d95p: Boolean = false %>
+<%@ val maxy: Option[Double] = None %>
+<%@ val miny: Option[Double] = None %>
+<%@ val logy: Boolean = false %>
+<%@ val ident_spaces: Int = 2 %>
+<% val identStr = " " * ident_spaces %>
+<% if (rx != "") { %>
+<%= identStr %>rx: '<%= rx %>'
+<% } %>
+<% if (rxx != "") { %>
+<%= identStr %>rxx: '<%= rxx %>'
+<% } %>
+<% if (trx != "") { %>
+<%= identStr %>trx: '<%= trx %>'
+<% } %>
+<% if (prx != "") { %>
+<%= identStr %>prx: '<%= prx %>'
+<% } %>
+<% if (px != "") { %>
+<%= identStr %>px: '<%= px %>'
+<% } %>
+<% if (sx != "") { %>
+<%= identStr %>sx: '<%= sx %>'
+<% } %>
+<% if (lbls != "") { %>
+<%= identStr %>lbls: '<%= lbls %>'
+<% } %>
+<% if (remote != "") { %>
+<%= identStr %>remote: '<%= remote %>'
+<% } %>
+<% if (step != 0) { %>
+<%= identStr %>step: <%= step %>
+<% } %>
+<% if (pl != "") { %>
+<%= identStr %>pl: '<%= pl %>'
+<% } %>
+<% if (xsort != 0) { %>
+<%= identStr %>xsort: <%= xsort %>
+<% } %>
+<% if (dpp) { %>
+<%= identStr %>dpp: true
+<% } %>
+<% if (d95p) { %>
+<%= identStr %>d95p: true
+<% } %>
+<% if (maxy.isDefined) { %>
+<%= identStr %>maxy: <%= maxy.get.toString %>
+<% } %>
+<% if (miny.isDefined) { %>
+<%= identStr %>maxy: <%= miny.get.toString %>
+<% } %>
+<% if (logy) { %>
+<%= identStr %>logy: true
+<% } %>

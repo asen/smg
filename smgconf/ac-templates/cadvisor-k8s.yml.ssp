@@ -201,7 +201,6 @@
   "timeout" -> metrics_timeout,
   "rra_def" -> rra_def,
   "interval" -> interval,
-  "timeout" -> metrics_timeout,
   "vars" -> Seq(
     Map( "label" -> varLabel, "mu" -> varMu )
   ),

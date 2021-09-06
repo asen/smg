@@ -1,0 +1,23 @@
+<%@ val flt: com.smule.smg.core.SMGFilter %>
+<%@ val ident_spaces: Int = 2 %>
+<% render("_filter.yml.ssp", Map(
+  "rx" -> flt.rx.getOrElse(""),
+  "rxx" -> flt.rxx.getOrElse(""),
+  "trx" -> flt.trx.getOrElse(""),
+  "prx" -> flt.prx.getOrElse(""),
+  "px" -> flt.px.getOrElse(""),
+  "sx" -> flt.sx.getOrElse(""),
+  "lbls" -> flt.lbls.getOrElse(""),
+  "remote" -> flt.remotes.mkString(","),
+  "step" -> flt.step.getOrElse(0),
+  "pl" -> flt.pl.getOrElse(""),
+  "xsort" -> flt.xsort.getOrElse(0),
+  "dpp" -> flt.dpp,
+  "d95p" -> flt.d95p,
+  "maxy" -> flt.maxy,
+  "miny" -> flt.miny,
+  "logy" -> flt.logy,
+  "ident_spaces" -> ident_spaces
+))
+%>
+

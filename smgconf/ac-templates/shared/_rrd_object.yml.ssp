@@ -2,9 +2,9 @@
 <%@ val id: String %>
 <%@ val command: String %>
 <%@ val vars: Seq[Map[String,String]] %>
-<%@ val rrd_type: String %>
-
-<%@ val title: String = "" %>
+<%@ val rrd_type: String %><%
+// optional params below
+%><%@ val title: String = "" %>
 <%@ val interval: Int = 60 %>
 <%@ val timeout: Int = 30 %>
 <%@ val pre_fetch: String = "" %>
@@ -18,44 +18,52 @@
 # id = <%= id %>
 # command = <%= command %>
 - id: <%= id %>
-#if (pre_fetch != "")
+<% if (pre_fetch != "") { %>
   pre_fetch: <%= pre_fetch %>
-#end
+<% } %>
   command: '<%= command %>'
   interval: <%= interval.toString %>
   timeout: <%= timeout.toString %>
   rrd_type: <%= rrd_type %>
-#if (title != "")
+<% if (title != "") { %>
   title: '<%= title %>'
-#end
-#if (notify_fail != "")
+<% } %>
+<% if (notify_fail != "") { %>
   notify-fail: <%= notify_fail %>
-#end
-#if (stack)
+<% } %>
+<% if (stack) { %>
   stack: true
-#end
-#if (rrd_init_source != "")
+<% } %>
+<% if (rrd_init_source != "") { %>
   rrd_init_source: '<%= rrd_init_source %>'
-#end
-#if (rra_def != "")
+<% } %>
+<% if (rra_def != "") { %>
   rra_def: '<%= rra_def %>'
-#end
-#if (delay != 0)
+<% } %>
+<% if (delay != 0) { %>
   delay: <%= delay.toString %>
-#end
-#if (data_delay != 0)
+<% } %>
+<% if (data_delay != 0) { %>
   data_delay: <%= data_delay.toString %>
-#end
-#if (object_labels.nonEmpty)
-  labels:
-#for ( (k,v) <- object_labels.toSeq )
-    <%= k %>: '<%= v %>'
-#end
-#end
+<% } %>
   vars:
-#for ( (vmap, ix) <- vars.zipWithIndex )
+<%
+  vars.zipWithIndex.foreach { case (vmap, ix) => %>
   - label: '<%= vmap.getOrElse("label", s"ds${ix}") %>'
-#for ( (k,v) <- vmap.toSeq.sorted if k != "label" && v != "" )
+<%
+    for ( (k,v) <- vmap.toSeq.sorted if k != "label" && v != "" ) { %>
     <%= k %>: '<%= v %>'
-#end
-#end
+<%
+    } // for k,v
+  } // vars.zipWithIndex.foreach
+%>
+<% if (object_labels.nonEmpty) { %>
+  labels:
+<%
+  object_labels.foreach { case (k,v) =>
+%>
+    <%= k %>: '<%= v %>'
+<%
+  } //object_labels.foreach
+} // object_labels.nonEmpty
+%>

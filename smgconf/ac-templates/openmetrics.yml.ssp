@@ -7,7 +7,7 @@
 <%@ val command: String %>
 <%@ val node_name: String %>
 <%@ val port: Int = 0 %>
-<%@ val data: Seq[String] %>
+<%@ val data: Object %>
 <%@ val id_prefix: String = "host." %>
 <%@ val title_prefix: String = "Host " %>
 <%@ val interval: Int = 60 %>
@@ -26,7 +26,7 @@
 <%@ val sum_count_group_bucket_labels: Seq[String] = Seq("le", "quantile") %>
 <%@ val filter_rxx: String = "" %>
 <%@ val regex_replaces: Seq[String] = Seq() %>
-
+<%@ val fail_on_missing: Boolean = false %>
 <%
   import scala.collection.mutable.ListBuffer
 
@@ -53,7 +53,7 @@
     val arr = s.split("=", 2)
     (arr(0), arr.lift(1).getOrElse(""))
   }
-  def processRegexReplaces(s: String) = {
+  val processRegexReplaces = (s: String) => {
     var ret = s
     myRegexReplaces.foreach { t =>
       ret = ret.replaceAll(t._1, t._2)
@@ -64,44 +64,60 @@
   def isSumCountName(name: String): Boolean = name.endsWith("_sum") || name.endsWith("_count")
 
   val myPortDesc = if (port == 0) "" else s" (port $port)"
+  val getErrParam = if (fail_on_missing) ":err " else ""
 
   // parse /metrics output
-  val groups = com.smule.smg.openmetrics.OpenMetricsParser.parseText(data.mkString("\n"), None)
+  var needParse = true
+  val groups = if (data.isInstanceOf[com.smule.smgplugins.scrape.OpenMetricsResultData]) {
+    needParse = false
+    data.asInstanceOf[com.smule.smgplugins.scrape.OpenMetricsResultData].stats
+  } else if (data.isInstanceOf[java.lang.String])
+    com.smule.smg.openmetrics.OpenMetricsParser.parseText(data.asInstanceOf[java.lang.String], None)
+  else
+    com.smule.smg.openmetrics.OpenMetricsParser.parseText(data.asInstanceOf[Seq[String]].mkString("\n"), None)
+
   val parsed = groups.flatMap { grp => grp.rows.map { row => (grp, row) } }
   val parsedByUid = parsed.groupBy(_._2.labelUid)
+  val fullPrefix = s"${id_prefix}${node_name}.${metrics_name}"
+  val fullTitlePrefix = s"${title_prefix} ${metrics_hname}"
+%>
+### pre fetch command(s)
+<%
+  if (needParse){
+    render("shared/_pre_fetch.yml.ssp", Map(
+    "id" -> s"${fullPrefix}.get",
+    "command" -> command,
+    "desc" -> s"Get ${metrics_hname} from ${node_name}${myPortDesc}",
+    "pass_data" -> true,
+    "notify_fail" -> notify_fail,
+    "pre_fetch" -> pre_fetch,
+    "timeout" -> metrics_timeout
+    ))
+  }
 %>
 
-### pre fetch commands
-
-- type: $pre_fetch
-  id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.get
-#if (pre_fetch != "")
-  pre_fetch: <%= pre_fetch %>
-#end
-  desc: "Get <%= metrics_hname %> from <%= node_name %><%= myPortDesc %>"
-  command: '<%= command %>'
-  pass_data: true
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
-  timeout: <%= metrics_timeout.toString %>
-
-- type: $pre_fetch
-  id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.parse
-  pre_fetch: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.get
-  desc: "Parse <%= metrics_hname %> from <%= node_name %><%= myPortDesc %>"
-  command: ":scrape parse"
-  pass_data: true
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
-  timeout: <%= metrics_timeout.toString %>
+<%
+  val pfDescPx = if (needParse) "Parse" else "Retrieve and parse"
+  val pfPf = if (needParse) s"${fullPrefix}.get" else pre_fetch
+  val pfCmd = if (needParse) ":scrape parse" else command
+  render("shared/_pre_fetch.yml.ssp", Map(
+  "id" -> s"${fullPrefix}.parse",
+  "command" -> pfCmd,
+  "desc" -> s"${pfDescPx} ${metrics_hname} from ${node_name}${myPortDesc}",
+  "pass_data" -> true,
+  "notify_fail" -> notify_fail,
+  "pre_fetch" -> pfPf,
+  "timeout" -> metrics_timeout
+)) %>
 
 # the top-level index
-- id: ^<%= id_prefix %><%= node_name %>.<%= metrics_name %>.all
-  title: <%= node_name %> <%= metrics_hname %> - all
-  px: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.
-  desc: "Retrieved via: <%= command.replaceAll("\"","\\\"") %>"
+<% render("shared/_index.yml.ssp", Map(
+  "id" -> s"${fullPrefix}.all",
+  "px" -> s"${fullPrefix}.",
+  "title" -> s"${title_prefix} ${node_name} ${metrics_hname} - all",
+  "parent" -> parent_index
+))
+%>
 
 #for (grp <- groups)
 <%
@@ -115,290 +131,32 @@
     case x => "GAUGE"
   }
 %>
-
 ############################################################
 # grp <%= grp.metaKey.getOrElse(grp.rows.headOption.map(_.name).getOrElse("None")) %>  - isSumCountGroup=<%= isSumCountGroup %>
 #if (isSumCountGroup)
 ############################################################
-<%
-  var myRows = grp.rows
-  // TODO strip repeating label k=vs?
-  //    var commonLabels = Set[(String,String)]()
-  //    if (grp.rows.nonEmpty) {
-  //      commonLabels ++= grp.rows.head.labels.toSet
-  //      grp.rows.tail.foreach { r =>
-  //        commonLabels = commonLabels.intersect(r.labels.toSet)
-  //      }
-  //    }
-
-  // (Seq(buckets), sumRow, countRow)
-  val sumCountGroups = ListBuffer[(Seq[com.smule.smg.openmetrics.OpenMetricsRow],
-                                  Option[com.smule.smg.openmetrics.OpenMetricsRow],
-                                  Option[com.smule.smg.openmetrics.OpenMetricsRow])]()
-  var hasMore = myRows.nonEmpty
-  while (hasMore){
-    val curGroup = ListBuffer[com.smule.smg.openmetrics.OpenMetricsRow]()
-    curGroup ++= myRows.takeWhile(r => !isSumCountName(r.name))
-    myRows = myRows.drop(curGroup.size)
-    var nextName: String = myRows.headOption.map(_.name).getOrElse("")
-    if (curGroup.isEmpty && !isSumCountName(nextName)){
-      //log.warn(s"SMGScrapeObjectGen.processSumCountGroups: ${grp.metaKey} empty group with no sum/count")
-      hasMore = false
-    } else {
-      // also get _sum and _count, do not assume specific order or existence of both
-      val sumCount = ListBuffer[com.smule.smg.openmetrics.OpenMetricsRow]()
-      if (isSumCountName(nextName)) {
-        sumCount += myRows.head
-        myRows = myRows.tail
-      }
-      nextName = myRows.headOption.map(_.name).getOrElse("")
-      if (isSumCountName(nextName)) {
-        sumCount += myRows.head
-        myRows = myRows.tail
-      }
-      val sumOpt = sumCount.find(_.name.endsWith("_sum"))
-      val countOpt = sumCount.find(_.name.endsWith("_count"))
-      if (curGroup.nonEmpty || sumOpt.nonEmpty || countOpt.nonEmpty)
-        sumCountGroups += ((curGroup.toList, sumOpt, countOpt))
-      hasMore = myRows.nonEmpty
-    }
-  }
-
-  val hasManyGroups = sumCountGroups.lengthCompare(1) > 0
-  var actualGroups: Int = 0
+<% render("shared/_openmetrics_sumcount.yml.ssp", Map(
+  "grp" -> grp,
+  "rrdType" -> rrdType,
+  "id_prefix" -> s"${fullPrefix}",
+  "pre_fetch" -> s"${fullPrefix}.parse",
+  "processRegexReplacesObj" -> processRegexReplaces,
+  "matchesFilterObj" -> matchesFilter _,
+  "parent_index" -> s"${fullPrefix}.all",
+  "labels_in_uids" ->  labels_in_uids,
+  "max_uid_len" -> max_uid_len,
+  "title_prefix" -> fullTitlePrefix,
+  "interval" -> interval,
+  "rra_def" -> rra_def,
+  "extra_labels" -> extra_labels,
+  "sum_count_group_bucket_labels" -> sum_count_group_bucket_labels,
+  "notify_fail" -> notify_fail,
+  "fail_on_missing" -> fail_on_missing
+))
 %>
-#for (t3ix <- sumCountGroups.zipWithIndex)
-<%
-  val buckets = t3ix._1._1
-  val sumRow = t3ix._1._2
-  val countRow = t3ix._1._3
-  val ix = t3ix._2
-  val hasMany = hasManyGroups
-
-  val groupType = grp.metaType.getOrElse(s"INVALID_SUMCOUNT_GROUPTYPE")
-  val rawBaseUid = if (grp.metaKey.nonEmpty) {
-    grp.metaKey.get
-  } else if (buckets.nonEmpty) {
-    buckets.head.name.stripSuffix("_bucket")
-  } else if (sumRow.nonEmpty){
-    sumRow.get.name.stripSuffix("_sum")
-  } else if (countRow.nonEmpty) {
-    countRow.get.name.stripSuffix("_count")
-  } else s"INVALID_SUMCOUNT_GROUP-$groupType" // should never happen
-
-  val rawIdxSuffix = if (labels_in_uids) {
-    val refRow = countRow.getOrElse(sumRow.getOrElse(buckets.head))
-    val labelUid = com.smule.smg.openmetrics.OpenMetricsParser.groupIndexUid(
-      com.smule.smg.openmetrics.OpenMetricsParser.labelUid(rawBaseUid, refRow.labels), refRow.getDupIndex
-    )
-    if (labelUid.lengthCompare(max_uid_len) <= 0)
-      labelUid
-    else
-      com.smule.smg.openmetrics.OpenMetricsParser.groupIndexUid(rawBaseUid, Some(ix))
-    } else if (hasMany)
-      com.smule.smg.openmetrics.OpenMetricsParser.groupIndexUid(rawBaseUid, Some(ix))
-    else {
-      com.smule.smg.openmetrics.OpenMetricsParser.safeUid(rawBaseUid)
-    }
-  val idxSuffix = processRegexReplaces(rawIdxSuffix)
-  val baseUid = processRegexReplaces(rawBaseUid)
-  val titleGroupIndexId = if (hasMany) Some(ix) else None
-  var indexCols = 0
-%>
-
-#if (buckets.nonEmpty && matchesFilter(idxSuffix))
-<%
-  val scrapeGetParams = buckets.map(_.labelUid).mkString(" ")
-
-  val bucketVarLabels = buckets.zipWithIndex.map { case (row, i) =>
-    var lblOpt = row.labels.find(t => sum_count_group_bucket_labels.contains(t._1))
-    if (lblOpt.isEmpty) lblOpt = row.labels.lastOption
-    lblOpt.map(t => com.smule.smg.openmetrics.OpenMetricsParser.safeUid(s"${t._1}-${t._2}")).getOrElse(s"bucket_$i")
-  }.toList
-
-  val myLabels = com.smule.smg.openmetrics.OpenMetricsParser.mergeLabels(buckets.flatMap(_.labels)).map { case (k,vs) =>
-    (k, vs.mkString(","))
-  }
-  indexCols += 1
-%>
-# one graph for all buckets
-- id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= idxSuffix %>.<%= groupType %>_buckets
-  pre_fetch: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.parse
-  title: "<%= grp.title(metrics_hname, baseUid, titleGroupIndexId) %> (<%= groupType %> buckets)"
-  rrd_type: <%= rrdType %>
-#if (rra_def != "")
-  rra_def: "<%= rra_def %>"
-#end
-  interval : <%= interval.toString %>
-  command: ":scrape get <%= scrapeGetParams %>"
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
-  vars:
-#for (bucketVarLabel <- bucketVarLabels)
-  - label: "<%= bucketVarLabel %>"
-#end
-#if (myLabels.nonEmpty || extra_labels.nonEmpty)
-  labels:
-#for (t <- myLabels)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#for (t <- extra_labels.toSeq)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#end
-
-# buckets.nonEmpty END
-#end
-
-#if (sumRow.nonEmpty && matchesFilter(idxSuffix))
-<%
-  val scrapeGetParams = sumRow.get.labelUid
-  val myLabels = sumRow.get.labelsAsMap
-  indexCols += 1
-%>
-# one graph for the sum
-- id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= idxSuffix %>.<%= groupType %>_sum
-  pre_fetch: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.parse
-  title: "<%= grp.title(metrics_hname, baseUid, titleGroupIndexId) %> (<%= groupType %> sum)"
-  rrd_type: <%= rrdType %>
-#if (rra_def != "")
-  rra_def: "<%= rra_def %>"
-#end
-  interval : <%= interval.toString %>
-  command: ":scrape get <%= scrapeGetParams %>"
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
-  vars:
-    - label: sum
-#if (myLabels.nonEmpty || extra_labels.nonEmpty)
-  labels:
-#for (t <- myLabels)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#for (t <- extra_labels.toSeq)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#end
-
-# sumRow.nonEmpty END
-#end
-
-#if (countRow.nonEmpty && matchesFilter(idxSuffix))
-<%
-  val scrapeGetParams = countRow.get.labelUid
-  val myLabels = countRow.get.labelsAsMap
-  indexCols += 1
-%>
-# one graph for the count
-- id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= idxSuffix %>.<%= groupType %>_count
-  pre_fetch: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.parse
-  title: "<%= grp.title(metrics_hname, baseUid, titleGroupIndexId) %> (<%= groupType %> count)"
-  rrd_type: <%= rrdType %>
-#if (rra_def != "")
-  rra_def: "<%= rra_def %>"
-#end
-  interval : <%= interval.toString %>
-  command: ":scrape get <%= scrapeGetParams %>"
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
-  vars:
-    - label: count
-#if (myLabels.nonEmpty || extra_labels.nonEmpty)
-  labels:
-#for (t <- myLabels)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#for (t <- extra_labels.toSeq)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#end
-
-# countRow.nonEmpty END
-#end
-
-#if (sumRow.nonEmpty && countRow.nonEmpty && matchesFilter(idxSuffix))
-<%
-  //an average object - dividing sum/count using rpn
-  indexCols += 1
-  val myLabels = sumRow.get.labelsAsMap ++ countRow.get.labelsAsMap
-%>
-# an extra average graph if both sum/count available
-# TODO this needs to operate on the derived rates vs absolute value?
-- id: +<%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= idxSuffix %>.<%= groupType %>_average
-  title: "<%= grp.title(metrics_hname, baseUid, titleGroupIndexId) %> (<%= groupType %> count)"
-  rrd_type: GAUGE
-#if (rra_def != "")
-  rra_def: "<%= rra_def %>"
-#end
-  interval : <%= interval.toString %>
-  op: "RPN:$ds0,$ds1,/"
-  vars:
-    - label: avg
-  ids:
-    - <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= idxSuffix %>.<%= groupType %>_sum
-    - <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= idxSuffix %>.<%= groupType %>_count
-#if (myLabels.nonEmpty || extra_labels.nonEmpty)
-  labels:
-#for (t <- myLabels)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#for (t <- extra_labels.toSeq)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#end
-
-# (sumRow.nonEmpty && countRow.nonEmpty) END
-#end
-
-#if (indexCols > 0)
-<%
-  actualGroups += 1
-%>
-# an index for the individual group
-- id: ^<%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= idxSuffix %>
-  px: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= idxSuffix %>.
-  title: <%= grp.title(metrics_hname, baseUid, None) %> - <%= grp.metaType.getOrElse("INVALID") %>
-#if (hasManyGroups)
-  parent: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= baseUid %>
-#else
-  parent: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.all
-#end
-  cols: <%= indexCols %>
-  rows: <%= 60 / indexCols %>
-#if (grp.metaHelp.isDefined)
-  desc: <%= grp.metaHelp.get %>
-#end
-
-# indexCols > 0 END
-#end
-
-# t3ix <- sumCountGroups.zipWithIndex END
-#end
-
-#if (hasManyGroups && actualGroups > 0)
-<%
-  val baseUid = processRegexReplaces(grp.metaKey.getOrElse("INVALID"))
-%>
-- id: ^<%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= baseUid %>
-  px: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= baseUid %>.
-  title: <%= grp.title(metrics_hname, baseUid, None) %> - <%= grp.metaType.getOrElse("INVALID") %>
-  parent: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.all
-  cols: 4
-  rows: 15
-#if (grp.metaHelp.isDefined)
-  desc: <%= grp.metaHelp.get %>
-#end
-
-# hasManyGroups && actualGroups > 0 END
-#end
-
-# isSumCountGroup == true END
+## END if (isSumCountGroup == true)
 #else
 ############################################################
-
 #if (grp.rows.nonEmpty)
 <%
   val numRows = grp.rows.size
@@ -408,7 +166,6 @@
   val canHaveLabelUids = grp.rows.forall(_.labelUid.lengthCompare(max_uid_len) <= 0)
   var grpNonEmpty = false
 %>
-
 #for (rowt <- grp.rows.zipWithIndex)
 <%
   val row = rowt._1
@@ -429,69 +186,46 @@
   val scrapeGetParams = row.labelUid
   val varLabel = varLabelFromStatName(row.name)
   val varMu = if (rrdType == "GAUGE") "" else s"$varLabel/sec"
-
-  // TODO apply regex replaces and filters
 %>
-
 #if (matchesFilter(idxSuffix))
 <%
   grpNonEmpty = true
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${fullPrefix}.${idxSuffix}",
+  "pre_fetch" -> s"${fullPrefix}.parse",
+  "command" -> s":scrape get ${getErrParam}${scrapeGetParams}",
+  "title" -> s"${grp.title(fullTitlePrefix, idxSuffix, titleGroupIndexId)}",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> rrdType,
+  "rra_def" -> rra_def,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> varLabel) ++ (if (varMu != "") Map("varMu" -> varMu) else Map())
+  ),
+  "object_labels" -> (row.labelsAsMap ++ extra_labels)
+  ))
 %>
-- id: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= idxSuffix %>
-  pre_fetch: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.parse
-  title: "<%= grp.title(metrics_hname, idxSuffix, titleGroupIndexId) %>"
-  rrd_type: <%= rrdType %>
-#if (rra_def != "")
-  rra_def: "<%= rra_def %>"
-#end
-  interval : <%= interval.toString %>
-  command: ":scrape get <%= scrapeGetParams %>"
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
-  vars:
-    - label: "<%= varLabel %>"
-#if (varMu != "")
-      mu: "<%= varMu %>"
-#end
-#if (row.labels.nonEmpty || extra_labels.nonEmpty)
-  labels:
-#for (t <- row.labels)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#for (t <- extra_labels.toSeq)
-    <%= t._1 %>: "<%= t._2 %>"
-#end
-#end
-
 # filterMatches(idxSuffix) END
 #end
-
 # rowt loop END
 #end
-
 #if (grpNonEmpty)
 <%
   val filterDotSuffix = if (hasMany) "." else ""
+  render("shared/_index.yml.ssp", Map(
+  "id" -> s"${fullPrefix}.${baseUid}",
+  "px" -> s"${fullPrefix}.${baseUid}${filterDotSuffix}",
+  "title" -> s"${grp.title(fullTitlePrefix, baseUid, None)}",
+  "parent" -> s"${fullPrefix}.all",
+  "desc" -> grp.metaHelp.getOrElse("")
+  ))
 %>
-- id: ^<%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= baseUid %>
-  px: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.<%= baseUid %><%= filterDotSuffix %>
-  title: <%= grp.title(metrics_hname, baseUid, None) %>
-  parent: <%= id_prefix %><%= node_name %>.<%= metrics_name %>.all
-#if (grp.metaHelp.isDefined)
-  desc: <%= grp.metaHelp.get %>
-#end
-
 # grpNonEmpty END
 #end
-
 # grp.rows.nonEmpty END
 #end
-
-# isSumCountGroup == false  END
+# END isSumCountGroup == false
 #end
-
 # grp <- groups loop END
 #end
-
 # End of generated output

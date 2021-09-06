@@ -1,0 +1,77 @@
+### shared/_rrd_agg_object.yml.ssp
+<%@ val id: String %>
+<%@ val rrd_type: String %>
+<%@ val op: String %><%
+// either ids or filter must be supplied
+%><%@ val ids: Seq[String] = Seq() %>
+<%@ val flt: Option[com.smule.smg.core.SMGFilter] = None %>
+<%@ val vars: Seq[Map[String,String]] = Seq() %>
+<%@ val title: String = "" %>
+<%@ val interval: Int = 60 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val object_labels: Map[String,String] = Map() %>
+<%@ val stack: Boolean = false %>
+<%@ val data_delay: Int = 0 %>
+<%@ val rrd_init_source: String = "" %>
+<%@ val rra_def: String = "" %>
+# id = +<%= id %>
+- id: +<%= id %>
+  interval: <%= interval.toString %>
+  op: '<%= op %>'
+<% if (ids.nonEmpty) { %>
+  ids:
+<% for (oid <- ids) { %>
+    - <%= oid %>
+<%
+    }
+  }
+%>
+<% if (flt.nonEmpty) { %>
+  filter:
+<%
+  render("_smg_filter.yml.ssp", Map(
+    "flt" -> flt.get,
+    "ident_spaces" -> 4
+    ))
+  } // flt.nonEmpty
+%>
+  rrd_type: <%= rrd_type %>
+<% if (title != "") { %>
+  title: '<%= title %>'
+<% } %>
+<% if (stack) { %>
+  stack: true
+<% } %>
+<% if (rrd_init_source != "") { %>
+  rrd_init_source: '<%= rrd_init_source %>'
+<% } %>
+<% if (rra_def != "") { %>
+  rra_def: '<%= rra_def %>'
+<% } %>
+<% if (data_delay != 0) { %>
+  data_delay: <%= data_delay.toString %>
+<% } %>
+<% if (vars.nonEmpty) { %>
+  vars:
+<%
+    vars.zipWithIndex.foreach { case (vmap, ix) => %>
+  - label: '<%= vmap.getOrElse("label", s"ds${ix}") %>'
+  <%
+      for ( (k,v) <- vmap.toSeq.sorted if k != "label" && v != "" ) { %>
+    <%= k %>: '<%= v %>'
+  <%
+      } // for k,v
+    } // vars.zipWithIndex.foreach
+  } // vars.nonEmpty
+%>
+<% if (object_labels.nonEmpty) { %>
+  labels:
+<%
+    object_labels.foreach { case (k,v) =>
+%>
+    <%= k %>: '<%= v %>'
+<%
+    } //object_labels.foreach
+  } // object_labels.nonEmpty
+%>

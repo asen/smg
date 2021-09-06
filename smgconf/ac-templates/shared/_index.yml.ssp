@@ -3,39 +3,84 @@
 <%@ val title: String = "" %>
 <%@ val parent: String = "" %>
 <%@ val desc: String = "" %>
+<%@ val cols: Int = -1 %>
+<%@ val rows: Int = -1 %>
 <%@ val rx: String = "" %>
 <%@ val rxx: String = "" %>
 <%@ val trx: String = "" %>
+<%@ val prx: String = "" %>
 <%@ val px: String = "" %>
 <%@ val sx: String = "" %>
+<%@ val lbls: String = "" %>
+<%@ val remote: String = "" %>
+<%@ val step: Int = 0 %>
+<%@ val pl: String = "" %>
+<%@ val xsort: Int = 0 %>
+<%@ val dpp: Boolean = false %>
+<%@ val d95p: Boolean = false %>
+<%@ val maxy: Option[Double] = None %>
+<%@ val miny: Option[Double] = None %>
+<%@ val logy: Boolean = false %>
+<%@ val alerts: Seq[Map[String,Object]] = Seq() %>
 <%
-  // TODO - add everything and index supports
+  def quoteObj(o: Object): String = {
+    o match {
+      case s: String => s"'${s}'"
+      case x => x.toString
+    }
+  }
 %>
 # id = <%= id %>
-
 - id: ^<%= id %>
-#if (title != "")
+<% if (title != "") { %>
   title: '<%= title %>'
-#end
-#if (desc != "")
+<% } %>
+<% if (desc != "") { %>
   desc: '<%= desc %>'
-#end
-#if (parent != "")
+<% } %>
+<% if (parent != "") { %>
   parent: '<%= parent %>'
-#end
-#if (rx != "")
-  rx: '<%= rx %>'
-#end
-#if (rxx != "")
-  rxx: '<%= rxx %>'
-#end
-#if (trx != "")
-  trx: '<%= trx %>'
-#end
-#if (px != "")
-  px: '<%= px %>'
-#end
-#if (sx != "")
-  sx: '<%= sx %>'
-#end
-
+<% } %>
+<% if (cols > 0) { %>
+  cols: <%= cols.toString %>
+<% } %>
+<% if (rows >= 0) { %>
+  rows: <%= rows.toString %>
+<% } %>
+<% render("_filter.yml.ssp", Map(
+  "rx" -> rx,
+  "rxx" -> rxx,
+  "trx" -> trx,
+  "prx" -> prx,
+  "px" -> px,
+  "sx" -> sx,
+  "lbls" -> lbls,
+  "remote" -> remote,
+  "step" -> step,
+  "pl" -> pl,
+  "xsort" -> xsort,
+  "dpp" -> dpp,
+  "d95p" -> d95p,
+  "maxy" -> maxy,
+  "miny" -> miny,
+  "logy" -> logy,
+  "ident_spaces" -> 2
+  ))
+  if (alerts.nonEmpty) {
+%>
+  alerts:
+<%
+    alerts.foreach { am =>
+      if (am.nonEmpty) {
+        val sq = am.toSeq
+    %>
+    - <%= sq.head._1 %>: <%= quoteObj(sq.head._2) %>
+<%
+        sq.tail.foreach { t =>
+%>      <%= t._1 %>: <%= quoteObj(t._2) %>
+<%
+        } //sq.tail.foreach
+      } //am.nonEmpty
+    } //alerts.foreach
+  } // alerts.nonE,pty
+%>
