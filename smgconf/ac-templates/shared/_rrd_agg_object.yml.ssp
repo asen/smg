@@ -38,7 +38,7 @@
 %>
   rrd_type: <%= rrd_type %>
 <% if (title != "") { %>
-  title: '<%= title.replaceAll("'","\\\\'") %>'
+  title: '<%= title.replaceAll("'","''") %>'
 <% } %>
 <% if (stack) { %>
   stack: true
@@ -70,7 +70,7 @@
 <%
     object_labels.foreach { case (k,v) =>
 %>
-    <%= k %>: '<%= v.replaceAll("'","\\\\'") %>'
+    <%= k %>: '<%= v.replaceAll("'","''") %>'
 <%
     } //object_labels.foreach
   } // object_labels.nonEmpty
