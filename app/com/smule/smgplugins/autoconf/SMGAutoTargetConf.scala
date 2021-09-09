@@ -24,6 +24,7 @@ case class SMGAutoTargetConf(
                               regenDelay: Option[Int],
                               // the two special attributes
                               nodeName: Option[String],
+                              nodeHost: Option[String],
                               command: Option[String],
                               context: Map[String,Object]
                             ) {
@@ -91,6 +92,8 @@ object SMGAutoTargetConf {
       ret.put("resolve_name", Boolean.box(true))
     if (in.nodeName.isDefined)
       ret.put("node_name", in.nodeName.get)
+    if (in.nodeHost.isDefined)
+      ret.put("node_host", in.nodeName.get)
     if (in.command.isDefined)
       ret.put("command", in.command.get)
     if (in.context.nonEmpty)
@@ -127,6 +130,7 @@ object SMGAutoTargetConf {
         resolveName = ymap.contains("resolve_name") && ymap("resolve_name").toString == "true",
         regenDelay = ymap.get("regen_delay").map(_.asInstanceOf[Int]),
         nodeName = ymap.get("node_name").map(_.toString),
+        nodeHost = ymap.get("node_host").map(_.toString),
         command = ymap.get("command").map(_.toString),
         context = if (ymap.contains("context")) yobjMap(ymap("context")).toMap else Map()
       )

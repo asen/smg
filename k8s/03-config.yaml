@@ -60,6 +60,8 @@ data:
       interval: 15
       fetch_timeout: 8
       rra_def: kube_15s
+      cluster:
+        - template: k8s-kubectl-top
       node_metrics:
         - template: node-exporter
           template_alias: node-ex
@@ -70,9 +72,8 @@ data:
         - uid: kubelet
           proto: https
           port_path: ":10250/metrics"
-          sort_indexes: true
         - template: cadvisor-k8s
-          command: ":scrape fetch :tokenf /etc/smg/kube-token/token https://%node_host%:%port%/metrics/cadvisor"
+          command: ":scrape fetch :tokenf /etc/smg/kube-token/token https://%node_host%:10250/metrics/cadvisor"
           runtime_data: true
           parent_index: cluster.skube.node
           title_prefix: "Node "

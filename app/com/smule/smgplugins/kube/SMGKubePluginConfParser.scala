@@ -11,6 +11,7 @@ import org.yaml.snakeyaml.Yaml
 import java.io.File
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 
 class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLoggerApi) {
 
@@ -28,19 +29,27 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
       pluginId + "." + uid,
       ymap.toMap.map(t => (t._1, t._2.toString))
     )
-    val nodeMetrics = ListBuffer[SMGKubeNodeMetricsConf]()
+    val clusterGlobalAutoconfs = ListBuffer[Map[String, Object]]()
+    if (ymap.contains("cluster")) {
+      yobjList(ymap("cluster")).foreach { o =>
+        clusterGlobalAutoconfs += yobjMap(o).toMap
+      }
+    }
+    //val nodeMetrics = ListBuffer[SMGKubeNodeMetricsConf]()
     val nodeAutoconfs = ListBuffer[Map[String, Object]]()
     if (ymap.contains("node_metrics")){
       val metricsSeq = yobjList(ymap("node_metrics"))
       metricsSeq.foreach { o =>
         val m = yobjMap(o)
-        if (m.contains("template")) {
-          nodeAutoconfs += m.toMap
-        } else {
-          val ret = SMGKubeNodeMetricsConf.fromYamlMap(m, pluginId)
-          if (ret.isDefined)
-            nodeMetrics += ret.get
-        }
+        // scrape plugin would expect a port_path param, convert this to separate port and path params
+        val portPathMap: Map[String, Object] = if(m.contains("port_path")) {
+          val ppArr = m("port_path").toString.stripPrefix(":").split("/", 2)
+          val ppPort = if (ppArr(0) == "") None else Try(ppArr(0).toInt).toOption
+          val ppPath = ppArr.lift(1)
+          (if (!m.contains("port") && ppPort.isDefined) Map("port" -> Integer.valueOf(ppPort.get)) else Map()) ++
+            (if (!m.contains("path") && ppPath.isDefined) Map("path" -> ppPath.get) else Map())
+        } else Map()
+        nodeAutoconfs += (m.toMap ++ portPathMap)
       }
     }
 
@@ -59,25 +68,28 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
         uid = uid,
         humanName = ymap.get("name").map(_.toString),
         interval = ymap.get("interval").map(_.asInstanceOf[Int]).getOrElse(SMGConfigParser.defaultInterval),
-        fetchCommand = ymap("fetch_command").toString,
-        fetchCommandTimeout =
+        defaultFetchCommand = ymap("fetch_command").toString,
+        defaultFetchCommandTimeout =
           ymap.get("fetch_timeout").map(_.asInstanceOf[Int]).getOrElse(SMGConfigParser.defaultTimeout),
         filter = if (ymap.contains("filter")){
           Some(SMGFilter.fromYamlMap(yobjMap(ymap("filter")).toMap))
         } else None,
+        defaultTemplate = ymap.getOrElse("default_template", "openmetrics").toString,
         idPrefix = ymap.get("id_prefix").map(_.toString),
         regexReplaces = ymap.get("regex_replaces").map { yo: Object =>
           yobjList(yo).flatMap { o =>  RegexReplaceConf.fromYamlObject(yobjMap(o)) }
         }.getOrElse(Seq()),
-        nodeMetrics = nodeMetrics.toList,
+        // nodeMetrics = nodeMetrics.toList,
+        clusterGlobalAutoconfs = clusterGlobalAutoconfs.toList,
         nodeAutoconfs = nodeAutoconfs.toList,
         autoConfs = autoConfs,
         parentPfId  = ymap.get("pre_fetch").map(_.toString),
         parentIndexId = ymap.get("parent_index").map(_.toString),
         notifyConf = notifyConf,
         authConf = SMGKubeClusterAuthConf.fromYamlObject(ymap),
-        prefixIdsWithClusterId = ymap.get("prefix_ids_with_cluster_id").map(_.toString).getOrElse("false") == "true",
-        kubectlTopStats = ymap.get("top_stats").map(_.toString).getOrElse("true") != "false",
+        prefixIdsWithClusterId = ymap.get("prefix_ids_with_cluster_id").map(_.toString).
+          getOrElse("false") == "true",
+        //kubectlTopStats = ymap.get("top_stats").map(_.toString).getOrElse("true") != "false",
         rraDef = rraDef,
         needParse = ymap.getOrElse("need_parse", "true").toString != "false"
       )

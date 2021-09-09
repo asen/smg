@@ -23,7 +23,7 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
       val ymap = yobjMap(yobj)
       if (ymap.contains("include")) { // process include
         if (ymap.size > 1) {
-          log.warn(s"SMGScrapeConfParser.parseConf($fname): autconf include has additional properties " +
+          log.warn(s"SMGAutoConfPluginConfParser.parseConf($fname): autconf include has additional properties " +
             s"(will be ignored): ${ymap.keys.mkString(",")}")
         }
         val glob = ymap("include").toString
@@ -58,7 +58,7 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
       val yamlList = yobjList(yaml.load(confTxt))
       parseTargetsSeq(yamlList, fn, outputFiles, confOutputDir)
     } catch { case t : Throwable =>
-      log.ex(t, s"SMGScrapeConfParser.parseAutoConfsInclude($fn): unexpected error: ${t.getMessage}")
+      log.ex(t, s"SMGAutoConfPluginConfParser.parseTargetsInclude($fn): unexpected error: ${t.getMessage}")
       Seq()
     }
   }
@@ -98,7 +98,7 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
   private var myConf: SMGAutoConfPluginConf = try {
     parseConf()
   } catch { case t: Throwable =>
-    log.ex(t, s"SMGScrapeConfParser.init - unexpected exception (assuming empty conf): ${t.getMessage}")
+    log.ex(t, s"SMGAutoConfPluginConfParser.init - unexpected exception (assuming empty conf): ${t.getMessage}")
     SMGAutoConfPluginConf.empty
   }
 
@@ -106,7 +106,7 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
     try {
       myConf = parseConf()
     } catch { case t: Throwable =>
-      log.ex(t, s"SMGScrapeConfParser.reload - unexpected exception (config NOT reloaded): ${t.getMessage}")
+      log.ex(t, s"SMGAutoConfPluginConfParser.reload - unexpected exception (config NOT reloaded): ${t.getMessage}")
     }
   }
 

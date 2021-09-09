@@ -781,7 +781,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
         }
       } catch {
         case t: Throwable =>
-          log.ex(t, "createAggObject: unexpected error creating Aggregate object - oid=$oid")
+          log.ex(t, s"createAggObject: unexpected error creating Aggregate object - oid=$oid")
           processConfigError(confFile,
           s"createAggObject: unexpected error creating Aggregate object - oid=$oid")
       }

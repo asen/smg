@@ -57,10 +57,10 @@
 <%
     vars.zipWithIndex.foreach { case (vmap, ix) => %>
   - label: '<%= vmap.getOrElse("label", s"ds${ix}") %>'
-  <%
+<%
       for ( (k,v) <- vmap.toSeq.sorted if k != "label" && v != "" ) { %>
     <%= k %>: <%= v %>
-  <%
+<%
       } // for k,v
     } // vars.zipWithIndex.foreach
   } // vars.nonEmpty

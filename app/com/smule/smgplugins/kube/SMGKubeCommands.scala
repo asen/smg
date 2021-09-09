@@ -32,7 +32,8 @@ class SMGKubeCommands(log: SMGLoggerApi, clusterUid: String, authConf: SMGKubeCl
       pods.sortBy(_.kubePod.name).foreach { podStats =>
         if (groupIndex.isDefined) groupIndex = Some(groupIndex.get + 1)
         val podLabels = ownerLabels ++ Seq[(String,String)](
-          ("smg_top_pod", podStats.kubePod.name)
+          ("smg_top_pod", podStats.kubePod.name),
+          ("smg_namespace", podStats.kubePod.namespace)
         ) ++ podStats.kubePod.labels.toSeq
         val podKey = s"pod.${podStats.kubePod.stableUid(groupIndex)}"
         val podCpuKey = s"${podKey}.cpu"

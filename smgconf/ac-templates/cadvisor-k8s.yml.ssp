@@ -98,11 +98,8 @@
     s"group from key_ref_metric name: ${key_ref_metric}")
   }
   val refGroup = refGroupOpt.get
-
-//  val parsed = groups.flatMap { g => g.grp.rows.map { row => (g.grp, row) } }
-//  val parsedByUid = parsed.groupBy(_._2.labelUid)
-
-//  val dupCountersGlobal = scala.collection.mutable.Map[String, Int]()
+  val myTiltePrefix = if (title_prefix.nonEmpty && !title_prefix.endsWith(" ")) title_prefix + " " else title_prefix
+  val fullTitlePrefix = myTiltePrefix + node_name
 %>
 
 ### pre fetch commands
@@ -135,7 +132,7 @@
 # the top-level index
 <% render("shared/_index.yml.ssp", Map(
   "id" -> s"${id_prefix}${node_name}.${metrics_name}.all",
-  "title" -> s"${title_prefix}${node_name} ${metrics_hname} - all",
+  "title" -> s"${fullTitlePrefix} ${metrics_hname} - all",
   "parent" -> parent_index,
   "px" -> s"${id_prefix}${node_name}.${metrics_name}."
 )) %>
@@ -149,7 +146,7 @@
 # keyVals = <%= keyStr %>
 <% render("shared/_index.yml.ssp", Map(
   "id" -> s"${id_prefix}${node_name}.${metrics_name}.${keyStr}",
-  "title" -> s"${title_prefix}${node_name} ${metrics_hname} - ${keyStr}",
+  "title" -> s"${fullTitlePrefix} ${metrics_hname} - ${keyStr}",
   "parent" -> s"${id_prefix}${node_name}.${metrics_name}.all",
   "px" -> s"${id_prefix}${node_name}.${metrics_name}.${keyStr}."
 )) %>
@@ -194,7 +191,7 @@
 <% render("shared/_rrd_object.yml.ssp", Map(
   "id" -> s"${id_prefix}${node_name}.${metrics_name}.${keyStr}.${mrow.name}${extraSuffix}",
   "command" -> s":scrape get ${mrow.labelUid}",
-  "title" -> s"${title_prefix}${node_name} ${metrics_hname} - ${keyStr}.${mrow.name}${extraSuffix}",
+  "title" -> s"${fullTitlePrefix} ${metrics_hname} - ${keyStr}.${mrow.name}${extraSuffix}",
   "notify_fail" -> notify_fail,
   "rrd_type" -> rrdType,
   "pre_fetch" -> s"${id_prefix}${node_name}.${metrics_name}.parse",

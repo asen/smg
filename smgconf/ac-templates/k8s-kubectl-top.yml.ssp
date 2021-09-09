@@ -1,0 +1,241 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%
+  // Configure this with a cluster_id like this:
+  // cluster_id: 'my-cluster'
+%>
+<%@ val kube_cluster_id: String %>
+<%@ val smgConfigService: com.smule.smg.config.SMGConfigService %>
+<%@ val top_nodes: Boolean = true %>
+<%@ val top_pods: Boolean = true %>
+<%@ val interval: Int = 60 %>
+<%@ val timeout: Int = 15 %>
+<%@ val rra_def: String = "" %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val id_prefix: String = "" %>
+<%@ val title_prefix: String = "" %>
+<%@ val extra_labels: Map[String,String] = Map() %>
+<%
+  import com.smule.smg.core.{SMGCmd,ParentCommandData}
+
+  val myIdPrefix = id_prefix + (if (id_prefix.isEmpty || id_prefix.endsWith(".")) "" else ".")
+
+  def podStableBaseName(podName: String, ownerKind: String): String = {
+    val dropSuffixes = ownerKind match {
+      case "DaemonSet" => 1            //"-xxxxx"
+      case "ReplicaSet" => 2            //"-xxxxxxxxxx-xxxxx"
+      case "StatefulSet" => 0           //"-x"
+      case "Job" => 1                   //"-<timestamp>-xxxxx"
+      case "ReplicationController" => 1 //"-xxxxx"
+      case "Node" => 0                  //drop nothing
+      case _ => 0
+    }
+    podName.split("-").dropRight(dropSuffixes).mkString("-")
+  }
+
+%>
+# top nodes
+<%
+  if (top_nodes) {
+    val topNodesCmd = s":kube ${kube_cluster_id} top-nodes"
+    val topNodesCmdId = s"${myIdPrefix}kubectl.top.nodes.fetch"
+    val nodesData = smgConfigService.runFetchCommand(SMGCmd(topNodesCmd), None).
+      data.asInstanceOf[com.smule.smgplugins.scrape.OpenMetricsResultData].stats
+    val rowsByNode = nodesData.flatMap(_.rows).groupBy(r => r.labelsAsMap.getOrElse("smg_top_node", ""))
+
+    render("shared/_pre_fetch.yml.ssp", Map(
+      "id" -> topNodesCmdId,
+      "command" -> topNodesCmd,
+      "desc" -> s"Get kubectl top nodes stats from ${kube_cluster_id}",
+      "pass_data" -> true,
+      "notify_fail" -> notify_fail,
+      "pre_fetch" -> pre_fetch,
+      "timeout" -> timeout
+    ))
+
+    render("shared/_index.yml.ssp", Map(
+      "id" -> s"${myIdPrefix}kubectl.top.nodes.all",
+      "title" -> s"${title_prefix}kubectl top nodes - all",
+      "parent" -> parent_index,
+      "px" -> s"${myIdPrefix}kubectl.top.nodes."
+    ))
+%>
+
+<%
+    for ( (nn, rows) <- rowsByNode ) {
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${myIdPrefix}kubectl.top.nodes.${nn}",
+        "title" -> s"${title_prefix}kubectl top nodes - ${nn}",
+        "parent" -> s"${myIdPrefix}kubectl.top.nodes.all",
+        "px" -> s"${myIdPrefix}kubectl.top.nodes.${nn}."
+      ))
+%>
+
+<%
+      for (row <- rows) {
+        val statId = row.labelsAsMap.getOrElse("smg_top_stat", "invalid")
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${myIdPrefix}kubectl.top.nodes.${nn}.${statId}",
+          "pre_fetch" -> topNodesCmdId,
+          "command" -> s":scrape get ${row.labelUid}",
+          "title" ->  s"${title_prefix}kubectl top nodes - ${nn} - ${statId}",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra_def" -> rra_def,
+          "interval" -> interval,
+          "vars" -> Seq(
+            Map( "label" -> s"${statId} used") ++ (if (statId == "mem") Map("mu" -> "B") else Map())
+          ),
+          "object_labels" -> (row.labelsAsMap ++ extra_labels)
+        ))
+%>
+
+<%
+      } // for (row <- rows)
+    } // for ( (nn, rows) <- rowsByNode )
+
+  } // top_nodes
+%>
+
+# top pods
+<%
+  if (top_pods) {
+    val topPodsPfCmd = s":kube ${kube_cluster_id} top-pods-pf"
+    val topPodsPfCmdId = s"${myIdPrefix}kubectl.top.pods-pf"
+    val topPodsCmd = s":kube ${kube_cluster_id} top-pods"
+    val topPodsCmdId = s"${myIdPrefix}kubectl.top.pods.fetch"
+    val topContsCmd = s":kube ${kube_cluster_id} top-conts"
+    val topContsCmdId = s"${myIdPrefix}kubectl.top.conts.fetch"
+
+    val parentData = smgConfigService.runFetchCommand(SMGCmd(topPodsPfCmd), None)
+
+    val podsData = smgConfigService.runFetchCommand(SMGCmd(topPodsCmd), Some(ParentCommandData(parentData, None))).
+      data.asInstanceOf[com.smule.smgplugins.scrape.OpenMetricsResultData].stats
+    val contsData = smgConfigService.runFetchCommand(SMGCmd(topContsCmd), Some(ParentCommandData(parentData, None))).
+      data.asInstanceOf[com.smule.smgplugins.scrape.OpenMetricsResultData].stats
+
+    render("shared/_pre_fetch.yml.ssp", Map(
+      "id" -> topPodsPfCmdId,
+      "command" -> topPodsPfCmd,
+      "desc" -> s"Get kubectl top pods and container stats from ${kube_cluster_id}",
+      "pass_data" -> true,
+      "notify_fail" -> notify_fail,
+      "pre_fetch" -> pre_fetch,
+      "timeout" -> timeout
+    ))
+
+    render("shared/_pre_fetch.yml.ssp", Map(
+      "id" -> topPodsCmdId,
+      "command" -> topPodsCmd,
+      "desc" -> s"Get kubectl top pods stats from ${kube_cluster_id}",
+      "pass_data" -> true,
+      "notify_fail" -> notify_fail,
+      "pre_fetch" -> topPodsPfCmdId,
+      "timeout" -> timeout
+    ))
+
+    render("shared/_pre_fetch.yml.ssp", Map(
+      "id" -> topContsCmdId,
+      "command" -> topContsCmd,
+      "desc" -> s"Get kubectl top containers stats from ${kube_cluster_id}",
+      "pass_data" -> true,
+      "notify_fail" -> notify_fail,
+      "pre_fetch" -> topPodsPfCmdId,
+      "timeout" -> timeout
+    ))
+
+    render("shared/_index.yml.ssp", Map(
+      "id" -> s"${myIdPrefix}kubectl.top.pods.all",
+      "title" -> s"${title_prefix}kubectl top pods - all",
+      "parent" -> parent_index,
+      "px" -> s"${myIdPrefix}kubectl.top.pods."
+    ))
+%>
+
+<%
+    val podRowsByNamespace = podsData.flatMap(_.rows).groupBy(r => r.labelsAsMap.getOrElse("smg_namespace", ""))
+    val contsDataByPodName = contsData.flatMap(_.rows).groupBy { r =>
+      r.labelsAsMap.getOrElse("smg_namespace", "") + "." + r.labelsAsMap.getOrElse("smg_top_pod", "")
+    }
+
+    for ( (nn, rows) <- podRowsByNamespace ) {
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${myIdPrefix}kubectl.top.pods.${nn}",
+        "title" -> s"${title_prefix}kubectl top pods - ${nn}",
+        "parent" -> s"${myIdPrefix}kubectl.top.pods.all",
+        "px" -> s"${myIdPrefix}kubectl.top.pods.${nn}."
+      ))
+%>
+
+<%
+      val byStableName = rows.groupBy { row =>
+        val fullPodName = row.labelsAsMap.getOrElse("smg_top_pod", "invalid")
+        val podOwnerKind = row.labelsAsMap.getOrElse("smg_pod_owner_kind", "invalid")
+        podStableBaseName(fullPodName, podOwnerKind)
+      }
+      for ((stableBaseName, rows) <- byStableName) {
+        val byPod = rows.groupBy(r => r.labelsAsMap.getOrElse("smg_top_pod", "invalid"))
+        for ((t, dupIx) <- byPod.toSeq.sortBy(_._1).zipWithIndex) {
+          val fullPodName = t._1
+          val rows = t._2
+          val stableName = if (fullPodName != stableBaseName) stableBaseName + s"._${dupIx}" else stableBaseName
+          render("shared/_index.yml.ssp", Map(
+            "id" -> s"${myIdPrefix}kubectl.top.pods.${nn}.${stableName}",
+            "title" -> s"${title_prefix}kubectl top pods - ${nn}.${stableName}",
+            "parent" -> s"${myIdPrefix}kubectl.top.pods.${nn}",
+            "px" -> s"${myIdPrefix}kubectl.top.pods.${nn}.${stableName}."
+          ))
+          for (row <- rows) {
+            val statId = row.labelsAsMap.getOrElse("smg_top_stat", "invalid")
+            render("shared/_rrd_object.yml.ssp", Map(
+              "id" -> s"${myIdPrefix}kubectl.top.pods.${nn}.${stableName}.${statId}",
+              "pre_fetch" -> topPodsCmdId,
+              "command" -> s":scrape get ${row.labelUid}",
+              "title" ->  s"${title_prefix}kubectl top pods - ${nn}.${fullPodName} - ${statId}",
+              "notify_fail" -> notify_fail,
+              "rrd_type" -> "GAUGE",
+              "rra_def" -> rra_def,
+              "interval" -> interval,
+              "vars" -> Seq(
+                Map( "label" -> s"${statId} used") ++ (if (statId == "mem") Map("mu" -> "B") else Map())
+              ),
+              "object_labels" -> (row.labelsAsMap ++ extra_labels)
+            ))
+          } // for (row -> rows)
+%>
+
+# pod <%= fullPodName %> (<%= stableName%>) containers
+<%
+          val contsData = contsDataByPodName.get(s"${nn}.${fullPodName}")
+          if (contsData.isDefined) {
+            render("shared/_index.yml.ssp", Map(
+              "id" -> s"${myIdPrefix}kubectl.top.conts.${nn}.${stableName}",
+              "title" -> s"${title_prefix}kubectl top containers - ${nn}.${stableName}",
+              "parent" -> s"${myIdPrefix}kubectl.top.pods.${nn}.${stableName}",
+              "px" -> s"${myIdPrefix}kubectl.top.conts.${nn}.${stableName}."
+            ))
+            for (crow <- contsData.get) {
+              val contName = crow.labelsAsMap.getOrElse("smg_top_container", "invalid")
+              val contStatId = crow.labelsAsMap.getOrElse("smg_top_stat", "invalid")
+              render("shared/_rrd_object.yml.ssp", Map(
+                "id" -> s"${myIdPrefix}kubectl.top.conts.${nn}.${stableName}.${contName}.${contStatId}",
+                "pre_fetch" -> topContsCmdId,
+                "command" -> s":scrape get ${crow.labelUid}",
+                "title" ->  s"${title_prefix}kubectl top containers - ${nn}.${fullPodName}.${contName} - ${contStatId}",
+                "notify_fail" -> notify_fail,
+                "rrd_type" -> "GAUGE",
+                "rra_def" -> rra_def,
+                "interval" -> interval,
+                "vars" -> Seq(
+                  Map( "label" -> s"${contStatId} used") ++ (if (contStatId == "mem") Map("mu" -> "B") else Map())
+                ),
+                "object_labels" -> (crow.labelsAsMap ++ extra_labels)
+              ))
+            } //(crow <- contsData.get)
+          } // (contsData.isDefined)
+        } // (t, dupIx) <- byPod
+      } // ((stableName, rows) <- byStableName)
+    } // for ( (nn, rows) <- podRowsByNamespace )
+  } // top_nodes
+%>

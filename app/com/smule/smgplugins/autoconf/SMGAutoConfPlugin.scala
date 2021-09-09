@@ -118,13 +118,13 @@ class SMGAutoConfPlugin (
 
   override def htmlContent(httpParams: Map[String,String]): String = {
     <h3>Plugin {pluginId}: Configuration</h3>
-      <h4>Configured scrapes</h4>
-      <ul>
+      <h4>Configured template targets</h4>
+      <ol>
         {confParser.conf.targets.map { aconf =>
         <li>
           <h5>{aconf.inspect}</h5>
         </li>
       }}
-      </ul>
+      </ol>
   }.mkString
 }

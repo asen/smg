@@ -4,16 +4,16 @@ scrape:
   conf_output_dir: "/opt/smg/data/conf/scrape-private.d"
   conf_output_dir_owned: true
   targets:
-    - uid: smg-metrics
-      name: Local SMG Metrics
-      conf_output: local-metrics.yml
-#      conf_output_backup_ext: backup
-#      command: curl -f -sS http://localhost:9000/metrics
-      command: ':scrape fetch http://localhost:9000/metrics'
-      need_parse: false
-      interval: 60
-      timeout: 30
-      labels_in_uids: true
+#    - uid: smg-metrics
+#      name: Local SMG Metrics
+#      conf_output: local-metrics.yml
+##      conf_output_backup_ext: backup
+##      command: curl -f -sS http://localhost:9000/metrics
+#      command: ':scrape fetch http://localhost:9000/metrics'
+#      need_parse: false
+#      interval: 60
+#      timeout: 30
+#      labels_in_uids: true
 #      filter:
 #        rxx: "^scrape-test.local-metrics.prometheus"
 #      regex_replaces:

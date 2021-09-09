@@ -8,12 +8,14 @@ case class SMGKubeClusterConf(
                                uid: String,
                                humanName: Option[String],
                                interval: Int,
-                               fetchCommand: String,
-                               fetchCommandTimeout: Int,
+                               defaultFetchCommand: String,
+                               defaultFetchCommandTimeout: Int,
+                               defaultTemplate: String,
                                filter: Option[SMGFilter],
                                idPrefix: Option[String],
                                regexReplaces: Seq[RegexReplaceConf],
-                               nodeMetrics: Seq[SMGKubeNodeMetricsConf],
+                               //nodeMetrics: Seq[SMGKubeNodeMetricsConf],
+                               clusterGlobalAutoconfs: Seq[Map[String, Object]],
                                nodeAutoconfs: Seq[Map[String, Object]],
                                autoConfs: Seq[SMGKubeClusterAutoConf],
                                parentPfId: Option[String],
@@ -21,7 +23,7 @@ case class SMGKubeClusterConf(
                                notifyConf: Option[SMGMonNotifyConf],
                                authConf: SMGKubeClusterAuthConf,
                                prefixIdsWithClusterId: Boolean,
-                               kubectlTopStats: Boolean,
+                               //kubectlTopStats: Boolean,
                                rraDef: Option[String],
                                needParse: Boolean
                              ) {
@@ -29,8 +31,8 @@ case class SMGKubeClusterConf(
 
   lazy val uidPrefix: String = if (prefixIdsWithClusterId) uid + "." else ""
 
-  lazy val inspect: String = s"uid=$uid humanNamePrefix=$hnamePrefix interval=$interval command=$fetchCommand " +
-    s"timeout=$fetchCommandTimeout nodeMetrics=${nodeMetrics.size} " +
+  lazy val inspect: String = s"uid=$uid humanNamePrefix=$hnamePrefix interval=$interval command=$defaultFetchCommand " +
+    s"timeout=$defaultFetchCommandTimeout nodeAutoconfs=${nodeAutoconfs.size} " +
     s"auto_confs=${autoConfs.map(x => x.targetType).mkString(",")} " +
     s"filter: ${filter.map(_.humanText).getOrElse("None")}"
 

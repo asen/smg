@@ -68,7 +68,9 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
           timeoutSec, s"Invalid fetch option param: $x")
       }
     }
-    val targetUrl = myParamStr.strip()
+    val targetUrl = myParamStr.strip().
+      stripPrefix("\"").stripSuffix("\"").
+      stripPrefix("'").stripSuffix("'")
     if (targetUrl.isBlank)
       throwOnError("fetch", paramStr,
         timeoutSec, s"Invalid fetch url param - blank")
@@ -82,7 +84,7 @@ class SMGScrapeCommands(log: SMGLoggerApi) {
       val dataTxt = commandFetchCommon(paramStr, timeoutSec, parentData)
       parseText(dataTxt)
     } catch { case t: Throwable =>
-      throwOnError("parse", paramStr, timeoutSec, s"${t.getMessage}")
+      throwOnError("fetch", paramStr, timeoutSec, s"${t.getMessage}")
     }
   }
 

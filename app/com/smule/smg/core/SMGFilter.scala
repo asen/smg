@@ -103,13 +103,15 @@ case class SMGFilter(px: Option[String],
       ob.parentIds.exists(pid => ciPrx.get.findFirstIn(SMGRemote.localId(pid)).isDefined)
   }
 
-  private def matchesLabels(ob: SMGObjectBase): Boolean = {
+  def matchesLabelsMap(labels: Map[String, String]): Boolean = {
     if (labelFilters.isEmpty)
       true
     else labelFilters.forall { lf =>
-      lf.matches(ob.labels)
+      lf.matches(labels)
     }
   }
+
+  private def matchesLabels(ob: SMGObjectBase): Boolean = matchesLabelsMap(ob.labels)
 
   def asUrlForPeriod(aPeriod: Option[String] = None): String = {
     val sb = new StringBuilder()

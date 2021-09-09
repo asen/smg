@@ -43,6 +43,8 @@
   <logger name="sun.rmi.client.call" level="OFF" />
   <logger name="sun.rmi.server.call" level="OFF" />
 
+  <logger name="org.fusesource.scalate.util.ResourceLoader" level="OFF" />
+
   <root level="DEBUG">
     <appender-ref ref="ASYNCFILE" />
     <appender-ref ref="ASYNCSTDOUT" />

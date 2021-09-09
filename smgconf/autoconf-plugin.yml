@@ -10,16 +10,25 @@ autoconf:
 # XXX This setting is special, not subject to reload. false means allow_reload (and is the default)
   prevent_template_reload: false
   targets:
-#    - output: localhost-smg-stats.yml
-#      template: openmetrics
-#      node_name: localhost
-#      runtime_data: true
-#      runtime_data_timeout_sec: 30
-#      command: "curl -sS -f 'http://localhost:9000/metrics'"
-#      context:
-#        metrics_name: "smg-openmetrics"
-#        metrics_hname: "SMG OpenMetrics"
-#        labels_in_uids: true
+    - output: localhost-smg-stats.yml
+      template: openmetrics
+      node_name: localhost
+      runtime_data: true
+      runtime_data_timeout_sec: 30
+      command: "curl -sS -f 'http://localhost:9000/metrics'"
+      context:
+        metrics_name: "smg-openmetrics"
+        metrics_hname: "SMG OpenMetrics"
+        labels_in_uids: true
+
+    - output: localhost-jmx-.yml
+      template: jmx-jvm
+      node_name: localhost
+      regen_delay: 300
+      context:
+        node_host: 127.0.0.1
+        port: 9001
+        app_type: smg
 
 #    - output: localhost-haproxy-stats.yml
 #      template: haproxy
@@ -67,15 +76,6 @@ autoconf:
 #        mysql_password: mysql
 #        innodb_details: true
 #        extra_details: true
-
-#    - output: localhost-jmx-.yml
-#      template: jmx-jvm
-#      node_name: localhost
-#      regen_delay: 120
-#      context:
-#        node_host: 127.0.0.1
-#        port: 9001
-#        app_type: smg
 
 #    - output: my-router-.yml
 #      template: netsw-snmp

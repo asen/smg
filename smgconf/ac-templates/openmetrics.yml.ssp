@@ -5,15 +5,15 @@
   // runtime_data: true
 %>
 <%@ val command: String %>
-<%@ val node_name: String %>
+<%@ val node_name: String = "" %>
 <%@ val port: Int = 0 %>
 <%@ val data: Object %>
 <%@ val id_prefix: String = "host." %>
 <%@ val title_prefix: String = "Host " %>
 <%@ val interval: Int = 60 %>
-<%@ val metrics_name: String = "metrics" %>
-<%@ val metrics_hname: String = "Metrics" %>
-<%@ val metrics_timeout: Int = 15 %>
+<%@ val metrics_name: String = "" %>
+<%@ val metrics_hname: String = "" %>
+<%@ val timeout: Int = 15 %>
 <%@ val rra_def: String = "" %>
 <%@ val pre_fetch: String = "" %>
 <%@ val parent_index: String = "" %>
@@ -63,7 +63,6 @@
 
   def isSumCountName(name: String): Boolean = name.endsWith("_sum") || name.endsWith("_count")
 
-  val myPortDesc = if (port == 0) "" else s" (port $port)"
   val getErrParam = if (fail_on_missing) ":err " else ""
 
   // parse /metrics output
@@ -78,8 +77,19 @@
 
   val parsed = groups.flatMap { grp => grp.rows.map { row => (grp, row) } }
   val parsedByUid = parsed.groupBy(_._2.labelUid)
-  val fullPrefix = s"${id_prefix}${node_name}.${metrics_name}"
-  val fullTitlePrefix = s"${title_prefix} ${metrics_hname}"
+
+  val normalizedPrefix = id_prefix + (if (id_prefix.isEmpty || id_prefix.endsWith(".")) "" else ".")
+  val extraNodePrefix = if (node_name == "" || id_prefix.contains(node_name)) "" else s"${node_name}."
+  val extraMetricsPrefix = if (metrics_name == "") "" else s"${metrics_name}."
+  val fullPrefix = s"${normalizedPrefix}${extraNodePrefix}${extraMetricsPrefix}".stripSuffix(".") //make sure does NOT end with a dot
+
+  val normalizedTitlePrefix = title_prefix + (if (title_prefix.isEmpty || title_prefix.endsWith(" ")) "" else " ")
+  val extraNodeTitlePrefix = if (node_name == "" || id_prefix.contains(node_name)) "" else s"${node_name} "
+  val extraMetricsTitlePrefix = if (metrics_name == "") "" else s"${metrics_name} "
+
+  val fullTitlePrefix = (normalizedTitlePrefix + extraNodeTitlePrefix +
+      extraMetricsTitlePrefix).stripSuffix(" ") //make sure does NOT end with a space
+
 %>
 ### pre fetch command(s)
 <%
@@ -87,11 +97,11 @@
     render("shared/_pre_fetch.yml.ssp", Map(
     "id" -> s"${fullPrefix}.get",
     "command" -> command,
-    "desc" -> s"Get ${metrics_hname} from ${node_name}${myPortDesc}",
+    "desc" -> s"Retrieve ${fullTitlePrefix} data via command",
     "pass_data" -> true,
     "notify_fail" -> notify_fail,
     "pre_fetch" -> pre_fetch,
-    "timeout" -> metrics_timeout
+    "timeout" -> timeout
     ))
   }
 %>
@@ -103,18 +113,18 @@
   render("shared/_pre_fetch.yml.ssp", Map(
   "id" -> s"${fullPrefix}.parse",
   "command" -> pfCmd,
-  "desc" -> s"${pfDescPx} ${metrics_hname} from ${node_name}${myPortDesc}",
+  "desc" -> s"${pfDescPx} ${fullTitlePrefix} data via command",
   "pass_data" -> true,
   "notify_fail" -> notify_fail,
   "pre_fetch" -> pfPf,
-  "timeout" -> metrics_timeout
+  "timeout" -> timeout
 )) %>
 
 # the top-level index
 <% render("shared/_index.yml.ssp", Map(
   "id" -> s"${fullPrefix}.all",
   "px" -> s"${fullPrefix}.",
-  "title" -> s"${title_prefix} ${node_name} ${metrics_hname} - all",
+  "title" -> s"${fullTitlePrefix} - all",
   "parent" -> parent_index
 ))
 %>

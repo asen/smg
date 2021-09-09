@@ -59,11 +59,7 @@ class SMGKubePlugin(
       try {
         log.debug("SMGKubePlugin.run - processing in async thread")
         val runResult = targetProcessor.run()
-        if (runResult.reloadScrape){
-          log.info("SMGKubePlugin.run - reloading Scrape conf due to changed configs")
-          reloadAnotherPluginConf("scrape")
-        }
-        if (runResult.reloadAtoconf){
+        if (runResult.reloadAutoconf){
           log.info("SMGKubePlugin.run - reloading Autoconf conf due to changed configs")
           reloadAnotherPluginConf("autoconf")
         }
@@ -91,19 +87,26 @@ class SMGKubePlugin(
     <h3>Plugin {pluginId}: Configuration</h3>
       <h4>Conf</h4>
       <ul>
-        <li>scrapeTargetsD={confParser.conf.scrapeTargetsD}</li>
+        <li>autoconfTargetsD={confParser.conf.autoconfTargetsD}</li>
       </ul>
       <h4>Configured clusters</h4>
       <ul>
         {confParser.conf.clusterConfs.map { cconf =>
         <li>
           <h5>{cconf.inspect}</h5>
-          <p>Auto discovered commands:</p>
-          <ul>
-            {targetProcessor.listAutoDiscoveredCommands.map( adcs =>
-            <li>{adcs.inspect}</li>
-            )}
-          </ul>
+          { targetProcessor.getAutoconfTargetSummaries(cconf).map { seq =>
+            <p>Targets:</p>
+            <ol>
+              {seq.map { ac =>
+              <li>{ac.inspect}</li>
+              }}
+            </ol>
+            }.getOrElse {
+            <p>No data</p>
+            }
+          }
+          <hr/>
+          <p>Check the <a href="/plugin/autoconf">Autoconf plugin UI</a> for actual generated targets</p>
         </li>
       }}
       </ul>

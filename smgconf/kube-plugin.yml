@@ -1,8 +1,6 @@
 
 kube:
-  # XXX if changing these two - make sure these are actually included by the
-  # respective scrape/autoconf plugin confs
-  scrape_targets_d: "/opt/smg/data/conf/scrape-targets.d"
+  # XXX if changing this - make sure it is actually included by the autoconf plugin conf
   autoconf_targets_d: "/opt/smg/data/conf/autoconf.d"
 #  log_skipped: false
   clusters:
@@ -15,6 +13,8 @@ kube:
 #      fetch_command: ':scrape fetch :tokenf /etc/smg/kube-token'
 #      need_parse: false # set to false if fetch_command returns internally parsed OpenMetricsResultData
 #      fetch_timeout: 10
+#      cluster:
+#        - template: k8s-kubectl-top
 #      node_metrics:
 #        - uid: node
 #          proto: http
