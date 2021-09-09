@@ -47,9 +47,7 @@ class SMGAutoTargetProcessor(
         Some(smgConfSvc.runFetchCommand(cmd, None).data)
       } catch {
         case t: Throwable =>
-//          log.warn(s"SMGAutoTargetProcessor: Unable to retrieve " +
-//            s"data from command: ${conf.command.get}, target will be skipped: ${t.getMessage}")
-          log.ex(t, s"SMGAutoTargetProcessor: Unable to retrieve " +
+          log.error(t, s"SMGAutoTargetProcessor: Unable to retrieve " +
             s"data from command: ${conf.command.get}, target will be skipped: ${t.getMessage}")
           None
       }

@@ -34,7 +34,7 @@ class SMGTemplateProcessor(log: SMGLoggerApi, preventReload: Boolean = false) {
     } catch { case t: Throwable =>
       val logContext = scalafiedContext.filter(_._1 != "data") ++
         Map( "data" -> scalafiedContext.get("data").map(d => "SIZE=" + d.toString.length.toString).getOrElse("null") )
-      log.error(s"SMGTemplateProcessorprocessTemplate: Error processing template $inputFile message: " +
+      log.ex(t,s"SMGTemplateProcessorprocessTemplate: Error processing template $inputFile message: " +
         s"${t.getMessage} Context: ${logContext}")
       None
     }
