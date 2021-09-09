@@ -52,6 +52,21 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 //    logSkipped(kubeNsObject.namespace, kubeNsObject.name, targetType, clusterUid, reason)
 //  }
 
+  private val INTEGER_REGEX = "^-?\\d+$".r
+  private val DOUBLE_REGEX = "^[^\\+][\\d\\.\\+-E]+$".r
+
+  private def objectifyString(s: String): Object = {
+    if (INTEGER_REGEX.findFirstIn(s).isDefined)
+      return Try(Integer.valueOf(s.toInt)).getOrElse(s)
+    if (DOUBLE_REGEX.findFirstIn(s).isDefined)
+      return Try(Double.box(s.toDouble)).getOrElse(s)
+    if (s == "true")
+      return Boolean.box(true)
+    if (s == "false")
+      return Boolean.box(false)
+    s
+  }
+
   private val SEQ_TYPE_PREFIX = "_seq-"
   private val MAP_TYPE_PREFIX = "_map-"
   // smg.autoconf-0/template: blah
@@ -60,9 +75,9 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   // smg.autoconf-0/net_dvc_filters._map-my_key: "my value"
   // smg.autoconf-0/net_dvc_filters._map-my_other_key: "my other value"
   private def getAutoconfAnnotationGroup(tseq: Seq[(String, String)]): Map[String,Object] = {
-    val retStrings = mutable.Map[String, String]()
-    val retSeqs = mutable.Map[String, mutable.Map[String, String]]()
-    val retMaps = mutable.Map[String, mutable.Map[String, String]]()
+    val retObjects = mutable.Map[String, Object]()
+    val retSeqObjects = mutable.Map[String, mutable.Map[String, Object]]()
+    val retMapObjects = mutable.Map[String, mutable.Map[String, Object]]()
     tseq.map { case (k,v) =>
       val myK = k.split("/",2).lift(1).getOrElse("")
       (myK, v)
@@ -72,21 +87,21 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       if (mytyp.startsWith(SEQ_TYPE_PREFIX)){
         val seqName = arr(0)
         val seqIndex = mytyp.stripPrefix(SEQ_TYPE_PREFIX)
-        val seqBuf = retSeqs.getOrElseUpdate(seqName, mutable.Map())
-        seqBuf.put(seqIndex, v)
+        val seqBuf = retSeqObjects.getOrElseUpdate(seqName, mutable.Map())
+        seqBuf.put(seqIndex, objectifyString(v))
       } else if (mytyp.startsWith(MAP_TYPE_PREFIX)){
         val mapName = arr(0)
         val mapKey = mytyp.stripPrefix(MAP_TYPE_PREFIX)
-        val mapBuf = retMaps.getOrElseUpdate(mapName, mutable.Map())
-        mapBuf.put(mapKey, v)
+        val mapBuf = retMapObjects.getOrElseUpdate(mapName, mutable.Map())
+        mapBuf.put(mapKey, objectifyString(v))
       } else {
-        retStrings.put(myk, v)
+        retObjects.put(myk, objectifyString(v))
       }
     }
-    retStrings.toMap ++ retSeqs.map { case (k,v) =>
+    retObjects.toMap ++ retSeqObjects.map { case (k,v) =>
       // sort the "index" -> "value" map by index and get the values
       (k, v.toSeq.sortBy(_._1).map(_._2).toList)
-    }.toMap ++ retMaps.map { case (k,v) =>
+    }.toMap ++ retMapObjects.map { case (k,v) =>
       (k,v.toMap)
     }.toMap
   }
