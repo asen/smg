@@ -37,6 +37,15 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   // (clusterId,command) -> (success, expires)
   private val autoDiscoveryCommandsCache = TrieMap[(String,String),(Boolean,Long)]()
 
+  def getAutoDiscoveryCommandsStatus: Seq[String] = {
+    val tssNow = System.currentTimeMillis()
+    autoDiscoveryCommandsCache.toSeq.map { t =>
+      val (clusterId, command) = t._1
+      val (success, expires) = t._2
+      s"$clusterId: $command (success=$success, expires in ${(expires - tssNow) / 1000} s)"
+    }
+  }
+
   private def logSkipped(namespace: String, name: String, targetType: String,
                          clusterUid: String, reason: String): Unit = {
     val msg = s"SMGKubeClusterProcessor.checkAutoConf(${targetType}): ${clusterUid} " +

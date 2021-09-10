@@ -107,6 +107,14 @@ class SMGKubePlugin(
           }
           <hr/>
           <p>Check the <a href="/plugin/autoconf">Autoconf plugin UI</a> for actual generated targets</p>
+          <hr/>
+          <h5>Auto discovery commands cache</h5>
+          <ul>
+          { targetProcessor.getAutoDiscoveryCommandsStatus.map { cmd =>
+            <li>{cmd}</li>
+          }}
+          </ul>
+          <hr/>
         </li>
       }}
       </ul>
