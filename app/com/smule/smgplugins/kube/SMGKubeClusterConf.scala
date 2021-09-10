@@ -29,7 +29,9 @@ case class SMGKubeClusterConf(
                              ) {
   lazy val hnamePrefix: String = if (prefixIdsWithClusterId) humanName.getOrElse(uid) + " " else ""
 
-  lazy val uidPrefix: String = if (prefixIdsWithClusterId) uid + "." else ""
+  lazy val uidPrefix: String = (if (prefixIdsWithClusterId) uid + "." else "") + idPrefix.map { ip =>
+    ip.stripSuffix(".") + "."
+  }.getOrElse("")
 
   lazy val inspect: String = s"uid=$uid humanNamePrefix=$hnamePrefix interval=$interval command=$defaultFetchCommand " +
     s"timeout=$defaultFetchCommandTimeout nodeAutoconfs=${nodeAutoconfs.size} " +

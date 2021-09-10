@@ -295,6 +295,12 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       if (!contextMap.contains("timeout")){
         contextMap.put("timeout", Integer.valueOf(cConf.defaultFetchCommandTimeout))
       }
+      if (!contextMap.contains("interval")){
+        contextMap.put("interval", Integer.valueOf(cConf.interval))
+      }
+      if (!contextMap.contains("rra_def") && cConf.rraDef.isDefined){
+        contextMap.put("rra_def", cConf.rraDef.get)
+      }
       val staticUid = contextMap.remove("uid").map(_.toString)
       val templateAlias = staticUid.getOrElse(contextMap.get("template_alias").map(_.toString).getOrElse(template))
       val staticOutput = contextMap.remove("output").map(_.toString)
@@ -335,13 +341,19 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
             s"filter not matching id: $uid")
           return None
         }
+        if (!flt.matchesLabelsMap(kubeObjectLabels)){
+          logSkipped(namespaceStr, kubeObjectName, targetType.toString, cConf.uid,
+            s"filter not matching labels: $uid: ${kubeObjectLabels}")
+          return None
+        }
       }
 
       val portOutputPart = portOpt.map("-" + _.toString).getOrElse(portNameOpt.map("-" + _).getOrElse(""))
-      val confOutput = staticOutput.getOrElse(s"${cConf.uid}-${targetType}-${namespaceFnStr}" +
-        s"${kubeObjectName}${portOutputPart}${idxId.map(x => s"-$x").getOrElse("")}-${templateAlias}.yml")
+      val confOutput = staticOutput.getOrElse(s"${cConf.uid}-${uid}" +
+        s"${portOutputPart}${idxId.map(x => s"-$x").getOrElse("")}-${templateAlias}.yml")
 
-      val portLabelMap = portNameOpt.map(n => Map("smg_target_port" -> n)).getOrElse(Map())
+      val portLabelMap = portOpt.map(n => Map("smg_target_port" -> n)).getOrElse(Map()) ++
+          portNameOpt.map(n => Map("smg_target_port_name" -> n)).getOrElse(Map())
       val extraLabels = Map("smg_target_type"-> targetType,
         "smg_target_host"-> ipAddr.getOrElse("")) ++ portLabelMap ++ kubeObjectLabels
       contextMap.put("extra_labels", extraLabels)
