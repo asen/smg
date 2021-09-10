@@ -96,7 +96,7 @@ class SMGAutoConfPlugin (
         log.debug(s"SMGAutoConfPlugin: Processing target conf: ${targetConf.confOutput}: conf=$targetConf")
         val targetReload = tp.processTarget(targetConf)
         if (targetReload) {
-          log.info(s"SMGAutoConfPlugin: Done processing target conf: ${targetConf.uid}: " +
+          log.info(s"SMGAutoConfPlugin: Done processing target conf: ${targetConf.confOutput}: " +
             s"targetReload=$targetReload needReload=$needReload")
           needReload = true
         }
