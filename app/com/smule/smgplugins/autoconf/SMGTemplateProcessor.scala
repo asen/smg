@@ -42,7 +42,7 @@ class SMGTemplateProcessor(log: SMGLoggerApi, preventReload: Boolean = false) {
     } ++ Map( "data" -> dataVal)
   }
 
-  def processTemplate(inputFile: String, context: Map[String,Object]): Option[String] = {
+  def processTemplate(inputFile: String, outputFile: String, context: Map[String,Object]): Option[String] = {
     try {
       val scalafiedContext = context.map(t => (t._1, scalafyObject(t._2)))
       try {
@@ -50,8 +50,10 @@ class SMGTemplateProcessor(log: SMGLoggerApi, preventReload: Boolean = false) {
       } catch {
         case t: Throwable =>
           val logContext = Try(getLogContext(scalafiedContext)).getOrElse(Map("getLogContext" -> "UNEXPECTED_ERROR"))
-          log.ex(t, s"SMGTemplateProcessor.processTemplate: Error processing template $inputFile message: " +
-            s"${t.getMessage} cause: ${Option(t.getCause).map(_.toString).getOrElse("null")} Context: ${logContext}")
+          log.ex(t, s"SMGTemplateProcessor.processTemplate: Error processing template $inputFile " +
+            s"(output ${outputFile}) message: ${t.getMessage} " +
+            s"cause: ${Option(t.getCause).map(_.toString).getOrElse("null")} " +
+            s"Context: ${logContext}")
           None
       }
     } catch { case t: Throwable =>

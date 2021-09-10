@@ -15,7 +15,7 @@ class SMGAutoConfPluginSpec extends Specification{
   "SMGTemplateProcessor" should {
     "work with haproxy" in {
       val p = new SMGTemplateProcessor(log)
-      val out = p.processTemplate("smgconf/ac-templates/haproxy.yml.ssp", Map(
+      val out = p.processTemplate("smgconf/ac-templates/haproxy.yml.ssp", "dummy-output" ,Map(
         "node_name" -> "test1",
         "command" -> "curl -sS -f 'http://test1/stats;csv'",
         "data" -> Seq(
@@ -28,7 +28,7 @@ class SMGAutoConfPluginSpec extends Specification{
       )).get
       println("===================")
       println(out)
-      val out2 = p.processTemplate("smgconf/ac-templates/haproxy.yml.ssp", Map(
+      val out2 = p.processTemplate("smgconf/ac-templates/haproxy.yml.ssp", "dummy-output" , Map(
         "node_name" -> "test1",
         "command" -> "curl -sS -f 'http://test1/stats;csv'",
         "data" -> Seq(
@@ -42,7 +42,7 @@ class SMGAutoConfPluginSpec extends Specification{
 
     "work with redis" in {
       val p = new SMGTemplateProcessor(log)
-      val out = p.processTemplate("smgconf/ac-templates/redis.yml.ssp", Map(
+      val out = p.processTemplate("smgconf/ac-templates/redis.yml.ssp", "dummy-output" , Map(
         "node_name" -> "localhost",
         "node_host" -> "localhost"
       )).get
@@ -51,7 +51,7 @@ class SMGAutoConfPluginSpec extends Specification{
       val portRange = new util.ArrayList[String]()
       portRange.add("6379")
       portRange.add("6380")
-      val out2 = p.processTemplate("smgconf/ac-templates/redis.yml.ssp", Map(
+      val out2 = p.processTemplate("smgconf/ac-templates/redis.yml.ssp", "dummy-output" , Map(
         "node_name" -> "localhost",
         "node_host" -> "someother_host",
         "port_range" -> portRange
@@ -63,7 +63,7 @@ class SMGAutoConfPluginSpec extends Specification{
 
     "work with linux-snmp-static" in {
       val p = new SMGTemplateProcessor(log)
-      val out = p.processTemplate("smgconf/ac-templates/linux-snmp-static.yml.ssp", Map(
+      val out = p.processTemplate("smgconf/ac-templates/linux-snmp-static.yml.ssp", "dummy-output" , Map(
         "node_name" -> "localhost",
         "node_host" -> "localhost"
       )).get
@@ -74,7 +74,7 @@ class SMGAutoConfPluginSpec extends Specification{
       d1.put("mount", "/")
       d1.put("oid", "34")
       dd.add(d1)
-      val out2 = p.processTemplate("smgconf/ac-templates/linux-snmp-static.yml.ssp", Map(
+      val out2 = p.processTemplate("smgconf/ac-templates/linux-snmp-static.yml.ssp", "dummy-output" , Map(
         "node_name" -> "localhost",
         "node_host" -> "someother_host",
         "disk_drives" -> dd
@@ -92,7 +92,7 @@ class SMGAutoConfPluginSpec extends Specification{
       println(parsed.data.asInstanceOf[csv.CSVParsedData].dump())
 
       val p = new SMGTemplateProcessor(log)
-      val out = p.processTemplate("smgconf/ac-templates/kafka-consumers.yml.ssp", Map(
+      val out = p.processTemplate("smgconf/ac-templates/kafka-consumers.yml.ssp", "dummy-output" , Map(
         "command" -> "cat test-data/kafka-groups-ka11.txt",
         "data" -> data
       )).get
@@ -106,7 +106,7 @@ class SMGAutoConfPluginSpec extends Specification{
 //      val data = SMGFileUtil.getFileLines("test-data/smg-metrics.txt")
       val data = SMGFileUtil.getFileLines("test-data/metrics.txt")
       val p = new SMGTemplateProcessor(log)
-      val out = p.processTemplate("smgconf/ac-templates/openmetrics.yml.ssp", Map(
+      val out = p.processTemplate("smgconf/ac-templates/openmetrics.yml.ssp", "dummy-output" , Map(
         "command" -> "cat 'test-data/smg-metrics.txt'",
         "node_name" -> "localhost",
         "node_host" -> "localhost",
@@ -120,7 +120,7 @@ class SMGAutoConfPluginSpec extends Specification{
     "work with cadvisor" in {
         val data = SMGFileUtil.getFileLines("test-data/metrics-cadvisor.txt")
         val p = new SMGTemplateProcessor(log)
-        val out = p.processTemplate("smgconf/ac-templates/cadvisor-k8s.yml.ssp", Map(
+        val out = p.processTemplate("smgconf/ac-templates/cadvisor-k8s.yml.ssp", "dummy-output" , Map(
           "node_name" -> "localhost",
           "node_host" -> "localhost",
           "command" -> "cat 'test-data/metrics-cadvisor.txt'",

@@ -67,7 +67,7 @@ class SMGAutoTargetProcessor(
       if (ctxOpt.isEmpty)
         return false
       val templateFile = pluginConf.getTemplateFilename(conf.template)
-      val outputContentsOpt = templateProcessor.processTemplate(templateFile, ctxOpt.get)
+      val outputContentsOpt = templateProcessor.processTemplate(templateFile, conf.confOutput, ctxOpt.get)
       if (outputContentsOpt.isEmpty) {
         return false
       }
