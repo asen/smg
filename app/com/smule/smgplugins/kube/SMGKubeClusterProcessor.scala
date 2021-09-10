@@ -197,7 +197,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         Map[String,Object](
           "proto" -> proto,
           "port" -> Integer.valueOf(kPort.port),
-          "path" -> autoConf.discoverMetricsPath
+          "path" -> autoConf.discoverMetricsPath,
+          "auto_discovered" -> Boolean.box(true)
         )
       }
     }

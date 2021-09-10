@@ -104,7 +104,7 @@ object OpenMetricsParser {
       val arr = rem.split("\\s+")
       if (arr.length > 2) {
         if (log.isDefined)
-          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (too many tokens): $ln")
+          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (too many tokens): ${ln.take(2000)}")
       }
       // some special cases for Go NaN formatting
       val value = if (arr(0).matches("^[\\+-]?Inf.*") )

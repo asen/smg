@@ -13,4 +13,6 @@ case class OpenMetricsGroup(
     (if (prefix == "") "" else s"($prefix) ") +
       name + grpIdxTitlePart + metaHelp.map(s => s" - ${s}").getOrElse("")
   }
+
+  lazy val sortKey: String = metaKey.getOrElse(rows.headOption.map(_.name).getOrElse(""))
 }
