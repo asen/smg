@@ -24,7 +24,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   case class KubeAutoconfTargetSummary(atConf: SMGAutoTargetConf) {
     def inspect: String = {
       s"output=${atConf.confOutput} template=${atConf.template} " +
-        s"command=${atConf.command.getOrElse("None")} context.size=${atConf.context.size}"
+        s"command=${atConf.command.getOrElse("None")} context=${atConf.context.size}"
     }
   }
 
