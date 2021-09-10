@@ -138,7 +138,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     val hasDupPortNames = actualPorts.map(_._2).distinct.size != actualPorts.size
     actualPorts.map { port =>
       annotationsMap ++ Map(
-        "port" -> port._1,
+        "port" -> Try(Integer.valueOf(port._1)).getOrElse(Integer.valueOf(0)),
         "port_name" -> (if (hasDupPortNames) port._1 else port._2)
       )
     }
