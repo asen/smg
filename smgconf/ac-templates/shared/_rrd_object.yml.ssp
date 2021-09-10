@@ -1,7 +1,7 @@
 ### shared/_rrd_object.yml.ssp
 <%@ val id: String %>
 <%@ val command: String %>
-<%@ val vars: Seq[Map[String,String]] %>
+<%@ val vars: Seq[Map[String,Object]] %>
 <%@ val rrd_type: String %><%
 // optional params below
 %><%@ val title: String = "" %>
@@ -9,7 +9,7 @@
 <%@ val timeout: Int = 30 %>
 <%@ val pre_fetch: String = "" %>
 <%@ val notify_fail: String = "" %>
-<%@ val object_labels: Map[String,String] = Map() %>
+<%@ val object_labels: Map[String,Object] = Map() %>
 <%@ val stack: Boolean = false %>
 <%@ val delay: Int = 0 %>
 <%@ val data_delay: Int = 0 %>
@@ -49,9 +49,9 @@
   vars:
 <%
   vars.zipWithIndex.foreach { case (vmap, ix) => %>
-  - label: '<%= vmap.getOrElse("label", s"ds${ix}") %>'
+  - label: '<%= vmap.getOrElse("label", s"ds${ix}").toString %>'
 <%
-    for ( (k,v) <- vmap.toSeq.sorted if k != "label" && v != "" ) { %>
+    for ( (k,v) <- vmap.toSeq.map(t => (t._1,t._2.toString)).sorted if k != "label" && v != "" ) { %>
     <%= k %>: <%= v %>
 <%
     } // for k,v
@@ -62,7 +62,7 @@
 <%
   object_labels.foreach { case (k,v) =>
 %>
-    <%= k %>: '<%= v.replaceAll("'","''") %>'
+    <%= k %>: '<%= v.toString.replaceAll("'","''") %>'
 <%
   } //object_labels.foreach
 } // object_labels.nonEmpty

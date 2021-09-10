@@ -13,7 +13,7 @@
 <%@ val title_prefix: String = "" %>
 <%@ val interval: Int = 60 %>
 <%@ val rra_def: String = "" %>
-<%@ val extra_labels: Map[String,String] = Map() %>
+<%@ val extra_labels: Map[String,Object] = Map() %>
 <%@ val sum_count_group_bucket_labels: Seq[String] = Seq("le", "quantile") %>
 <%@ val notify_fail: String = "" %>
 <%@ val fail_on_missing: Boolean = false %>
@@ -32,6 +32,7 @@
 
   def isSumCountName(name: String): Boolean = name.endsWith("_sum") || name.endsWith("_count")
 
+  val myExtraLabels = extra_labels.map(t => (t._1, t._2.toString))
   val normalizedPrefix = id_prefix + (if (id_prefix.isEmpty || id_prefix.endsWith(".")) "" else ".")
 //  val normalizedTitlePrefix = title_prefix + (if (title_prefix.isEmpty || title_prefix.endsWith(" ")) "" else " ")
 
@@ -148,7 +149,7 @@
         "vars" -> bucketVarLabels.map { bucketVarLabel =>
           Map( "label" -> bucketVarLabel)
         },
-        "object_labels" -> (myLabels.toMap ++ extra_labels)
+        "object_labels" -> (myLabels.toMap ++ myExtraLabels)
       ))
     } // (buckets.nonEmpty && matchesFilter(idxSuffix)
 
@@ -171,7 +172,7 @@
         "vars" -> Seq(
           Map( "label" -> "sum")
         ),
-        "object_labels" -> (myLabels.toMap ++ extra_labels)
+        "object_labels" -> (myLabels.toMap ++ myExtraLabels)
       ))
     } // if (sumRow.nonEmpty && matchesFilter(idxSuffix))
 %>
@@ -195,7 +196,7 @@
         "vars" -> Seq(
           Map( "label" -> "count")
         ),
-        "object_labels" -> (myLabels.toMap ++ extra_labels)
+        "object_labels" -> (myLabels.toMap ++ myExtraLabels)
       ))
     } // if (countRow.nonEmpty && matchesFilter(idxSuffix))
 
@@ -218,7 +219,7 @@
         "vars" -> Seq(
           Map( "label" -> "avg")
         ),
-        "object_labels" -> (myLabels.toMap ++ extra_labels)
+        "object_labels" -> (myLabels.toMap ++ myExtraLabels)
       ))
     } // if (sumRow.nonEmpty && countRow.nonEmpty && matchesFilter(idxSuffix))
 
