@@ -34,15 +34,15 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     autoconfTargetSummaries.get(cConf)
   }
 
-  // (clusterId,command) -> (success, expires)
-  private val autoDiscoveryCommandsCache = TrieMap[(String,String),(Boolean,Long)]()
+  // (clusterId,command) -> (success, expires, nsObjectName)
+  private val autoDiscoveryCommandsCache = TrieMap[(String,String),(Boolean,Long,String)]()
 
   def getAutoDiscoveryCommandsStatus: Seq[String] = {
     val tssNow = System.currentTimeMillis()
     autoDiscoveryCommandsCache.toSeq.map { t =>
       val (clusterId, command) = t._1
-      val (success, expires) = t._2
-      s"$clusterId: $command (success=$success, expires in ${(expires - tssNow) / 1000} s)"
+      val (success, expires, nsObjectName) = t._2
+      s"$clusterId.${nsObjectName}: $command (success=$success, expires in ${(expires - tssNow) / 1000} s)"
     }
   }
 
@@ -170,13 +170,14 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 
   private def checkDiscoveryMetricsCommand(cConf: SMGKubeClusterConf,
                                            aConf: SMGKubeClusterAutoConf,
+                                           nobj: KubeNsObject,
                                            cmd: String): Boolean = {
     val ret = autoDiscoveryCommandsCache.getOrElseUpdate( (cConf.uid, cmd), {
       val success = runDiscoveryMetricsCommand(cConf, cmd)
       var backoff = aConf.discoverBackoffSeconds + Random.nextInt(aConf.discoverBackoffShuffle)
       if (success) backoff *= aConf.discoverSuccessBackoffMultiplier
       val expires = System.currentTimeMillis() + (backoff * 1000L)
-      (success, expires)
+      (success, expires, s"${aConf.targetType}.${nobj.namespace}.${nobj.name}")
     })
     ret._1
   }
@@ -201,7 +202,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     val ret = ports.filter(_.protocol.toLowerCase != "udp").flatMap { kPort =>
       val workingProtoOpt: Option[String] = protos.find { proto =>
         val cmdToTry = portFetchCmd(proto, kPort.port)
-        checkDiscoveryMetricsCommand(cConf, autoConf, cmdToTry)
+        checkDiscoveryMetricsCommand(cConf, autoConf, nobj, cmdToTry)
       }
       workingProtoOpt.map { proto =>
         Map[String,Object](
