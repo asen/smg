@@ -267,13 +267,14 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     val contextMap = mutable.Map[String,Object]()
     contextMap ++= autoconfMap
     try {
+      val portOpt = contextMap.get("port")
       val template = if (contextMap.contains("template"))
         contextMap("template").toString
       else {
         if (!contextMap.contains("command")){
           // generate a default scrape command
-          val portStr = contextMap.get("port").map {p => s":${p}"}.getOrElse("")
-          var proto = if (contextMap.contains("proto"))
+          val portStr = portOpt.map {p => s":${p}"}.getOrElse("")
+          val proto = if (contextMap.contains("proto"))
             contextMap("proto").toString
           else if (contextMap.contains("scheme"))
             contextMap("scheme").toString
@@ -306,7 +307,6 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val runtimeDataTimeoutSecOpt = contextMap.get("runtime_data_timeout_sec").flatMap(s => Try(s.toString.toInt).toOption)
       val portNameOpt = contextMap.get("port_name").map(_.toString)
       val portDotName = portNameOpt.map("." + _).getOrElse("")
-      val portDashName = portNameOpt.map("-" + _).getOrElse("")
       val portColName = portNameOpt.map(": " + _).getOrElse("")
 
       if (ipAddr.isDefined) {
@@ -336,8 +336,10 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           return None
         }
       }
+
+      val portOutputPart = portOpt.map("-" + _.toString).getOrElse(portNameOpt.map("-" + _).getOrElse(""))
       val confOutput = staticOutput.getOrElse(s"${cConf.uid}-${targetType}-${namespaceFnStr}" +
-        s"${kubeObjectName}${portDashName}${idxId.map(x => s"-$x").getOrElse("")}-${templateAlias}.yml")
+        s"${kubeObjectName}${portOutputPart}${idxId.map(x => s"-$x").getOrElse("")}-${templateAlias}.yml")
 
       val portLabelMap = portNameOpt.map(n => Map("smg_target_port" -> n)).getOrElse(Map())
       val extraLabels = Map("smg_target_type"-> targetType,
