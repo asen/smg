@@ -35,6 +35,7 @@ class SMGTemplateProcessor(log: SMGLoggerApi, preventReload: Boolean = false) {
     }.getOrElse("null")
     scalafiedContext.filter(_._1 != "data").map { t =>
       val v = t._2 match {
+        case s: java.lang.String => s"'${s}'"
         case s: String => s"'${s}'"
         case o => o
       }
