@@ -35,7 +35,7 @@ class SMGAutoTargetProcessor(
       if (nodeHost.isDefined)
         dynMap.put("node_host", nodeHost.get)
       else
-        log.warn(s"SMGAutoTargetProcessor: Unable to resolve " +
+        log.warn(s"SMGAutoTargetProcessor: [${conf.confOutput}]: Unable to resolve " +
           s"node_host from node_name: ${conf.nodeName.get}")
     }
     val expandedCommandOpt = conf.command.map(c => expandCommandStr(c, dynMap))
@@ -47,7 +47,7 @@ class SMGAutoTargetProcessor(
         Some(smgConfSvc.runFetchCommand(cmd, None).data)
       } catch {
         case t: Throwable =>
-          log.error(t, s"SMGAutoTargetProcessor: Unable to retrieve " +
+          log.error(s"SMGAutoTargetProcessor: [${conf.confOutput}]: Unable to retrieve " +
             s"data from command: ${conf.command.get}, target will be skipped: ${t.getMessage}")
           None
       }
