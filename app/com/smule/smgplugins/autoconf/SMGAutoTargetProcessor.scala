@@ -57,6 +57,7 @@ class SMGAutoTargetProcessor(
         return None
     }
     dynMap.put("smgConfigService", smgConfSvc)
+    dynMap.put("smgLogger", log)
     Some(dynMap.toMap)
   }
 

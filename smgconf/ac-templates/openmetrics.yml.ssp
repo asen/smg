@@ -27,8 +27,17 @@
 <%@ val filter_rxx: String = "" %>
 <%@ val regex_replaces: Seq[String] = Seq() %>
 <%@ val fail_on_missing: Boolean = false %>
+
+<%@ val smgLogger: com.smule.smg.core.SMGLoggerApi = null %>
+
 <%
   import scala.collection.mutable.ListBuffer
+
+  def myLogEx(t: Throwable, msg: String): Unit = {
+    if (smgLogger != null) {
+      smgLogger.ex(t, msg)
+    }
+  }
 
   // Some helper functions
   def varLabelFromStatName(statName: String): String = {
@@ -67,13 +76,16 @@
 
   // parse /metrics output
   var needParse = true
-  val groups = if (data.isInstanceOf[com.smule.smgplugins.scrape.OpenMetricsResultData]) {
-    needParse = false
-    data.asInstanceOf[com.smule.smgplugins.scrape.OpenMetricsResultData].stats
-  } else if (data.isInstanceOf[java.lang.String])
-    com.smule.smg.openmetrics.OpenMetricsParser.parseText(data.asInstanceOf[java.lang.String], None)
-  else
-    com.smule.smg.openmetrics.OpenMetricsParser.parseText(data.asInstanceOf[Seq[String]].mkString("\n"), None)
+  val groups = try {
+    data match {
+    case ord: com.smule.smgplugins.scrape.OpenMetricsResultData => ord.stats
+    case s: String =>  com.smule.smg.openmetrics.OpenMetricsParser.parseText(s, None)
+    case x => com.smule.smg.openmetrics.OpenMetricsParser.parseText(x.asInstanceOf[Seq[String]].mkString("\n"), None)
+    }
+  } catch { case t: Throwable =>
+    myLogEx(t, s"Error converting data to OpenMetrics: data=${data.toString.take(768)} message=${t.getMessage}")
+    throw t
+  }
 
   val parsed = groups.flatMap { grp => grp.rows.map { row => (grp, row) } }
   val parsedByUid = parsed.groupBy(_._2.labelUid)
