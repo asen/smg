@@ -170,7 +170,10 @@ object OpenMetricsParser {
     val inpRef: StringOps = inp // XXX workaround for Java 11 String.lines() overriding Scala
 
     def processCurGroupLinesAndReset(): Unit = {
-      ret += parseLinesGroup(curGroupLines,  curMetaKey, curMetaType, curMetaHelp, log)
+      val grp = parseLinesGroup(curGroupLines,  curMetaKey, curMetaType, curMetaHelp, log)
+      if (!grp.isEmpty) {
+        ret += grp
+      }
       curGroupLines.clear()
       curMetaHelp = None
       curMetaType = None
