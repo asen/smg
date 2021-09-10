@@ -139,7 +139,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     actualPorts.map { port =>
       annotationsMap ++ Map(
         "port" -> Try(Integer.valueOf(port._1)).getOrElse(Integer.valueOf(0)),
-        "port_name" -> (if (hasDupPortNames) port._1 else port._2)
+        "port_name" -> (if (hasDupPortNames) port._1 else port._2),
+        "kube_source" -> "annotations"
       )
     }
   }
@@ -198,7 +199,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           "proto" -> proto,
           "port" -> Integer.valueOf(kPort.port),
           "path" -> autoConf.discoverMetricsPath,
-          "auto_discovered" -> Boolean.box(true)
+          "kube_source" -> "discovered"
         )
       }
     }
@@ -355,8 +356,12 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 
       val portLabelMap = portOpt.map(n => Map("smg_target_port" -> n)).getOrElse(Map()) ++
           portNameOpt.map(n => Map("smg_target_port_name" -> n)).getOrElse(Map())
+      val kubeSourceMap = if (contextMap.contains("kube_source"))
+        Map("smg_kube_source" -> contextMap("kube_source"))
+      else
+        Map()
       val extraLabels = Map("smg_target_type"-> targetType,
-        "smg_target_host"-> ipAddr.getOrElse("")) ++ portLabelMap ++ kubeObjectLabels
+        "smg_target_host"-> ipAddr.getOrElse("")) ++ kubeSourceMap ++ portLabelMap ++ kubeObjectLabels
       contextMap.put("extra_labels", extraLabels)
       val ret = SMGAutoTargetConf (
         template = template,

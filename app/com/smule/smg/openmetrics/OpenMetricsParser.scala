@@ -98,7 +98,7 @@ object OpenMetricsParser {
       val rem = remaining.stripLeading() // just on case ...
       if (rem == "") {
         if (log.isDefined)
-          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (not enough tokens or corrupt labels): $ln")
+          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (not enough tokens or corrupt labels): ${ln.take(2000)}")
         return None
       }
       val arr = rem.split("\\s+")
@@ -113,13 +113,13 @@ object OpenMetricsParser {
         arr(0).toDouble
       } catch { case t: Throwable =>
         if (log.isDefined)
-          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (invalid Double value): ${arr(0)}: ln=$ln")
+          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (invalid Double value): ${arr(0)}: ln=${ln.take(2000)}")
         return None
       }
       var tsms = arr.lift(1).map(_.toLong)
       if (tsms.isDefined && tsms.get <= 0){
         if (log.isDefined)
-          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (non-positive timestamp value): ${arr(1)}: ln=$ln")
+          log.get.warn(s"OpenMetricsGroup.parseLine: bad line (non-positive timestamp value): ${arr(1)}: ln=${ln.take(2000)}")
         tsms = None
       }
       Some(
@@ -132,7 +132,7 @@ object OpenMetricsParser {
       )
     } catch { case t: Throwable =>
       if (log.isDefined)
-        log.get.ex(t, s"OpenMetricsGroup.parseLine: bad line (unexpected error): $ln")
+        log.get.ex(t, s"OpenMetricsGroup.parseLine: bad line (unexpected error): ${ln.take(10000)}")
       None
     }
   }
