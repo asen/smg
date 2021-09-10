@@ -20,6 +20,7 @@ autoconf:
         metrics_name: "smg-openmetrics"
         metrics_hname: "SMG OpenMetrics"
         labels_in_uids: true
+        sort_groups: false
 
     - output: localhost-jmx-.yml
       template: jmx-jvm
