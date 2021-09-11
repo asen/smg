@@ -36,7 +36,7 @@ case class SMGAutoTargetConf(
   val confOutput: String = if (output.isDefined)
     output.get
   else
-    uid.get + ".yml" // XXX this would throw on empty uid but our parser prevents that case
+    uid.getOrElse("__MISSING_CONF_OUTPUT__") + ".yml"
 
   def confOutputFile(confDir: Option[String]): String = {
     if (confDir.isDefined && !Paths.get(confOutput).isAbsolute){
@@ -50,6 +50,20 @@ case class SMGAutoTargetConf(
 }
 
 object SMGAutoTargetConf {
+
+  def configErrorTarget(yobj: Map[String, Object]): SMGAutoTargetConf = SMGAutoTargetConf(
+    template = yobj.get("template").map(_.toString).getOrElse("unknown"),
+    output = yobj.get("output").map(_.toString),
+    uid = yobj.get("uid").map(_.toString),
+    runtimeData = false,
+    runtimeDataTimeoutSec = None,
+    resolveName = false,
+    regenDelay = None,
+    nodeName = None,
+    nodeHost = None,
+    command = None,
+    context = yobj
+  )
 
   def dumpYamlList(lst: Seq[Object]): java.util.List[Object] = {
     val ret = new java.util.ArrayList[Object]()
@@ -101,26 +115,26 @@ object SMGAutoTargetConf {
     ret
   }
 
-  def fromYamlObj(ymap: mutable.Map[String,Object], log: SMGLoggerApi): Option[SMGAutoTargetConf] = {
+  def fromYamlObj(ymap: mutable.Map[String,Object], log: SMGLoggerApi): Either[SMGAutoTargetConf, String] = {
     if (!ymap.contains("template")){
       log.error("SMGAutoTargetConf: Config does not contain template param")
-      return None
+      return Right("Config does not contain template param")
     }
     if (!ymap.contains("uid") && !ymap.contains("output")){
       log.error("SMGAutoTargetConf: Config must contain at least one of uid or output params")
-      return None
+      return Right("Config must contain at least one of uid or output params")
     }
     val runtimeData = ymap.contains("runtime_data") && ymap("runtime_data").toString == "true"
     if (runtimeData && !ymap.contains("command")){
       log.error("SMGAutoTargetConf: Config must contain command param if runtime_data is enabled")
-      return None
+      return Right("Config must contain command param if runtime_data is enabled")
     }
     val resolveName = ymap.contains("resolve_name") && ymap("resolve_name").toString == "true"
-    if (resolveName && !ymap.contains("node_name")){
+    if (resolveName && !ymap.contains("node_name")) {
       log.error("SMGAutoTargetConf: Config must contain node_name param if resolve_name is enabled")
-      return None
+      return Right("Config must contain node_name param if resolve_name is enabled")
     }
-    Some(
+    Left(
       SMGAutoTargetConf(
         template = ymap("template").toString,
         output = ymap.get("output").map(_.toString),

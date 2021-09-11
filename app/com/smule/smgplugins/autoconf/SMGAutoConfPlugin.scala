@@ -22,7 +22,10 @@ class SMGAutoConfPlugin (
     smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.plugins-shared")
 
   private val confFilesLastUpdatedTs = TrieMap[String, Int]()
-  private var failedTargets = List[(SMGAutoTargetConf, String)]()
+
+  private var targetStatuses: List[SMGAutoTargetStatus] = confParser.conf.targets.map { t =>
+    SMGAutoTargetStatus(t, Some("unknown"))
+  }.toList
 
   override def reloadConf(): Unit = {
     log.debug("SMGAutoConfPlugin.reloadConf")
@@ -48,7 +51,10 @@ class SMGAutoConfPlugin (
           smgConfSvc.reloadLocal()
           smg.remotes.notifyMasters()
         }
-        failedTargets = targetProcessor.getFailedTargets
+        val failedTargetOutputs = targetProcessor.getFailedTargetsByOutputFile
+        targetStatuses = pluginConf.targets.map { aConf =>
+          SMGAutoTargetStatus(aConf, failedTargetOutputs.get(aConf.confOutput))
+        }.toList
         log.debug("SMGAutoConfPlugin.run - done processing in async thread")
       } catch { case t: Throwable =>
         log.ex(t, s"SMGAutoConfPlugin.run - unexpected error: ${t.getMessage}")
@@ -120,21 +126,32 @@ class SMGAutoConfPlugin (
 
 
   override def htmlContent(httpParams: Map[String,String]): String = {
-    <h3>Plugin {pluginId}: Configuration</h3>
-      <h4>Configured template targets</h4>
-      <ol>
-        {confParser.conf.targets.map { aconf =>
-        <li>
-          <h5>{aconf.inspect}</h5>
-        </li>
-      }}
-      </ol>
-      <hr/>
-      <h4>Failed targets</h4>
-      <ol>
-      { failedTargets.map { case (cc, reason) =>
-        <li>{cc.inspect}<br/>Reason: {reason}</li>
-      }}
-      </ol>
+      <h3>Plugin {pluginId}: Configuration</h3>
+      <div>
+        { confParser.conf.failedTargets.headOption.map { _ =>
+        <h4>Template targets with config errors</h4>
+          <ol>
+            {confParser.conf.failedTargets.map { as =>
+            <li>
+              <h5>{as.aConf.confOutput}: Status: {as.errorStatus.getOrElse("OK") }</h5>
+              <p>{as.aConf.inspect}</p>
+            </li>
+          }}
+          </ol>
+        }.getOrElse {
+         <h4>No config errors detected</h4>
+        }}
+      </div>
+      <div>
+        <h4>Configured template targets</h4>
+        <ol>
+          {targetStatuses.map { as =>
+          <li>
+            <h5>{as.aConf.confOutput}: Status: {as.errorStatus.getOrElse("OK") }</h5>
+            <p>{as.aConf.inspect}</p>
+          </li>
+        }}
+        </ol>
+      </div>
   }.mkString
 }

@@ -17,8 +17,9 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
                               fname: String,
                               outputFiles: mutable.Set[String],
                               confOutputDir: Option[String]
-                             ): Seq[SMGAutoTargetConf] = {
+                             ): (Seq[SMGAutoTargetConf], Seq[SMGAutoTargetStatus]) = {
     val ret = ListBuffer[SMGAutoTargetConf]()
+    val failedRet = ListBuffer[SMGAutoTargetStatus]()
     yamlList.foreach { yobj =>
       val ymap = yobjMap(yobj)
       if (ymap.contains("include")) { // process include
@@ -29,29 +30,36 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
         val glob = ymap("include").toString
         val fileList = SMGConfigParser.expandGlob(glob, log)
         fileList.foreach { fname =>
-          ret ++= parseTargetsInclude(fname, outputFiles, confOutputDir)
+          val parseRet = parseTargetsInclude(fname, outputFiles, confOutputDir)
+          ret ++= parseRet._1
+          failedRet ++= parseRet._2
         }
       } else { // process auto-conf object
-        val copt = SMGAutoTargetConf.fromYamlObj(ymap, log)
-        if (copt.isDefined) {
+        val confOrStatus = SMGAutoTargetConf.fromYamlObj(ymap, log)
+        if (confOrStatus.isLeft) {
+          val copt = confOrStatus.left
           val outFn = copt.get.confOutputFile(confOutputDir)
           if (!outputFiles.contains(outFn)){
             outputFiles += outFn
             ret += copt.get
           } else {
+            failedRet += SMGAutoTargetStatus(copt.get, Some("Error - duplicate output filename"))
             log.error(s"SMGAutoConfPluginConfParser.parseConf($fname): ignoring autoconf with " +
               s"duplicate output filename ($outFn): ${ymap.toMap}")
           }
-        } else
+        } else {
           log.error(s"SMGAutoConfPluginConfParser.parseConf($fname): ignoring invalid autoconf: ${ymap.toMap}")
+          val failedConf = SMGAutoTargetConf.configErrorTarget(ymap.toMap)
+          failedRet += SMGAutoTargetStatus(failedConf, Some(s"Config Error - ${confOrStatus.right.get}"))
+        }
       }
     }
-    ret.toList
+    (ret.toList, failedRet.toList)
   }
 
   private def parseTargetsInclude(fn: String,
                                   outputFiles: mutable.Set[String],
-                                  confOutputDir: Option[String]): Seq[SMGAutoTargetConf] = {
+                                  confOutputDir: Option[String]): (Seq[SMGAutoTargetConf], Seq[SMGAutoTargetStatus]) = {
     try {
       val confTxt = SMGFileUtil.getFileContents(fn)
       val yaml = new Yaml()
@@ -59,7 +67,7 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
       parseTargetsSeq(yamlList, fn, outputFiles, confOutputDir)
     } catch { case t : Throwable =>
       log.ex(t, s"SMGAutoConfPluginConfParser.parseTargetsInclude($fn): unexpected error: ${t.getMessage}")
-      Seq()
+      (Seq(), Seq())
     }
   }
 
@@ -78,7 +86,7 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
     val targetConfs = if (pluginConfMap.contains("targets")){
       val yamlList = yobjList(pluginConfMap("targets"))
       parseTargetsSeq(yamlList, confFile, mutable.Set[String](), confOutputDir)
-    } else Seq()
+    } else (Seq(), Seq())
     val confOutputDirOwned = pluginConfMap.get("conf_output_dir_owned").exists(_.toString == "true")
     if (confOutputDir.isDefined && confOutputDirOwned){
       val dirFile = new File(confOutputDir.get)
@@ -87,11 +95,12 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
     }
     val preventTemplateReload = pluginConfMap.get("prevent_template_reload").exists(_.toString == "true")
     SMGAutoConfPluginConf(
-      targetConfs,
-      templateDirs,
-      confOutputDir,
-      confOutputDirOwned,
-      preventTemplateReload
+      targets = targetConfs._1,
+      failedTargets = targetConfs._2,
+      templateDirs = templateDirs,
+      confOutputDir = confOutputDir,
+      confOutputDirOwned = confOutputDirOwned,
+      preventTemplateReload = preventTemplateReload
     )
   }
 
@@ -106,6 +115,7 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
     try {
       myConf = parseConf()
     } catch { case t: Throwable =>
+      log.ex(t, s"SMGAutoConfPluginConfParser.reload - unexpected exception (config NOT reloaded): ${t.getMessage}")
       log.ex(t, s"SMGAutoConfPluginConfParser.reload - unexpected exception (config NOT reloaded): ${t.getMessage}")
     }
   }

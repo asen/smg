@@ -5,6 +5,7 @@ import java.nio.file.Paths
 
 case class SMGAutoConfPluginConf(
                                   targets: Seq[SMGAutoTargetConf],
+                                  failedTargets: Seq[SMGAutoTargetStatus],
                                   templateDirs: Seq[String],
                                   confOutputDir: Option[String],
                                   confOutputDirOwned: Boolean,
@@ -29,6 +30,6 @@ case class SMGAutoConfPluginConf(
 
 object SMGAutoConfPluginConf {
   val empty: SMGAutoConfPluginConf =
-    SMGAutoConfPluginConf(targets = Seq(), templateDirs = Seq(),
+    SMGAutoConfPluginConf(targets = Seq(), failedTargets = Seq(), templateDirs = Seq(),
       confOutputDir = None, confOutputDirOwned = false, preventTemplateReload = false)
 }

@@ -7,6 +7,7 @@ import com.smule.smg.core.{SMGCmd, SMGFileUtil, SMGLoggerApi}
 import java.io.File
 import java.net.InetAddress
 import java.nio.file.{Files, Paths}
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
@@ -18,9 +19,10 @@ class SMGAutoTargetProcessor(
                               log: SMGLoggerApi
                             ) {
 
-  private val failedTargets = ListBuffer[(SMGAutoTargetConf, String)]()
+  // output_file -> reason
+  private val failedTargets = TrieMap[String, String]()
 
-  def getFailedTargets: List[(SMGAutoTargetConf, String)] = failedTargets.toList
+  def getFailedTargetsByOutputFile: Map[String, String] = failedTargets.toMap
 
   def expandCommandStr(orig: String, ctxMap: mutable.Map[String,Object]): String = {
     var ret = orig
@@ -52,7 +54,7 @@ class SMGAutoTargetProcessor(
         Some(smgConfSvc.runFetchCommand(cmd, None).data)
       } catch {
         case t: Throwable =>
-          failedTargets += ((conf, s"Runtime data command failed: ${t.getMessage}"))
+          failedTargets(conf.confOutput) = s"Runtime data command failed: ${t.getMessage}"
           log.error(s"SMGAutoTargetProcessor: [${conf.confOutput}]: Unable to retrieve " +
             s"data from command: ${conf.command.get}, target will be skipped: ${t.getMessage}")
           None
@@ -76,7 +78,7 @@ class SMGAutoTargetProcessor(
       val templateFile = pluginConf.getTemplateFilename(conf.template)
       val outputContentsOpt = templateProcessor.processTemplate(templateFile, conf.confOutput, ctxOpt.get)
       if (outputContentsOpt.isEmpty) {
-        failedTargets += ((conf, s"Template processor failed, please check the logs")) // TODO
+        failedTargets(conf.confOutput) = s"Template processor failed, please check the logs" // TODO
         return false
       }
       val outputContents = outputContentsOpt.get
