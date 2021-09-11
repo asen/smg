@@ -8,6 +8,7 @@ import java.io.File
 import java.net.InetAddress
 import java.nio.file.{Files, Paths}
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 class SMGAutoTargetProcessor(
@@ -16,6 +17,10 @@ class SMGAutoTargetProcessor(
                               smgConfSvc: SMGConfigService,
                               log: SMGLoggerApi
                             ) {
+
+  private val failedTargets = ListBuffer[(SMGAutoTargetConf, String)]()
+
+  def getFailedTargets: List[(SMGAutoTargetConf, String)] = failedTargets.toList
 
   def expandCommandStr(orig: String, ctxMap: mutable.Map[String,Object]): String = {
     var ret = orig
@@ -47,6 +52,7 @@ class SMGAutoTargetProcessor(
         Some(smgConfSvc.runFetchCommand(cmd, None).data)
       } catch {
         case t: Throwable =>
+          failedTargets += ((conf, s"Runtime data command failed: ${t.getMessage}"))
           log.error(s"SMGAutoTargetProcessor: [${conf.confOutput}]: Unable to retrieve " +
             s"data from command: ${conf.command.get}, target will be skipped: ${t.getMessage}")
           None
@@ -70,6 +76,7 @@ class SMGAutoTargetProcessor(
       val templateFile = pluginConf.getTemplateFilename(conf.template)
       val outputContentsOpt = templateProcessor.processTemplate(templateFile, conf.confOutput, ctxOpt.get)
       if (outputContentsOpt.isEmpty) {
+        failedTargets += ((conf, s"Template processor failed, please check the logs")) // TODO
         return false
       }
       val outputContents = outputContentsOpt.get

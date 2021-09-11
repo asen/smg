@@ -5,6 +5,7 @@ import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 import com.smule.smg.rrd.SMGRrd
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
 
@@ -21,6 +22,7 @@ class SMGAutoConfPlugin (
     smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.plugins-shared")
 
   private val confFilesLastUpdatedTs = TrieMap[String, Int]()
+  private var failedTargets = List[(SMGAutoTargetConf, String)]()
 
   override def reloadConf(): Unit = {
     log.debug("SMGAutoConfPlugin.reloadConf")
@@ -46,6 +48,7 @@ class SMGAutoConfPlugin (
           smgConfSvc.reloadLocal()
           smg.remotes.notifyMasters()
         }
+        failedTargets = targetProcessor.getFailedTargets
         log.debug("SMGAutoConfPlugin.run - done processing in async thread")
       } catch { case t: Throwable =>
         log.ex(t, s"SMGAutoConfPlugin.run - unexpected error: ${t.getMessage}")
@@ -124,6 +127,13 @@ class SMGAutoConfPlugin (
         <li>
           <h5>{aconf.inspect}</h5>
         </li>
+      }}
+      </ol>
+      <hr/>
+      <h4>Failed targets</h4>
+      <ol>
+      { failedTargets.map { case (cc, reason) =>
+        <li>{cc.inspect}<br/>Reason: {reason}</li>
       }}
       </ol>
   }.mkString
