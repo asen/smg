@@ -6,7 +6,7 @@ autoconf:
   template_dirs:
     - "/etc/smg/ac-templates"
     - "/opt/smg/data/conf/ac-templates"
-    - "smgconf/ac-templates"
+#    - "smgconf/ac-templates" # this is built-in/hard-coded last
 # XXX This setting is special, not subject to reload. false means allow_reload (and is the default)
   prevent_template_reload: false
   targets:

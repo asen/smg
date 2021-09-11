@@ -8,6 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
+import scala.xml.{Elem, NodeBuffer}
 
 class SMGAutoConfPlugin (
                           val pluginId: String,
@@ -23,9 +24,9 @@ class SMGAutoConfPlugin (
 
   private val confFilesLastUpdatedTs = TrieMap[String, Int]()
 
-  private var targetStatuses: List[SMGAutoTargetStatus] = confParser.conf.targets.map { t =>
+  private var targetStatuses: (List[SMGAutoTargetStatus], List[SMGAutoTargetStatus]) = confParser.conf.targets.map { t =>
     SMGAutoTargetStatus(t, Some("unknown"))
-  }.toList
+  }.toList.partition(!_.isOk)
 
   override def reloadConf(): Unit = {
     log.debug("SMGAutoConfPlugin.reloadConf")
@@ -54,7 +55,7 @@ class SMGAutoConfPlugin (
         val failedTargetOutputs = targetProcessor.getFailedTargetsByOutputFile
         targetStatuses = pluginConf.targets.map { aConf =>
           SMGAutoTargetStatus(aConf, failedTargetOutputs.get(aConf.confOutput))
-        }.toList
+        }.toList.partition(!_.isOk)
         log.debug("SMGAutoConfPlugin.run - done processing in async thread")
       } catch { case t: Throwable =>
         log.ex(t, s"SMGAutoConfPlugin.run - unexpected error: ${t.getMessage}")
@@ -124,34 +125,61 @@ class SMGAutoConfPlugin (
     needReload
   }
 
+  private def confOverview(conf: SMGAutoConfPluginConf): NodeBuffer = {
+    <h3>Plugin {pluginId}: Configuration</h3>
+      <div>
+        confOutputDir={confParser.conf.confOutputDir.getOrElse("None")}
+        (owned={confParser.conf.confOutputDirOwned.toString})
+        <br/>
+        templateDirs={confParser.conf.templateDirs.mkString(", ")}
+        (prevent_reload={confParser.conf.preventTemplateReload.toString})
+        <br/>
+      </div>
+  }
+
+  private def targetsList(tagets: Seq[SMGAutoTargetStatus]): Elem = {
+    <ol>
+      {tagets.map { as =>
+      <li>
+        <h5>{as.aConf.confOutput}: Status: {as.errorStatus.getOrElse("OK") }</h5>
+        <p>{as.aConf.inspect}</p>
+      </li>
+      }}
+    </ol>
+  }
 
   override def htmlContent(httpParams: Map[String,String]): String = {
-      <h3>Plugin {pluginId}: Configuration</h3>
+    <div>
+      { confOverview(confParser.conf)}
+      { confParser.conf.failedTargets.headOption.map { _ =>
       <div>
-        { confParser.conf.failedTargets.headOption.map { _ =>
-        <h4>Template targets with config errors</h4>
-          <ol>
-            {confParser.conf.failedTargets.map { as =>
-            <li>
-              <h5>{as.aConf.confOutput}: Status: {as.errorStatus.getOrElse("OK") }</h5>
-              <p>{as.aConf.inspect}</p>
-            </li>
-          }}
-          </ol>
-        }.getOrElse {
+        <h4>Targets with config errors:</h4>
+        { targetsList(confParser.conf.failedTargets) }
+      </div>
+    }.getOrElse {
          <h4>No config errors detected</h4>
+        }}
+    </div>
+      <div>
+        { targetStatuses._1.headOption.map { _ =>
+          <div>
+            <h4>Targets with run-time/compile errors:</h4>
+            {targetsList(targetStatuses._1) }
+          </div>
+        }.getOrElse {
+          <h4>No run-time/compile errors detected</h4>
         }}
       </div>
       <div>
-        <h4>Configured template targets</h4>
-        <ol>
-          {targetStatuses.map { as =>
-          <li>
-            <h5>{as.aConf.confOutput}: Status: {as.errorStatus.getOrElse("OK") }</h5>
-            <p>{as.aConf.inspect}</p>
-          </li>
-        }}
-        </ol>
+        { targetStatuses._2.headOption.map { _ =>
+          <div>
+            <h4>Configured template targets:</h4>
+            { targetsList(targetStatuses._2) }
+          </div>
+        }.getOrElse {
+          <h4>No targets detected</h4>
+        }
+      }
       </div>
   }.mkString
 }
