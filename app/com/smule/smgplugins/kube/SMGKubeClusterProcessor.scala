@@ -497,7 +497,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         val targetHost = kubeNode.ipAddress.getOrElse(kubeNode.hostName.getOrElse(kubeNode.name))
         cConf.nodeAutoconfs.foreach { ac =>
           val flt = ac.get("filter").map(SMGConfigParser.yobjMap).map(m => SMGFilter.fromYamlMap(m.toMap))
-          val aacOpt = processAutoconfMap(ac, cConf, ConfType.global, flt, kubeNode.name, None,
+          val aacOpt = processAutoconfMap(ac, cConf, ConfType.node, flt, kubeNode.name, None,
             kubeNode.labels, Some(targetHost), None, cConf.nodesIndexId)
           if (aacOpt.isDefined)
             nodeAutoConfs += aacOpt.get
