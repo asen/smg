@@ -14,12 +14,13 @@
 <%@ val parent_index: String = "" %>
 <%@ val notify_fail: String = "" %>
 <%@ val id_prefix: String = "" %>
+<%@ val object_type_prefix: String = "global." %>
 <%@ val title_prefix: String = "" %>
 <%@ val extra_labels: Map[String,String] = Map() %>
 <%
   import com.smule.smg.core.{SMGCmd,ParentCommandData}
 
-  val myIdPrefix = id_prefix + (if (id_prefix.isEmpty || id_prefix.endsWith(".")) "" else ".")
+  val myIdPrefix = id_prefix + (if (id_prefix.isEmpty || id_prefix.endsWith(".")) "" else ".") + object_type_prefix
 
   def podStableBaseName(podName: String, ownerKind: String): String = {
     val dropSuffixes = ownerKind match {
