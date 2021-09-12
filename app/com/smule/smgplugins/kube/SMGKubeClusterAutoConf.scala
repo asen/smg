@@ -28,7 +28,7 @@ case class SMGKubeClusterAutoConf(
 object SMGKubeClusterAutoConf {
 
   object ConfType extends Enumeration {
-    val endpoint, service, pod_port = Value
+    val global, node, endpoint, service, pod_port = Value
   }
 
   val defaultRecheckBackoff: Long = 600000L

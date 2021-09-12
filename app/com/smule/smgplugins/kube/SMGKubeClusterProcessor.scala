@@ -264,7 +264,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
   private def processAutoconfMap(
                                   autoconfMap: Map[String, Object],
                                   cConf: SMGKubeClusterConf,
-                                  targetType: String,
+                                  targetTypeVal: ConfType.Value,
                                   filter: Option[SMGFilter],
                                   kubeObjectName: String,
                                   kubeObjectNamespace: Option[String],
@@ -274,6 +274,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                                   parentIndexId: Option[String]
                                 ): Option[SMGAutoTargetConf] = {
 
+    val targetType = targetTypeVal.toString
     val namespaceStr = kubeObjectNamespace.map(_ + ".").getOrElse("")
     val contextMap = mutable.Map[String,Object]()
     contextMap ++= autoconfMap
@@ -405,7 +406,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     val autoconfMaps = processAutoconfAnnotations(cConf, autoConf, nobj, kubeService.clusterIp,
       nobj.ports, nobj.annotations)
     val autoconfs = autoconfMaps.flatMap { acm =>
-      processAutoconfMap(acm, cConf, autoConf.targetType.toString, autoConf.filter,
+      processAutoconfMap(acm, cConf, autoConf.targetType, autoConf.filter,
         nobj.name, Some(nobj.namespace), nobj.labels,
         Some(kubeService.clusterIp), idxId = None,
         parentIndexId = cConf.endpointsIndexId)
@@ -426,7 +427,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         val nobj = kubeEndpoint
         val autoconfMaps = processAutoconfAnnotations(cConf, autoConf, nobj, addr, subs.ports, nobj.annotations)
         val autoconfs = autoconfMaps.flatMap { acm =>
-          processAutoconfMap(acm, cConf, autoConf.targetType.toString, autoConf.filter,
+          processAutoconfMap(acm, cConf, autoConf.targetType, autoConf.filter,
             nobj.name, Some(nobj.namespace), nobj.labels,
             Some(addr), idxId = idx,
             parentIndexId = cConf.endpointsIndexId)
@@ -454,7 +455,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
           val nobj = KubeNamedObject(pod.stableName(idx), pod.namespace, pod.labels, pod.annotations)
           val autoconfMaps = processAutoconfAnnotations(cConf, autoConf, pod, pod.podIp.getOrElse(""), pod.ports, pod.annotations)
           val autoconfs = autoconfMaps.flatMap { acm =>
-            processAutoconfMap(acm, cConf, autoConf.targetType.toString, autoConf.filter,
+            processAutoconfMap(acm, cConf, autoConf.targetType, autoConf.filter,
               nobj.name, Some(nobj.namespace), nobj.labels,
               pod.podIp, idxId = None,
               parentIndexId = cConf.podPortsIndexId)
@@ -484,7 +485,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       val clusterAutoconfs = ListBuffer[SMGAutoTargetConf]()
       cConf.clusterGlobalAutoconfs.foreach { ac =>
         val flt = ac.get("filter").map(SMGConfigParser.yobjMap).map(m => SMGFilter.fromYamlMap(m.toMap))
-        val aacOpt = processAutoconfMap(ac, cConf, "global", flt, "cluster", None,
+        val aacOpt = processAutoconfMap(ac, cConf, ConfType.global, flt, "cluster", None,
           Map(), None, None, cConf.clusterIndexId)
         if (aacOpt.isDefined)
           clusterAutoconfs += aacOpt.get
@@ -496,7 +497,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         val targetHost = kubeNode.ipAddress.getOrElse(kubeNode.hostName.getOrElse(kubeNode.name))
         cConf.nodeAutoconfs.foreach { ac =>
           val flt = ac.get("filter").map(SMGConfigParser.yobjMap).map(m => SMGFilter.fromYamlMap(m.toMap))
-          val aacOpt = processAutoconfMap(ac, cConf, "node", flt, kubeNode.name, None,
+          val aacOpt = processAutoconfMap(ac, cConf, ConfType.global, flt, kubeNode.name, None,
             kubeNode.labels, Some(targetHost), None, cConf.nodesIndexId)
           if (aacOpt.isDefined)
             nodeAutoConfs += aacOpt.get
@@ -639,7 +640,12 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         )
         myParentIndexId = cConf.clusterIndexId
       }
-      // TODO cluster/global index?
+      if (cConf.indexesByType && cConf.clusterGlobalAutoconfs.nonEmpty) // top level global metrics index
+        ret += myIndexDef(cConf.nodesIndexId.get,
+          s"Kubernetes cluster ${cConf.uid} - Global stats",
+          idxPrefix + "global.",
+          myParentIndexId
+        )
       if (cConf.indexesByType && cConf.nodeAutoconfs.nonEmpty) // top level node metrics index
         ret += myIndexDef(cConf.nodesIndexId.get,
           s"Kubernetes cluster ${cConf.uid} - Nodes stats",

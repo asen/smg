@@ -40,6 +40,7 @@ case class SMGKubeClusterConf(
     s"filter: ${filter.map(_.humanText).getOrElse("None")}"
 
   lazy val clusterIndexId: Option[String] = Some("cluster."+uid) // TODO maybe optional?
+  lazy val globalsIndexId: Option[String] = clusterIndexId.map(_ + ".global")
   lazy val nodesIndexId: Option[String] = clusterIndexId.map(_ + ".node")
   lazy val endpointsIndexId: Option[String] = clusterIndexId.map(_ + ".endpoint")
   lazy val servicesIndexId: Option[String] = clusterIndexId.map(_ + ".service")
