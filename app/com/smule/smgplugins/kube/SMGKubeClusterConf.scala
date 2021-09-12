@@ -25,7 +25,8 @@ case class SMGKubeClusterConf(
                                prefixIdsWithClusterId: Boolean,
                                //kubectlTopStats: Boolean,
                                rraDef: Option[String],
-                               needParse: Boolean
+                               needParse: Boolean,
+                               indexesByType: Boolean
                              ) {
   lazy val hnamePrefix: String = if (prefixIdsWithClusterId) humanName.getOrElse(uid) + " " else ""
 

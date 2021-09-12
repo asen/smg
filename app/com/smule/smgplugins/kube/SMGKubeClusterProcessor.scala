@@ -275,7 +275,6 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
                                 ): Option[SMGAutoTargetConf] = {
 
     val namespaceStr = kubeObjectNamespace.map(_ + ".").getOrElse("")
-    val namespaceFnStr = kubeObjectNamespace.map(_ + "-").getOrElse("")
     val contextMap = mutable.Map[String,Object]()
     contextMap ++= autoconfMap
     try {
@@ -313,6 +312,10 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       if (!contextMap.contains("rra_def") && cConf.rraDef.isDefined){
         contextMap.put("rra_def", cConf.rraDef.get)
       }
+      if (!contextMap.contains("parent_index") && cConf.indexesByType){
+        contextMap.put("parent_index", s"cluster.${cConf.uid}.${targetType}")
+      }
+
       val staticUid = contextMap.remove("uid").map(_.toString)
       val templateAlias = staticUid.getOrElse(contextMap.get("template_alias").map(_.toString).getOrElse(template))
       val staticOutput = contextMap.remove("output").map(_.toString)
@@ -637,27 +640,27 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         myParentIndexId = cConf.clusterIndexId
       }
       // TODO cluster/global index?
-      if (cConf.nodeAutoconfs.nonEmpty) // top level node metrics index
+      if (cConf.indexesByType && cConf.nodeAutoconfs.nonEmpty) // top level node metrics index
         ret += myIndexDef(cConf.nodesIndexId.get,
-          s"Kubernetes cluster ${cConf.uid} - Nodes",
+          s"Kubernetes cluster ${cConf.uid} - Nodes stats",
           idxPrefix + "node.",
           myParentIndexId
         )
-      if (cConf.autoConfs.exists(x => x.targetType == ConfType.service && x.enabled))  // top level svcs metrics index
+      if (cConf.indexesByType && cConf.autoConfs.exists(x => x.targetType == ConfType.service && x.enabled))  // top level svcs metrics index
         ret += myIndexDef(cConf.servicesIndexId.get,
-          s"Kubernetes cluster ${cConf.uid} - Services",
+          s"Kubernetes cluster ${cConf.uid} - Services stats",
           idxPrefix + "service.",
           myParentIndexId
         )
-      if (cConf.autoConfs.exists(x => x.targetType == ConfType.endpoint && x.enabled)) // top level endpoints metrics index
+      if (cConf.indexesByType && cConf.autoConfs.exists(x => x.targetType == ConfType.endpoint && x.enabled)) // top level endpoints metrics index
         ret += myIndexDef(cConf.endpointsIndexId.get,
-          s"Kubernetes cluster ${cConf.uid} - Endpoints",
+          s"Kubernetes cluster ${cConf.uid} - Endpoints stats",
           idxPrefix + "endpoint.",
           myParentIndexId
         )
-      if (cConf.autoConfs.exists(x => x.targetType == ConfType.pod_port && x.enabled)) // top level podPorts metrics index
+      if (cConf.indexesByType && cConf.autoConfs.exists(x => x.targetType == ConfType.pod_port && x.enabled)) // top level podPorts metrics index
         ret += myIndexDef(cConf.podPortsIndexId.get,
-          s"Kubernetes cluster ${cConf.uid} - auto discovered metrics from pod listen ports",
+          s"Kubernetes cluster ${cConf.uid} - Pods stats",
           idxPrefix + "pod_port.",
           myParentIndexId
         )

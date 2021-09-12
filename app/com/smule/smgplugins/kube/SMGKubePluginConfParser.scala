@@ -91,7 +91,8 @@ class SMGKubePluginConfParser(pluginId: String, confFile: String, log: SMGLogger
           getOrElse("false") == "true",
         //kubectlTopStats = ymap.get("top_stats").map(_.toString).getOrElse("true") != "false",
         rraDef = rraDef,
-        needParse = ymap.getOrElse("need_parse", "true").toString != "false"
+        needParse = ymap.getOrElse("need_parse", "false").toString == "true",
+        indexesByType = ymap.getOrElse("indexes_by_type", "true").toString == "true"
       )
     )
   }
