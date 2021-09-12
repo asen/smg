@@ -17,6 +17,9 @@
 <%@ val object_type_prefix: String = "global." %>
 <%@ val title_prefix: String = "" %>
 <%@ val extra_labels: Map[String,String] = Map() %>
+<%@ val rrd_init_source_regex: String = "" %>
+<%@ val rrd_init_source_replace: String = "" %>
+
 <%
   import com.smule.smg.core.{SMGCmd,ParentCommandData}
 
@@ -74,10 +77,15 @@
 %>
 
 <%
+      val tnOid = s"${myIdPrefix}kubectl.top.nodes.${nn}.${statId}"
+      val rrdInitSource = if (rrd_init_source_regex != "")
+        tnOid.replaceAll(rrd_init_source_regex, rrd_init_source_replace)
+      else
+        ""
       for (row <- rows) {
         val statId = row.labelsAsMap.getOrElse("smg_top_stat", "invalid")
         render("shared/_rrd_object.yml.ssp", Map(
-          "id" -> s"${myIdPrefix}kubectl.top.nodes.${nn}.${statId}",
+          "id" -> tnOid,
           "pre_fetch" -> topNodesCmdId,
           "command" -> s":scrape get ${row.labelUid}",
           "title" ->  s"${title_prefix}kubectl top nodes - ${nn} - ${statId}",
@@ -85,6 +93,7 @@
           "rrd_type" -> "GAUGE",
           "rra_def" -> rra_def,
           "interval" -> interval,
+          "rrd_init_source" -> rrdInitSource,
           "vars" -> Seq(
             Map( "label" -> s"${statId} used") ++ (if (statId == "mem") Map("mu" -> "B") else Map())
           ),
@@ -189,14 +198,20 @@
           ))
           for (row <- rows) {
             val statId = row.labelsAsMap.getOrElse("smg_top_stat", "invalid")
+            val tpOid = s"${myIdPrefix}kubectl.top.pods.${nn}.${stableName}.${statId}"
+            val rrdInitSource = if (rrd_init_source_regex != "")
+              tpOid.replaceAll(rrd_init_source_regex, rrd_init_source_replace)
+            else
+              ""
             render("shared/_rrd_object.yml.ssp", Map(
-              "id" -> s"${myIdPrefix}kubectl.top.pods.${nn}.${stableName}.${statId}",
+              "id" -> tpOid,
               "pre_fetch" -> topPodsCmdId,
               "command" -> s":scrape get ${row.labelUid}",
               "title" ->  s"${title_prefix}kubectl top pods - ${nn}.${fullPodName} - ${statId}",
               "notify_fail" -> notify_fail,
               "rrd_type" -> "GAUGE",
               "rra_def" -> rra_def,
+              "rrd_init_source" -> rrdInitSource,
               "interval" -> interval,
               "vars" -> Seq(
                 Map( "label" -> s"${statId} used") ++ (if (statId == "mem") Map("mu" -> "B") else Map())
@@ -219,14 +234,20 @@
             for (crow <- contsData.get) {
               val contName = crow.labelsAsMap.getOrElse("smg_top_container", "invalid")
               val contStatId = crow.labelsAsMap.getOrElse("smg_top_stat", "invalid")
+              val tcOid = s"${myIdPrefix}kubectl.top.conts.${nn}.${stableName}.${contName}.${contStatId}"
+              val rrdInitSource = if (rrd_init_source_regex != "")
+                tcOid.replaceAll(rrd_init_source_regex, rrd_init_source_replace)
+              else
+                ""
               render("shared/_rrd_object.yml.ssp", Map(
-                "id" -> s"${myIdPrefix}kubectl.top.conts.${nn}.${stableName}.${contName}.${contStatId}",
+                "id" -> tcOid,
                 "pre_fetch" -> topContsCmdId,
                 "command" -> s":scrape get ${crow.labelUid}",
                 "title" ->  s"${title_prefix}kubectl top containers - ${nn}.${fullPodName}.${contName} - ${contStatId}",
                 "notify_fail" -> notify_fail,
                 "rrd_type" -> "GAUGE",
                 "rra_def" -> rra_def,
+                "rrd_init_source" -> rrdInitSource,
                 "interval" -> interval,
                 "vars" -> Seq(
                   Map( "label" -> s"${contStatId} used") ++ (if (contStatId == "mem") Map("mu" -> "B") else Map())
