@@ -77,13 +77,13 @@
 %>
 
 <%
-      val tnOid = s"${myIdPrefix}kubectl.top.nodes.${nn}.${statId}"
-      val rrdInitSource = if (rrd_init_source_regex != "")
-        tnOid.replaceAll(rrd_init_source_regex, rrd_init_source_replace)
-      else
-        ""
       for (row <- rows) {
         val statId = row.labelsAsMap.getOrElse("smg_top_stat", "invalid")
+        val tnOid = s"${myIdPrefix}kubectl.top.nodes.${nn}.${statId}"
+        val rrdInitSource = if (rrd_init_source_regex != "")
+          tnOid.replaceAll(rrd_init_source_regex, rrd_init_source_replace)
+        else
+          ""
         render("shared/_rrd_object.yml.ssp", Map(
           "id" -> tnOid,
           "pre_fetch" -> topNodesCmdId,
