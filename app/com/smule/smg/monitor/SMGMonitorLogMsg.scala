@@ -75,7 +75,7 @@ object SMGMonitorLogMsg extends Enumeration {
     }
   }
 
-  val logTsFmt = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZ")
+  val logTsFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
 
   def tsFmt(t :Int): String = logTsFmt.format(new Date(t.toLong * 1000))
 
