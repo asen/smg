@@ -641,7 +641,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         myParentIndexId = cConf.clusterIndexId
       }
       if (cConf.indexesByType && cConf.clusterGlobalAutoconfs.nonEmpty) // top level global metrics index
-        ret += myIndexDef(cConf.nodesIndexId.get,
+        ret += myIndexDef(cConf.globalsIndexId.get,
           s"Kubernetes cluster ${cConf.uid} - Global stats",
           idxPrefix + "global.",
           myParentIndexId
