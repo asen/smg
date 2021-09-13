@@ -4,6 +4,7 @@ import com.smule.smg.config.SMGConfigService
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 import com.smule.smg.rrd.SMGRrd
 
+import java.util.Date
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
@@ -141,7 +142,9 @@ class SMGAutoConfPlugin (
     <ol>
       {tagets.map { as =>
       <li>
-        <h5>{as.aConf.confOutput}: Status: {as.errorStatus.getOrElse("OK") }</h5>
+        <h5>{as.aConf.confOutput}:
+          Last updated: {confFilesLastUpdatedTs.get(as.aConf.confOutput).map(n => new Date(n).toString).getOrElse("N/A")}
+          Status: { as.errorStatus.getOrElse("OK") }</h5>
         <p>{as.aConf.inspect}</p>
       </li>
       }}
