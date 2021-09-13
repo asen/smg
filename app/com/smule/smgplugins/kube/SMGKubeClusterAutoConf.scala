@@ -22,7 +22,8 @@ case class SMGKubeClusterAutoConf(
                                    discoverTemplate: Option[String],
                                    discoverBackoffSeconds: Int,
                                    discoverBackoffShuffle: Int,
-                                   discoverSuccessBackoffMultiplier: Int
+                                   discoverSuccessBackoffMultiplier: Int,
+                                   staticContext: Map[String,Object]
                                  )
 
 object SMGKubeClusterAutoConf {
@@ -60,7 +61,8 @@ object SMGKubeClusterAutoConf {
       discoverBackoffShuffle = scm.get("discover_backoff_shuffle").map(_.asInstanceOf[Int]).
         getOrElse(Integer.valueOf(600)),
       discoverSuccessBackoffMultiplier = scm.get("discover_success_backoff_multiplier").
-        map(_.asInstanceOf[Int]).getOrElse(10)
+        map(_.asInstanceOf[Int]).getOrElse(10),
+      staticContext = scm.get("context").map(c => yobjMap(c).toMap).getOrElse(Map())
     )
     Some(ret)
   }

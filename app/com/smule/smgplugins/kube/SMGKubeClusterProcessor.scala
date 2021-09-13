@@ -250,7 +250,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       }
     }
     val myAutoconfGroups = getAutoconfAnnotationGropus(autoConf, nobjAnnotations)
-    if (myAutoconfGroups.isEmpty && autoConf.discoverMetrics) {
+    val ret = if (myAutoconfGroups.isEmpty && autoConf.discoverMetrics) {
       // auto discovery mode
       discoverMetrics(cConf, autoConf, nobj, ipAddr, ports)
     } else {
@@ -259,6 +259,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
         expandAutoconfAnnotationPorts(ports, annotationsMap)
       }
     }
+    ret.map(_ ++ autoConf.staticContext)
   }
 
   private def processAutoconfMap(
