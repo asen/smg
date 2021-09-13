@@ -6,6 +6,8 @@
 %>
 <%@ val matchesFilterObj: Object = null %><% // (String) => Boolean
 %>
+<%@ val rrdInitSourceObj: Object = null %><% // (String) => String
+%>
 <%@ val id_prefix: String = "openmetrics." %>
 <%@ val parent_index: String = "" %>
 <%@ val labels_in_uids: Boolean = false %>
@@ -29,6 +31,11 @@
     matchesFilterObj.asInstanceOf[(String) => Boolean]
   else
     (s: String) => true
+
+  val rrdInitSource = if (rrdInitSourceObj != null)
+    rrdInitSourceObj.asInstanceOf[(String) => String]
+  else
+    (s: String) => ""
 
   def isSumCountName(name: String): Boolean = name.endsWith("_sum") || name.endsWith("_count")
 
@@ -137,14 +144,17 @@
 %>
 # one graph for all buckets
 <%
+      val boid = s"${normalizedPrefix}${idxSuffix}.${groupType}_buckets"
+      val brrdInitSrc = rrdInitSource(boid)
       render("_rrd_object.yml.ssp", Map(
-        "id" -> s"${normalizedPrefix}${idxSuffix}.${groupType}_buckets",
+        "id" -> boid,
         "command" -> s":scrape get ${getErrParam}${scrapeGetParams}",
         "title" -> s"${grp.title(title_prefix, baseUid, titleGroupIndexId)} (${groupType} buckets)",
         "notify_fail" -> notify_fail,
         "rrd_type" -> rrdType,
         "pre_fetch" -> pre_fetch,
         "rra_def" -> rra_def,
+        "rrd_init_source" -> brrdInitSrc,
         "interval" -> interval,
         "vars" -> bucketVarLabels.map { bucketVarLabel =>
           Map( "label" -> bucketVarLabel)
@@ -160,14 +170,17 @@
 %>
 # one graph for the sum
 <%
+      val soid = s"${normalizedPrefix}${idxSuffix}.${groupType}_sum"
+      val srrdInitSrc = rrdInitSource(soid)
       render("_rrd_object.yml.ssp", Map(
-        "id" -> s"${normalizedPrefix}${idxSuffix}.${groupType}_sum",
+        "id" -> soid,
         "command" -> s":scrape get ${getErrParam}${scrapeGetParams}",
         "title" -> s"${grp.title(title_prefix, baseUid, titleGroupIndexId)} (${groupType} sum)",
         "notify_fail" -> notify_fail,
         "rrd_type" -> rrdType,
         "pre_fetch" -> pre_fetch,
         "rra_def" -> rra_def,
+        "rrd_init_source" -> srrdInitSrc,
         "interval" -> interval,
         "vars" -> Seq(
           Map( "label" -> "sum")
@@ -184,14 +197,17 @@
 %>
 # one graph for the count
 <%
+      val coid = s"${normalizedPrefix}${idxSuffix}.${groupType}_count"
+      val crrdInitSrc = rrdInitSource(coid)
       render("_rrd_object.yml.ssp", Map(
-        "id" -> s"${normalizedPrefix}${idxSuffix}.${groupType}_count",
+        "id" -> coid,
         "command" -> s":scrape get ${getErrParam}${scrapeGetParams}",
         "title" -> s"${grp.title(title_prefix, baseUid, titleGroupIndexId)} (${groupType} count)",
         "notify_fail" -> notify_fail,
         "rrd_type" -> rrdType,
         "pre_fetch" -> pre_fetch,
         "rra_def" -> rra_def,
+        "rrd_init_source" -> crrdInitSrc,
         "interval" -> interval,
         "vars" -> Seq(
           Map( "label" -> "count")
@@ -208,13 +224,16 @@
 # an extra average graph if both sum/count available
 # TODO this needs to operate on the derived rates vs absolute value?
 <%
+      val aoid = s"${normalizedPrefix}${idxSuffix}.${groupType}_average"
+      val arrdInitSrc = rrdInitSource(aoid)
       render("_rrd_agg_object.yml.ssp", Map(
-        "id" -> s"${normalizedPrefix}${idxSuffix}.${groupType}_average",
+        "id" -> aoid,
         "ids" -> Seq(s"${normalizedPrefix}${idxSuffix}.${groupType}_sum", s"${normalizedPrefix}${idxSuffix}.${groupType}_count"),
         "op" -> "RPN:$ds0,$ds1,/",
         "title" -> s"${grp.title(title_prefix, baseUid, titleGroupIndexId)} (${groupType} average)",
         "rrd_type" -> "GAUGE",
         "rra_def" -> rra_def,
+        "rrd_init_source" -> arrdInitSrc,
         "interval" -> interval,
         "vars" -> Seq(
           Map( "label" -> "avg")

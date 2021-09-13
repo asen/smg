@@ -28,6 +28,8 @@
 <%@ val regex_replaces: Seq[String] = Seq() %>
 <%@ val fail_on_missing: Boolean = false %>
 <%@ val sort_groups: Boolean = true %>
+<%@ val rrd_init_source_regex: String = "" %>
+<%@ val rrd_init_source_replace: String = "" %>
 
 <%@ val smgLogger: com.smule.smg.core.SMGLoggerApi = null %>
 
@@ -69,6 +71,15 @@
       ret = ret.replaceAll(t._1, t._2)
     }
     ret
+  }
+
+  def rrdInitSource(oid: String): String = {
+    if (rrd_init_source_regex == "")
+      return ""
+    val ret = oid.replaceAll(rrd_init_source_regex, rrd_init_source_replace)
+    if (ret == oid)
+      return ""
+    return ret
   }
 
   def isSumCountName(name: String): Boolean = name.endsWith("_sum") || name.endsWith("_count")
@@ -171,6 +182,7 @@
   "pre_fetch" -> s"${fullPrefix}.parse",
   "processRegexReplacesObj" -> processRegexReplaces,
   "matchesFilterObj" -> matchesFilter _,
+  "rrdInitSourceObj" -> rrdInitSource _,
   "parent_index" -> s"${fullPrefix}.all",
   "labels_in_uids" ->  labels_in_uids,
   "max_uid_len" -> max_uid_len,
@@ -219,19 +231,22 @@
 #if (matchesFilter(idxSuffix))
 <%
   grpNonEmpty = true
+  val oid = s"${fullPrefix}.${idxSuffix}"
+  val rrdInitSrc = rrdInitSource(oid)
   render("shared/_rrd_object.yml.ssp", Map(
-  "id" -> s"${fullPrefix}.${idxSuffix}",
-  "pre_fetch" -> s"${fullPrefix}.parse",
-  "command" -> s":scrape get ${getErrParam}${scrapeGetParams}",
-  "title" -> s"${grp.title(fullTitlePrefix, idxSuffix, titleGroupIndexId)}",
-  "notify_fail" -> notify_fail,
-  "rrd_type" -> rrdType,
-  "rra_def" -> rra_def,
-  "interval" -> interval,
-  "vars" -> Seq(
-    Map( "label" -> varLabel) ++ (if (varMu != "") Map("varMu" -> varMu) else Map())
-  ),
-  "object_labels" -> (row.labelsAsMap ++ myExtraLabels)
+    "id" -> oid,
+    "pre_fetch" -> s"${fullPrefix}.parse",
+    "command" -> s":scrape get ${getErrParam}${scrapeGetParams}",
+    "title" -> s"${grp.title(fullTitlePrefix, idxSuffix, titleGroupIndexId)}",
+    "notify_fail" -> notify_fail,
+    "rrd_type" -> rrdType,
+    "rra_def" -> rra_def,
+    "rrd_init_source" -> rrdInitSrc,
+    "interval" -> interval,
+    "vars" -> Seq(
+      Map( "label" -> varLabel) ++ (if (varMu != "") Map("varMu" -> varMu) else Map())
+    ),
+    "object_labels" -> (row.labelsAsMap ++ myExtraLabels)
   ))
 %>
 # filterMatches(idxSuffix) END
