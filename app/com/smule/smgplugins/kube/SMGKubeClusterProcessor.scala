@@ -182,8 +182,20 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     ret._1
   }
 
+
+  private def matchesFilter(filter: Option[SMGFilter], nobj: KubeNsObject, kPort: KubePort): Boolean = {
+    if (filter.isDefined) {
+      val portName = kPort.name.getOrElse(kPort.port.toString)
+      val oid = nobj.namespace + "." + nobj.name + "." + portName
+      autoConf.filter.get.matchesId(oid) &&
+        autoConf.filter.get.matchesLabelsMap(nobj.labels)
+    } else true
+  }
+
   private def discoverMetrics(cConf: SMGKubeClusterConf, autoConf: SMGKubeClusterAutoConf,
-                              nobj: KubeNsObject, ipAddr: String, ports: Seq[KubePort]): Seq[Map[String, Object]] = {
+                              nobj: KubeNsObject, ipAddr: String,
+                              ports: Seq[KubePort]
+                             ): Seq[Map[String, Object]] = {
     if (ipAddr == "") {
       logSkipped(nobj.namespace, nobj.name, autoConf.targetType.toString, cConf.uid,
         s"empty ip address")
@@ -200,18 +212,20 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       Seq("http", "https")
 
     val ret = ports.filter(_.protocol.toLowerCase != "udp").flatMap { kPort =>
-      val workingProtoOpt: Option[String] = protos.find { proto =>
-        val cmdToTry = portFetchCmd(proto, kPort.port)
-        checkDiscoveryMetricsCommand(cConf, autoConf, nobj, cmdToTry)
-      }
-      workingProtoOpt.map { proto =>
-        Map[String,Object](
-          "proto" -> proto,
-          "port" -> Integer.valueOf(kPort.port),
-          "path" -> autoConf.discoverMetricsPath,
-          "kube_source" -> "discovered"
-        )
-      }
+      if (matchesFilter(autoConf.filter, nobj, kPort)) {
+        val workingProtoOpt: Option[String] = protos.find { proto =>
+          val cmdToTry = portFetchCmd(proto, kPort.port)
+          checkDiscoveryMetricsCommand(cConf, autoConf, nobj, cmdToTry)
+        }
+        workingProtoOpt.map { proto =>
+          Map[String, Object](
+            "proto" -> proto,
+            "port" -> Integer.valueOf(kPort.port),
+            "path" -> autoConf.discoverMetricsPath,
+            "kube_source" -> "discovered"
+          )
+        }
+      } else None
     }
     if (ret.isEmpty) {
       logSkipped(nobj.namespace, nobj.name, autoConf.targetType.toString, cConf.uid,
@@ -240,19 +254,18 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     }
     // apply filter first
     if (autoConf.filter.isDefined) {
-      val oid = nobj.namespace + "." + nobj.name
-      val matchesFilter = autoConf.filter.get.matchesId(oid) &&
-        autoConf.filter.get.matchesLabelsMap(nobj.labels)
-      if (!matchesFilter) {
+      val matchesSomePort = ports.exists{ kPort =>  matchesFilter(autoConf.filter, nobj, kPort) }
+      if (!matchesSomePort) {
         logSkipped(nobj.namespace, nobj.name, autoConf.targetType.toString, cConf.uid,
-          s"filter not matching id or labels: $oid")
+          s"filter not matching id or labels: ${nobj.namespace}.${nobj.name} " +
+            s"ports=${ports.map(p => p.name.getOrElse(p.port)).mkString(", ")}")
         return Seq()
       }
     }
     val myAutoconfGroups = getAutoconfAnnotationGropus(autoConf, nobjAnnotations)
     val ret = if (myAutoconfGroups.isEmpty && autoConf.discoverMetrics) {
       // auto discovery mode
-      discoverMetrics(cConf, autoConf, nobj, ipAddr, ports)
+      discoverMetrics(cConf, autoConf, nobj, ipAddr, ports, autoConf.filter)
     } else {
       // annotations based mode
       myAutoconfGroups.flatMap { annotationsMap =>
