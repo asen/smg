@@ -10,27 +10,27 @@ SMG_INIT_PAUSE=${SMG_INIT_PAUSE:-10}
 INOTIFY_WAIT="inotifywait -e modify -e moved_to -e moved_from -e move -e create -e delete -r"
 
 _term() {
-  echo "INOTIFY_WAIT: Caught SIGTERM signal!"
+  echo "INOTIFY_WAIT: [`date`] Caught SIGTERM signal!"
   for cpid in `pgrep -P $$` ; do
-    echo "INOTIFY_WAIT: Sending SIGTERM signal to child $cpid"
+    echo "INOTIFY_WAIT: [`date`] Sending SIGTERM signal to child $cpid"
     kill $cpid
   done
-  echo "INOTIFY_WAIT: Exiting gracefully"
+  echo "INOTIFY_WAIT: [`date`] Exiting gracefully"
   exit 0
 }
 trap _term SIGTERM SIGINT
 
-echo "INOTIFY_WAIT: Sleeping for $SMG_INIT_PAUSE seconds before starting to watch $SMG_DIRS_TO_WATCH"
+echo "INOTIFY_WAIT: [`date`] Sleeping for $SMG_INIT_PAUSE seconds before starting to watch $SMG_DIRS_TO_WATCH"
 sleep $SMG_INIT_PAUSE
-echo "INOTIFY_WAIT: Entering infinite loop ..."
+echo "INOTIFY_WAIT: [`date`] Entering infinite loop ..."
 
 while true ; do
   $INOTIFY_WAIT $SMG_DIRS_TO_WATCH
   ret=$?
   if [ "$ret" == "0" ] ; then
-    echo "INOTIFY_WAIT: Changes detected, reloading conf"
+    echo "INOTIFY_WAIT: [`date`] Changes detected, reloading conf"
     sleep $SMG_RELOAD_BACKOFF
     $SMG_RELOAD_CMD
   fi
 done
-echo "INOTIFY_WAIT: Exiting (after loop)..." # never?
+echo "INOTIFY_WAIT: [`date`] Exiting (after loop)..." # never?
