@@ -1,0 +1,21 @@
+<%@ val object_labels: Map[String,Object] %>
+<%@ val sanitize_labels: Boolean = true %>
+<%@ val ident_spaces: Int = 2 %>
+<%
+  val identStr = " " * ident_spaces
+  def sanitizeLabelValue(v: String): String = {
+    if (sanitize_labels)
+      v.replaceAll("['\"\\\\]", "_")
+    else
+      v.replaceAll("'","''")
+  }
+  if (object_labels.nonEmpty) { %>
+<%= identStr %>labels:
+<%
+    object_labels.foreach { case (k,v) =>
+%>
+<%= identStr %>  <%= k %>: '<%= sanitizeLabelValue(v.toString) %>'
+<%
+    } //object_labels.foreach
+  } // object_labels.nonEmpty
+%>

@@ -1,0 +1,16 @@
+<%@ val vars: Seq[Map[String,Object]] %>
+<%@ val ident_spaces: Int = 2 %>
+<%
+  val identStr = " " * ident_spaces
+%>
+<%= identStr %>vars:
+<%
+  vars.zipWithIndex.foreach { case (vmap, ix) => %>
+<%= identStr %>  - label: '<%= vmap.getOrElse("label", s"ds${ix}").toString %>'
+<%
+    for ( (k,v) <- vmap.toSeq.map(t => (t._1,t._2.toString)).sorted if k != "label" && v != "" ) { %>
+<%= identStr %>    <%= k %>: <%= v %>
+<%
+    } // for k,v
+  } // vars.zipWithIndex.foreach
+%>

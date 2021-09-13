@@ -15,6 +15,7 @@
 <%@ val data_delay: Int = 0 %>
 <%@ val rrd_init_source: String = "" %>
 <%@ val rra_def: String = "" %>
+<%@ val sanitize_labels: Boolean = true %>
 # id = <%= id %>
 # command = <%= command %>
 - id: <%= id %>
@@ -45,25 +46,15 @@
 <% } %>
 <% if (data_delay != 0) { %>
   data_delay: <%= data_delay.toString %>
-<% } %>
-  vars:
-<%
-  vars.zipWithIndex.foreach { case (vmap, ix) => %>
-  - label: '<%= vmap.getOrElse("label", s"ds${ix}").toString %>'
-<%
-    for ( (k,v) <- vmap.toSeq.map(t => (t._1,t._2.toString)).sorted if k != "label" && v != "" ) { %>
-    <%= k %>: <%= v %>
-<%
-    } // for k,v
-  } // vars.zipWithIndex.foreach
+<% }
+
+  render("_object_vars.yml.ssp", Map(
+    "vars" -> vars,
+    "ident_spaces" -> 2))
+
+  render("_object_labels.yml.ssp", Map(
+    "object_labels" -> object_labels,
+    "sanitize_labels" -> sanitize_labels,
+    "ident_spaces" -> 2))
 %>
-<% if (object_labels.nonEmpty) { %>
-  labels:
-<%
-  object_labels.foreach { case (k,v) =>
-%>
-    <%= k %>: '<%= v.toString.replaceAll("'","''") %>'
-<%
-  } //object_labels.foreach
-} // object_labels.nonEmpty
-%>
+

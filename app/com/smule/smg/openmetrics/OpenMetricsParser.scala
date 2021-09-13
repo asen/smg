@@ -37,15 +37,29 @@ object OpenMetricsParser {
     }
   }
 
+  private val escapeSuffixRegex = "\\\\+$".r
+  def endsWithEscape(s: String): Boolean = {
+    val escapeSuffix = escapeSuffixRegex.findFirstIn(s).getOrElse("").length
+    escapeSuffix % 2 == 1 //odd number fo slashes
+  }
+
   // extract a quoted value out of inp and return it together with the remaining string
   // assumes input starts with a single or double quote
   private def quotedValue(inp: String): (String, String) = {
     val quoteChar = inp(0)
-    val rem = inp.drop(1)
-    val eix = rem.indexOf(quoteChar)
+    var rem = inp.drop(1)
+    var eix = rem.indexOf(quoteChar)
     if (eix < 0) throw new RuntimeException(s"unclosed label value quote ($quoteChar)")
-    val value = rem.take(eix)
-    (value, rem.drop(eix + 1))
+    var value = rem.take(eix)
+    rem = rem.drop(eix + 1)
+    while (endsWithEscape(value)) {
+      value += quoteChar
+      eix = rem.indexOf(quoteChar)
+      if (eix < 0) throw new RuntimeException(s"unclosed label value quote ($quoteChar)")
+      value += rem.take(eix)
+      rem = rem.drop(eix + 1)
+    }
+    (value, rem)
   }
 
   private def parseLabels(inp: String, log: Option[SMGLoggerApi]): (Seq[(String,String)], String) = {
