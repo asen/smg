@@ -143,7 +143,7 @@ class SMGAutoConfPlugin (
       {tagets.map { as =>
       <li>
         <h5>{as.aConf.confOutput}:
-          Last updated: {confFilesLastUpdatedTs.get(as.aConf.confOutput).map(n => new Date(n).toString).getOrElse("N/A")}
+          Last updated: {confFilesLastUpdatedTs.get(as.aConf.confOutput).map(n => new Date(1000L * n).toString).getOrElse("N/A")}
           Status: { as.errorStatus.getOrElse("OK") }</h5>
         <p>{as.aConf.inspect}</p>
       </li>
