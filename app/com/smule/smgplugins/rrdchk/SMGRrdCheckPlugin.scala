@@ -9,7 +9,7 @@ import com.smule.smg.rrd.{SMGRraInfo, SMGRrd}
 import play.api.libs.json.Json
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 /**
@@ -22,6 +22,9 @@ class SMGRrdCheckPlugin (val pluginId: String,
                         ) extends SMGPlugin {
 
   private val log = new SMGPluginLogger(pluginId)
+
+  private val myEc: ExecutionContext =
+    smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.plugins-shared")
 
   override def objects: Seq[SMGObjectView] = Seq()
 
@@ -293,7 +296,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
         } finally {
           finished()
         }
-      } (smgConfSvc.executionContexts.defaultCtx)
+      } (myEc)
       true
     } else false
   }
@@ -359,7 +362,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
         } finally {
           finished()
         }
-      } (smgConfSvc.executionContexts.defaultCtx)
+      } (myEc)
       true
     } else false
   }
