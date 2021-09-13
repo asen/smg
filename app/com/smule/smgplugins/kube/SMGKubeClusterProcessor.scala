@@ -187,8 +187,8 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     if (filter.isDefined) {
       val portName = kPort.name.getOrElse(kPort.port.toString)
       val oid = nobj.namespace + "." + nobj.name + "." + portName
-      autoConf.filter.get.matchesId(oid) &&
-        autoConf.filter.get.matchesLabelsMap(nobj.labels)
+      filter.get.matchesId(oid) &&
+        filter.get.matchesLabelsMap(nobj.labels)
     } else true
   }
 
@@ -265,7 +265,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     val myAutoconfGroups = getAutoconfAnnotationGropus(autoConf, nobjAnnotations)
     val ret = if (myAutoconfGroups.isEmpty && autoConf.discoverMetrics) {
       // auto discovery mode
-      discoverMetrics(cConf, autoConf, nobj, ipAddr, ports, autoConf.filter)
+      discoverMetrics(cConf, autoConf, nobj, ipAddr, ports)
     } else {
       // annotations based mode
       myAutoconfGroups.flatMap { annotationsMap =>
