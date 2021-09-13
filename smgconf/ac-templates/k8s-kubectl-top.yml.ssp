@@ -9,6 +9,7 @@
 <%@ val top_pods: Boolean = true %>
 <%@ val interval: Int = 60 %>
 <%@ val timeout: Int = 15 %>
+<%@ val rra: String = "" %>
 <%@ val rra_def: String = "" %>
 <%@ val pre_fetch: String = "" %>
 <%@ val parent_index: String = "" %>
@@ -22,6 +23,8 @@
 
 <%
   import com.smule.smg.core.{SMGCmd,ParentCommandData}
+
+  val rraDef = if (rra == "") rra_def else rra
 
   val myIdPrefix = id_prefix + (if (id_prefix.isEmpty || id_prefix.endsWith(".")) "" else ".") + object_type_prefix
 
@@ -91,7 +94,7 @@
           "title" ->  s"${title_prefix}kubectl top nodes - ${nn} - ${statId}",
           "notify_fail" -> notify_fail,
           "rrd_type" -> "GAUGE",
-          "rra_def" -> rra_def,
+          "rra" -> rraDef,
           "interval" -> interval,
           "rrd_init_source" -> rrdInitSource,
           "vars" -> Seq(
@@ -210,7 +213,7 @@
               "title" ->  s"${title_prefix}kubectl top pods - ${nn}.${fullPodName} - ${statId}",
               "notify_fail" -> notify_fail,
               "rrd_type" -> "GAUGE",
-              "rra_def" -> rra_def,
+              "rra" -> rraDef,
               "rrd_init_source" -> rrdInitSource,
               "interval" -> interval,
               "vars" -> Seq(
@@ -246,7 +249,7 @@
                 "title" ->  s"${title_prefix}kubectl top containers - ${nn}.${fullPodName}.${contName} - ${contStatId}",
                 "notify_fail" -> notify_fail,
                 "rrd_type" -> "GAUGE",
-                "rra_def" -> rra_def,
+                "rra" -> rraDef,
                 "rrd_init_source" -> rrdInitSource,
                 "interval" -> interval,
                 "vars" -> Seq(

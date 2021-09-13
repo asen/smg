@@ -12,6 +12,7 @@
 <%@ val id_prefix: String = "host." %>
 <%@ val title_prefix: String = "Host " %>
 <%@ val interval: Int = 60 %>
+<%@ val rra: String = "" %>
 <%@ val rra_def: String = "" %>
 <%@ val pre_fetch: String = "" %>
 <%@ val parent_index: String = "" %>
@@ -30,6 +31,8 @@
 <%@ val extra_labels: Map[String,String] = Map() %>
 <%
   import com.smule.smg.openmetrics.OpenMetricsGroup
+
+  val rraDef = if (rra == "") rra_def else rra
 
   def varLabelFromStatName(statName: String): String = {
     val varLabelUnderscore = statName.split('_').last
@@ -196,7 +199,7 @@
   "rrd_type" -> rrdType,
   "pre_fetch" -> s"${id_prefix}${node_name}.${metrics_name}.parse",
   "timeout" -> metrics_timeout,
-  "rra_def" -> rra_def,
+  "rra" -> rraDef,
   "interval" -> interval,
   "vars" -> Seq(
     Map( "label" -> varLabel, "mu" -> varMu )

@@ -14,6 +14,7 @@
 <%@ val max_uid_len: Int = 180 %>
 <%@ val title_prefix: String = "" %>
 <%@ val interval: Int = 60 %>
+<%@ val rra: String = "" %>
 <%@ val rra_def: String = "" %>
 <%@ val extra_labels: Map[String,Object] = Map() %>
 <%@ val sum_count_group_bucket_labels: Seq[String] = Seq("le", "quantile") %>
@@ -21,6 +22,8 @@
 <%@ val fail_on_missing: Boolean = false %>
 <%
   import scala.collection.mutable.ListBuffer
+
+  val rraDef = if (rra == "") rra_def else rra
 
   val processRegexReplaces = if (processRegexReplacesObj != null)
     processRegexReplacesObj.asInstanceOf[(String) => String]
@@ -153,7 +156,7 @@
         "notify_fail" -> notify_fail,
         "rrd_type" -> rrdType,
         "pre_fetch" -> pre_fetch,
-        "rra_def" -> rra_def,
+        "rra" -> rraDef,
         "rrd_init_source" -> brrdInitSrc,
         "interval" -> interval,
         "vars" -> bucketVarLabels.map { bucketVarLabel =>
@@ -179,7 +182,7 @@
         "notify_fail" -> notify_fail,
         "rrd_type" -> rrdType,
         "pre_fetch" -> pre_fetch,
-        "rra_def" -> rra_def,
+        "rra" -> rraDef,
         "rrd_init_source" -> srrdInitSrc,
         "interval" -> interval,
         "vars" -> Seq(
@@ -206,7 +209,7 @@
         "notify_fail" -> notify_fail,
         "rrd_type" -> rrdType,
         "pre_fetch" -> pre_fetch,
-        "rra_def" -> rra_def,
+        "rra" -> rraDef,
         "rrd_init_source" -> crrdInitSrc,
         "interval" -> interval,
         "vars" -> Seq(
@@ -232,7 +235,7 @@
         "op" -> "RPN:$ds0,$ds1,/",
         "title" -> s"${grp.title(title_prefix, baseUid, titleGroupIndexId)} (${groupType} average)",
         "rrd_type" -> "GAUGE",
-        "rra_def" -> rra_def,
+        "rra" -> rraDef,
         "rrd_init_source" -> arrdInitSrc,
         "interval" -> interval,
         "vars" -> Seq(

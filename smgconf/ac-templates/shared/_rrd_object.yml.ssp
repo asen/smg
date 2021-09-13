@@ -14,8 +14,10 @@
 <%@ val delay: Int = 0 %>
 <%@ val data_delay: Int = 0 %>
 <%@ val rrd_init_source: String = "" %>
+<%@ val rra: String = "" %>
 <%@ val rra_def: String = "" %>
 <%@ val sanitize_labels: Boolean = true %>
+<% val rraDef = if (rra == "") rra_def else rra %>
 # id = <%= id %>
 # command = <%= command %>
 - id: <%= id %>
@@ -38,8 +40,8 @@
 <% if (rrd_init_source != "") { %>
   rrd_init_source: '<%= rrd_init_source %>'
 <% } %>
-<% if (rra_def != "") { %>
-  rra_def: '<%= rra_def %>'
+<% if (rraDef != "") { %>
+  rra: '<%= rraDef %>'
 <% } %>
 <% if (delay != 0) { %>
   delay: <%= delay.toString %>

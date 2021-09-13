@@ -324,8 +324,10 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
       if (!contextMap.contains("interval")){
         contextMap.put("interval", Integer.valueOf(cConf.interval))
       }
-      if (!contextMap.contains("rra_def") && cConf.rraDef.isDefined){
-        contextMap.put("rra_def", cConf.rraDef.get)
+      if (!contextMap.contains("rra") && cConf.rraDef.isDefined){
+        contextMap.put("rra", cConf.rraDef.get)
+      } else if (!contextMap.contains("rra_def") && cConf.rraDef.isDefined){
+        contextMap.put("rra", cConf.rraDef.get)
       }
       if (!contextMap.contains("parent_index") && cConf.indexesByType){
         contextMap.put("parent_index", s"cluster.${cConf.uid}.${targetType}")
@@ -615,7 +617,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
 
   private val KUBECTL_TOP_PODS_PF_NAME = "kubectl-top-pods-pf"
 
-  def preFetches: Seq[SMGPreFetchCmd] = pluginConfParser.conf.clusterConfs.flatMap { cConf =>
+  def preFetches: Seq[SMGPreFetchCmd] = pluginConf.clusterConfs.flatMap { cConf =>
     Seq()
   }
 
@@ -640,7 +642,7 @@ class SMGKubeClusterProcessor(pluginConfParser: SMGKubePluginConfParser,
     disableHeatmap = false
   )
 
-  def indexes: Seq[SMGConfIndex] = pluginConfParser.conf.clusterConfs.flatMap { cConf =>
+  def indexes: Seq[SMGConfIndex] = pluginConf.clusterConfs.flatMap { cConf =>
     // optional top-level index
     if (cConf.clusterIndexId.isDefined) {
       val idxPrefix = if (cConf.prefixIdsWithClusterId) cConf.uid + "." else ""

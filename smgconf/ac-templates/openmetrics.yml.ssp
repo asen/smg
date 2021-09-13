@@ -14,6 +14,7 @@
 <%@ val metrics_name: String = "" %>
 <%@ val metrics_hname: String = "" %>
 <%@ val timeout: Int = 15 %>
+<%@ val rra: String = "" %>
 <%@ val rra_def: String = "" %>
 <%@ val pre_fetch: String = "" %>
 <%@ val parent_index: String = "" %>
@@ -35,6 +36,8 @@
 
 <%
   import scala.collection.mutable.ListBuffer
+
+  val rraDef = if (rra == "") rra_def else rra
 
   def myLogEx(t: Throwable, msg: String): Unit = {
     if (smgLogger != null) {
@@ -188,7 +191,7 @@
   "max_uid_len" -> max_uid_len,
   "title_prefix" -> fullTitlePrefix,
   "interval" -> interval,
-  "rra_def" -> rra_def,
+  "rra" -> rraDef,
   "extra_labels" -> myExtraLabels,
   "sum_count_group_bucket_labels" -> sum_count_group_bucket_labels,
   "notify_fail" -> notify_fail,
@@ -240,7 +243,7 @@
     "title" -> s"${grp.title(fullTitlePrefix, idxSuffix, titleGroupIndexId)}",
     "notify_fail" -> notify_fail,
     "rrd_type" -> rrdType,
-    "rra_def" -> rra_def,
+    "rra" -> rraDef,
     "rrd_init_source" -> rrdInitSrc,
     "interval" -> interval,
     "vars" -> Seq(
