@@ -1,5 +1,7 @@
-import com.smule.smg.core.{CommandResultListString, ParentCommandData, SMGCmd, SMGLogger}
+import com.smule.smg.core.{CommandResultListDouble, CommandResultListString, ParentCommandData, SMGCmd, SMGLogger}
+import com.smule.smg.rrd.SMGRrd
 import com.smule.smgplugins.cc.kv.SMGKvParseCommands
+import com.smule.smgplugins.cc.ts.SMGTsCommand
 import org.junit.runner.RunWith
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
@@ -21,6 +23,46 @@ class SMGCcCommandsSpec extends Specification {
         "get questions",
         30, Some(ppdata))
       log.info(s"RES: $res")
+      1.equals(1)
+    }
+  }
+
+  "SMGTsCommands" should {
+    "work with ts" in {
+      val tsNow = SMGRrd.tssNow
+      val tsRrd = tsNow
+      val out = List(tsNow.toDouble, (tsNow + 1).toDouble, (tsNow - 1).toDouble)
+      val pdata = ParentCommandData(CommandResultListDouble(out, Some(tsRrd)), Some(tsRrd))
+      val c = new SMGTsCommand(log)
+      var res = c.tsCommand("ts", "age", 30, Some(pdata))
+      log.info(s"TS_RES-age: $res")
+      res = c.tsCommand("ts", "ttl", 30, Some(pdata))
+      log.info(s"TS_RES-ttl: $res")
+      res = c.tsCommand("ts", "delta", 30, Some(pdata))
+      log.info(s"TS_RES-delta: $res")
+      res = c.tsCommand("ts", "delta_abs", 30, Some(pdata))
+      log.info(s"TS_RES-delta_abs: $res")
+      res = c.tsCommand("ts", "delta_neg", 30, Some(pdata))
+      log.info(s"TS_RES-delta_neg: $res")
+      1.equals(1)
+    }
+
+    "work with ts_ms" in {
+      val tsNow = System.currentTimeMillis()
+      val tsRrd = (tsNow / 1000).toInt
+      val out = List(tsNow.toDouble, (tsNow + 1000).toDouble, (tsNow - 1000).toDouble)
+      val pdata = ParentCommandData(CommandResultListDouble(out, Some(tsRrd)), Some(tsRrd))
+      val c = new SMGTsCommand(log)
+      var res = c.tsCommand("ts_ms", "age", 30, Some(pdata))
+      log.info(s"TS_MS_RES-age: $res")
+      res = c.tsCommand("ts_ms", "ttl", 30, Some(pdata))
+      log.info(s"TS_MS_RES-ttl: $res")
+      res = c.tsCommand("ts_ms", "delta", 30, Some(pdata))
+      log.info(s"TS_MS_RES-delta: $res")
+      res = c.tsCommand("ts_ms", "delta_abs", 30, Some(pdata))
+      log.info(s"TS_MS_RES-delta_abs: $res")
+      res = c.tsCommand("ts_ms", "delta_neg", 30, Some(pdata))
+      log.info(s"TS_RES-delta_neg: $res")
       1.equals(1)
     }
   }
