@@ -130,7 +130,20 @@ class SMGAutoConfPluginSpec extends Specification{
         println("===================")
         println(out)
         1.equals(1)
-      }
+    }
+
+    "work with k8s-kube-state-metrics" in {
+      val data = SMGFileUtil.getFileLines("test-data/kube-state-metrics.txt")
+      val p = new SMGTemplateProcessor(log)
+      val out = p.processTemplate("smgconf/ac-templates/k8s-kube-state-metrics.yml.ssp", "dummy-output" , Map(
+        "command" -> "cat 'test-data/kube-state-metrics.txt'",
+        "data" -> data
+      )).get
+      println("===================")
+      println(out)
+      1.equals(1)
+    }
+
   }
 }
 

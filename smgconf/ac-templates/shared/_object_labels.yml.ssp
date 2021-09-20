@@ -12,7 +12,7 @@
   if (object_labels.nonEmpty) { %>
 <%= identStr %>labels:
 <%
-    object_labels.foreach { case (k,v) =>
+    object_labels.toSeq.sortBy(_._1).foreach { case (k,v) =>
 %>
 <%= identStr %>  <%= k %>: '<%= sanitizeLabelValue(v.toString) %>'
 <%

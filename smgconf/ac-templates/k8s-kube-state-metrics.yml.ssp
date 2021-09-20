@@ -1,0 +1,1814 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%@ val target_host: String = "kube-state-metrics.kube-system.svc.cluster.local" %>
+<%@ val fetch_command_prefix: String = ":scrape fetch" %>
+<%@ val port: Int = 8080 %>
+<%@ val path: String = "/metrics" %>
+<%@ val proto: String = "http" %>
+<%@ val data: Object = null %>
+<%@ val command: String = "" %>
+<%@ val interval: Int = 60 %>
+<%@ val timeout: Int = 15 %>
+<%@ val rra: String = "" %>
+<%@ val rra_def: String = "" %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val id_prefix: String = "" %>
+<%@ val object_type_prefix: String = "global." %>
+<%@ val title_prefix: String = "" %>
+<%@ val smgConfigService: com.smule.smg.config.SMGConfigService = null %>
+<%@ val smgLogger: com.smule.smg.core.SMGLoggerApi = null %>
+<%
+  import com.smule.smg.core.SMGCmd
+  import com.smule.smg.openmetrics.{OpenMetricsGroup,OpenMetricsRow,OpenMetricsParser}
+
+  val fetchCommand = if (command == "")
+    s"""${fetch_command_prefix} "${proto}://${target_host}:${port}/${path.stripPrefix("/")}""""
+  else
+    command
+  val myData = if (data == null)
+    smgConfigService.runFetchCommand(SMGCmd(fetchCommand), None).data
+  else
+    data
+  // parse /metrics output
+  var needParse = true
+  val groups = try {
+    myData match {
+      case ord: com.smule.smgplugins.scrape.OpenMetricsResultData => {
+        needParse = false
+        ord.stats
+      }
+      case s: String =>  com.smule.smg.openmetrics.OpenMetricsParser.parseText(s, None)
+      case x => com.smule.smg.openmetrics.OpenMetricsParser.parseText(x.asInstanceOf[Seq[String]].mkString("\n"), None)
+    }
+  } catch { case t: Throwable =>
+    smgLogger.ex(t, s"Error converting data to OpenMetrics: data=${data.toString.take(768)} message=${t.getMessage}")
+    throw t
+  }
+
+  def myLogError(msg: String): Unit = {
+    if (smgLogger != null )
+      smgLogger.error("k8s-kube-state-metrics.yml.ssp: " + msg)
+  }
+
+  def splitByLabelValue(grp: OpenMetricsGroup, lname: String): Seq[(String, OpenMetricsGroup)] = {
+    grp.rows.groupBy { r => r.labelsAsMap.getOrElse(lname, "") }.toSeq.map { t =>
+      (t._1, OpenMetricsGroup(grp.metaKey, grp.metaType, grp.metaHelp, t._2))
+    }
+  }
+
+  def groupRowSeqMap(grps: Seq[OpenMetricsGroup],
+                     gSortKey: String, mapKeyLabel: String): Map[String,Seq[OpenMetricsRow]] = {
+    grps.find(_.sortKey == gSortKey).map(_.rows).getOrElse(Seq()).groupBy { r =>
+      r.labelsAsMap.getOrElse(mapKeyLabel, "UNDEFINED-mapKeyLabel")
+    }
+  }
+
+  def groupRowsMap(grps: Seq[OpenMetricsGroup],
+                   gSortKey: String, mapKeyLabel: String): Map[String,OpenMetricsRow] = {
+    groupRowSeqMap(grps, gSortKey, mapKeyLabel).map { case (klv, seq) => (klv, seq.head) }
+  }
+
+  def smgStatNameLabels(statName: String) = Map("smg_stat_name" -> statName)
+
+  def podStableBaseName(podName: String, ownerKind: String): String = {
+    val dropSuffixes = ownerKind match {
+      case "DaemonSet" => 1            //"-xxxxx"
+      case "ReplicaSet" => 2            //"-xxxxxxxxxx-xxxxx"
+      case "StatefulSet" => 0           //"-x"
+      case "Job" => 2                   //"-<timestamp>-xxxxx"
+      case "ReplicationController" => 1 //"-xxxxx"
+      case "Node" => 0                  //drop nothing
+      case _ => 0
+    }
+    podName.split("-").dropRight(dropSuffixes).mkString("-")
+  }
+
+  val tsFmt = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
+  def myTsFmt(v: Double, isTsMs: Boolean): String = {
+    val tsMs = if (isTsMs) v.toLong else v.toLong * 1000L
+    val dt = new java.util.Date(tsMs)
+    tsFmt.format(dt)
+  }
+
+  val byNs: Seq[(String, Seq[OpenMetricsGroup])] = groups.flatMap { grp =>
+    splitByLabelValue(grp, "namespace")
+  }.groupBy(_._1).toSeq.map { t =>
+    (t._1, t._2.map(_._2))
+  }.sortBy(_._1)
+
+  val topLevelIdPrefix = s"${id_prefix}${object_type_prefix}kube-state-metrics"
+  val topLevelTitlePrefix = s"${title_prefix} kube-state-metrics"
+
+  val topLevelPfId = s"${topLevelIdPrefix}.fetch"
+  render("shared/_pre_fetch.yml.ssp", Map(
+    "id" -> topLevelPfId,
+    "command" -> fetchCommand,
+    "desc" -> s"${title_prefix}Get kube-state-metric stats from cluster kube-state-metrics service",
+    "pass_data" -> true,
+    "notify_fail" -> notify_fail,
+    "pre_fetch" -> pre_fetch,
+    "timeout" -> timeout
+  ))
+
+  val topLevelIndexId = s"${topLevelIdPrefix}.all"
+  render("shared/_index.yml.ssp", Map(
+    "id" -> topLevelIndexId,
+    "px" -> s"${topLevelIdPrefix}.",
+    "title" -> s"${topLevelTitlePrefix} - all",
+    "parent" -> parent_index
+  ))
+
+  if (byNs.head._1 == "") {
+    val rows = byNs.head._2
+%>
+#### global (no namespace) objects: <%= rows.size %>
+
+<%
+  // byNs.head - global objects
+  //  #### namespace=
+  // GLOBAL - no ns
+  //  # TYPE kube_lease
+  //  # TYPE kube_mutatingwebhookconfiguration
+  //  # TYPE kube_node
+  //  # TYPE kube_persistentvolume
+  //  # TYPE kube_storageclass
+  //  # TYPE kube_validatingwebhookconfiguration
+
+  //  # .kube_lease_owner - 12
+  //  # .kube_lease_renew_time - 12
+  //  # .kube_mutatingwebhookconfiguration_info - 2
+  //  # .kube_mutatingwebhookconfiguration_created - 2
+  //  # .kube_mutatingwebhookconfiguration_metadata_resource_version - 2
+  //  # .kube_node_info - 11
+  //  # .kube_node_created - 11
+  //  # .kube_node_labels - 11
+  //  # .kube_node_role - 3
+  //  # .kube_node_spec_unschedulable - 11
+  //  # .kube_node_spec_taint - 9
+  //  # .kube_node_status_condition - 132
+  //  # .kube_node_status_capacity - 66
+  //  # .kube_node_status_allocatable - 66
+  //  # .kube_persistentvolume_claim_ref - 9
+  //  # .kube_persistentvolume_labels - 9
+  //  # .kube_persistentvolume_status_phase - 45
+  //  # .kube_persistentvolume_info - 9
+  //  # .kube_persistentvolume_capacity_bytes - 9
+  //  # .kube_storageclass_info - 1
+  //  # .kube_storageclass_created - 1
+  //  # .kube_storageclass_labels - 1
+  //  # .kube_validatingwebhookconfiguration_info - 1
+  //  # .kube_validatingwebhookconfiguration_created - 1
+  //  # .kube_validatingwebhookconfiguration_metadata_resource_version - 1
+  } // if (byNs.head._1 == "")
+
+
+  // TODO
+  //  # TYPE kube_certificatesigningrequest
+  //  # TYPE kube_horizontalpodautoscaler
+  //  # TYPE kube_ingress
+  //  # TYPE kube_limitrange gauge
+  //  # TYPE kube_limitrange
+  //  # TYPE kube_networkpolicy
+  //  # TYPE kube_replicationcontroller
+  //  # TYPE kube_resourcequota
+  //  # TYPE kube_volumeattachment
+
+  byNs.dropWhile(_._1 == "").foreach { case (ns, grps) =>
+    val nsIdPrefix = s"${topLevelIdPrefix}.${ns}"
+    val nsTitlePrefix = s"${topLevelTitlePrefix} (namespace ${ns})"
+%>
+
+#### namespace=<%= ns %>
+<%
+    render("shared/_index.yml.ssp", Map(
+      "id" -> s"${nsIdPrefix}.all",
+      "px" -> s"${nsIdPrefix}.",
+      "title" -> s"${nsTitlePrefix} - all",
+      "parent" -> topLevelIndexId
+    ))
+
+    //  # TYPE kube_service
+%>
+
+# <%= ns %>.service
+<%
+    val serviceInfos = groupRowsMap(grps, "kube_service_info", "service")
+    val serviceCreateds = groupRowsMap(grps, "kube_service_created", "service")
+    val serviceSpecTypes = groupRowsMap(grps, "kube_service_spec_type", "service")
+    val serviceLabels = groupRowsMap(grps, "kube_service_labels", "service")
+    if (serviceLabels.isEmpty) {
+%>
+# No Services defined
+<%
+    } else {  // serviceLabels.isEmpty
+      val svcIdPrefix = s"${nsIdPrefix}.service"
+      val svcTitlePrefix = s"${nsTitlePrefix} Service"
+
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${svcIdPrefix}.all",
+        "px" -> s"${svcIdPrefix}.",
+        "title" -> s"${svcTitlePrefix}s - all",
+        "parent" -> s"${nsIdPrefix}.all"
+      ))
+
+      serviceLabels.keys.toSeq.sorted.foreach { svcName =>
+        val labelsRow = serviceLabels(svcName)
+        val idPrefix = s"${svcIdPrefix}.${svcName}"
+        val titlePrefix = s"${svcTitlePrefix} ${svcName}"
+        val objectLabels: Map[String,String] = labelsRow.labelsAsMap ++
+          serviceInfos.get(svcName).map(_.labelsAsMap).getOrElse(Map[String,String]()) ++
+          serviceSpecTypes.get(svcName).map(_.labelsAsMap).getOrElse(Map[String,String]()) ++
+          serviceCreateds.get(svcName).map(r => Map("smg_created" -> myTsFmt(r.value, false))).getOrElse(Map[String,String]())
+
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.kube_service_labels",
+          "command" -> s":scrape get ${labelsRow.labelUid}",
+          "vars" -> Seq(
+            Map("label" -> "dummy 1")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} Labels",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> (objectLabels ++ smgStatNameLabels("kube_service_labels"))
+        ))
+      }
+    } // serviceLabels.isEmpty
+
+//    # HELP kube_service_spec_external_ip Service external ips. One series for each ip
+//    # TYPE kube_service_spec_external_ip gauge
+//    # HELP kube_service_status_load_balancer_ingress Service load balancer ingress status
+//    # TYPE kube_service_status_load_balancer_ingress gauge
+
+
+    //  # TYPE kube_endpoint
+%>
+
+# <%= ns %>.endpoint
+<%
+    val epInfos = groupRowsMap(grps, "kube_endpoint_info", "endpoint")
+    val epCreateds = groupRowsMap(grps, "kube_endpoint_created", "endpoint")
+    val epLabels = groupRowsMap(grps, "kube_endpoint_labels", "endpoint")
+    val epAddrAvails = groupRowsMap(grps, "kube_endpoint_address_available", "endpoint")
+    val epAddrNotReadys = groupRowsMap(grps, "kube_endpoint_address_not_ready", "endpoint")
+
+    if (epInfos.isEmpty) {
+%>
+# No Endpoints defined
+<%
+    } else {  // epInfos.isEmpty
+      val epIdPrefix = s"${nsIdPrefix}.endpoint"
+      val epTitlePrefix = s"${nsTitlePrefix} Endpoint"
+
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${epIdPrefix}.all",
+        "px" -> s"${epIdPrefix}.",
+        "title" -> s"${epTitlePrefix}s - all",
+        "parent" -> s"${nsIdPrefix}.all"
+      ))
+
+      epLabels.keys.toSeq.sorted.foreach { epName =>
+        val labelsRow = epLabels(epName)
+        val idPrefix = s"${epIdPrefix}.${epName}"
+        val titlePrefix = s"${epTitlePrefix} ${epName}"
+        val objectLabels: Map[String,String] = labelsRow.labelsAsMap ++
+          epInfos.get(epName).map(_.labelsAsMap).getOrElse(Map[String,String]()) ++
+          epCreateds.get(epName).map(r => Map("smg_created" -> myTsFmt(r.value, false))).getOrElse(Map[String,String]())
+
+        val availRowParam = epAddrAvails.get(epName).map(_.labelUid).getOrElse("invalid")
+        val notReadyRowParam = epAddrNotReadys.get(epName).map(_.labelUid).getOrElse("invalid")
+
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.kube_endpoint_addr_avail_not_ready",
+          "command" -> s":scrape get ${availRowParam},${notReadyRowParam}",
+          "vars" -> Seq(
+            Map("label" -> "available"),
+            Map("label" -> "not_ready")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} Addresses available/not_ready",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> (objectLabels ++
+            smgStatNameLabels("kube_endpoint_address_available,kube_endpoint_address_not_ready"))
+        ))
+      }
+    } //epInfos.isEmpty
+
+    //  # TYPE kube_statefulset
+%>
+
+# <%= ns %>.statefulset
+<%
+    val stsLabels = groupRowsMap(grps, "kube_statefulset_labels", "statefulset")
+    val stsUpdRevs = groupRowsMap(grps, "kube_statefulset_status_update_revision", "statefulset")
+    val stsCurRevs = groupRowsMap(grps, "kube_statefulset_status_current_revision", "statefulset")
+    val stsCreateds = groupRowsMap(grps, "kube_statefulset_created", "statefulset")
+
+    val stsDesiredReplicas = groupRowsMap(grps, "kube_statefulset_replicas", "statefulset")
+    val stsStatusReplicas = groupRowsMap(grps, "kube_statefulset_status_replicas", "statefulset")
+    val stsStatusReplicaCurrents = groupRowsMap(grps, "kube_statefulset_status_replicas_current", "statefulset")
+    val stsStatusReplicaReadys = groupRowsMap(grps, "kube_statefulset_status_replicas_ready", "statefulset")
+    val stsStatusReplicaUpdateds = groupRowsMap(grps, "kube_statefulset_status_replicas_updated", "statefulset")
+
+    val stsStatusObservedGenerations = groupRowsMap(grps, "kube_statefulset_status_observed_generation", "statefulset")
+    val stsMetadataGenerations = groupRowsMap(grps, "kube_statefulset_metadata_generation", "statefulset")
+
+    if (stsLabels.isEmpty) {
+%>
+# No Endpoints defined
+<%
+    } else { // if (stsLabels.isEmpty)
+      val stsIdPrefix = s"${nsIdPrefix}.statefulset"
+      val stsTitlePrefix = s"${nsTitlePrefix} StatefulSet"
+
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${stsIdPrefix}.all",
+        "px" -> s"${stsIdPrefix}.",
+        "title" -> s"${stsTitlePrefix}s - all",
+        "parent" -> s"${nsIdPrefix}.all"
+      ))
+
+      stsLabels.keys.toSeq.sorted.foreach { stsName =>
+        val labelsRow = stsLabels(stsName)
+        val idPrefix = s"${stsIdPrefix}.${stsName}"
+        val titlePrefix = s"${stsTitlePrefix} ${stsName}"
+        val objectLabels: Map[String,String] = labelsRow.labelsAsMap ++
+          stsUpdRevs.get(stsName).map(_.labelsAsMap).getOrElse(Map[String,String]()) ++
+          stsCurRevs.get(stsName).map(_.labelsAsMap).getOrElse(Map[String,String]()) ++
+          stsCreateds.get(stsName).map(r => Map("smg_created" -> myTsFmt(r.value, false))).getOrElse(Map[String,String]())
+
+        render("shared/_index.yml.ssp", Map(
+          "id" -> s"${idPrefix}.all",
+          "px" -> s"${idPrefix}.",
+          "title" -> s"${titlePrefix}",
+          "parent" -> s"${stsIdPrefix}.all"
+        ))
+
+        val stsDesiredReplicasParam = stsDesiredReplicas.get(stsName).map(_.labelUid).getOrElse("invalid")
+        val stsStatusReplicasParam = stsStatusReplicas.get(stsName).map(_.labelUid).getOrElse("invalid")
+        val stsStatusReplicaCurrentsParam = stsStatusReplicaCurrents.get(stsName).map(_.labelUid).getOrElse("invalid")
+        val stsStatusReplicaReadysParam = stsStatusReplicaReadys.get(stsName).map(_.labelUid).getOrElse("invalid")
+        val stsStatusReplicaUpdatedsParam = stsStatusReplicaUpdateds.get(stsName).map(_.labelUid).getOrElse("invalid")
+        val getParam = s"${stsDesiredReplicasParam},${stsStatusReplicasParam},${stsStatusReplicaCurrentsParam}," +
+          s"${stsStatusReplicaReadysParam},${stsStatusReplicaUpdatedsParam}"
+
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.replicas",
+          "command" -> s":scrape get ${getParam}",
+          "vars" -> Seq(
+            Map("label" -> "desired"),
+            Map("label" -> "status"),
+            Map("label" -> "current"),
+            Map("label" -> "ready"),
+            Map("label" -> "updated")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} Replicas",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> objectLabels
+        ))
+
+        val stsStatusObservedGenerationsParam = stsStatusObservedGenerations.get(stsName).map(_.labelUid).getOrElse("invalid")
+        val stsMetadataGenerationsParam = stsMetadataGenerations.get(stsName).map(_.labelUid).getOrElse("invalid")
+
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.generation",
+          "command" -> s":scrape get ${stsStatusObservedGenerationsParam},${stsMetadataGenerationsParam}",
+          "vars" -> Seq(
+            Map("label" -> "observed"),
+            Map("label" -> "metadata")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} Generation",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> objectLabels
+        ))
+      } // stsLabels.keys.toSeq.sorted.foreach
+    } // if (stsLabels.isEmpty)
+
+    //  # TYPE kube_deployment
+%>
+
+# <%= ns %>.deployment
+<%
+    val dplLabels = groupRowsMap(grps, "kube_deployment_labels", "deployment")
+    val dplCreateds = groupRowsMap(grps, "kube_deployment_created", "deployment")
+
+    val dplDesiredReplicas = groupRowsMap(grps, "kube_deployment_spec_replicas", "deployment")
+    val dplStatusReplicas = groupRowsMap(grps, "kube_deployment_status_replicas", "deployment")
+    val dplReplicaAvails = groupRowsMap(grps, "kube_deployment_status_replicas_available", "deployment")
+    val dplReplicaUnavails = groupRowsMap(grps, "kube_deployment_status_replicas_unavailable", "deployment")
+    val dplReplicaUpdateds = groupRowsMap(grps, "kube_deployment_status_replicas_updated", "deployment")
+
+    val dplObsvGenerations = groupRowsMap(grps, "kube_deployment_status_observed_generation", "deployment")
+    val dplMetadataGenerations = groupRowsMap(grps, "kube_deployment_metadata_generation", "deployment")
+
+    val dplStatusConditions = groupRowSeqMap(grps, "kube_deployment_status_condition", "deployment")
+
+    val dplPauseds = groupRowsMap(grps, "kube_deployment_spec_paused", "deployment")
+
+    val dplStartegyMaxUnavails = groupRowsMap(grps, "kube_deployment_spec_strategy_rollingupdate_max_unavailable", "deployment")
+    val dplStartegyMaxSurges = groupRowsMap(grps, "kube_deployment_spec_strategy_rollingupdate_max_surge", "deployment")
+
+    if (dplLabels.isEmpty) {
+%>
+# No Deployments defined
+<%
+    } else { // if (dplLabels.isEmpty)
+      val dplIdPrefix = s"${nsIdPrefix}.deployment"
+      val dplTitlePrefix = s"${nsTitlePrefix} Deployment"
+
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${dplIdPrefix}.all",
+        "px" -> s"${dplIdPrefix}.",
+        "title" -> s"${dplTitlePrefix}s - all",
+        "parent" -> s"${nsIdPrefix}.all"
+      ))
+
+      dplLabels.keys.toSeq.sorted.foreach { dplName =>
+        val labelsRow = dplLabels(dplName)
+        val idPrefix = s"${dplIdPrefix}.${dplName}"
+        val titlePrefix = s"${dplTitlePrefix} ${dplName}"
+        val objectLabels: Map[String,String] = labelsRow.labelsAsMap ++
+            dplCreateds.get(dplName).map(r => Map("smg_created" -> myTsFmt(r.value, false))).
+              getOrElse(Map[String,String]())
+
+        render("shared/_index.yml.ssp", Map(
+          "id" -> s"${idPrefix}.all",
+          "px" -> s"${idPrefix}.",
+          "title" -> s"${titlePrefix}",
+          "parent" -> s"${dplIdPrefix}.all"
+        ))
+
+        val dplDesiredReplicasParam = dplDesiredReplicas.get(dplName).map(_.labelUid).getOrElse("invalid")
+        val dplStatusReplicasParam = dplStatusReplicas.get(dplName).map(_.labelUid).getOrElse("invalid")
+        val dplReplicaAvailsParam = dplReplicaAvails.get(dplName).map(_.labelUid).getOrElse("invalid")
+        val dplReplicaUnavailsParam = dplReplicaUnavails.get(dplName).map(_.labelUid).getOrElse("invalid")
+        val dplReplicaUpdatedsParam = dplReplicaUpdateds.get(dplName).map(_.labelUid).getOrElse("invalid")
+        val getParam = s"${dplDesiredReplicasParam},${dplStatusReplicasParam},${dplReplicaAvailsParam}," +
+          s"${dplReplicaUnavailsParam},${dplReplicaUpdatedsParam}"
+
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.replicas",
+          "command" -> s":scrape get ${getParam}",
+          "vars" -> Seq(
+            Map("label" -> "desired"),
+            Map("label" -> "status"),
+            Map("label" -> "avail"),
+            Map("label" -> "unavail", "alert-warn-gt" -> "0"),
+            Map("label" -> "updated")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} Replicas",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> objectLabels
+        ))
+
+        val dplObsvGenerationsParam = dplObsvGenerations.get(dplName).map(_.labelUid).getOrElse("invalid")
+        val dplMetadataGenerationsParam = dplMetadataGenerations.get(dplName).map(_.labelUid).getOrElse("invalid")
+
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.generation",
+          "command" -> s":scrape get ${dplObsvGenerationsParam},${dplMetadataGenerationsParam}",
+          "vars" -> Seq(
+            Map("label" -> "observed"),
+            Map("label" -> "metadata")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} Generation",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> objectLabels
+        ))
+
+        val dplStatusCondRows = dplStatusConditions.getOrElse(dplName, Seq())
+        val byCond = dplStatusCondRows.groupBy(_.labelsAsMap.getOrElse("condition", "_InvalidCondition")).
+            toSeq.sortBy(_._1)
+        byCond.foreach { case (condName, condRows) =>
+          if (condRows.size != 3) {
+            myLogError(s"invalid deployment condition statuses - not 3: " +
+              s"$idPrefix : ${condName}  ${condRows}")
+          } else { // condRows.size != 3
+            val safeCondName = OpenMetricsParser.safeUid(condName)
+            val varLabelRows = condRows.map(r => (r.labelsAsMap.getOrElse("status", "_InvalidStatus"), r)).sortBy(_._1)
+            val getParam = varLabelRows.map(_._2.labelUid).mkString(",")
+            val myVars = varLabelRows.map { case (lbl, _) =>
+                Map("label" -> lbl)
+            }.toList
+            render("shared/_rrd_object.yml.ssp", Map(
+              "id" -> s"${idPrefix}.${safeCondName}.status_condition",
+              "command" -> s":scrape get ${getParam}",
+              "vars" -> myVars,
+              "pre_fetch" -> topLevelPfId,
+              "title" -> s"${titlePrefix} ${condName} status_condition",
+              "notify_fail" -> notify_fail,
+              "rrd_type" -> "GAUGE",
+              "rra" -> rra,
+              "interval" -> interval,
+              "object_labels" -> objectLabels
+            ))
+          } // condRows.size != 3
+        } //byCond.foreach
+
+        val dplStartegyMaxUnavailsParam = dplStartegyMaxUnavails.get(dplName).map(_.labelUid)
+        val dplStartegyMaxSurgesParam = dplStartegyMaxUnavails.get(dplName).map(_.labelUid)
+        if (dplStartegyMaxUnavailsParam.isDefined && dplStartegyMaxSurgesParam.isDefined) {
+          val getParam = s"${dplStartegyMaxUnavailsParam.get},${dplStartegyMaxSurgesParam.get}"
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${idPrefix}.strategy_max_unavail_surge",
+            "command" -> s":scrape get ${getParam}",
+            "vars" -> Seq(
+              Map("label" -> "max_unavail"),
+              Map("label" -> "max_surge")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${titlePrefix} Max Unavailable/Surges",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> objectLabels
+          ))
+        } // (dplStartegyMaxUnavailsParam.isDefined && dplStartegyMaxSurgesParam.isDefined)
+
+        val dplPausedParam = dplPauseds.get(dplName).map(_.labelUid).getOrElse("invalid")
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.spec_paused",
+          "command" -> s":scrape get ${dplPausedParam}",
+          "vars" -> Seq(
+            Map("label" -> "paused")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} Spec Paused",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> objectLabels
+        ))
+      } // dplLabels.keys.toSeq.sorted.foreach
+    } // if (dplLabels.isEmpty)
+
+
+//  # TYPE kube_replicaset
+%>
+
+# <%= ns %>.replicaset
+<%
+    val rpsLabels = groupRowsMap(grps, "kube_replicaset_labels", "replicaset")
+    val rpsCreateds = groupRowsMap(grps, "kube_replicaset_created", "replicaset")
+
+    val rpsDesiredReplicas = groupRowsMap(grps, "kube_replicaset_spec_replicas", "replicaset")
+    val (rpsActiveReplicas, rpsInactiveReplicas) = rpsDesiredReplicas.partition(_._2.value > 0)
+    val rpsStatusReplicas = groupRowsMap(grps, "kube_replicaset_status_replicas", "replicaset")
+    val rpsReplicasReadys = groupRowsMap(grps, "kube_replicaset_status_ready_replicas", "replicaset")
+    val rpsReplicasLabelleds = groupRowsMap(grps, "kube_replicaset_status_fully_labeled_replicas", "replicaset")
+
+    val rpsOwners = groupRowsMap(grps, "kube_replicaset_owner", "replicaset")
+
+    val rpsObsvGenerations = groupRowsMap(grps, "kube_replicaset_status_observed_generation", "replicaset")
+    val rpsMetadataGenerations = groupRowsMap(grps, "kube_replicaset_metadata_generation", "replicaset")
+
+    if (rpsActiveReplicas.isEmpty) {
+%>
+# No ReplicaSets defined
+<%
+    } else { // if (rpsActiveReplicas.isEmpty)
+
+      val rpsIdPrefix = s"${nsIdPrefix}.replicaset"
+      val rpsTitlePrefix = s"${nsTitlePrefix} Active ReplicaSet"
+
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${rpsIdPrefix}.all",
+        "px" -> s"${rpsIdPrefix}.",
+        "title" -> s"${rpsTitlePrefix}s - all",
+        "parent" -> s"${nsIdPrefix}.all"
+      ))
+
+      rpsActiveReplicas.keys.toSeq.sorted.foreach { rpsName =>
+        val ownerRow = rpsOwners.get(rpsName)
+        val ownerIsController = ownerRow.flatMap(_.labelsAsMap.get("owner_is_controller")).getOrElse("false")
+        val rpsStableName = ownerIsController match {
+          case "true" => rpsName.split("-").dropRight(1).mkString("-")
+          case x => rpsName
+        }
+
+        val idPrefix = s"${rpsIdPrefix}.${rpsStableName}"
+        val titlePrefix = s"${rpsTitlePrefix} ${rpsName}"
+
+        val objectLabels: Map[String,String] =
+          rpsLabels.get(rpsName).map(_.labelsAsMap).getOrElse(Map()) ++
+          ownerRow.map(_.labelsAsMap).getOrElse(Map()) ++
+          rpsCreateds.get(rpsName).map(r => Map("smg_created" -> myTsFmt(r.value, false))).
+          getOrElse(Map[String,String]())
+
+        render("shared/_index.yml.ssp", Map(
+          "id" -> s"${idPrefix}.all",
+          "px" -> s"${idPrefix}.",
+          "title" -> s"${titlePrefix}",
+          "parent" -> s"${rpsIdPrefix}.all"
+        ))
+
+        val rpsDesiredReplicasRowParam = rpsActiveReplicas(rpsName).labelUid
+        val rpsStatusReplicasParam = rpsStatusReplicas.get(rpsName).map(_.labelUid).getOrElse("_invalid_replica")
+        val rpsReplicasReadysParam = rpsReplicasReadys.get(rpsName).map(_.labelUid).getOrElse("_invalid_replica")
+        val rpsReplicasLabelledsParam = rpsReplicasLabelleds.get(rpsName).map(_.labelUid).getOrElse("_invalid_replica")
+        val getParam = s"${rpsDesiredReplicasRowParam},${rpsStatusReplicasParam},${rpsReplicasReadysParam}," +
+            s"${rpsReplicasLabelledsParam}"
+
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.replicas",
+          "command" -> s":scrape get ${getParam}",
+          "vars" -> Seq(
+            Map("label" -> "desired"),
+            Map("label" -> "status"),
+            Map("label" -> "ready"),
+            Map("label" -> "labelled")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} Replicas",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> objectLabels
+        ))
+
+        val rpsObsvGenerationsParam = rpsObsvGenerations.get(rpsName).map(_.labelUid).getOrElse("invalid")
+        val rpsMetadataGenerationsParam = rpsMetadataGenerations.get(rpsName).map(_.labelUid).getOrElse("invalid")
+
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.generation",
+          "command" -> s":scrape get ${rpsObsvGenerationsParam},${rpsMetadataGenerationsParam}",
+          "vars" -> Seq(
+            Map("label" -> "observed"),
+            Map("label" -> "metadata")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} Generation",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> objectLabels
+        ))
+      } // rpsActiveReplicas.keys.toSeq.sorted.foreach
+    } //if (rpsActiveReplicas.isEmpty)
+
+//  # TYPE kube_daemonset
+%>
+
+# <%= ns %>.daemonset
+<%
+    val dmsLabels = groupRowsMap(grps, "kube_daemonset_labels", "daemonset")
+    val dmsCreateds = groupRowsMap(grps, "kube_daemonset_created", "daemonset")
+    
+    val dmsObsvGenerations = groupRowsMap(grps, "kube_daemonset_status_observed_generation", "daemonset")
+    val dmsMetadataGenerations = groupRowsMap(grps, "kube_daemonset_metadata_generation", "daemonset")
+
+    val dmsStatusDesired = groupRowsMap(grps, "kube_daemonset_status_desired_number_scheduled", "daemonset")
+    val dmsStatusCurrent = groupRowsMap(grps, "kube_daemonset_status_current_number_scheduled", "daemonset")
+    val dmsStatusUpdated = groupRowsMap(grps, "kube_daemonset_status_updated_number_scheduled", "daemonset")
+    val dmsStatusMisscheduled = groupRowsMap(grps, "kube_daemonset_status_number_misscheduled", "daemonset")
+    val dmsStatusAvailable = groupRowsMap(grps, "kube_daemonset_status_number_available", "daemonset")
+    val dmsStatusReady = groupRowsMap(grps, "kube_daemonset_status_number_ready", "daemonset")
+    val dmsStatusUnavailable = groupRowsMap(grps, "kube_daemonset_status_number_unavailable", "daemonset")
+
+    if (dmsLabels.isEmpty) {
+%>
+# No DaemonSets defined
+<%
+    } else { //if (dmsLabels.isEmpty)
+
+      val dmsIdPrefix = s"${nsIdPrefix}.daemonset"
+      val dmsTitlePrefix = s"${nsTitlePrefix} DaemonSet"
+
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${dmsIdPrefix}.all",
+        "px" -> s"${dmsIdPrefix}.",
+        "title" -> s"${dmsTitlePrefix}s - all",
+        "parent" -> s"${nsIdPrefix}.all"
+      ))
+
+      dmsLabels.keys.toSeq.sorted.foreach { dmsName =>
+        val labelsRow = dmsLabels(dmsName)
+        val idPrefix = s"${dmsIdPrefix}.${dmsName}"
+        val titlePrefix = s"${dmsTitlePrefix} ${dmsName}"
+        val objectLabels: Map[String,String] = labelsRow.labelsAsMap ++
+            dplCreateds.get(dmsName).map(r => Map("smg_created" -> myTsFmt(r.value, false))).
+            getOrElse(Map[String,String]())
+
+        render("shared/_index.yml.ssp", Map(
+          "id" -> s"${idPrefix}.all",
+          "px" -> s"${idPrefix}.",
+          "title" -> s"${titlePrefix}",
+          "parent" -> s"${dmsIdPrefix}.all"
+        ))
+
+        val dmsStatusDesiredParam = dmsStatusDesired.get(dmsName).map(_.labelUid).getOrElse("invalid")
+        val dmsStatusCurrentParam = dmsStatusCurrent.get(dmsName).map(_.labelUid).getOrElse("invalid")
+        val dmsStatusUpdatedParam = dmsStatusUpdated.get(dmsName).map(_.labelUid).getOrElse("invalid")
+        val dmsStatusMisscheduledParam = dmsStatusMisscheduled.get(dmsName).map(_.labelUid).getOrElse("invalid")
+        val dmsStatusAvailableParam = dmsStatusAvailable.get(dmsName).map(_.labelUid).getOrElse("invalid")
+        val dmsStatusReadyParam = dmsStatusReady.get(dmsName).map(_.labelUid).getOrElse("invalid")
+        val dmsStatusUnavailableParam = dmsStatusUnavailable.get(dmsName).map(_.labelUid).getOrElse("invalid")
+        val getParam = s"${dmsStatusDesiredParam},${dmsStatusCurrentParam},${dmsStatusUpdatedParam}," +
+          s"${dmsStatusMisscheduledParam},${dmsStatusAvailableParam},${dmsStatusReadyParam}," +
+          s"${dmsStatusUnavailableParam}"
+
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.status_number",
+          "command" -> s":scrape get ${getParam}",
+          "vars" -> Seq(
+            Map("label" -> "desired"),
+            Map("label" -> "current"),
+            Map("label" -> "updated"),
+            Map("label" -> "misscheduled"),
+            Map("label" -> "available"),
+            Map("label" -> "ready"),
+            Map("label" -> "unavailable")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} DaemonSets",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> objectLabels
+        ))
+
+
+
+        val dmsObsvGenerationsParam = dmsObsvGenerations.get(dmsName).map(_.labelUid).getOrElse("invalid")
+        val dmsMetadataGenerationsParam = dmsMetadataGenerations.get(dmsName).map(_.labelUid).getOrElse("invalid")
+
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.generation",
+          "command" -> s":scrape get ${dmsObsvGenerationsParam},${dmsMetadataGenerationsParam}",
+          "vars" -> Seq(
+            Map("label" -> "observed"),
+            Map("label" -> "metadata")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} Generation",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> objectLabels
+        ))
+
+
+      } // dmsLabels.keys.toSeq.sorted.foreach
+    } // if (dmsLabels.isEmpty)
+
+//  # TYPE kube_pod
+%>
+
+# <%= ns %>.pod
+<%
+    val podLabels = groupRowsMap(grps, "kube_pod_labels", "pod")
+    val podCreateds = groupRowsMap(grps, "kube_pod_created", "pod")
+
+    val podScheduleds = groupRowsMap(grps, "kube_pod_status_scheduled_time", "pod")
+
+
+    val podOwners = groupRowsMap(grps, "kube_pod_owner", "pod")
+
+    val podsByOwner = grps.find(_.sortKey == "kube_pod_owner").map(_.rows).getOrElse(Seq()).groupBy { r =>
+      val ret = r.labelsAsMap.getOrElse("owner_name", "_UNDEFINED_owner_name")
+      if (r.labelsAsMap.getOrElse("owner_kind", "") == "Job" && ret.matches(".*-\\d{10}$") ) {
+        ret.split("-").dropRight(1).mkString("-")
+      } else ret
+    }.toSeq.sortBy(_._1)
+
+    val podStableNames = podsByOwner.flatMap { case (ownerName, rows) =>
+      rows.sortBy(_.labelsAsMap.getOrElse("pod", "")).zipWithIndex.map { case (r, ix) =>
+        val podName = r.labelsAsMap.getOrElse("pod", "")
+        val stableBn = podStableBaseName(podName, r.labelsAsMap.getOrElse("owner_kind", ""))
+        val stableN = s"${stableBn}._${ix}"
+        (podName, stableN)
+      }
+    }.toMap
+
+    val podInfos = groupRowsMap(grps, "kube_pod_info", "pod")
+    val podRestartPolicies = groupRowsMap(grps, "kube_pod_restart_policy", "owner_name")
+
+    val podStartTimes = groupRowsMap(grps, "kube_pod_start_time", "pod")
+    val podCompletionTimes = groupRowsMap(grps, "kube_pod_completion_time", "pod")
+
+    val podStatusPhases = groupRowSeqMap(grps, "kube_pod_status_phase", "pod")
+
+    val podStatusReadys = groupRowSeqMap(grps, "kube_pod_status_ready", "pod")
+    val podStatusScheduleds = groupRowSeqMap(grps, "kube_pod_status_scheduled", "pod")
+    val podStatusReasons = groupRowSeqMap(grps, "kube_pod_status_reason", "pod")
+
+    val podPvcInfos = groupRowSeqMap(grps, "kube_pod_spec_volumes_persistentvolumeclaims_info", "pod")
+    val podPvcReadonlys = groupRowSeqMap(grps, "kube_pod_spec_volumes_persistentvolumeclaims_readonly", "pod")
+
+    //  # HELP kube_pod_overhead_cpu_cores The pod overhead in regards to cpu cores associated with running a pod.
+    //  # TYPE kube_pod_overhead_cpu_cores gauge
+    //  # HELP kube_pod_overhead_memory_bytes The pod overhead in regards to memory associated with running a pod.
+    //  # TYPE kube_pod_overhead_memory_bytes gauge
+    //  # HELP kube_pod_runtimeclass_name_info The runtimeclass associated with the pod.
+    //  # TYPE kube_pod_runtimeclass_name_info gauge
+
+    // splitByLabelValue(grp: OpenMetricsGroup, lname: String): Seq[(String, OpenMetricsGroup)]
+    val podsContainersData = grps.filter(x => x.sortKey.startsWith("pod_container_") || x.sortKey.startsWith("pod_init_container_"))
+    val podsContainersDataByPod: Map[String, Seq[OpenMetricsGroup]] = podsContainersData.flatMap { cgrp =>
+        splitByLabelValue(cgrp, "pod") //: Seq[(String, OpenMetricsGroup)]
+    }.groupBy(_._1).map(x => (x._1, x._2.map(_._2))).toMap
+    //    .flatMap(_.rows).groupBy { r =>
+//      r.labelsAsMap.getOrElse("pod", "_invalid_pod")
+//    }.map { case (podName, rs) =>
+//      val
+//      (podName,)
+//    }
+//
+    if (podStableNames.isEmpty) {
+%>
+# No Pods defined
+<%
+    } else { // if (podStableNames.isEmpty)
+      val podIdPrefix = s"${nsIdPrefix}.pod"
+      val podTitlePrefix = s"${nsTitlePrefix} Pod"
+
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${podIdPrefix}.all",
+        "px" -> s"${podIdPrefix}.",
+        "title" -> s"${podTitlePrefix}s - all",
+        "parent" -> s"${nsIdPrefix}.all"
+      ))
+
+      podStableNames.keys.toSeq.sorted.foreach { podName =>
+        val podStableName = podStableNames(podName)
+
+        val idPrefix = s"${podIdPrefix}.${podStableName}"
+        val titlePrefix = s"${podTitlePrefix} ${podName}"
+
+        val objectLabels: Map[String,String] =
+          podLabels.get(podName).map(_.labelsAsMap).getOrElse(Map()) ++
+          podOwners.get(podName).map(_.labelsAsMap).getOrElse(Map()) ++
+          podCreateds.get(podName).map(r => Map("smg_created" -> myTsFmt(r.value, false))).
+            getOrElse(Map[String,String]()) ++
+          podScheduleds.get(podName).map(r => Map("smg_scheduled" -> myTsFmt(r.value, false))).
+            getOrElse(Map[String,String]()) ++
+          podStartTimes.get(podName).map(r => Map("smg_started" -> myTsFmt(r.value, false))).
+            getOrElse(Map[String,String]()) ++
+          podCompletionTimes.get(podName).map(r => Map("smg_completed" -> myTsFmt(r.value, false))).
+            getOrElse(Map[String,String]()) ++
+          podInfos.get(podName).map(_.labelsAsMap).getOrElse(Map()) ++
+          podRestartPolicies.get(podName).map(_.labelsAsMap).getOrElse(Map())
+
+
+        render("shared/_index.yml.ssp", Map(
+          "id" -> s"${idPrefix}.all",
+          "px" -> s"${idPrefix}.",
+          "title" -> s"${titlePrefix}",
+          "parent" -> s"${podIdPrefix}.all"
+        ))
+
+        val podStatusGetParams = podStatusPhases.getOrElse(podName, Seq()).sortBy(
+            _.labelsAsMap.getOrElse("phase", "_invalid_phase")
+        ).map(_.labelUid)
+
+        if (podStatusGetParams.lengthCompare(5) != 0) {
+          myLogError(s"invalid pod status phases - not 5: " +
+            s"$idPrefix : ${podName}  ${podStatusGetParams}")
+        } else {
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${idPrefix}.status_phase",
+            "command" -> s":scrape get ${podStatusGetParams.mkString(",")}",
+            "vars" -> Seq(
+              Map("label" -> "Failed"),
+              Map("label" -> "Pending"),
+              Map("label" -> "Running"),
+              Map("label" -> "Succeeded"),
+              Map("label" -> "Unknown")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${titlePrefix} Status Phases",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> objectLabels
+          ))
+        } // if (podStatusGetParams.lengthCompare(5) != 0)
+
+        val podStatusReadyParams = podStatusReadys.getOrElse(podName, Seq()).sortBy(
+          _.labelsAsMap.getOrElse("condition", "_invalid_condition")
+        ).map(_.labelUid)
+
+        if (podStatusReadyParams.lengthCompare(3) != 0) {
+          myLogError(s"invalid pod status ready conditions - not 3: " +
+            s"$idPrefix : ${podName}  ${podStatusReadyParams}")
+        } else {
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${idPrefix}.status_ready",
+            "command" -> s":scrape get ${podStatusReadyParams.mkString(",")}",
+            "vars" -> Seq(
+              Map("label" -> "False"),
+              Map("label" -> "True"),
+              Map("label" -> "Unknown")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${titlePrefix} Status Ready",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> objectLabels
+          ))
+        } // if (podStatusReadyParams.lengthCompare(3) != 0)
+
+        val podStatusScheduledParams = podStatusScheduleds.getOrElse(podName, Seq()).sortBy(
+          _.labelsAsMap.getOrElse("condition", "_invalid_condition")
+        ).map(_.labelUid)
+
+        if (podStatusScheduledParams.lengthCompare(3) != 0) {
+          myLogError(s"invalid pod status scheduled conditions - not 3: " +
+            s"$idPrefix : ${podName}  ${podStatusScheduledParams}")
+        } else {
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${idPrefix}.status_scheduled",
+            "command" -> s":scrape get ${podStatusScheduledParams.mkString(",")}",
+            "vars" -> Seq(
+              Map("label" -> "False"),
+              Map("label" -> "True"),
+              Map("label" -> "Unknown")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${titlePrefix} Status Scheduled",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> objectLabels
+          ))
+        } // if (podStatusScheduledParams.lengthCompare(3) != 0)
+
+
+        val validReasons = Set("Evicted", "NodeLost", "UnexpectedAdmissionError")
+        val podStatusReasonRows = podStatusReasons.getOrElse(podName, Seq()).map( r =>
+          (r.labelsAsMap.getOrElse("reason", "_invalid_reason"), r)
+        ).sortBy(t => t._1)
+
+        val podStatusReasonParams = podStatusReasonRows.filter { t =>
+          val ret = validReasons.contains(t._1)
+          if (!ret){
+            myLogError(s"Invalid pod status reason row reason: ${t._1} " + s"$idPrefix : ${podName}  ${t._2}")
+          }
+          ret
+        }.map(_._2.labelUid)
+
+        if (podStatusReasonParams.lengthCompare(3) != 0) {
+          myLogError(s"invalid pod status reasons - not 3: " +
+            s"$idPrefix : ${podName}  ${podStatusReasonParams}")
+        } else {
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${idPrefix}.status_reason",
+            "command" -> s":scrape get ${podStatusReasonParams.mkString(",")}",
+            "vars" -> Seq(
+              Map("label" -> "Evicted"),
+              Map("label" -> "NodeLost"),
+              Map("label" -> "UnexpAdmErr")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${titlePrefix} Status Reason",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> objectLabels
+          ))
+        } // if (podStatusReasonParams.lengthCompare(3) != 0)
+
+        val podPvcInfoRows = podPvcInfos.getOrElse(podName, Seq())
+        val podPvcReadonlyRows = podPvcReadonlys.getOrElse(podName, Seq())
+
+        podPvcReadonlyRows.foreach { podPvcReadonlyRow =>
+          val podPvcName = podPvcReadonlyRow.labelsAsMap.getOrElse("persistentvolumeclaim", "_invalid_persistentvolumeclaim")
+          val safePodPvcName = OpenMetricsParser.safeUid(podPvcName)
+          val podPvcInfoRow = podPvcInfoRows.find(_.labelsAsMap.getOrElse("persistentvolumeclaim", "") == podPvcName)
+          val pvcObjectLabels: Map[String,String] = objectLabels ++
+            podPvcReadonlyRow.labelsAsMap ++
+            podPvcInfoRow.map(_.labelsAsMap).getOrElse(Map())
+
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${idPrefix}.kube_pod_spec_volumes_persistentvolumeclaims_readonly.${safePodPvcName}",
+            "command" -> s":scrape get ${podPvcReadonlyRow.labelUid}",
+            "vars" -> Seq(
+              Map("label" -> "readonly")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${titlePrefix} PVC ${podPvcName} Readonly",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> pvcObjectLabels
+          ))
+        } // podPvcInfoRows.foreach
+
+        podsContainersDataByPod.get(podName).foreach { cigrps =>
+          val (initCountGroups, contGroups) = cigrps.partition(_.sortKey.startsWith("kube_pod_init_container_"))
+          Seq((contGroups, "", ""), (initCountGroups, "init_", "Init ")).foreach { case (cgrps, idPart, titlePart) =>
+            val cIdPrefix = s"${idPrefix}.${idPart}container"
+            val cTitlePrefix = s"${titlePrefix} ${titlePart}Container"
+
+            render("shared/_index.yml.ssp", Map(
+              "id" -> s"${cIdPrefix}.all",
+              "px" -> s"${cIdPrefix}.",
+              "title" -> s"${cTitlePrefix}s",
+              "parent" -> s"${idPrefix}.all"
+            ))
+
+            val cInfos = groupRowsMap(cgrps, s"kube_pod_${idPart}container_info", "container")
+            val cStarteds = groupRowsMap(cgrps, s"kube_pod_${idPart}container_state_started", "container")
+
+            val csWaitings = groupRowsMap(cgrps, s"kube_pod_${idPart}container_status_waiting", "container")
+            val csWaitingReasons = groupRowsMap(cgrps, s"kube_pod_${idPart}container_status_waiting_reason", "container")
+            val csRunnings = groupRowsMap(cgrps, s"kube_pod_${idPart}container_status_running", "container")
+            val csTerminateds = groupRowsMap(cgrps, s"kube_pod_${idPart}container_status_terminated", "container")
+            val csTerminatedReasons = groupRowsMap(cgrps, s"kube_pod_${idPart}container_status_terminated_reason", "container")
+            val csLastTerminatedReasons = groupRowsMap(cgrps, s"kube_pod_${idPart}container_status_last_terminated_reason", "container")
+            val csReadys = groupRowsMap(cgrps, s"kube_pod_${idPart}container_status_ready", "container")
+
+            val csRestartsTotals = groupRowsMap(cgrps, s"kube_pod_${idPart}container_status_restarts_total", "container")
+
+            val csContRequests = groupRowSeqMap(cgrps,s"kube_pod_${idPart}container_resource_requests", "container")
+            val csContLimits = groupRowSeqMap(cgrps,s"kube_pod_${idPart}container_resource_limits", "container")
+
+            val csContRequestsCpu = groupRowsMap(cgrps, s"kube_pod_${idPart}container_resource_requests_cpu_cores", "container")
+            val csContLimitsCpu = groupRowsMap(cgrps, s"kube_pod_${idPart}container_resource_limits_cpu_cores", "container")
+            val csContRequestsMem = groupRowsMap(cgrps, s"kube_pod_${idPart}container_resource_requests_memory_bytes", "container")
+            val csContLimitsMem = groupRowsMap(cgrps, s"kube_pod_${idPart}container_resource_limits_memory_bytes", "container")
+            val csContRequestsStrg = groupRowsMap(cgrps, s"kube_pod_${idPart}container_resource_requests_storage_bytes", "container")
+            val csContLimitsStrg = groupRowsMap(cgrps, s"kube_pod_${idPart}container_resource_limits_storage_bytess", "container")
+            val csContRequestsEphStrg = groupRowsMap(cgrps, s"kube_pod_${idPart}container_resource_requests_ephemeral_storage_bytes", "container")
+            val csContLimitsEphStrg = groupRowsMap(cgrps, s"kube_pod_${idPart}container_resource_limits_ephemeral_storage_bytess", "container")
+
+            cInfos.keys.toSeq.sorted.foreach { contName =>
+              val infoRow = cInfos(contName)
+
+              val cObjectLabels = objectLabels ++
+                  infoRow.labelsAsMap ++
+                  cStarteds.get(contName).map(r => Map("smg_started" -> myTsFmt(r.value, false))).
+                    getOrElse(Map[String,String]()) ++
+                  csWaitingReasons.get(contName).map(r =>
+                    Map("smg_waiting_reason" ->r.labelsAsMap.getOrElse("reason", "_invalid_reason"))).
+                    getOrElse(Map[String,String]()) ++
+                  csTerminatedReasons.get(contName).map(r =>
+                    Map("smg_terminated_reason" ->r.labelsAsMap.getOrElse("reason", "_invalid_reason"))).
+                    getOrElse(Map[String,String]()) ++
+                  csLastTerminatedReasons.get(contName).map(r =>
+                    Map("smg_last_terminated_reason" ->r.labelsAsMap.getOrElse("reason", "_invalid_reason"))).
+                    getOrElse(Map[String,String]())
+
+              val safeContName = OpenMetricsParser.safeUid(contName)
+
+              val csWaitingParam = csWaitings.get(contName).map(_.labelUid).getOrElse("_invalid_cont_status_param")
+              val csRunningParam = csRunnings.get(contName).map(_.labelUid).getOrElse("_invalid_cont_status_param")
+              val csTerminatedParam = csTerminateds.get(contName).map(_.labelUid).getOrElse("_invalid_cont_status_param")
+              val csReadyParam = csReadys.get(contName).map(_.labelUid).getOrElse("_invalid_cont_status_param")
+
+              val cGetParam = Seq(csWaitingParam,csRunningParam,csTerminatedParam,csReadyParam).mkString(",")
+              render("shared/_rrd_object.yml.ssp", Map(
+                "id" -> s"${cIdPrefix}.${safeContName}.status",
+                "command" -> s":scrape get ${cGetParam}",
+                "vars" -> Seq(
+                  Map("label" -> "waiting"),
+                  Map("label" -> "running"),
+                  Map("label" -> "terminated"),
+                  Map("label" -> "ready")
+                ),
+                "pre_fetch" -> topLevelPfId,
+                "title" -> s"${cTitlePrefix} ${contName} Status",
+                "notify_fail" -> notify_fail,
+                "rrd_type" -> "GAUGE",
+                "rra" -> rra,
+                "interval" -> interval,
+                "object_labels" -> cObjectLabels
+              ))
+
+              val csRestartsTotalsRow = csRestartsTotals.get(podName)
+              csRestartsTotalsRow.foreach { csrrow =>
+                render("shared/_rrd_object.yml.ssp", Map(
+                  "id" -> s"${cIdPrefix}.${safeContName}.restarts_total",
+                  "command" -> s":scrape get ${csrrow.labelUid}",
+                  "vars" -> Seq(
+                    Map("label" -> "restarts")
+                  ),
+                  "pre_fetch" -> topLevelPfId,
+                  "title" -> s"${cTitlePrefix} ${contName} Total Restarts",
+                  "notify_fail" -> notify_fail,
+                  "rrd_type" -> "GAUGE",
+                  "rra" -> rra,
+                  "interval" -> interval,
+                  "object_labels" -> cObjectLabels
+                ))
+              } // csRestartsTotalsRow.foreach
+
+              val csContRequestsMap = csContRequests.getOrElse(contName, Seq()).groupBy { r =>
+                r.labelsAsMap.getOrElse("resource", "_invalid_resource")
+              }
+              val csContLimitsMap = csContLimits.getOrElse(contName, Seq()).groupBy { r =>
+                r.labelsAsMap.getOrElse("resource", "_invalid_resource")
+              }
+              (csContRequestsMap.keySet ++ csContLimitsMap.keySet).toSeq.sorted.foreach { rsrc =>
+                val reqRow = csContRequestsMap.get(rsrc).map(_.head)
+                val limitRow = csContLimitsMap.get(rsrc).map(_.head)
+                val rGetParam = reqRow.map(_.labelUid).getOrElse("_invalid_requests_row") + "," +
+                    limitRow.map(_.labelUid).getOrElse("_invalid_limits_row")
+
+                val crObjectLabels = cObjectLabels ++
+                  reqRow.map(_.labelsAsMap).getOrElse(Map()) ++
+                  limitRow.map(_.labelsAsMap).getOrElse(Map())
+                val myMu = reqRow.flatMap(_.labelsAsMap.get("unit")).getOrElse(
+                  limitRow.flatMap(_.labelsAsMap.get("unit")).getOrElse("invalid")
+                ) + "s"
+                val limitMu = limitRow.flatMap(_.labelsAsMap.get("unit")).getOrElse("unknown") + "s"
+                render("shared/_rrd_object.yml.ssp", Map(
+                  "id" -> s"${cIdPrefix}.${safeContName}.resource_request_limit",
+                  "command" -> s":scrape get ${rGetParam}",
+                  "vars" -> Seq(
+                    Map("label" -> "requests", "mu" -> myMu),
+                    Map("label" -> "limits", "mu" -> myMu)
+                  ),
+                  "pre_fetch" -> topLevelPfId,
+                  "title" -> s"${cTitlePrefix} ${contName} ${rsrc} Requests/Limits",
+                  "notify_fail" -> notify_fail,
+                  "rrd_type" -> "GAUGE",
+                  "rra" -> rra,
+                  "interval" -> interval,
+                  "object_labels" -> crObjectLabels
+                ))
+              }
+
+
+              val csContRequestsCpuRow = csContRequestsCpu.get(contName)
+              val csContLimitsCpuRow = csContLimitsCpu.get(contName)
+
+              val csContRequestsMemRow = csContRequestsMem.get(contName)
+              val csContLimitsMemRow = csContLimitsMem.get(contName)
+
+              val csContRequestsStrgRow = csContRequestsStrg.get(contName)
+              val csContLimitsStrgRow = csContLimitsStrg.get(contName)
+
+              val csContRequestsEphStrgRow = csContRequestsEphStrg.get(contName)
+              val csContLimitsEphStrgRow = csContLimitsEphStrg.get(contName)
+
+              Seq(
+                (csContRequestsCpuRow, csContLimitsCpuRow, "Cpu", "cpu", "cores"),
+                (csContRequestsCpuRow, csContLimitsCpuRow, "Memory", "memory", "bytes"),
+                (csContRequestsCpuRow, csContLimitsCpuRow, "Storage", "storage", "bytes"),
+                (csContRequestsCpuRow, csContLimitsCpuRow, "Ephemeral Storage", "ephemeral_storage", "bytes")
+              ).filter { t5 => t5._1.isDefined || t5._2.isDefined }.foreach { case (reqRow, lmtRow, tPart, idPart, myMu) =>
+                val reqParam = reqRow.map(_.labelUid).getOrElse(s"_invalid_resource_request_${idPart}")
+                val limitParam = reqRow.map(_.labelUid).getOrElse(s"_invalid_resource_limit_${idPart}")
+
+                render("shared/_rrd_object.yml.ssp", Map(
+                  "id" -> s"${cIdPrefix}.${safeContName}.resource_request_limit_${idPart}",
+                  "command" -> s":scrape get ${reqParam},${limitParam}",
+                  "vars" -> Seq(
+                    Map("label" -> "requests", "mu" -> myMu),
+                    Map("label" -> "limits", "mu" -> myMu)
+                  ),
+                  "pre_fetch" -> topLevelPfId,
+                  "title" -> s"${cTitlePrefix} ${contName} ${tPart} Requests/Limits",
+                  "notify_fail" -> notify_fail,
+                  "rrd_type" -> "GAUGE",
+                  "rra" -> rra,
+                  "interval" -> interval,
+                  "object_labels" -> cObjectLabels
+                ))
+              } // Seq(...).filter {...}.foreach
+            } // cInfos.keys.toSeq.sorted.foreach
+          } // Seq((contGroups, "", ""), (initCountGroups, "init_", "Init ")).foreach
+        } // podsContainersDataByPod.get(podName).foreach
+      } // podStableNames.keys.toSeq.sorted.foreach
+    } // if (podStableNames.isEmpty)
+
+//  # TYPE kube_secret
+%>
+
+# <%= ns %>.secret
+<%
+
+      val scrTypes = groupRowsMap(grps, "kube_secret_type", "secret")
+      val scrLabels = groupRowsMap(grps, "kube_secret_labels", "secret")
+      val scrCreateds = groupRowsMap(grps, "kube_secret_created", "secret")
+      val scrMetaRsrcVers = groupRowsMap(grps, "kube_secret_metadata_resource_version", "secret")
+      
+      val scrStableNames = scrTypes.toSeq.map { case (scrName, typRow) =>
+        val dropSuffix = typRow.labelsAsMap.getOrElse("type", "_invalid_secret_type") match {
+          case "kubernetes.io/service-account-token" => 1
+          case _ => 0
+        }
+        val stableBaseName = if (dropSuffix > 0) {
+          scrName.split("-").dropRight(dropSuffix).mkString("-")
+        } else scrName
+        (stableBaseName, scrName)
+      }.groupBy(_._1).map { case (bn, tplseq) =>
+        (bn, tplseq.map(_._2).sorted)
+      }.toSeq.sortBy(_._1)
+
+      if (scrStableNames.isEmpty) {
+%>
+# No Secrets defined
+<%
+      } else { //(scrStableNames.isEmpty)
+        val scrIdPrefix = s"${nsIdPrefix}.secret"
+        val scrTitlePrefix = s"${nsTitlePrefix} Secret"
+
+        render("shared/_index.yml.ssp", Map(
+          "id" -> s"${scrIdPrefix}.all",
+          "px" -> s"${scrIdPrefix}.",
+          "title" -> s"${scrTitlePrefix}s - all",
+          "parent" -> s"${nsIdPrefix}.all"
+        ))
+        scrStableNames.foreach { case (stableBn, scrNames) =>
+          scrNames.zipWithIndex.foreach { case  (scrName, ix) =>
+            val scrStableName = if (scrNames.size > 1)
+              stableBn + s"._${ix}"
+            else
+              stableBn
+            val typesRow = scrTypes(scrName)
+            val objectLabels: Map[String,String] = typesRow.labelsAsMap ++
+              scrLabels.get(scrName).map(_.labelsAsMap).getOrElse(Map()) ++
+              scrCreateds.get(scrName).map(r => Map("smg_created" -> myTsFmt(r.value, false))).
+                getOrElse(Map[String,String]())
+            scrMetaRsrcVers.get(scrName).foreach { scrMetaRsrcVerRow =>
+              render("shared/_rrd_object.yml.ssp", Map(
+                "id" -> s"${scrIdPrefix}.${scrStableName}.metadata_resource_version",
+                "command" -> s":scrape get ${scrMetaRsrcVerRow.labelUid}",
+                "vars" -> Seq(
+                  Map("label" -> "version")
+                ),
+                "pre_fetch" -> topLevelPfId,
+                "title" -> s"${scrTitlePrefix} ${scrName} Matadata Resource Version",
+                "notify_fail" -> notify_fail,
+                "rrd_type" -> "GAUGE",
+                "rra" -> rra,
+                "interval" -> interval,
+                "object_labels" -> objectLabels
+              ))
+            } // scrMetaRsrcVers.get(scrName).foreach
+          } // scrNames.zipWithIndex.foreach
+        } //scrStableNames.foreach { case (stableBn, rows) =>
+      } //(scrStableNames.isEmpty)
+      
+//  # TYPE kube_persistentvolumeclaim
+%>
+
+# <%= ns %>.persistentvolumeclaim
+<%
+      val pvcLabels = groupRowsMap(grps, "kube_persistentvolumeclaim_labels", "persistentvolumeclaim")
+      if (pvcLabels.isEmpty) {
+%>
+# No PersistentVolumeClaims defined
+<%
+      }  else {  // if (pvcLabels.isEmpty)
+        val pvcInfos = groupRowsMap(grps, "kube_persistentvolumeclaim_info", "persistentvolumeclaim")
+        val pvcAccessModes = groupRowsMap(grps, "kube_persistentvolumeclaim_access_mode", "persistentvolumeclaim")
+        //val pvcStatusConds = groupRowSeqMap(grps, "kube_persistentvolumeclaim_status_condition", "persistentvolumeclaim")
+
+        val pvcStatusPhases = groupRowSeqMap(grps, "kube_persistentvolumeclaim_status_phase", "persistentvolumeclaim")
+
+        val pvcReqStorageBytes = groupRowsMap(grps, "kube_persistentvolumeclaim_resource_requests_storage_bytes", "persistentvolumeclaim")
+
+        val pvcIdPrefix = s"${nsIdPrefix}.pvc"
+        val pvcTitlePrefix = s"${nsTitlePrefix} PVC"
+
+        render("shared/_index.yml.ssp", Map(
+          "id" -> s"${pvcIdPrefix}.all",
+          "px" -> s"${pvcIdPrefix}.",
+          "title" -> s"${pvcTitlePrefix}s - all",
+          "parent" -> s"${nsIdPrefix}.all"
+        ))
+        pvcLabels.keys.toSeq.sorted.foreach { pvcName =>
+          val labelsRow = pvcLabels(pvcName)
+
+          val objectLabels: Map[String,String] = labelsRow.labelsAsMap ++
+            pvcInfos.get(pvcName).map(_.labelsAsMap).getOrElse(Map()) ++
+            pvcAccessModes.get(pvcName).map(_.labelsAsMap).getOrElse(Map())
+
+          pvcReqStorageBytes.get(pvcName).foreach { pvcReqStorageBytesRow =>
+            render("shared/_rrd_object.yml.ssp", Map(
+              "id" -> s"${pvcIdPrefix}.${pvcName}.resource_requests_storage_bytes",
+              "command" -> s":scrape get ${pvcReqStorageBytesRow.labelUid}",
+              "vars" -> Seq(
+                Map("label" -> "req storage", "mu" -> "bytes")
+              ),
+              "pre_fetch" -> topLevelPfId,
+              "title" -> s"${pvcTitlePrefix} ${pvcName} Resource Requests Storage",
+              "notify_fail" -> notify_fail,
+              "rrd_type" -> "GAUGE",
+              "rra" -> rra,
+              "interval" -> interval,
+              "object_labels" -> objectLabels
+            ))
+          } // pvcReqStorageBytes.get(pvcName).foreach { pvcReqStorageBytesRow =>
+
+          val pvcStatusPhasesRows = pvcStatusPhases.getOrElse(pvcName, Seq())
+          if (pvcStatusPhasesRows.lengthCompare(3) != 0) {
+            myLogError(s"invalid pvc status phases - not 3: " +
+              s"$pvcIdPrefix : ${pvcName}  ${pvcStatusPhasesRows}")
+          } else {
+             //Bound|Lost|Pending
+            val getParam = pvcStatusPhasesRows.sortBy(_.labelsAsMap.get("phase")).map(_.labelUid).mkString(",")
+            render("shared/_rrd_object.yml.ssp", Map(
+              "id" -> s"${pvcIdPrefix}.${pvcName}.status_phase",
+              "command" -> s":scrape get ${getParam}",
+              "vars" -> Seq(
+                Map("label" -> "Bound"),
+                Map("label" -> "Lost"),
+                Map("label" -> "Pending")
+              ),
+              "pre_fetch" -> topLevelPfId,
+              "title" -> s"${pvcTitlePrefix} ${pvcName} Resource Requests Storage",
+              "notify_fail" -> notify_fail,
+              "rrd_type" -> "GAUGE",
+              "rra" -> rra,
+              "interval" -> interval,
+              "object_labels" -> objectLabels
+            ))
+          } // if (pvcStatusPhasesRows.lengthCompare(3) != 0) {
+        } // pvcLabels.keys.toSeq.sorted.foreach { pvcName =>
+      } //if (pvcLabels.isEmpty)
+
+//  # TYPE kube_poddisruptionbudget
+%>
+
+# <%= ns %>.poddisruptionbudget
+<%
+      val pdbIdPrefix = s"${nsIdPrefix}.pdb"
+      val pdbTitlePrefix = s"${nsTitlePrefix} Pod Disruption Budget"
+
+      val pdbCreateds = groupRowsMap(grps, "kube_poddisruptionbudget_created", "poddisruptionbudget")
+
+      val pdbStatusCurrentHealthys = groupRowsMap(grps, "kube_poddisruptionbudget_status_current_healthy", "poddisruptionbudget")
+      val pdbStatusDesiredHealthys = groupRowsMap(grps, "kube_poddisruptionbudget_status_desired_healthy", "poddisruptionbudget")
+      val pdbStatusExpectedPods = groupRowsMap(grps, "kube_poddisruptionbudget_status_expected_pods", "poddisruptionbudget")
+      val pdbStatusPodDisruptAlloweds = groupRowsMap(grps, "kube_poddisruptionbudget_status_pod_disruptions_allowed", "poddisruptionbudget")
+
+      val pdbObservedGenerations = groupRowsMap(grps, "kube_poddisruptionbudget_status_observed_generation", "poddisruptionbudget")
+
+      pdbCreateds.toSeq.sortBy(_._1).foreach { case (pdbName, pdbCreatedRow) =>
+        val objectLabels: Map[String,String] = pdbCreatedRow.labelsAsMap ++
+          Map("smg_created" -> myTsFmt(pdbCreatedRow.value, false))
+
+        pdbStatusCurrentHealthys.get(pdbName).foreach { myRow =>
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${pdbIdPrefix}.${pdbName}.${myRow.name}",
+            "command" -> s":scrape get ${myRow.labelUid}",
+            "vars" -> Seq(
+              Map("label" -> "pods")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${pdbTitlePrefix} ${pdbName} Current Healthy Pods",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> (objectLabels ++ myRow.labelsAsMap)
+          ))
+        }
+
+        pdbStatusExpectedPods.get(pdbName).foreach { myRow =>
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${pdbIdPrefix}.${pdbName}.${myRow.name}",
+            "command" -> s":scrape get ${myRow.labelUid}",
+            "vars" -> Seq(
+              Map("label" -> "pods")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${pdbTitlePrefix} ${pdbName} Expected Pods",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> (objectLabels ++ myRow.labelsAsMap)
+          ))
+        }
+
+        pdbStatusPodDisruptAlloweds.get(pdbName).foreach { myRow =>
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${pdbIdPrefix}.${pdbName}.${myRow.name}",
+            "command" -> s":scrape get ${myRow.labelUid}",
+            "vars" -> Seq(
+              Map("label" -> "pods")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${pdbTitlePrefix} ${pdbName} Allowed Pods Disruptions",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> (objectLabels ++ myRow.labelsAsMap)
+          ))
+        }
+
+        pdbObservedGenerations.get(pdbName).foreach { myRow =>
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${pdbIdPrefix}.${pdbName}.${myRow.name}",
+            "command" -> s":scrape get ${myRow.labelUid}",
+            "vars" -> Seq(
+              Map("label" -> "generation")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${pdbTitlePrefix} ${pdbName} Observed Generation",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> (objectLabels ++ myRow.labelsAsMap)
+          ))
+        }
+      } // pdbCreateds.toSeq.sortBy(_._1).foreach { case (pdbName, pdbCreatedRow) =>
+
+//  # TYPE kube_cronjob
+%>
+
+# <%= ns %>.cronjob
+<%
+    val cronJobInfos = groupRowsMap(grps, "kube_cronjob_info", "cronjob")
+    val cronJobCreateds = groupRowsMap(grps, "kube_cronjob_created", "cronjob")
+    val cronJobLastSts = groupRowsMap(grps, "kube_cronjob_status_last_schedule_time", "cronjob")
+    val cronJobNextSts = groupRowsMap(grps, "kube_cronjob_next_schedule_time", "cronjob")
+    val cronJobStatusActives = groupRowsMap(grps, "kube_cronjob_status_active", "cronjob")
+    val cronJobSpecSuspends = groupRowsMap(grps, "kube_cronjob_spec_suspend", "cronjob")
+    if (cronJobInfos.isEmpty) {
+%>
+# No cronjobs defined
+<%
+    } else { // cronJobInfos.isEmpty
+      val cjIdPrefix = s"${nsIdPrefix}.cronjob"
+      val cjTitlePrefix = s"${nsTitlePrefix} CronJob"
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${cjIdPrefix}.all",
+        "px" -> s"${cjIdPrefix}.",
+        "title" -> s"${cjTitlePrefix}s - all",
+        "parent" -> s"${nsIdPrefix}.all" ,
+        "cols" -> 3
+      ))
+
+      cronJobInfos.keys.toSeq.sorted.foreach { cjobName =>
+        val infoRow = cronJobInfos(cjobName)
+        val idPrefix = s"${cjIdPrefix}.${cjobName}"
+        val titlePrefix = s"${cjTitlePrefix} ${cjobName}"
+
+        render("shared/_index.yml.ssp", Map(
+          "id" -> s"${idPrefix}.all",
+          "px" -> s"${idPrefix}.",
+          "title" -> s"${titlePrefix}",
+          "parent" -> s"${cjIdPrefix}.all"
+        ))
+
+        val objectLabels = infoRow.labelsAsMap ++ ( if (cronJobCreateds.contains(cjobName)) {
+          Map("smg_created" -> myTsFmt(cronJobCreateds(cjobName).value, false))
+        } else Map() )
+
+        // kube_cronjob_status_last_schedule_time - age
+        cronJobLastSts.get(cjobName).foreach { lstRow =>
+          render("shared/_ts_object.yml.ssp", Map(
+            "id" -> s"${idPrefix}.${lstRow.name}",
+            "command" -> s":scrape get ${lstRow.labelUid}",
+            "vars" -> Seq(Map[String,Object]()),
+            "sub_command" -> "ts_s",
+            "ts_op" -> "age",
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${titlePrefix} Last Schedule Time - age",
+            "notify_fail" -> notify_fail,
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> objectLabels
+    //        ,"rrd_init_source" -> rrd_init_source,
+    //        "stack" -> stack,
+    //        "data_delay" -> data_delay,
+    //        "sanitize_labels" -> sanitize_labels
+          ))
+        }
+
+        // kube_cronjob_next_schedule_time - ttl
+        cronJobNextSts.get(cjobName).foreach { nstRow =>
+          render("shared/_ts_object.yml.ssp", Map(
+            "id" -> s"${idPrefix}.${nstRow.name}",
+            "command" -> s":scrape get ${nstRow.labelUid}",
+            "vars" -> Seq(Map[String,Object]("label" -> "remaining")),
+            "sub_command" -> "ts_s",
+            "ts_op" -> "ttl",
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${titlePrefix} Next Schedule Time - time remaining",
+            "notify_fail" -> notify_fail,
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> objectLabels
+            //        ,"rrd_init_source" -> rrd_init_source,
+            //        "stack" -> stack,
+            //        "data_delay" -> data_delay,
+            //        "sanitize_labels" -> sanitize_labels
+          ))
+        }
+
+        // kube_cronjob_status_active, kube_cronjob_spec_suspend
+        val saRowOpt = cronJobStatusActives.get(cjobName)
+        val ssRowOpt = cronJobSpecSuspends.get(cjobName)
+        if (saRowOpt.isDefined && ssRowOpt.isDefined){
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${idPrefix}.kube_cronjob_active_suspended",
+            "command" -> s":scrape get ${saRowOpt.get.labelUid},${ssRowOpt.get.labelUid}",
+            "vars" -> Seq(
+              Map("label" -> "active"),
+              Map("label" -> "suspended")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${titlePrefix} Active/Suspended status",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> objectLabels
+          ))
+        }
+      } // cronJobInfosMap.keys.toSeq.sorted.forEach
+    } // cronJobInfos.isEmpty
+    
+
+//  # TYPE kube_job
+%>
+
+# <%= ns %>.job
+<%
+    val jobOwners = groupRowsMap(grps, "kube_job_owner", "job_name")
+    val jobLabels = groupRowsMap(grps, "kube_job_labels", "job_name")
+    val jobInfos = groupRowsMap(grps, "kube_job_info", "job_name")
+    val jobCreateds = groupRowsMap(grps, "kube_job_created", "job_name")
+
+    val jobSpecParallelisms = groupRowsMap(grps, "kube_job_spec_parallelism", "job_name")
+    val jobSpecCompletions = groupRowsMap(grps, "kube_job_spec_completions", "job_name")
+    val jobSpecActiveDeadlines = groupRowsMap(grps, "kube_job_spec_active_deadline_seconds", "job_name")
+
+    val jobStatusSucceededs = groupRowsMap(grps, "kube_job_status_succeeded", "job_name")
+    val jobStatusFaileds = groupRowsMap(grps, "kube_job_status_failed", "job_name")
+    val jobStatusActives = groupRowsMap(grps, "kube_job_status_active", "job_name")
+
+    val jobStatusStartTss = groupRowsMap(grps, "kube_job_status_start_time", "job_name")
+    val jobStatusCompletionTss = groupRowsMap(grps, "kube_job_status_completion_time", "job_name")
+
+    val jobCompletes = groupRowSeqMap(grps, "kube_job_complete", "job_name")
+    val jobFaileds = groupRowSeqMap(grps, "kube_job_failed", "job_name")
+
+    val jobStableNames: Seq[(String,Seq[String])] = jobOwners.toSeq.map { case (jobName, ownerRow) =>
+      val dropSuffix = ownerRow.labelsAsMap.getOrElse("owner_kind", "_invalid_owner_kind") match {
+        case "CronJob" => 1
+        case _ => 0
+      }
+      val stableBaseName = if (dropSuffix > 0) {
+        jobName.split("-").dropRight(dropSuffix).mkString("-")
+      } else jobName
+      (stableBaseName, jobName)
+    }.groupBy(_._1).map { case (bn, tplseq) =>
+      (bn, tplseq.map(_._2).sorted)
+    }.toSeq.sortBy(_._1)
+
+    if (jobStableNames.isEmpty) {
+%>
+# No jobs defined
+<%
+    } else { //if (jobStableNames.isEmpty)
+      val jIdPrefix = s"${nsIdPrefix}.job"
+      val jTitlePrefix = s"${nsTitlePrefix} Job"
+
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${jIdPrefix}.all",
+        "px" -> s"${jIdPrefix}.",
+        "title" -> s"${jTitlePrefix}s - all",
+        "parent" -> s"${nsIdPrefix}.all"
+      ))
+
+      jobStableNames.foreach { case (stableBn, jobNames) =>
+        render("shared/_index.yml.ssp", Map(
+          "id" -> s"${jIdPrefix}.${stableBn}.all",
+          "px" -> s"${jIdPrefix}.${stableBn}.",
+          "title" -> s"${jTitlePrefix} - ${stableBn}",
+          "parent" -> s"${jIdPrefix}.all"
+        ))
+
+        jobNames.zipWithIndex.foreach { case (jobName, ix) =>
+          val stableName = if (jobName != stableBn) {
+            s"${stableBn}._${ix}"
+          } else {
+            jobName
+          }
+          val idPrefix = s"${jIdPrefix}.${stableName}"
+          val titlePrefix = s"${jTitlePrefix} ${jobName}"
+
+          val jobLabelsRow = jobLabels.get(jobName)
+          val jobInfosRow = jobInfos.get(jobName)
+
+          val jobCreatedsRow = jobCreateds.get(jobName)
+          val jobStatusStartTssRow = jobStatusStartTss.get(jobName)
+          val jobStatusCompletionTssRow = jobStatusCompletionTss.get(jobName)
+
+          val objectLabels = jobOwners(jobName).labelsAsMap ++
+            jobLabelsRow.map(_.labelsAsMap).getOrElse(Map()) ++
+            jobInfosRow.map(_.labelsAsMap).getOrElse(Map()) ++
+            jobCreatedsRow.map(r => Map("smg_created" -> myTsFmt(r.value, false))).getOrElse(Map()) ++
+            jobStatusStartTssRow.map(r => Map("smg_started" -> myTsFmt(r.value, false))).getOrElse(Map()) ++
+            jobStatusCompletionTssRow.map(r => Map("smg_completed" -> myTsFmt(r.value, false))).getOrElse(Map())
+
+          val jobSpecParallelismsRow = jobSpecParallelisms.get(jobName)
+          jobSpecParallelismsRow.foreach { row =>
+            render("shared/_rrd_object.yml.ssp", Map(
+              "id" -> s"${idPrefix}.spec_parallelism",
+              "command" -> s":scrape get ${row.labelUid}",
+              "vars" -> Seq(
+                Map("label" -> "parallelism")
+              ),
+              "pre_fetch" -> topLevelPfId,
+              "title" -> s"${titlePrefix} Spec Parallelism",
+              "notify_fail" -> notify_fail,
+              "rrd_type" -> "GAUGE",
+              "rra" -> rra,
+              "interval" -> interval,
+              "object_labels" -> objectLabels
+            ))
+          }
+
+          val jobSpecCompletionsRow = jobSpecCompletions.get(jobName)
+          jobSpecCompletionsRow.foreach { row =>
+            render("shared/_rrd_object.yml.ssp", Map(
+              "id" -> s"${idPrefix}.spec_completions",
+              "command" -> s":scrape get ${row.labelUid}",
+              "vars" -> Seq(
+                Map("label" -> "completions")
+              ),
+              "pre_fetch" -> topLevelPfId,
+              "title" -> s"${titlePrefix} Spec Completions",
+              "notify_fail" -> notify_fail,
+              "rrd_type" -> "GAUGE",
+              "rra" -> rra,
+              "interval" -> interval,
+              "object_labels" -> objectLabels
+            ))
+          }
+
+          jobSpecActiveDeadlines.get(jobName).foreach { row =>
+            render("shared/_rrd_object.yml.ssp", Map(
+              "id" -> s"${idPrefix}.spec_active_deadline_seconds",
+              "command" -> s":scrape get ${row.labelUid}",
+              "vars" -> Seq(
+                Map("label" -> "active_deadline", "mu" -> "seconds")
+              ),
+              "pre_fetch" -> topLevelPfId,
+              "title" -> s"${titlePrefix} Spec Active Deadline Seconds (max allowed run time)",
+              "notify_fail" -> notify_fail,
+              "rrd_type" -> "GAUGE",
+              "rra" -> rra,
+              "interval" -> interval,
+              "object_labels" -> objectLabels
+            ))
+          }
+
+          val jobStatusSucceededsParam = jobStatusSucceededs.get(jobName).
+            map(_.labelUid).getOrElse("_invalid_success_status")
+          val jobStatusFailedsParam = jobStatusFaileds.get(jobName).
+            map(_.labelUid).getOrElse("_invalid_failed_status")
+          val jobStatusActivesParam = jobStatusActives.get(jobName).
+            map(_.labelUid).getOrElse("_invalid_active_status")
+
+          val getParam = Seq(jobStatusSucceededsParam,
+            jobStatusFailedsParam, jobStatusActivesParam).mkString(",")
+
+          render("shared/_rrd_object.yml.ssp", Map(
+            "id" -> s"${idPrefix}.spec_success_failed_active",
+            "command" -> s":scrape get ${getParam}",
+            "vars" -> Seq(
+              Map("label" -> "success"),
+              Map("label" -> "failed"),
+              Map("label" -> "active")
+            ),
+            "pre_fetch" -> topLevelPfId,
+            "title" -> s"${titlePrefix} Spec Success/Failed/Active",
+            "notify_fail" -> notify_fail,
+            "rrd_type" -> "GAUGE",
+            "rra" -> rra,
+            "interval" -> interval,
+            "object_labels" -> objectLabels
+          ))
+
+          val jobCompleteRows = jobCompletes.getOrElse(jobName, Seq())
+          val jobFailedRows = jobFaileds.getOrElse(jobName, Seq())
+
+          if (jobCompleteRows.size == 3 || jobFailedRows.size == 3) {
+            val completedParams = jobCompleteRows.sortBy(_.labelsAsMap.getOrElse("condition",""))
+            val failedParams = jobFailedRows.sortBy(_.labelsAsMap.getOrElse("condition",""))
+            val getParam = Seq(
+              completedParams.lift(0).map(_.labelUid).getOrElse("_invalid_completed_condition_false"),
+              completedParams.lift(1).map(_.labelUid).getOrElse("_invalid_completed_condition_true"),
+              completedParams.lift(2).map(_.labelUid).getOrElse("_invalid_completed_condition_unknown"),
+              failedParams.lift(0).map(_.labelUid).getOrElse("_invalid_failed_condition_false"),
+              failedParams.lift(1).map(_.labelUid).getOrElse("_invalid_failed_condition_true"),
+              failedParams.lift(2).map(_.labelUid).getOrElse("_invalid_failed_condition_unknown")
+            ).mkString(",")
+
+            render("shared/_rrd_object.yml.ssp", Map(
+              "id" -> s"${idPrefix}.completed_failed",
+              "command" -> s":scrape get ${getParam}",
+              "vars" -> Seq(
+                Map("label" -> "completed_false"),
+                Map("label" -> "completed_true"),
+                Map("label" -> "completed_unknown"),
+                Map("label" -> "failed_false"),
+                Map("label" -> "failed_true"),
+                Map("label" -> "failed_unknown")
+              ),
+              "pre_fetch" -> topLevelPfId,
+              "title" -> s"${titlePrefix} Completed/Failed",
+              "notify_fail" -> notify_fail,
+              "rrd_type" -> "GAUGE",
+              "rra" -> rra,
+              "interval" -> interval,
+              "object_labels" -> objectLabels
+            ))
+          }
+        } // jobNames.zipWithIndex.foreach { case (jobName, ix) =>
+
+      }// jobStableNames.foreach { case (stableBn, jobNames) =>
+    } // if (jobStableNames.isEmpty)
+    
+  //  # TYPE kube_namespace  ???
+
+    //  # TYPE kube_configmap
+%>
+
+# <%= ns %>.configmap
+<%
+    val cmInfos = groupRowsMap(grps, "kube_configmap_info", "configmap")
+    val cmCreateds = groupRowsMap(grps, "kube_configmap_created", "configmap")
+    val cmMetaRsrcVers = groupRowsMap(grps, "kube_configmap_metadata_resource_version", "configmap")
+
+    if (cmMetaRsrcVers.isEmpty) {
+%>
+# No configmaps defined
+<%
+    } else { //if (cmMetaRsrcVers.isEmpty)
+      val cmIdPrefix = s"${nsIdPrefix}.configmap"
+      val cmTitlePrefix = s"${nsTitlePrefix} ConfigMap"
+
+      render("shared/_index.yml.ssp", Map(
+        "id" -> s"${cmIdPrefix}.all",
+        "px" -> s"${cmIdPrefix}.",
+        "title" -> s"${cmTitlePrefix}s - all",
+        "parent" -> s"${nsIdPrefix}.all"
+      ))
+
+      cmMetaRsrcVers.toSeq.sortBy(_._1).foreach { case (cmName, metaRsrcVerRow) =>
+        val idPrefix = s"${cmIdPrefix}.${cmName}"
+        val titlePrefix = s"${cmTitlePrefix} ${cmName}"
+
+        val objectLabels = metaRsrcVerRow.labelsAsMap ++
+          cmInfos.get(cmName).map(_.labelsAsMap).getOrElse(Map()) ++
+          cmCreateds.get(cmName).map(r => Map("smg_created" -> myTsFmt(r.value, false))).getOrElse(Map())
+
+        render("shared/_rrd_object.yml.ssp", Map(
+          "id" -> s"${idPrefix}.metadata_resource_version",
+          "command" -> s":scrape get ${metaRsrcVerRow.labelUid}",
+          "vars" -> Seq(
+            Map("label" -> "rsrc version")
+          ),
+          "pre_fetch" -> topLevelPfId,
+          "title" -> s"${titlePrefix} Metadata Resource Version",
+          "notify_fail" -> notify_fail,
+          "rrd_type" -> "GAUGE",
+          "rra" -> rra,
+          "interval" -> interval,
+          "object_labels" -> objectLabels
+        ))
+
+      } // cmMetaRsrcVers.toSeq.sortBy(_._1).foreach { case (cmName, metaRsrcVerRow) =>
+
+    } //if (cmMetaRsrcVers.isEmpty)
+
+  } // byNs
+
+%>

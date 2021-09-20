@@ -33,7 +33,7 @@
       case "DaemonSet" => 1            //"-xxxxx"
       case "ReplicaSet" => 2            //"-xxxxxxxxxx-xxxxx"
       case "StatefulSet" => 0           //"-x"
-      case "Job" => 1                   //"-<timestamp>-xxxxx"
+      case "Job" => 2                   //"-<timestamp>-xxxxx"
       case "ReplicationController" => 1 //"-xxxxx"
       case "Node" => 0                  //drop nothing
       case _ => 0

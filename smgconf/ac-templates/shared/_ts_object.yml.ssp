@@ -1,0 +1,71 @@
+### shared/_ts_object.yml.ssp
+<%@ val id: String %>
+<%@ val command: String %>
+<%@ val vars: Seq[Map[String,Object]] %>
+<%@ val sub_command: String = "ts_s" %>
+<%@ val ts_op: String = "delta" %>
+<%@ val add_op_to_var_labels: Boolean = false %><%
+  // common params below
+%><%@ val title: String = "" %>
+<%@ val interval: Int = 60 %>
+<%@ val timeout: Int = 30 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val object_labels: Map[String,Object] = Map() %>
+<%@ val stack: Boolean = false %>
+<%@ val delay: Int = 0 %>
+<%@ val data_delay: Int = 0 %>
+<%@ val rrd_init_source: String = "" %>
+<%@ val rra: String = "" %>
+<%@ val sanitize_labels: Boolean = true %>
+<%
+  render("_pre_fetch.yml.ssp", Map(
+    "id" -> s"${id}._ts_fetch",
+    "command" -> command,
+    "desc" -> s"${title} - fetch data",
+    "pass_data" -> true,
+    "delay" -> delay,
+    "notify_fail" -> notify_fail,
+    "pre_fetch" -> pre_fetch,
+    "timeout" -> timeout
+  ))
+
+  lazy val myMu = if (sub_command == "ts_ms") "ms" else "s"
+  val minYMap = Map(
+    "delta" -> "U",
+    "delta_neg" -> "U"
+  )
+  val minY = minYMap.get(ts_op)
+  val myVars = vars.zipWithIndex.map { case (vm,ix) =>
+    vm ++
+      (if (vm.contains("mu")) Map() else Map("mu" -> myMu)) ++
+      (if (minY.isEmpty || vm.contains("min")) Map() else Map("min" -> minY.get)) ++
+      (if (vm.contains("label")) {
+        if (add_op_to_var_labels)
+          Map("label" -> (vm("label").toString + s" - ${ts_op}"))
+        else
+          Map()
+      } else {
+        if (vars.size > 1)
+          Map("label" -> s"ds${ix} - ${ts_op}")
+        else
+          Map("label" -> ts_op)
+      })
+  }
+  render("_rrd_object.yml.ssp", Map(
+    "id" -> id,
+    "pre_fetch" -> s"${id}._ts_fetch",
+    "command" -> s":cc ${sub_command} ${ts_op}",
+    "title" -> title,
+    "notify_fail" -> notify_fail,
+    "rrd_type" -> "GAUGE",
+    "rra" -> rra,
+    "rrd_init_source" -> rrd_init_source,
+    "interval" -> interval,
+    "stack" -> stack,
+    "data_delay" -> data_delay,
+    "vars" -> myVars,
+    "object_labels" -> object_labels,
+    "sanitize_labels" -> sanitize_labels
+  ))
+%>
