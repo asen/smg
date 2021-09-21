@@ -183,7 +183,7 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
   private def processAggObjectMessage(aggm: SMGAggObjectMessage): Unit = {
     try {
       val resTupl = try {
-        (Some(configSvc.fetchAggValues(aggm.obj, configSvc)), None)
+        (Some(configSvc.fetchAggValues(aggm.obj)), None)
       } catch { case t: Throwable =>
         log.ex(t, s"SMGUpdateActor.processAggObjectMessage (${aggm.obj.id}): " +
           s"Unexpected exception from fetchAggValues: ${t.getMessage}")

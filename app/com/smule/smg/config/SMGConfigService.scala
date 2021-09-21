@@ -125,8 +125,8 @@ trait SMGConfigService {
 
   def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult
 
-  def fetchAggValues(aggObj: SMGRrdAggObject, confSvc: SMGConfigService): SMGRrdUpdateData = {
-    val cache = aggObj.ous.map(ou => confSvc.getCachedValues(ou, !aggObj.isCounter)).toList
+  def fetchAggValues(aggObj: SMGRrdAggObject): SMGRrdUpdateData = {
+    val cache = aggObj.ous.map(ou => this.getCachedValues(ou, !aggObj.isCounter)).toList
     val sources = cache.map(_._1)
     val tssSeq: Seq[Long] = cache.flatMap(_._2.map(_.toLong)) // using long to avoid the sum overflowing 32 its
     val tss: Option[Int] = if (tssSeq.isEmpty){

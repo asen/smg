@@ -67,7 +67,7 @@ class SMGValuesCache(log: SMGLoggerApi) {
             val rates = opt.get.vals.zip(prevOpt.get.vals).map { case (cur, prev) => (cur - prev) / deltaTime }
             val isGood = rates.zip(ou.vars).forall { case (rate, v) =>
               val (minCompareRate, maxCompareRate) = ou.getVarMinMaxCompareValues(v)
-              (!rate.isNaN) && (rate >= minCompareRate) && (maxCompareRate >= rate)
+              rate.isNaN || (rate >= minCompareRate) && (maxCompareRate >= rate)
             }
             if (isGood)
               if (counterAsRate)
@@ -83,7 +83,10 @@ class SMGValuesCache(log: SMGLoggerApi) {
         } else  (nanList, None)
       } else //not a counter
         (opt.get.vals, Some(opt.get.tss))
-    } else  (nanList, None)
+    } else  {
+      log.warn(s"SMGValuesCache.getCachedValues: missing or too old cache value for ${ou.id} :$opt")
+      (nanList, None)
+    }
   }
 
   def purgeObsoleteObjs(newObjs: Seq[SMGObjectUpdate]): Unit = {
