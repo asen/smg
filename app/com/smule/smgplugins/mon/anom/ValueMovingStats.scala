@@ -148,8 +148,8 @@ class ValueMovingStats(val idStr: String, log: SMGLoggerApi) {
 
   def serialize : JsValue = {
     val m = Map[String,JsValue](
-      "stVals" -> Json.toJson(stVals.toList),
-      "prevStVals" -> Json.toJson(prevStVals.toList),
+      "stVals" -> Json.toJson(stVals.filter(!_.isNaN).toList),
+      "prevStVals" -> Json.toJson(prevStVals.filter(!_.isNaN).toList),
       "ltStats" -> Json.toJson(ltStats.toList.map(_.serialize)),
       "lastUpdateTs" -> Json.toJson(lastUpdateTs),
       // XXX these below are serialized only for convenience - to show via inspect
