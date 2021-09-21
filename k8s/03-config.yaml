@@ -61,6 +61,7 @@ data:
       fetch_timeout: 8
       rra_def: kube_15s
       cluster:
+        - template: k8s-kube-state-metrics
         - template: k8s-kubectl-top
       node_metrics:
         - template: node-exporter

@@ -16,6 +16,7 @@ kube:
 #      fetch_timeout: 10
 #      cluster:
 #        - template: k8s-kubectl-top
+#        - template: k8s-kube-state-metrics
 #      node_metrics:
 #        - uid: node
 #          proto: http
