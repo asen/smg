@@ -73,7 +73,7 @@ data:
         - uid: kubelet
           proto: https
           port_path: ":10250/metrics"
-        - template: cadvisor-k8s
+        - template: k8s-cadvisor
           command: ":scrape fetch :tokenf /etc/smg/kube-token/token https://%node_host%:10250/metrics/cadvisor"
           runtime_data: true
           parent_index: cluster.skube.node

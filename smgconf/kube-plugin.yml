@@ -31,7 +31,7 @@ kube:
 #          port_path: ":10250/metrics"
 ##          filter:
 ##            rx: blah
-#        - uid: cadvisor
+#        - template: k8s-cadvisor
 #          proto: https
 #          port_path: ":10250/metrics/cadvisor"
 #      auto_confs:

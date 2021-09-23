@@ -1,7 +1,7 @@
 # This file is managed by SMG AutoConf. Changes will be overwritten
 <%
   // Configure this with a command like this:
-  // command: ':scrape fetch :tokenf /etc/smg/kube-token/token https://%node_host%:%port$/metrics/cadvisor'
+  // command: ':scrape fetch :tokenf /etc/smg/kube-token/token https://%node_host%:%port%/metrics/cadvisor'
   // runtime_data: true
 %>
 <%@ val command: String %>
