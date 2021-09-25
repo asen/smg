@@ -6,7 +6,8 @@ import com.smule.smg.remote.SMGRemote
 import scala.util.Try
 
 /**
-  * A SMG "object" interface, used to display a SMG object. An object is generally represented as a graph in the UI
+  * A SMG "object view" interface, used to display a SMG object. An object view is represented as a
+  * graph in the UI. It can be backed by its own rrd file or derived from one or more other object rrds
   */
 trait SMGObjectView extends SMGObjectBase {
 

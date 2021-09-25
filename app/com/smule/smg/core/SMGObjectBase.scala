@@ -7,6 +7,8 @@ import scala.util.Try
 
 /**
   * Created by asen on 10/6/16.
+  * The base interface for any SMG object - has the common properties needed to
+  * be able to search and filter objects.
   */
 trait SMGObjectBase {
 

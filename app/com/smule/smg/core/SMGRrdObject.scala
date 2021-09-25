@@ -34,7 +34,7 @@ case class SMGRrdObject(id: String,
                         override val rrdInitSource: Option[String],
                         notifyConf: Option[SMGMonNotifyConf],
                         labels: Map[String,String]
-                       ) extends SMGObjectView with SMGObjectUpdate with SMGFetchCommand {
+                       ) extends SMGObjectUpdate with SMGFetchCommand {
 
 //  private val log = SMGLogger
 
@@ -49,8 +49,6 @@ case class SMGRrdObject(id: String,
   override val graphVarsIndexes: List[Int] = vars.indices.toList
 
   override val cdefVars: List[Map[String, String]] = List()
-
-  override val refObj: Option[SMGObjectUpdate] = Some(this)
 
   override val pluginId: Option[String] = None
 
