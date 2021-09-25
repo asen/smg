@@ -2,7 +2,7 @@ package com.smule.smg.config
 
 import com.smule.smg.{config, monitor}
 import com.smule.smg.config.SMGConfigNotifyConfsSummary.{CommandsNotifyIndexConfSummary, CommandsNotifyObjectConfSummary, VarsNotifySeverityConfSummary}
-import com.smule.smg.core.{SMGFetchCommand, SMGObjectUpdate}
+import com.smule.smg.core.{SMGFetchCommand, SMGObjectUpdate, SMGObjectVar}
 import com.smule.smg.monitor.{SMGMonAlertConfSource, SMGState}
 import com.smule.smg.notify.SMGMonNotifyCmd
 
@@ -191,10 +191,10 @@ object SMGConfigNotifyConfsSummary {
         if (ncObj.isDefined){
           val confsForVar = ncObj.get.varConfs.get(vix)
           if (confsForVar.isDefined){
-            val vmap = ou.vars.lift(vix).getOrElse(Map[String,String]())
+            val vmap = ou.vars.lift(vix).getOrElse(SMGObjectVar.empty)
             val varDesc = Seq(
-              vmap.get("label").map(x => ("label", x)),
-              vmap.get("mu").map(x => ("mu", x)),
+              vmap.label.map(x => ("label", x)),
+              vmap.mu.map(x => ("mu", x)),
               Some(("vix", vix))
             ).flatten.map {t => s"${t._1}=${t._2}"}.mkString(" ")
             confsForVar.get.foreach { nc =>

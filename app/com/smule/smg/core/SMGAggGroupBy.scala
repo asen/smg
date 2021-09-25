@@ -14,14 +14,14 @@ import scala.util.Try
   * @param vars - list - var maps. each map can be the full object var definition or a subset of it,
   *             according to the groupBy value
   */
-case class SMGAggGroupBy(groupBy: SMGAggGroupBy.Value, tlMap: Map[String,String], vars:List[Map[String,String]]){
+case class SMGAggGroupBy(groupBy: SMGAggGroupBy.Value, tlMap: Map[String,String], vars:List[SMGObjectVar]){
 
   def desc: String = {
     val tlDesc = if (tlMap.isEmpty) "" else tlMap.map { case (k, s) => s"$k=$s" }.mkString(" ") + " "
     val varsDesc = s"vars (${vars.size}): " + vars.zipWithIndex.map { case (v, ix) =>
-      if (v.isEmpty) {
+      if (v.m.isEmpty) {
         "(*)"
-      } else "(" + v.map { case (k,s) =>
+      } else "(" + v.m.map { case (k,s) =>
         s"$k=$s"
       }.mkString(" ") + ")"
     }.mkString(", ")
@@ -69,9 +69,9 @@ object SMGAggGroupBy extends Enumeration {
     }).map { case (k,v) => ("label:" + k, v) }
 
     lazy val labelMuVars = ov.filteredVars(true).map { m =>
-      m.filter { case (k, v) =>
+      SMGObjectVar(m.m.filter { case (k, v) =>
         (k == "label") || (k == "mu")
-      }
+      })
     }
     lazy val bySxTlMap = Map("sx" -> ov.id.split('.').last)
     lazy val bySx2TlMap = Map("sx" -> ov.id.split('.').takeRight(2).mkString("."))
@@ -79,7 +79,7 @@ object SMGAggGroupBy extends Enumeration {
     lazy val byPxTlMap = Map("px" -> ov.id.split('.').dropWhile(_.startsWith("@")).head)
     lazy val byPx2TlMap = Map("px" -> ov.id.split('.').dropWhile(_.startsWith("@")).take(2).mkString("."))
     lazy val byPx3TlMap = Map("px" -> ov.id.split('.').dropWhile(_.startsWith("@")).take(3).mkString("."))
-    lazy val emptyFilteredVars = ov.filteredVars(true).map { m => Map[String,String]() }
+    lazy val emptyFilteredVars = ov.filteredVars(true).map { m => SMGObjectVar.empty }
 
     gb match {
       case GB_VARS => SMGAggGroupBy(gb, Map(), ov.filteredVars(true))

@@ -104,7 +104,7 @@ object SMGYamlConfigGen {
     val varsLst = new util.ArrayList[Object]()
     obj.vars.foreach { vmap =>
       val jmap = new util.HashMap[String, Object]()
-      vmap.foreach { t =>
+      vmap.m.foreach { t =>
         jmap.put(t._1, t._2)
       }
       varsLst.add(jmap)
@@ -157,7 +157,7 @@ object SMGYamlConfigGen {
     val varsLst = new util.ArrayList[Object]()
     obj.vars.foreach { vmap =>
       val jmap = new util.HashMap[String, Object]()
-      vmap.foreach { t =>
+      vmap.m.foreach { t =>
         jmap.put(t._1, t._2)
       }
       varsLst.add(jmap)

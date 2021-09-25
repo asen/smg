@@ -2,9 +2,8 @@ package com.smule.smg.rrd
 
 import java.io.File
 import java.nio.file.{Files, Path, Paths}
-
 import com.smule.smg.config.{SMGConfigParser, SMGConfigService}
-import com.smule.smg.core.{SMGCmd, SMGObjectUpdate}
+import com.smule.smg.core.{SMGCmd, SMGObjectUpdate, SMGObjectVar}
 
 import scala.collection.mutable
 
@@ -77,10 +76,10 @@ class SMGRrdUpdate(val obju: SMGObjectUpdate, val configSvc: SMGConfigService) {
     }
     //    c.append(" --no-overwrite")
     val lbl = new LabelMaker()
-    obju.vars.foreach { (v: Map[String, String]) =>
+    obju.vars.foreach { (v: SMGObjectVar) =>
       c.append(" DS:").append(lbl.nextLabel).append(":").append(obju.rrdType)
-      c.append(":").append((obju.interval * 2.5).toInt).append(":").append(v.getOrElse("min", "0"))
-      c.append(":").append(v.getOrElse("max", "U"))
+      c.append(":").append((obju.interval * 2.5).toInt).append(":").append(v.min.getOrElse("0"))
+      c.append(":").append(v.max.getOrElse("U"))
     }
     val myRraDef = if (obju.rraDef.isDefined)
       obju.rraDef.get

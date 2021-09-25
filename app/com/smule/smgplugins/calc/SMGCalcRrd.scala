@@ -124,7 +124,7 @@ class SMGCalcRrd(configSvc: SMGConfigService) {
           ret.append(" 'SHIFT:pp_").append(defLbl).append(s":$ppoffs'")
         }
 
-        val cdef = ovElem.graphVar.get("cdef")
+        val cdef = ovElem.graphVar.cdef
         val lbl = if (cdef.nonEmpty) {
           val cdefLbl = "cdf_" + defLbl
           val cdefSubst = SMGRrd.substCdef(cdef.get, defLbl)
@@ -147,7 +147,7 @@ class SMGCalcRrd(configSvc: SMGConfigService) {
     }
 
     val v = expr.firstObjectViewElem.get.graphVar
-    ret.append(SMGRrd.graphVar(v, s"cc_0", v.getOrElse("label","calc"), colorMaker, false, false, gopts))
+    ret.append(SMGRrd.graphVar(v, s"cc_0", v.label.getOrElse("calc"), colorMaker, false, false, gopts))
 
     ret.toString()
   }

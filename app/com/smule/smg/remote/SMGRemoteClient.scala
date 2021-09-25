@@ -72,8 +72,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
   val nonAggObjectBuilder = (JsPath \ "id").read[String].map(id => prefixedId(id)) and
     (JsPath \ "pids").readNullable[Seq[String]].map(seqOpt => seqOpt.map(sq => sq.map(prefixedId)).getOrElse(Seq())) and
     (JsPath \ "interval").read[Int] and
-    (JsPath \ "vars").read[List[Map[String, String]]] and
-    (JsPath \ "cdefVars").readNullable[List[Map[String, String]]].map(ol => ol.getOrElse(List())) and
+    (JsPath \ "vars").read[List[Map[String, String]]].map(x => x.map(SMGObjectVar(_))) and
+    (JsPath \ "cdefVars").readNullable[List[Map[String, String]]].map(ol => ol.getOrElse(List()).map(SMGObjectVar(_))) and
     (JsPath \ "graphVarsIndexes").readNullable[List[Int]].map(ol => ol.getOrElse(List())) and
     (JsPath \ "title").read[String].map(title => "(" + remote.id + ") " + title) and
     (JsPath \ "stack").read[Boolean] and
@@ -92,8 +92,8 @@ class SMGRemoteClient(val remote: SMGRemote, ws: WSClient, configSvc: SMGConfigS
       (JsPath \ "gb").readNullable[String].map { gbOpt =>
         gbOpt.flatMap(gbs => SMGAggGroupBy.gbVal(gbs)).getOrElse(SMGAggGroupBy.defaultGroupBy) } and
       (JsPath \ "gbp").readNullable[String] and
-      (JsPath \ "vars").read[List[Map[String, String]]] and
-      (JsPath \ "cdefVars").readNullable[List[Map[String, String]]].map(ol => ol.getOrElse(List())) and
+      (JsPath \ "vars").read[List[Map[String, String]]].map(x => x.map(SMGObjectVar(_))) and
+      (JsPath \ "cdefVars").readNullable[List[Map[String, String]]].map(ol => ol.getOrElse(List()).map(x => SMGObjectVar(x))) and
       (JsPath \ "graphVarsIndexes").readNullable[List[Int]].map(ol => ol.getOrElse(List())) and
       (JsPath \ "title").read[String].map(title => "(" + remote.id + ") " + title) and
       (JsPath \ "st").readNullable[String]
@@ -1060,8 +1060,8 @@ object SMGRemoteClient {
     "id" -> obj.id,
     "pids" -> obj.parentIds,
     "interval" -> obj.interval,
-    "vars" -> Json.toJson(obj.vars),
-    "cdefVars" -> Json.toJson(obj.cdefVars),
+    "vars" -> Json.toJson(obj.vars.map(_.m)),
+    "cdefVars" -> Json.toJson(obj.cdefVars.map(_.m)),
     "graphVarsIndexes" -> Json.toJson(obj.graphVarsIndexes),
     "title" -> obj.title,
     "stack" -> obj.stack,
@@ -1083,8 +1083,8 @@ object SMGRemoteClient {
       "op" -> obj.op,
       "gb" -> obj.groupBy.toString,
       "gbp" -> Json.toJson(obj.gbParam),
-      "vars" -> Json.toJson(obj.vars),
-      "cdefVars" -> Json.toJson(obj.cdefVars),
+      "vars" -> Json.toJson(obj.vars.map(_.m)),
+      "cdefVars" -> Json.toJson(obj.cdefVars.map(_.m)),
       "graphVarsIndexes" -> Json.toJson(obj.graphVarsIndexes),
       "title" -> obj.title,
       "stack" -> obj.stack,

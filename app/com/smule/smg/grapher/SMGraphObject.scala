@@ -1,6 +1,6 @@
 package com.smule.smg.grapher
 
-import com.smule.smg.core.{SMGObjectUpdate, SMGObjectView}
+import com.smule.smg.core.{SMGObjectUpdate, SMGObjectVar, SMGObjectView}
 import com.smule.smg.rrd.SMGRraDef
 
 /**
@@ -9,8 +9,8 @@ import com.smule.smg.rrd.SMGRraDef
 case class SMGraphObject(
                           id: String,
                           interval: Int,
-                          vars: List[Map[String, String]],
-                          cdefVars: List[Map[String, String]],
+                          vars: List[SMGObjectVar],
+                          cdefVars: List[SMGObjectVar],
                           title: String,
                           stack: Boolean,
                           gvIxes: List[Int],

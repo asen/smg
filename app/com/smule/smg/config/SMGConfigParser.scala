@@ -141,13 +141,13 @@ class SMGConfigParser(log: SMGLoggerApi) {
     else ymap.getOrElse("rrdType", realDefault).toString
   }
 
-  def yamlVarsToVars(yamlVars: Object): List[Map[String, String]] = {
+  def yamlVarsToVars(yamlVars: Object): List[SMGObjectVar] = {
     yamlVars.asInstanceOf[util.ArrayList[util.Map[String, Object]]].asScala.toList.map(
-      (m: util.Map[String, Object]) => m.asScala.map { t => (t._1, t._2.toString) }.toMap
+      (m: util.Map[String, Object]) => SMGObjectVar(m.asScala.map { t => (t._1, t._2.toString) }.toMap)
     )
   }
 
-  def ymapVars(ymap: mutable.Map[String, Object]): List[Map[String, String]] = {
+  def ymapVars(ymap: mutable.Map[String, Object]): List[SMGObjectVar] = {
     if (ymap.contains("vars")) {
       yamlVarsToVars(ymap("vars"))
     } else {
@@ -155,7 +155,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
   }
 
-  private def ymapCdefVars(ymap: mutable.Map[String, Object]): List[Map[String, String]] = {
+  private def ymapCdefVars(ymap: mutable.Map[String, Object]): List[SMGObjectVar] = {
     if (ymap.contains("cdef_vars")) {
       yamlVarsToVars(ymap("cdef_vars"))
     } else {
@@ -468,13 +468,13 @@ class SMGConfigParser(log: SMGLoggerApi) {
     def checkOid(oid: String): Boolean = validateOid(oid) &&
       (!objectIds.contains(oid)) && (!preFetches.contains(oid))
 
-    def processObjectVarsAlertAndNotifyConfs(ymap: mutable.Map[String, Object], oid: String): List[Map[String,String]] = {
+    def processObjectVarsAlertAndNotifyConfs(ymap: mutable.Map[String, Object], oid: String): List[SMGObjectVar] = {
       val myYmapVars = ymapVars(ymap)
       // parse alert confs
       myYmapVars.zipWithIndex.foreach { t =>
         val ix = t._2
         val m = t._1
-        val ac = SMGMonAlertConfVar.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m, pluginChecks)
+        val ac = SMGMonAlertConfVar.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m.m, pluginChecks)
         if (ac.isDefined) {
           addAlertConf(oid, ix, ac.get)
         }
@@ -483,16 +483,16 @@ class SMGConfigParser(log: SMGLoggerApi) {
       myYmapVars.zipWithIndex.foreach { t =>
         val ix = t._2
         val m = t._1
-        val nc = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m)
+        val nc = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, oid, m.m)
         if (nc.isDefined) {
           addNotifyConf(oid, ix, nc.get)
         }
       }
       // exclude alert- and notify- defs from the vars maps so it is not passed around remotes and does not mess up aggregation
       val ymapFilteredVars = myYmapVars.map { m =>
-        m.filter(t => !(SMGMonAlertConfVar.isAlertKey(t._1) || SMGMonNotifyConf.isNotifyKey(t._1)) )
+        m.m.filter(t => !(SMGMonAlertConfVar.isAlertKey(t._1) || SMGMonNotifyConf.isNotifyKey(t._1)) )
       }
-      ymapFilteredVars
+      ymapFilteredVars.map(x => SMGObjectVar(x))
     }
 
     def getRraDef(confFile: String, oid: String, ymap: mutable.Map[String, Object]): Option[SMGRraDef] = {
@@ -736,7 +736,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
             } else {
               // XXX no vars defined, use first object's ones but filter out the "max" value
               // which is likely wrong for the SUM object.
-              objs.head.vars.map { v => v.filter { case (k, vv) => k != "max" } }
+              objs.head.vars.map { v => SMGObjectVar(v.m.filter { case (k, vv) => k != "max" }) }
             }
             val myDataDelay = if (ymap.contains("dataDelay")){
               ymap("dataDelay").asInstanceOf[Int]
@@ -1016,7 +1016,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
           ou.vars.zipWithIndex.foreach{ tv =>
             val v = tv._1
             val ix = tv._2
-            if ((lblAsIx == ix) || (v.getOrElse("label", s"ds$ix") == lbl))
+            if ((lblAsIx == ix) || (v.label.getOrElse(s"ds$ix") == lbl))
               addAlertConf(ou.id, ix, ac)
           }
         }
@@ -1031,7 +1031,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
           ou.vars.zipWithIndex.foreach{ tv =>
             val v = tv._1
             val ix = tv._2
-            if ((lblAsIx == ix) || (v.getOrElse("label", s"ds$ix") == lbl))
+            if ((lblAsIx == ix) || (v.label.getOrElse(s"ds$ix") == lbl))
               addNotifyConf(ou.id, ix, ac)
           }
         }

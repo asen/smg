@@ -41,10 +41,10 @@ trait SMGObjectUpdate extends SMGObjectView with SMGTreeNode {
 
   def numFmt(num: Double, vix: Int, applyCdef: Boolean = true): String = {
     val myNum = if (applyCdef)
-      vars(vix).get("cdef").map(cdf => SMGRrd.computeCdef(cdf, num)).getOrElse(num)
+      vars(vix).cdef.map(cdf => SMGRrd.computeCdef(cdf, num)).getOrElse(num)
     else
       num
-    SMGState.numFmt(myNum, vars(vix).get("mu"))
+    SMGState.numFmt(myNum, vars(vix).mu)
   }
 
   def inspect(cfSvc: SMGConfigService): String = List(

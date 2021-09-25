@@ -14,7 +14,7 @@ import com.smule.smg.rrd.{SMGRraDef, SMGRrd}
 case class SMGRrdAggObject(id: String,
                            ous: Seq[SMGObjectUpdate],
                            aggOp: String,
-                           vars: List[Map[String, String]],
+                           vars: List[SMGObjectVar],
                            title: String,
                            rrdType: String,
                            interval: Int,
@@ -32,7 +32,7 @@ case class SMGRrdAggObject(id: String,
 
   override val graphVarsIndexes: List[Int] = vars.indices.toList
 
-  override val cdefVars: List[Map[String, String]] = List()
+  override val cdefVars: List[SMGObjectVar] = List()
 
   override val pluginId: Option[String] = None
 

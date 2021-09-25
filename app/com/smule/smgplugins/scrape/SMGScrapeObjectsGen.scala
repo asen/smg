@@ -1,7 +1,7 @@
 package com.smule.smgplugins.scrape
 
 import com.smule.smg.config.{SMGConfIndex, SMGConfigParser, SMGConfigService}
-import com.smule.smg.core.{SMGCmd, SMGFilter, SMGLoggerApi, SMGPreFetchCmd, SMGRrdAggObject, SMGRrdObject}
+import com.smule.smg.core.{SMGCmd, SMGFilter, SMGLoggerApi, SMGObjectVar, SMGPreFetchCmd, SMGRrdAggObject, SMGRrdObject}
 import com.smule.smg.grapher.{SMGAggObjectView, SMGraphObject}
 import com.smule.smg.openmetrics.{OpenMetricsGroup, OpenMetricsParser, OpenMetricsRow}
 import com.smule.smg.rrd.SMGRraDef
@@ -83,7 +83,7 @@ class SMGScrapeObjectsGen(
       id = ouid,
       parentIds = parentPfIds,
       command = SMGCmd(cmd, scrapeTargetConf.timeoutSec),
-      vars = vars,
+      vars = vars.map(x => SMGObjectVar(x)),
       title = title,
       rrdType = rrdType,
       interval = scrapeTargetConf.interval,
@@ -249,7 +249,7 @@ class SMGScrapeObjectsGen(
     if (sumObj.nonEmpty && countObj.nonEmpty){
       //an average object - dividing sum/count using rpn
       val ouid = smgBaseUid + s".${groupType}_average"
-      val myVars = List(Map("label" -> "avg"))
+      val myVars = List(SMGObjectVar(Map("label" -> "avg")))
       val myLabels = sumRow.get.labelsAsMap ++ countRow.get.labelsAsMap
       ret.objects += SMGRrdAggObject(id = ouid,
         ous = Seq(sumObj.get, countObj.get),

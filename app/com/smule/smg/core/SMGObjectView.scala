@@ -29,9 +29,9 @@ trait SMGObjectView extends SMGObjectBase {
   /**
     * List of Maps for each CDEF variable of this object
     */
-  val cdefVars: List[Map[String, String]]
+  val cdefVars: List[SMGObjectVar]
 
-  def filteredVars(inclCdefVars: Boolean) : List[Map[String, String]] = {
+  def filteredVars(inclCdefVars: Boolean) : List[SMGObjectVar] = {
     val ovars = for ( (v,i) <- vars.zipWithIndex ;
           // assume empty vars means all vars
           if graphVarsIndexes.isEmpty || graphVarsIndexes.contains(i)) yield v
@@ -42,10 +42,10 @@ trait SMGObjectView extends SMGObjectBase {
     }
   }
 
-  override def searchVars: List[Map[String, String]] = filteredVars(true)
+  override def searchVars: List[SMGObjectVar] = filteredVars(true)
 
   lazy val graphMinY: Option[Double] = {
-    val myMins = filteredVars(inclCdefVars = true).map(v => v.getOrElse("min", "0.0"))
+    val myMins = filteredVars(inclCdefVars = true).map(v => v.min.getOrElse("0.0"))
     if (myMins.exists { m => (m == "U") || m.startsWith("-") }) {
       None
     } else {
@@ -55,8 +55,8 @@ trait SMGObjectView extends SMGObjectBase {
 
   lazy val graphMaxY: Option[Double] = {
     val myMaxys = for (v <- filteredVars(inclCdefVars = true) ;
-                       if v.contains("maxy") ;
-                       d = Try(v("maxy").toDouble).toOption ;
+                       if v.maxy.isDefined ;
+                       d = Try(v.maxy.get.toDouble).toOption ;
                        if d.isDefined)
       yield d.get
     if (myMaxys.isEmpty) {

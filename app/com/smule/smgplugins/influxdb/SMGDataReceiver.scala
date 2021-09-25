@@ -26,7 +26,7 @@ class SMGDataReceiver(confParser: SMGInfluxDbPluginConfParser,
     val dbRecs: List[InfluxDbRecord] = msg.data.values.zip(msg.obj.vars).map { case (value, varMap) =>
       InfluxDbRecord(
         uid = uid,
-        tags = (msg.obj.labels ++ varMap).toSeq,
+        tags = (msg.obj.labels ++ varMap.m).toSeq,
         value = value,
         ts = msg.data.ts.getOrElse(SMGRrd.tssNow).toLong
       )

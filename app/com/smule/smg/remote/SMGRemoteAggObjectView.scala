@@ -1,6 +1,6 @@
 package com.smule.smg.remote
 
-import com.smule.smg.core.{SMGAggGroupBy, SMGObjectUpdate, SMGObjectView}
+import com.smule.smg.core.{SMGAggGroupBy, SMGObjectUpdate, SMGObjectVar, SMGObjectView}
 import com.smule.smg.grapher.SMGAggObjectView
 
 case class SMGRemoteAggObjectView(
@@ -9,8 +9,8 @@ case class SMGRemoteAggObjectView(
                                    op: String,
                                    groupBy: SMGAggGroupBy.Value,
                                    gbParam: Option[String],
-                                   vars: List[Map[String, String]],
-                                   cdefVars: List[Map[String, String]],
+                                   vars: List[SMGObjectVar],
+                                   cdefVars: List[SMGObjectVar],
                                    graphVarsIndexes: Seq[Int],
                                    title: String,
                                    searchTextOpt: Option[String]

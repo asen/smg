@@ -79,8 +79,8 @@ case class SMGRrdCheckInfo(ou: SMGObjectUpdate, raw: List[String]) {
         val vi = t._1
         val v = t._2
         vi.rrdType == ou.rrdType &&
-          vi.max.toString == Try(v.getOrElse("max", "NaN").toDouble).getOrElse(Double.NaN).toString &&
-          vi.min.toString == Try(v.getOrElse("min", "0.0").toDouble).getOrElse(Double.NaN).toString
+          vi.max.toString == Try(v.max.getOrElse("NaN").toDouble).getOrElse(Double.NaN).toString &&
+          vi.min.toString == Try(v.min.getOrElse("0.0").toDouble).getOrElse(Double.NaN).toString
       }
   }
 

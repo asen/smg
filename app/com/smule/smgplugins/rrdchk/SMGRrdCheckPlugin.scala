@@ -114,7 +114,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
       {hiddenInput("vix", vix.toString)}
       {hiddenInput("a", "tune")}
       {hiddenInput("nm", name)}
-      {textInput("v", ou.vars(vix).getOrElse(name, default), 12)}
+      {textInput("v", ou.vars(vix).m.getOrElse(name, default), 12)}
       <input type="Submit" value="Tune RRD"/>
     </form>
       <div style="clear: left"></div>
@@ -135,13 +135,13 @@ class SMGRrdCheckPlugin (val pluginId: String,
       index:
       {varInfo.index}
       , var def =
-      {Json.toJson(varDef)}<div style="clear: left"></div>
+      {Json.toJson(varDef.m)}<div style="clear: left"></div>
       type:
       {goodBad(varInfo.rrdType, ou.rrdType)}<div style="clear: left"></div>
       <span style="float: left">min:
-        {goodBad(varInfo.min, Try(varDef.getOrElse("min", "0.0").toDouble).getOrElse(Double.NaN))}&nbsp;
+        {goodBad(varInfo.min, Try(varDef.min.getOrElse("0.0").toDouble).getOrElse(Double.NaN))}&nbsp;
       </span>{tuneMinMaxForm(ou, vix, "min", "0.0")}<span style="float: left">max:
-      {goodBad(varInfo.max, Try(varDef.getOrElse("max", "NaN").toDouble).getOrElse(Double.NaN))}&nbsp;
+      {goodBad(varInfo.max, Try(varDef.max.getOrElse("NaN").toDouble).getOrElse(Double.NaN))}&nbsp;
     </span>{tuneMinMaxForm(ou, vix, "max", "NaN")}
     </li>
   }
@@ -310,12 +310,12 @@ class SMGRrdCheckPlugin (val pluginId: String,
       val vi = t._1
       val ix = t._2
       val v = info.ou.vars(ix)
-      val confMax = v.getOrElse("max", "NaN").toDouble
+      val confMax = v.max.getOrElse("NaN").toDouble
       if (vi.max.toString != confMax.toString){
         val success = SMGRrdCheckUtil.rrdTune(smgConfSvc, info.ou.rrdFile.get, "max", ix, confMax)
         log.info(s"runBgFix - tuned ${info.ou.id}[$ix] max=$confMax oldMax=${vi.max} success=$success")
       }
-      val confMin = v.getOrElse("min", "0.0").toDouble
+      val confMin = v.min.getOrElse("0.0").toDouble
       if (vi.min.toString != confMin.toString){
         val success = SMGRrdCheckUtil.rrdTune(smgConfSvc, info.ou.rrdFile.get, "min", ix, confMin)
         log.info(s"runBgFix - tuned ${info.ou.id}[$ix] min=$confMin oldMin=${vi.min} success=$success")

@@ -589,13 +589,13 @@ class Application  @Inject() (actorSystem: ActorSystem,
           aov.objs.flatMap{ o =>
             val sid = shortIds.next()
             ovars(o).map { v => // override labels
-              v ++ Map("label" -> (sid + "-" + v.getOrElse("label", "dsX")))
+              SMGObjectVar(v.m ++ Map("label" -> (sid + "-" + v.label.getOrElse("dsX"))))
             }
           }
         } else ovars(ov)
       } else ovars(ov)
 
-      "unixts,date," + vlst.map(_.getOrElse("label", "dsX")).mkString(",") +"\n"
+      "unixts,date," + vlst.map(_.label.getOrElse("dsX")).mkString(",") +"\n"
     }
     Ok(
       hdr + ret.map { row =>

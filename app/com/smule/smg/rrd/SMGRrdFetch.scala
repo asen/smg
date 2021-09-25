@@ -33,13 +33,13 @@ class SMGRrdFetch(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) {
         if ("(?i)nan".r.findFirstMatchIn(n).nonEmpty) Double.NaN else n.toDouble)
       //process cdefs
       objv.vars.zipWithIndex.foreach { case (v, i) =>
-        if (v.contains("cdef")) {
-          arr(i) = computeCdef(v("cdef"), arr(i))
+        if (v.cdef.isDefined) {
+          arr(i) = computeCdef(v.cdef.get, arr(i))
         }
       }
       //process cdefVars
       if (objv.cdefVars.nonEmpty) {
-        val cdLst = objv.cdefVars.map {cv => computeRpnValue(cv("cdef"), arr.toList)}
+        val cdLst = objv.cdefVars.map {cv => computeRpnValue(cv.cdef.get, arr.toList)}
         SMGRrdRow(tss, cdLst)
       } else {
         val filteredArr = if (objv.graphVarsIndexes.nonEmpty) {

@@ -40,8 +40,8 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) extends SM
       val rrdLbl = lblMaker.nextLabel // make sure labelmaker advances even if not graphed
       if (objv.graphVarsIndexes.isEmpty || objv.graphVarsIndexes.contains(t._2)) {
         val v = t._1
-        val vlabel = lblFmt(v.getOrElse("label", rrdLbl))
-        val cdef = v.get("cdef")
+        val vlabel = lblFmt(v.label.getOrElse(rrdLbl))
+        val cdef = v.cdef
         val srcLabel = if (cdef.isDefined) "cdf_" + rrdLbl else rrdLbl
         c.append(" 'DEF:").append(srcLabel).append("=")
         c.append(rrdFname).append(":").append(rrdLbl).append(":AVERAGE'") // TODO support MAX
@@ -71,11 +71,11 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) extends SM
       val cdefLblMaker = new LabelMaker("cd_")
       objv.cdefVars.foreach { cv =>
         val cdefLabel = cdefLblMaker.nextLabel
-        val vlabel = lblFmt(cv.getOrElse("label", cdefLabel))
-        val cdefSubst = substCdef(cv("cdef"), lblMaker.prefix)
+        val vlabel = lblFmt(cv.label.getOrElse(cdefLabel))
+        val cdefSubst = substCdef(cv.cdef.get, lblMaker.prefix)
         c.append(" 'CDEF:").append(cdefLabel).append("=").append(cdefSubst).append("'")
         if (!gopts.disablePop) {
-          val ppCdefSubst = substCdef(cv("cdef"), "pp_" + lblMaker.prefix)
+          val ppCdefSubst = substCdef(cv.cdef.get, "pp_" + lblMaker.prefix)
           c.append(" 'CDEF:pp_").append(cdefLabel).append("=").append(ppCdefSubst).append("'")
         }
         val stack = !first && objv.stack

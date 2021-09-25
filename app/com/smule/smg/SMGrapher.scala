@@ -540,7 +540,7 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
         }
       }
       val sortedVdesc = if (sortBy < vlstSorted.head.filteredVars(true).size) {
-        s"Sorted by ${vlstSorted.head.filteredVars(true)(sortBy).getOrElse("label", s"ds$sortBy")}"
+        s"Sorted by ${vlstSorted.head.filteredVars(true)(sortBy).label.getOrElse(s"ds$sortBy")}"
       } else
         "Not sorted"
       (List(vdesc, sortedVdesc), vlstSorted)

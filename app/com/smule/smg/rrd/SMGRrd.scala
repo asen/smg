@@ -23,13 +23,15 @@ object SMGRrd {
 //    "#D6C8C7", "#B6959D", "#F0D842", "#555E52", "#C0C7C3", "#809FAC",
 //    "#DADA55", "#7D7D7D", "#E6C4BE", "#DED6C7", "#650003", "#574864")
 
-  val LINE_COLORS = Array("#1aadce", "#161218", "#910000", "#8bbc21", "#2f7ed8", "#492970",
-                          "#ffff99", "#77a1e5", "#c42525", "#a6c96a", "#ffff00")
+  val LINE_COLORS: Array[String] = Array(
+    "#1aadce", "#161218", "#910000", "#8bbc21", "#2f7ed8", "#492970",
+    "#ffff99", "#77a1e5", "#c42525", "#a6c96a", "#ffff00"
+  )
 
   val GPRINT_NUM_FORMAT = "%8.2lf%s"
 
-  def numFmt(v: Map[String,String]): String = if (v.contains("mu"))
-      GPRINT_NUM_FORMAT + v("mu").replaceAll("%","%%")
+  def numFmt(v: SMGObjectVar): String = if (v.mu.isDefined)
+      GPRINT_NUM_FORMAT + v.mu.get.replaceAll("%","%%")
     else GPRINT_NUM_FORMAT
 
   //TODO - insert a + after the E instead? rrdtool doesn't like 2.5E9 (treats it as 2.5)
@@ -50,9 +52,9 @@ object SMGRrd {
 
   val DEFAULT_LINE_TYPE = "LINE1"
 
-  def lineType(v: Map[String,String]): String = v.getOrElse("lt", DEFAULT_LINE_TYPE)
+  def lineType(v: SMGObjectVar): String = v.lt.getOrElse(DEFAULT_LINE_TYPE)
 
-  def lineColor(v: Map[String,String], cm: ColorMaker): String = if (v.get("clr").isDefined) v("clr") else cm.nextColor
+  def lineColor(v: SMGObjectVar, cm: ColorMaker): String = if (v.clr.isDefined) v.clr.get else cm.nextColor
 
   //XXX the m suffix is ambiguous and M is not recognized by rrdtool - convert to seconds if m2sec is true
   def safePeriod(period: String, m2sec: Boolean = true): String = {
@@ -221,7 +223,7 @@ object SMGRrd {
 
   val HTAB = "    " // 4 spaces
 
-  def graphVar(v: Map[String,String], lbl: String, vlabel: String, colorMaker: ColorMaker,
+  def graphVar(v: SMGObjectVar, lbl: String, vlabel: String, colorMaker: ColorMaker,
                first: Boolean, stacked: Boolean, gopts: GraphOptions) : String = {
     val stackStr = if ((!first) && stacked) ":STACK" else ""
     val c = new mutable.StringBuilder()

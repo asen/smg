@@ -1,6 +1,6 @@
 package com.smule.smg.remote
 
-import com.smule.smg.core.{SMGObjectUpdate, SMGObjectView}
+import com.smule.smg.core.{SMGObjectUpdate, SMGObjectVar, SMGObjectView}
 import com.smule.smg.rrd.SMGRraDef
 
 /**
@@ -10,8 +10,8 @@ case class SMGRemoteObjectCopy(
                                 id: String,
                                 parentIds: Seq[String],
                                 interval: Int,
-                                vars: List[Map[String, String]],
-                                cdefVars: List[Map[String, String]],
+                                vars: List[SMGObjectVar],
+                                cdefVars: List[SMGObjectVar],
                                 graphVarsIndexes: Seq[Int],
                                 title: String,
                                 stack: Boolean,

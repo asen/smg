@@ -1,6 +1,6 @@
 package com.smule.smg.rrd
 
-import com.smule.smg.core.{SMGObjectView, SMGUpdateBatchActor}
+import com.smule.smg.core.{SMGObjectVar, SMGObjectView, SMGUpdateBatchActor}
 import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView}
 
 import scala.collection.mutable
@@ -52,9 +52,9 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
         val nextDefLbl = defLm.nextLabel
         if (obj.graphVarsIndexes.isEmpty || obj.graphVarsIndexes.contains(tpl._2)) {
           val v = tpl._1
-          val cdef = v.get("cdef")
+          val cdef = v.cdef
           val defLbl = if (cdef.nonEmpty) "o_" + nextDefLbl else nextDefLbl
-          val vlabel = lblFmt(v.getOrElse("label", defLbl))
+          val vlabel = lblFmt(v.label.getOrElse(defLbl))
           val c = new mutable.StringBuilder("'DEF:").append(defLbl).append("=").append(rrdFname).append(":")
           c.append(curObjDsLabel).append(":AVERAGE'")
           if (period.isDefined) {
@@ -151,11 +151,11 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
       val cdefVarLabelMaker = new LabelMaker("cv_")
       aggObj.cdefVars.foreach {cv =>
         val lbl = cdefVarLabelMaker.nextLabel
-        val vlabel = lblFmt(cv.getOrElse("label", lbl))
-        val cdefVarSubst = substCdef(cv("cdef"), cdefLabelMaker.prefix)
+        val vlabel = lblFmt(cv.label.getOrElse(lbl))
+        val cdefVarSubst = substCdef(cv.cdef.get, cdefLabelMaker.prefix)
         c.append(" 'CDEF:").append(lbl).append("=").append(cdefVarSubst).append("'")
         if (!gopts.disablePop) {
-          val ppCdefVarSubst = substCdef(cv("cdef"), "pp_" + cdefLabelMaker.prefix)
+          val ppCdefVarSubst = substCdef(cv.cdef.get, "pp_" + cdefLabelMaker.prefix)
           c.append(" 'CDEF:pp_").append(lbl).append("=").append(ppCdefVarSubst).append("'")
         }
         val gvStr = graphVar(cv, lbl, vlabel, colorMaker, first = false, stacked = aggObj.stack, gopts)
@@ -169,8 +169,8 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
   }
 
   // return (cdefs, vlabel, rrdlbl, var map)
-  private def getAllDefsAndLabelsByVarGroup: Seq[(String,String,String,Map[String,String])] = {
-    val retbuf = new ListBuffer[(String,String,String,Map[String,String])]()
+  private def getAllDefsAndLabelsByVarGroup: Seq[(String,String,String,SMGObjectVar)] = {
+    val retbuf = new ListBuffer[(String,String,String,SMGObjectVar)]()
     val shortIds = SMGAggObjectView.stripCommonStuff('.', aggObj.objs.map(o => o.id)).iterator
     val cdefVarLabelMaker = new LabelMaker("cv_")
     var cdefVarDsIx = 0
@@ -186,9 +186,9 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
         val nextDefLbl = defLm.nextLabel
         if (o.graphVarsIndexes.isEmpty || o.graphVarsIndexes.contains(tpl._2)) {
           val v = tpl._1
-          val cdef = v.get("cdef")
+          val cdef = v.cdef
           val defLbl = if (cdef.nonEmpty) "o_" + nextDefLbl else nextDefLbl
-          val vlabel = lblFmt(objShortId + '-' + v.getOrElse("label", defLbl))
+          val vlabel = lblFmt(objShortId + '-' + v.label.getOrElse(defLbl))
           c.append(" 'DEF:").append(defLbl).append("=").append(rrdFname).append(":")
           c.append(curObjDsLabel).append(":AVERAGE")
           c.append("'")
@@ -205,8 +205,8 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
       if (o.cdefVars.nonEmpty) {
         o.cdefVars.foreach {cv =>
           val lbl = cdefVarLabelMaker.nextLabel
-          val vlabel = lblFmt(objShortId + '-' + cv.getOrElse("label", lbl))
-          val cdefVarSubst = substCdefEx(cv("cdef"), "d", "_ds" + cdefVarDsIx)
+          val vlabel = lblFmt(objShortId + '-' + cv.label.getOrElse(lbl))
+          val cdefVarSubst = substCdefEx(cv.cdef.get, "d", "_ds" + cdefVarDsIx)
           cdefVarDsIx += 1
           c.append(" 'CDEF:").append(lbl).append("=").append(cdefVarSubst).append("'")
           retbuf += Tuple4(c.toString, vlabel, lbl, cv)

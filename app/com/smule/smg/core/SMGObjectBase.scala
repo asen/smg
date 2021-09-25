@@ -28,7 +28,7 @@ trait SMGObjectBase {
   /**
     * List of Maps for each variable of this object
     */
-  val vars: List[Map[String, String]]
+  val vars: List[SMGObjectVar]
 
   /**
     * object update interval
@@ -50,26 +50,26 @@ trait SMGObjectBase {
     * All applicable for search vars definitions (object views can define subsets)
     * @return
     */
-  def searchVars : List[Map[String, String]]
+  def searchVars : List[SMGObjectVar]
 
   private def searchRemoteIdSeq: Seq[String] =
     if (SMGRemote.isRemoteObj(id)) Seq(SMGRemote.remoteId(id)) else Seq(SMGRemote.localName)
 
   def searchText: String = (
     Seq(SMGRemote.localId(id)) ++ searchRemoteIdSeq ++ parentIds ++ Seq(title,
-      searchVars.map(v => v.getOrElse("label","") + " " + v.getOrElse("mu", "") ).mkString(" ")
+      searchVars.map(v => v.label.getOrElse("") + " " + v.mu.getOrElse("") ).mkString(" ")
       ) ++ labels.keys.toSeq.sorted.map{k => s"$k=${labels(k)}"}
     ).mkString(" ").toLowerCase
 
-  def getVarMinMaxCompareValues(v: Map[String, String]): (Double, Double) = {
+  def getVarMinMaxCompareValues(v: SMGObjectVar): (Double, Double) = {
     val minCompareValue = Try{
-      val m = v.getOrElse("min", "0.0") ;
+      val m = v.min.getOrElse("0.0") ;
       if (m == "U")
         Double.NegativeInfinity
       else
         m.toDouble
     }.getOrElse(Double.NegativeInfinity)
-    val maxCompareValue = v.get("max").flatMap(x => Try(x.toDouble).toOption).
+    val maxCompareValue = v.max.flatMap(x => Try(x.toDouble).toOption).
       getOrElse(Double.PositiveInfinity)
     (minCompareValue, maxCompareValue)
   }

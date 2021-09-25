@@ -61,8 +61,8 @@ object SMGConfigAlertCondsSummary {
         ou.vars.lift(t3._3).map { vmap =>
           val threshDesc = t3._1.threshDesc(numFmt)
           val myGbKey = Seq(
-            vmap.get("label").map(x => ("label", x)),
-            vmap.get("mu").map(x => ("mu", x)),
+            vmap.label.map(x => ("label", x)),
+            vmap.mu.map(x => ("mu", x)),
             Some(("vix", t3._3.toString)),
             Some(("conf", threshDesc))
           ).flatten.map {t => s"${t._1}=${t._2}"}.mkString(" ")

@@ -1,7 +1,7 @@
 package com.smule.smg.grapher
 
 import com.smule.smg.config.SMGStringUtils
-import com.smule.smg.core.{SMGAggGroupBy, SMGObjectView}
+import com.smule.smg.core.{SMGAggGroupBy, SMGObjectVar, SMGObjectView}
 import com.smule.smg.rrd.SMGRraDef
 import com.smule.smg.remote.SMGRemote
 
@@ -83,8 +83,8 @@ trait SMGAggObjectView extends SMGObjectView {
 object SMGAggObjectView {
 
   private def myGenId(objs: Seq[SMGObjectView],
-                      vars: List[Map[String, String]],
-                      cdefVars: List[Map[String, String]],
+                      vars: List[SMGObjectVar],
+                      cdefVars: List[SMGObjectVar],
                       graphVarsIndexes: Seq[Int],
                       op: String): String = {
     val byRemote = objs.groupBy(ov => SMGRemote.remoteId(ov.id))
@@ -102,16 +102,16 @@ object SMGAggObjectView {
       md.update(SMGRemote.localId(o.id).getBytes())
     }
     for (m <- vars) {
-      for (k <- m.keys.toSeq.sorted) {
+      for (k <- m.m.keys.toSeq.sorted) {
         md.update(k.getBytes())
-        md.update(m(k).getBytes())
+        md.update(m.m(k).getBytes())
       }
     }
     for (vi <- graphVarsIndexes.toList.sorted) md.update(vi.toString.getBytes)
     for (m <- cdefVars) {
-      for (k <- m.keys.toSeq.sorted) {
+      for (k <- m.m.keys.toSeq.sorted) {
         md.update(k.getBytes())
-        md.update(m(k).getBytes())
+        md.update(m.m(k).getBytes())
       }
     }
     remotePx + md.digest().map("%02x".format(_)).mkString + "-" + op

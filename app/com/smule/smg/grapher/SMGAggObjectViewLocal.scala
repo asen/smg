@@ -1,6 +1,6 @@
 package com.smule.smg.grapher
 
-import com.smule.smg.core.{SMGAggGroupBy, SMGObjectUpdate, SMGObjectView}
+import com.smule.smg.core.{SMGAggGroupBy, SMGObjectUpdate, SMGObjectVar, SMGObjectView}
 
 /**
   * Use SMGAggObjectView.build() to build from multiple compatible objects and
@@ -12,8 +12,8 @@ case class SMGAggObjectViewLocal(id: String,
                                  op: String,
                                  groupBy: SMGAggGroupBy.Value,
                                  gbParam: Option[String],
-                                 vars : List[Map[String, String]],
-                                 cdefVars: List[Map[String, String]],
+                                 vars : List[SMGObjectVar],
+                                 cdefVars: List[SMGObjectVar],
                                  graphVarsIndexes: Seq[Int],
                                  title: String ) extends SMGAggObjectView {
 

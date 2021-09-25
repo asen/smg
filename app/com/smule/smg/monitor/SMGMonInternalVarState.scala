@@ -27,7 +27,7 @@ class SMGMonInternalVarState(var objectUpdate: SMGObjectUpdate,
 
   override def intervals: Seq[Int] = Seq(objectUpdate.interval)
 
-  private def label =  objectUpdate.vars(vix).getOrElse("label", "ds" + vix)
+  private def label =  objectUpdate.vars(vix).label.getOrElse("ds" + vix)
 
   override def alertSubject: String = s"${objectUpdate.id}[$vix]:$label"
 
