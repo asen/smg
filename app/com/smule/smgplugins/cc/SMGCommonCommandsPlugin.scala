@@ -4,6 +4,7 @@ import com.smule.smg.config.SMGConfigService
 import com.smule.smg.core.{CommandResult, ParentCommandData, SMGCmdException}
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 import com.smule.smgplugins.cc.csv.SMGCsvCommands
+import com.smule.smgplugins.cc.exitval.SMGExitValueCommand
 import com.smule.smgplugins.cc.kv.SMGKvParseCommands
 import com.smule.smgplugins.cc.ln.SMGLineCommand
 import com.smule.smgplugins.cc.map.SMGMapCommand
@@ -34,6 +35,7 @@ class SMGCommonCommandsPlugin(val pluginId: String,
   private val snmpParseCommandRunner = new SMGSnmpParseCommands(log)
   private val kvParseCommandRunner = new SMGKvParseCommands(log)
   private val tsCommandRunner = new SMGTsCommand(log)
+  private val exitvalCommandRunner = new SMGExitValueCommand(log, smgConfSvc)
 
   override def runPluginFetchCommand(cmd: String, timeoutSec: Int,
                                      parentData: Option[ParentCommandData]): CommandResult = {
@@ -56,6 +58,8 @@ class SMGCommonCommandsPlugin(val pluginId: String,
       kvParseCommandRunner.kvParseCommand(action, paramStr, timeoutSec, parentData)
     else if (action.startsWith("ts"))
       tsCommandRunner.tsCommand(action, paramStr, timeoutSec, parentData)
+    else if (action.startsWith("exitval"))
+      exitvalCommandRunner.exitValCommand(action, paramStr, timeoutSec, parentData)
     else
       throw SMGCmdException(cmd, timeoutSec, -1, "", s"SMGCommonCommandsPlugin: Invalid command: $cmd")
   }
