@@ -2,7 +2,7 @@ package com.smule.smgplugins.cc.ln
 
 import com.smule.smg.core._
 import com.smule.smgplugins.cc.rx.SMGRegexCommands
-import com.smule.smgplugins.cc.shared.CCStringUtil
+import com.smule.smgplugins.cc.shared.{CCStringUtil, SMGCCRunner}
 
 // :cc ln [opts] index1 [index2...]
 //   -s <separator_regex> | --separator <separator_regex> (default is any whitespace - \s+)
@@ -11,15 +11,10 @@ import com.smule.smgplugins.cc.shared.CCStringUtil
 // :cc ln -s ", " 1
 // split a line using the separator (regex) string and output the specified 1-based elements
 // separated by space. 0 means to output the entire input line
-class SMGLineCommand(log: SMGLoggerApi) {
-
-  private def throwOnError(action: String, paramStr: String,
-                           timeoutSec: Int, errMsg: String) = {
-    throw SMGCmdException(s":cc $action $paramStr", timeoutSec, -1, "", errMsg)
-  }
+class SMGLineCommand(log: SMGLoggerApi) extends SMGCCRunner {
 
   // :cc ln -s ", " 1
-  def lnCommand(action: String, paramStr: String, timeoutSec: Int,
+  def runCommand(action: String, paramStr: String, timeoutSec: Int,
                 parentData: Option[ParentCommandData]): CommandResult = {
     if (parentData.isEmpty) {
       throwOnError(action, paramStr, timeoutSec, s"Line command expects parent data")

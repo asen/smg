@@ -2,6 +2,7 @@ package com.smule.smgplugins.cc.rpn
 
 import com.smule.smg.core.{CommandResult, CommandResultListDouble, ParentCommandData, SMGCmdException, SMGLoggerApi}
 import com.smule.smg.rrd.SMGRrd
+import com.smule.smgplugins.cc.shared.SMGCCRunner
 
 import scala.collection.mutable.ListBuffer
 
@@ -9,16 +10,11 @@ import scala.collection.mutable.ListBuffer
 // treat input as update data (list of Doubles) and compute RPN expressions from them
 // input ines are mapped to $dsX values in the expression where X is the zero-based
 // index in the list. Output one result (Double) per RPN expression provided
-class SMGRpnCommand(log: SMGLoggerApi) {
-
-  private def throwOnError(action: String, paramStr: String,
-                           timeoutSec: Int, errMsg: String) = {
-    throw SMGCmdException(s":cc $action $paramStr", timeoutSec, -1, "", errMsg)
-  }
+class SMGRpnCommand(log: SMGLoggerApi) extends SMGCCRunner {
 
   //:cc rpn (scur.to_f * 100.0) / limit.to_f
   //:cc rpn "$ds1,$ds0,100,*,/"
-  def rpnCommand(action: String, paramStr: String, timeoutSec: Int,
+  def runCommand(action: String, paramStr: String, timeoutSec: Int,
                  parentData: Option[ParentCommandData]): CommandResult = {
     try {
       val expressions = paramStr.split("\\s+").filterNot(_.isBlank)

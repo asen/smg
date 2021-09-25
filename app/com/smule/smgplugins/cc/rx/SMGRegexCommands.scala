@@ -1,7 +1,7 @@
 package com.smule.smgplugins.cc.rx
 
 import com.smule.smg.core._
-import com.smule.smgplugins.cc.shared.CCStringUtil
+import com.smule.smgplugins.cc.shared.{CCStringUtil, SMGCCRunner}
 
 import scala.collection.mutable
 import scala.util.Try
@@ -56,12 +56,7 @@ object SMGRegexCommands {
 
 }
 
-class SMGRegexCommands(log: SMGLoggerApi) {
-
-  private def throwOnError(action: String, paramStr: String,
-                           timeoutSec: Int, errMsg: String) = {
-    throw SMGCmdException(s":cc $action $paramStr", timeoutSec, -1, "", errMsg)
-  }
+class SMGRegexCommands(log: SMGLoggerApi) extends SMGCCRunner {
 
   private def validateParams(action: String, paramStr: String, timeoutSec: Int,
                              parentData: Option[ParentCommandData]): (Regex, String, Map[String,String]) = {
@@ -201,7 +196,7 @@ class SMGRegexCommands(log: SMGLoggerApi) {
     CommandResultListString(strLst, None)
   }
 
-  def rxCommand(action: String, paramStr: String, timeoutSec: Int,
+  def runCommand(action: String, paramStr: String, timeoutSec: Int,
                 parentData: Option[ParentCommandData]): CommandResult = {
     if (!SMGRegexCommands.VALID_COMMANDS.contains(action))
       throwOnError(action, paramStr, timeoutSec,

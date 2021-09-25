@@ -2,6 +2,7 @@ package com.smule.smgplugins.cc.ts
 
 import com.smule.smg.core._
 import com.smule.smg.rrd.SMGRrd
+import com.smule.smgplugins.cc.shared.SMGCCRunner
 
 // calculate relative time in seconds or milliseconds from timestamps
 // coming as parent data (list of Doubles)
@@ -11,14 +12,13 @@ import com.smule.smg.rrd.SMGRrd
 // use ts/ts_s for unix timestamps (in seconds since 1970) or
 // ts_ms for Java-style Long timestamp in milliseconds
 //
-class SMGTsCommand(log: SMGLoggerApi) {
+object SMGTsCommand {
+  val VALID_COMMANDS = Set("ts", "ts_s", "ts_ms")
+}
 
-  private def throwOnError(action: String, paramStr: String,
-                           timeoutSec: Int, errMsg: String) = {
-    throw SMGCmdException(s":cc $action $paramStr", timeoutSec, -1, "", errMsg)
-  }
+class SMGTsCommand(log: SMGLoggerApi) extends SMGCCRunner {
 
-  def tsCommand(action: String, paramStr: String, timeoutSec: Int,
+  def runCommand(action: String, paramStr: String, timeoutSec: Int,
                 parentData: Option[ParentCommandData]): CommandResult = {
     if (parentData.isEmpty) {
       throwOnError(action, paramStr, timeoutSec, s"Ts command expects parent data")

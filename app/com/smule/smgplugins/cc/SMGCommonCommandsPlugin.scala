@@ -10,6 +10,7 @@ import com.smule.smgplugins.cc.ln.SMGLineCommand
 import com.smule.smgplugins.cc.map.SMGMapCommand
 import com.smule.smgplugins.cc.rpn.SMGRpnCommand
 import com.smule.smgplugins.cc.rx.SMGRegexCommands
+import com.smule.smgplugins.cc.shared.SMGCCRunner
 import com.smule.smgplugins.cc.snmpp.SMGSnmpParseCommands
 import com.smule.smgplugins.cc.ts.SMGTsCommand
 
@@ -37,31 +38,43 @@ class SMGCommonCommandsPlugin(val pluginId: String,
   private val tsCommandRunner = new SMGTsCommand(log)
   private val exitvalCommandRunner = new SMGExitValueCommand(log, smgConfSvc)
 
+  private val commandsMap: Map[String, SMGCCRunner] = Map(
+    "ln" -> lineCommandRunner,
+    "map" -> mapCommandRunner,
+    "csv" -> csvCommandRunner,
+    "rpn" -> rpnCommandRunner,
+    "snmpp" -> snmpParseCommandRunner,
+    "kv" -> kvParseCommandRunner,
+    "exitval" -> exitvalCommandRunner
+
+//    , "rxe" -> regexCommandRunner,
+//    "rxel" -> regexCommandRunner,
+//    "rxm" -> regexCommandRunner,
+//    "rxml" -> regexCommandRunner,
+//    "rx_repl" -> regexCommandRunner
+
+//    , "ts" -> tsCommandRunner,
+//    "ts_s" -> tsCommandRunner,
+//    "ts_ms" -> tsCommandRunner
+
+  ) ++ SMGRegexCommands.VALID_COMMANDS.toSeq.map { c =>
+    (c, regexCommandRunner)
+  }.toMap ++ SMGTsCommand.VALID_COMMANDS.toSeq.map { c =>
+    (c, tsCommandRunner)
+  }.toMap
+
   override def runPluginFetchCommand(cmd: String, timeoutSec: Int,
                                      parentData: Option[ParentCommandData]): CommandResult = {
     val arr = cmd.split("\\s+", 2)
     val action = arr(0)
     val paramStr = arr.lift(1).getOrElse("")
-    if (action.startsWith("rx"))
-      regexCommandRunner.rxCommand(action, paramStr, timeoutSec, parentData)
-    else if (action.startsWith("ln"))
-      lineCommandRunner.lnCommand(action, paramStr, timeoutSec, parentData)
-    else if (action.startsWith("map"))
-      mapCommandRunner.mapCommand(action, paramStr, timeoutSec, parentData)
-    else if (action.startsWith("csv"))
-      csvCommandRunner.csvCommand(action, paramStr, timeoutSec, parentData)
-    else if (action.startsWith("rpn"))
-      rpnCommandRunner.rpnCommand(action, paramStr, timeoutSec, parentData)
-    else if (action.startsWith("snmpp"))
-      snmpParseCommandRunner.snmpParseCommand(action, paramStr, timeoutSec, parentData)
-    else if (action.startsWith("kv"))
-      kvParseCommandRunner.kvParseCommand(action, paramStr, timeoutSec, parentData)
-    else if (action.startsWith("ts"))
-      tsCommandRunner.tsCommand(action, paramStr, timeoutSec, parentData)
-    else if (action.startsWith("exitval"))
-      exitvalCommandRunner.exitValCommand(action, paramStr, timeoutSec, parentData)
-    else
-      throw SMGCmdException(cmd, timeoutSec, -1, "", s"SMGCommonCommandsPlugin: Invalid command: $cmd")
+    val cmdOpt = commandsMap.get(action)
+    if (cmdOpt.isDefined) {
+      cmdOpt.get.runCommand(action, paramStr, timeoutSec, parentData)
+    } else {
+      throw SMGCmdException(cmd, timeoutSec, -1, "",
+        s"SMGCommonCommandsPlugin: Invalid command: $cmd")
+    }
   }
 
 }

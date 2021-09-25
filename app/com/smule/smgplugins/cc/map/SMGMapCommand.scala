@@ -1,7 +1,7 @@
 package com.smule.smgplugins.cc.map
 
 import com.smule.smg.core.{CommandResult, CommandResultListString, ParentCommandData, SMGCmdException, SMGLoggerApi}
-import com.smule.smgplugins.cc.shared.CCStringUtil
+import com.smule.smgplugins.cc.shared.{CCStringUtil, SMGCCRunner}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -10,12 +10,7 @@ import scala.collection.mutable.ListBuffer
 //  map input lines (kX string values) to specified output values (vX string values)
 //  if a default is specified it will be returned for not matching inout lines
 //  otherwise unmatched input line will result in error
-class SMGMapCommand(log: SMGLoggerApi) {
-
-  private def throwOnError(action: String, paramStr: String,
-                           timeoutSec: Int, errMsg: String) = {
-    throw SMGCmdException(s":cc $action $paramStr", timeoutSec, -1, "", errMsg)
-  }
+class SMGMapCommand(log: SMGLoggerApi) extends SMGCCRunner {
 
   case class MapParams(map: Map[String,String], default: Option[String], skipNotMatching: Boolean)
 
@@ -50,7 +45,7 @@ class SMGMapCommand(log: SMGLoggerApi) {
   }
 
   //:cc map k1=v1 k2=v2 [<default>]
-  def mapCommand(action: String, paramStr: String, timeoutSec: Int,
+  def runCommand(action: String, paramStr: String, timeoutSec: Int,
                 parentData: Option[ParentCommandData]): CommandResult = {
     if (parentData.isEmpty) {
       throwOnError(action, paramStr, timeoutSec, s"Map command expects parent data")

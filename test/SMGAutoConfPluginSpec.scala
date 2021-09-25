@@ -87,7 +87,7 @@ class SMGAutoConfPluginSpec extends Specification{
     "work with kafka-consumers" in {
       val data = SMGFileUtil.getFileLines("test-data/kafka-groups-ka11.txt")
       val csv = new SMGCsvCommands(log)
-      val parsed = csv.csvCommand("csv", "parserx", 30,
+      val parsed = csv.runCommand("csv", "parserx", 30,
         Some(ParentCommandData(CommandResultListString(data.toList, None), None)))
       println(parsed.data.asInstanceOf[csv.CSVParsedData].dump())
 

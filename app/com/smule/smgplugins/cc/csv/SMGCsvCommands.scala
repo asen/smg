@@ -1,6 +1,7 @@
 package com.smule.smgplugins.cc.csv
 
 import com.smule.smg.core._
+import com.smule.smgplugins.cc.shared.SMGCCRunner
 import org.apache.commons.csv.{CSVFormat, CSVParser}
 
 import scala.collection.JavaConverters._
@@ -41,11 +42,7 @@ object SMGCsvCommands {
   // parse the csv using default parse options and get value using provided get options in one shot
 }
 
-class SMGCsvCommands(log: SMGLoggerApi) {
-  private def throwOnError(subAction: String, paramStr: String,
-                           timeoutSec: Int, errMsg: String) = {
-    throw SMGCmdException(s":cc csv $subAction $paramStr", timeoutSec, -1, "", errMsg)
-  }
+class SMGCsvCommands(log: SMGLoggerApi) extends SMGCCRunner {
 
   case class CSVParsedData(
                           headers: Map[String,Int],
@@ -259,7 +256,7 @@ class SMGCsvCommands(log: SMGLoggerApi) {
     }
   }
 
-  def csvCommand(action: String, paramStr: String, timeoutSec: Int,
+  override def runCommand(action: String, paramStr: String, timeoutSec: Int,
                  parentData: Option[ParentCommandData]): CommandResult = {
     if (parentData.isEmpty) {
       throwOnError("", paramStr, timeoutSec, s"CSV commands expect parent data")

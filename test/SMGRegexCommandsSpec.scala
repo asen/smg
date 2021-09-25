@@ -16,21 +16,21 @@ class SMGRegexCommandsSpec extends Specification {
          "this is a test",
          "output a from parent command"
        ), None)
-       var res0 = rc.rxCommand("rxe", "test", 30, Some(ParentCommandData(inp, None)))
+       var res0 = rc.runCommand("rxe", "test", 30, Some(ParentCommandData(inp, None)))
        log.info(s"RES: $res0")
-       res0 = rc.rxCommand("rxel", "test", 30, Some(ParentCommandData(inp, None)))
+       res0 = rc.runCommand("rxel", "test", 30, Some(ParentCommandData(inp, None)))
        log.info(s"RES: $res0")
-       res0 = rc.rxCommand("rxe", "'a (test|from)' 1", 30, Some(ParentCommandData(inp, None)))
+       res0 = rc.runCommand("rxe", "'a (test|from)' 1", 30, Some(ParentCommandData(inp, None)))
        log.info(s"RES: $res0")
-       res0 = rc.rxCommand("rxel", "'a (test|from)' 1", 30, Some(ParentCommandData(inp, None)))
+       res0 = rc.runCommand("rxel", "'a (test|from)' 1", 30, Some(ParentCommandData(inp, None)))
        log.info(s"RES: $res0")
-       res0 = rc.rxCommand("rxm", "'a (test|from)'", 30, Some(ParentCommandData(inp, None)))
+       res0 = rc.runCommand("rxm", "'a (test|from)'", 30, Some(ParentCommandData(inp, None)))
        log.info(s"RES: $res0")
-       res0 = rc.rxCommand("rxml", "'a (test|from)'", 30, Some(ParentCommandData(inp, None)))
+       res0 = rc.runCommand("rxml", "'a (test|from)'", 30, Some(ParentCommandData(inp, None)))
        log.info(s"RES: $res0")
-       res0 = rc.rxCommand("rxm", "test", 30, Some(ParentCommandData(inp, None)))
+       res0 = rc.runCommand("rxm", "test", 30, Some(ParentCommandData(inp, None)))
        log.info(s"RES: $res0")
-       res0 = rc.rxCommand("rxml", "test", 30, Some(ParentCommandData(inp, None)))
+       res0 = rc.runCommand("rxml", "test", 30, Some(ParentCommandData(inp, None)))
        log.info(s"RES: $res0")
        1 equals(1)
      }
@@ -48,10 +48,10 @@ class SMGRegexCommandsSpec extends Specification {
         "this is a test",
         "output a from parent command"
       ), None)
-      var res0 = rc.rxCommand("rxml", "TCPLostRetransmit:",
+      var res0 = rc.runCommand("rxml", "TCPLostRetransmit:",
         30, Some(ParentCommandData(inp, None)))
       log.info(s"RXML RES: $res0")
-      res0 = rc.rxCommand("rx_repl", "'TCPLostRetransmit:'",
+      res0 = rc.runCommand("rx_repl", "'TCPLostRetransmit:'",
         30, Some(ParentCommandData(res0, None)))
       log.info(s"RX_REPL RES: $res0")
       1 equals(1)
@@ -69,10 +69,10 @@ class SMGRegexCommandsSpec extends Specification {
         "this is a test",
         "output a from parent command"
       ), None)
-      var res0 = rc.rxCommand("rxml", "-d ' 0 ' TCPLostRetransmit:",
+      var res0 = rc.runCommand("rxml", "-d ' 0 ' TCPLostRetransmit:",
         30, Some(ParentCommandData(inp, None)))
       log.info(s"RXML2 RES: $res0")
-      res0 = rc.rxCommand("rx_repl", "'TCPLostRetransmit:'",
+      res0 = rc.runCommand("rx_repl", "'TCPLostRetransmit:'",
         30, Some(ParentCommandData(res0, None)))
       log.info(s"RX_REPL2 RES: ${res0.asUpdateData(1)}")
       1 equals(1)
@@ -86,11 +86,10 @@ class SMGRegexCommandsSpec extends Specification {
         "this is a test",
         "output a from parent command"
       ), None)
-      var res0 = rc.lnCommand("ln", "2", 30, Some(ParentCommandData(inp, None)))
+      var res0 = rc.runCommand("ln", "2", 30, Some(ParentCommandData(inp, None)))
       log.info(s"LN RES: $res0")
-      res0 = rc.lnCommand("ln", "-s '\\s+a\\s+' 2", 30, Some(ParentCommandData(inp, None)))
+      res0 = rc.runCommand("ln", "-s '\\s+a\\s+' 2", 30, Some(ParentCommandData(inp, None)))
       log.info(s"LN RES: $res0")
-
 
       1 equals(1)
     }

@@ -1,7 +1,7 @@
 package com.smule.smgplugins.cc.kv
 
 import com.smule.smg.core.{CommandResult, CommandResultCustom, CommandResultListString, ParentCommandData, SMGCmdException, SMGLoggerApi}
-import com.smule.smgplugins.cc.shared.CCStringUtil
+import com.smule.smgplugins.cc.shared.{CCStringUtil, SMGCCRunner}
 
 object SMGKvParseCommands {
   val VALID_SUB_COMMANDS = Set("parse", "get", "pget")
@@ -13,12 +13,7 @@ object SMGKvParseCommands {
   // :cc kv pget [get opts] <key1> <key2...>
 }
 
-class SMGKvParseCommands(log: SMGLoggerApi) {
-
-  private def throwOnError(action: String, paramStr: String,
-                           timeoutSec: Int, errMsg: String) = {
-    throw SMGCmdException(s":cc $action $paramStr", timeoutSec, -1, "", errMsg)
-  }
+class SMGKvParseCommands(log: SMGLoggerApi) extends SMGCCRunner {
 
   case class KvParsedData(data: Map[String,String]) {
     def getValues(keys: Seq[String], default: Option[String], paramStr: String): List[String] = {
@@ -114,7 +109,7 @@ class SMGKvParseCommands(log: SMGLoggerApi) {
     kvGet(paramStr, timeoutSec, parsedResult)
   }
 
-  def kvParseCommand(action: String, paramStr: String, timeoutSec: Int,
+  def runCommand(action: String, paramStr: String, timeoutSec: Int,
                        parentData: Option[ParentCommandData]): CommandResult = {
     if (parentData.isEmpty) {
       throwOnError("", paramStr, timeoutSec, s"SNMP commands expect parent data")

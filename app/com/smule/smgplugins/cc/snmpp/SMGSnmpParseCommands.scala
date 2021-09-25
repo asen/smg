@@ -1,7 +1,7 @@
 package com.smule.smgplugins.cc.snmpp
 
 import com.smule.smg.core._
-import com.smule.smgplugins.cc.shared.CCStringUtil
+import com.smule.smgplugins.cc.shared.{CCStringUtil, SMGCCRunner}
 
 object SMGSnmpParseCommands {
   val VALID_SUB_COMMANDS = Set("parse", "get", "pget")
@@ -40,13 +40,8 @@ object SMGSnmpParseCommands {
 //TCP-MIB::tcpActiveOpens.0 = Counter32: 255737619
 //TCP-MIB::tcpCurrEstab.0 = Gauge32: 414
 
-class SMGSnmpParseCommands(log: SMGLoggerApi) {
-
-  private def throwOnError(action: String, paramStr: String,
-                           timeoutSec: Int, errMsg: String) = {
-    throw SMGCmdException(s":cc $action $paramStr", timeoutSec, -1, "", errMsg)
-  }
-
+class SMGSnmpParseCommands(log: SMGLoggerApi) extends SMGCCRunner {
+  
   case class SNMPParsedData(data: Map[String,String]) {
     def getValues(keys: Seq[String], default: Option[String], paramStr: String): List[String] = {
       keys.map { key =>
@@ -139,7 +134,7 @@ class SMGSnmpParseCommands(log: SMGLoggerApi) {
     snmpGet(paramStr, timeoutSec, parsedResult)
   }
 
-  def snmpParseCommand(action: String, paramStr: String, timeoutSec: Int,
+  def runCommand(action: String, paramStr: String, timeoutSec: Int,
                  parentData: Option[ParentCommandData]): CommandResult = {
     if (parentData.isEmpty) {
       throwOnError("", paramStr, timeoutSec, s"SNMP commands expect parent data")
