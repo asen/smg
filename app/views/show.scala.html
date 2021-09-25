@@ -57,7 +57,9 @@
   <div class="panel panel-primary">
     <div class="panel-heading">
       <h2 class="panel-title">Display @if(obj.isAgg){Aggregate }Object:
-        @if(cleanView){ @cfSvc.ellipsify(obj.title) } else { @obj.title } (@obj.rrdType)</h2>
+        @if(cleanView){ @cfSvc.ellipsify(obj.title) } else { @obj.title }
+        (<span style="cursor:default" title="RRD type: @{obj.rrdType}">@{obj.rrdType}</span>,
+        <span style="cursor:default" title="Update interval: @{obj.intervalHuman}">@{obj.intervalHuman}</span>)</h2>
     </div>
     <div class="panel-body">
       <div class="form-group">

@@ -27,7 +27,9 @@
     }
     <div class="subtitle-div">
       <div class="subtitle-div">
-        @{g.obj.id} (@{g.obj.rrdType}) [<a href="#@g.obj.id" >#</a>]
+        <span title="Object id">@{g.obj.id}</span> (<span style="cursor:default" title="RRD type: @{g.obj.rrdType}">@{g.obj.rrdType}</span>,
+          <span style="cursor:default" title="Update interval: @{g.obj.intervalHuman}">@{g.obj.intervalHuman}</span>)
+        [<a href="#@g.obj.id" >#</a>]
         @for(pa <- cfSvc.plugins.flatMap(_.actions)){
         [<a href="@{pa.actionUrl(g.obj, dep.period)}">@{pa.name}</a>]
         }

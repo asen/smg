@@ -1,7 +1,7 @@
 package com.smule.smg.core
 
 import com.smule.smg.remote.SMGRemote
-import com.smule.smg.rrd.SMGRraDef
+import com.smule.smg.rrd.{SMGRraDef, SMGRrd}
 
 import scala.util.Try
 
@@ -34,6 +34,8 @@ trait SMGObjectBase {
     * object update interval
     */
   def interval: Int
+
+  def intervalHuman: String = SMGRrd.intervalToStr(interval)
 
   /**
     * rrdtool type (GAUGE, COUNTER etc)
