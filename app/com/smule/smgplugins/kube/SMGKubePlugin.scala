@@ -71,7 +71,6 @@ class SMGKubePlugin(
         finished()
       }
     }(myEc)
-    log.info("SMGKubePlugin - done")
   }
 
   override def runPluginFetchCommand(cmd: String, timeoutSec: Int,
