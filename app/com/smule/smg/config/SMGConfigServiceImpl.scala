@@ -75,11 +75,11 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       // XXX looks like java is leaking direct memory buffers (or possibly - just slowing
       // down external commands when reclaiming these on the fly) when reloading conf.
       // This is an attempt to fix that after realizing that a "manual gc" via jconsole clears overlap issues
-      log.info(s"ConfigService ($ctx) calling System.gc() ... START")
+      log.debug(s"ConfigService ($ctx) calling System.gc() ... START")
       System.gc()
-      log.info(s"ConfigService ($ctx) calling System.gc() ... DONE")
+      log.debug(s"ConfigService ($ctx) calling System.gc() ... DONE")
     } else {
-      log.info(s"ConfigService ($ctx) calling of System.gc() is disabled via smg.callSystemGcOnReload=false")
+      log.debug(s"ConfigService ($ctx) calling of System.gc() is disabled via smg.callSystemGcOnReload=false")
     }
   }
 
