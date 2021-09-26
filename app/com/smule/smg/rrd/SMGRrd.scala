@@ -23,10 +23,27 @@ object SMGRrd {
 //    "#D6C8C7", "#B6959D", "#F0D842", "#555E52", "#C0C7C3", "#809FAC",
 //    "#DADA55", "#7D7D7D", "#E6C4BE", "#DED6C7", "#650003", "#574864")
 
-  val LINE_COLORS: Array[String] = Array(
-    "#1aadce", "#161218", "#910000", "#8bbc21", "#2f7ed8", "#492970",
-    "#ffff99", "#77a1e5", "#c42525", "#a6c96a", "#ffff00"
+  private var LINE_COLORS: Array[String] = Array(
+    "#1aadce", // "teal"-like
+    "#161218", // 92% black
+    "#910000", // dark red
+    "#8bbc21", // dark-ish green
+    "#2161ab", // dark blue
+    "#492970", // purple
+    "#ffff00", // yellow
+    "#66ff33", // electric green
+    "#ff00ff", // pink
+    "#d0ec93", // light-ish green
+    "#ffcc00", // yellow to brown
+    "#ff0000", // red
+    "#009900", // green
+    "#C71585", // MediumVioletRed
+    "#007777", // dark teal
+    "#BA55D3"  // MediumOrchid
   )
+
+  def setLineColors(lineColors: Array[String]): Unit = LINE_COLORS = lineColors
+  //def getLineColors: Array[String] = LINE_COLORS
 
   val GPRINT_NUM_FORMAT = "%8.2lf%s"
 
@@ -136,7 +153,7 @@ object SMGRrd {
   def tssNow: Int  = (System.currentTimeMillis() / 1000).toInt
 
   /**
-    * Helper to pick next color from the pallete
+    * Helper to pick next color from the palette
     */
   class ColorMaker {
     private var idx = 0

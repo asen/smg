@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import akka.actor.{ActorSystem, DeadLetter, Props}
 import com.smule.smg.core._
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginConfig}
-import com.smule.smg.rrd.SMGRrdUpdate
+import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdate}
 import com.typesafe.config.ConfigFactory
 
 import javax.inject.{Inject, Singleton}
@@ -61,6 +61,12 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     val execSeq = configuration.get[Seq[String]]("smg.executorCommand")
     log.info("Overriding SMGCmd executor command using " + execSeq)
     SMGCmd.setExecutorCommand(execSeq)
+  }
+
+  if (configuration.has("smg.lineColors")) {
+    val lcArr = configuration.get[Seq[String]]("smg.lineColors").toArray
+    log.info(s"Overriding SMGRrd color palete using ${lcArr.length} colors")
+    SMGRrd.setLineColors(lcArr)
   }
 
   /**
@@ -142,10 +148,10 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   override  def registerReloadListener(lsnr: SMGConfigReloadListener): Unit = {
     myConfigReloadListeners.synchronized(myConfigReloadListeners += lsnr)
   }
-  def reloadListerenrs: List[SMGConfigReloadListener] = myConfigReloadListeners.synchronized(myConfigReloadListeners.toList)
+  def reloadListeners: List[SMGConfigReloadListener] = myConfigReloadListeners.synchronized(myConfigReloadListeners.toList)
 
   override def notifyReloadListeners(ctx: String): Unit = {
-    val myrlsnrs = reloadListerenrs
+    val myrlsnrs = reloadListeners
     myrlsnrs.foreach { lsnr =>
       try {
         lsnr.reload()
