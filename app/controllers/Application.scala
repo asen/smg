@@ -576,24 +576,18 @@ class Application  @Inject() (actorSystem: ActorSystem,
         httpHdrs(CONTENT_DISPOSITION) = s"attachment; filename=" + ov.id + ".csv"
         httpHdrs(CONTENT_TYPE) = "text/csv"
       }
-
-      def ovars(ov: SMGObjectView) = if (ov.cdefVars.nonEmpty)
-        ov.cdefVars
-      else
-        ov.filteredVars(false)
-
       val vlst = if (ov.isAgg) {
         val aov = ov.asInstanceOf[SMGAggObjectView]
         if ((aov.op == "GROUP") || (aov.op == "STACK") ) {
           val shortIds = SMGAggObjectView.stripCommonStuff('.', aov.objs.map(o => o.id)).iterator
           aov.objs.flatMap{ o =>
             val sid = shortIds.next()
-            ovars(o).map { v => // override labels
+            o.graphVars.map { v => // override labels
               SMGObjectVar(v.m ++ Map("label" -> (sid + "-" + v.label.getOrElse("dsX"))))
             }
           }
-        } else ovars(ov)
-      } else ovars(ov)
+        } else ov.graphVars
+      } else ov.graphVars
 
       "unixts,date," + vlst.map(_.label.getOrElse("dsX")).mkString(",") +"\n"
     }

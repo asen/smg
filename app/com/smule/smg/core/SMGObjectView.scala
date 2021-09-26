@@ -42,6 +42,11 @@ trait SMGObjectView extends SMGObjectBase {
     }
   }
 
+  lazy val graphVars: List[SMGObjectVar] = if (cdefVars.nonEmpty)
+    cdefVars
+  else
+    filteredVars(false)
+
   override def searchVars: List[SMGObjectVar] = filteredVars(true)
 
   lazy val graphMinY: Option[Double] = {

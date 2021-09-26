@@ -539,8 +539,9 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
             -numSeq.foldLeft(0.0) { (x, y) => x + y } / numSeq.size
         }
       }
-      val sortedVdesc = if (sortBy < vlstSorted.head.filteredVars(true).size) {
-        s"Sorted by ${vlstSorted.head.filteredVars(true)(sortBy).label.getOrElse(s"ds$sortBy")}"
+      val gbVars = vlstSorted.head.graphVars
+      val sortedVdesc = if (sortBy < gbVars.size) {
+        s"Sorted by ${gbVars(sortBy).label.getOrElse(s"ds$sortBy")}"
       } else
         "Not sorted"
       (List(vdesc, sortedVdesc), vlstSorted)

@@ -68,7 +68,7 @@ object SMGAggGroupBy extends Enumeration {
       }.toMap
     }).map { case (k,v) => ("label:" + k, v) }
 
-    lazy val labelMuVars = ov.filteredVars(true).map { m =>
+    lazy val labelMuVars = ov.graphVars.map { m =>
       SMGObjectVar(m.m.filter { case (k, v) =>
         (k == "label") || (k == "mu")
       })
@@ -79,17 +79,17 @@ object SMGAggGroupBy extends Enumeration {
     lazy val byPxTlMap = Map("px" -> ov.id.split('.').dropWhile(_.startsWith("@")).head)
     lazy val byPx2TlMap = Map("px" -> ov.id.split('.').dropWhile(_.startsWith("@")).take(2).mkString("."))
     lazy val byPx3TlMap = Map("px" -> ov.id.split('.').dropWhile(_.startsWith("@")).take(3).mkString("."))
-    lazy val emptyFilteredVars = ov.filteredVars(true).map { m => SMGObjectVar.empty }
+    lazy val emptyFilteredVars = ov.graphVars.map { m => SMGObjectVar.empty }
 
     gb match {
-      case GB_VARS => SMGAggGroupBy(gb, Map(), ov.filteredVars(true))
+      case GB_VARS => SMGAggGroupBy(gb, Map(), ov.graphVars)
       case GB_OBJLBLS => SMGAggGroupBy(gb, byLabelsMap, emptyFilteredVars)
-      case GB_VARSSX => SMGAggGroupBy(gb, bySxTlMap, ov.filteredVars(true))
-      case GB_VARSSX2 => SMGAggGroupBy(gb, bySx2TlMap, ov.filteredVars(true))
-      case GB_VARSSX3 => SMGAggGroupBy(gb, bySx3TlMap, ov.filteredVars(true))
-      case GB_VARSPX => SMGAggGroupBy(gb, byPxTlMap, ov.filteredVars(true))
-      case GB_VARSPX2 => SMGAggGroupBy(gb, byPx2TlMap, ov.filteredVars(true))
-      case GB_VARSPX3 => SMGAggGroupBy(gb, byPx3TlMap, ov.filteredVars(true))
+      case GB_VARSSX => SMGAggGroupBy(gb, bySxTlMap, ov.graphVars)
+      case GB_VARSSX2 => SMGAggGroupBy(gb, bySx2TlMap, ov.graphVars)
+      case GB_VARSSX3 => SMGAggGroupBy(gb, bySx3TlMap, ov.graphVars)
+      case GB_VARSPX => SMGAggGroupBy(gb, byPxTlMap, ov.graphVars)
+      case GB_VARSPX2 => SMGAggGroupBy(gb, byPx2TlMap, ov.graphVars)
+      case GB_VARSPX3 => SMGAggGroupBy(gb, byPx3TlMap, ov.graphVars)
       case GB_VARLBLMU => SMGAggGroupBy(gb, Map(), labelMuVars)
       case GB_VARLBLMUSX => SMGAggGroupBy(gb, bySxTlMap, labelMuVars)
       case GB_NUMV => SMGAggGroupBy(gb, Map(), emptyFilteredVars)
