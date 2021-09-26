@@ -74,7 +74,7 @@ class SMGUpdateBatchActor(configSvc: SMGConfigService) extends Actor{
         val myFlushAll = rrdConf.rrdcachedFlushAllOnRun
         if (myFlushAll)
           flushAll(reason)
-        log.info(s"SMGUpdateBatchActor: processed flush($reason) message ($processedCount updates since last one) " +
+        log.debug(s"SMGUpdateBatchActor: processed flush($reason) message ($processedCount updates since last one) " +
           s"flushAll=$myFlushAll")
       }
       processedCount = 0
