@@ -10,8 +10,12 @@ SRCDIR=docs
 
 rm -rf $OUTDIR/*
 mkdir -p $OUTDIR
+mkdir -p $OUTDIR/howto
 
 for fn in `ls -1 $SRCDIR/*.html` ; do
     /bin/cp -vf $fn $OUTDIR/
 done
 
+for fn in `ls -1 $SRCDIR/howto/*.html` ; do
+    /bin/cp -vf $fn $OUTDIR/howto/
+done

@@ -17,4 +17,11 @@ pandoc --toc -s -f markdown --toc-depth=4 \
     --metadata title='Smule Grapher (SMG)' \
     index.md > index.html
 
+SED=`which gsed 2>/dev/null || which sed`
+
+for ht in `ls -1 howto/` ; do
+    ht_html=`echo $ht | $SED 's/\.md$/.html/g'`
+    pandoc -f markdown howto/$ht > howto/$ht_html
+done
+
 echo "build-html.sh: Done"
