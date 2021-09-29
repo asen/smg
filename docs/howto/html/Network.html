@@ -6,7 +6,7 @@
 <p>For the example we will use a network switch named racksw1.host, with “management” IP of 192.168.10.1 and SNMP community of “private”.</p>
 <p>First, verify that SNMP is working as expected, you will need snmpget and snmpwalk available. You can use a running SMG container instance to do that like this:</p>
 <pre><code>docker exec smg snmpget -v2c -c private 192.168.10.1 sysDescr.0</code></pre>
-<p>If that works we can proceed with configuring the SMG Autoconf target which would generate SMG configs to watch the device, using the <a href="https://github.com/asen/smg/blob/master/smgconf/ac-templates/netsw-snmp.yml.ssp">netws-snmp template</a>:</p>
+<p>If that works we can proceed with configuring the SMG Autoconf target which would generate SMG configs to watch the device, using the <a href="https://github.com/asen/smg/blob/master/smgconf/ac-templates/netsw-snmp.yml.ssp">netsw-snmp template</a>:</p>
 <pre><code>cat &gt; /opt/smg/data/conf/autoconf.d/racksw1.host-netsw.yml &lt;&lt;-EOH
 
 - output: racksw1.host-netsw.yml
@@ -14,5 +14,7 @@
   node_name: racksw1.host
   node_host: 192.168.10.1  # or resolve_name: true
   regen_delay: 1800 # this can be slow - run every 30 min instead of every minute
+  context:
+    snmp_community: private
 
 EOH</code></pre>
