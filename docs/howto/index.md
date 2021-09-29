@@ -6,7 +6,7 @@ A pre-requisite to follow the howtos is to have a running SMG instance. Easiest 
 
 How to monitor
 
-1. [Network switches](Netwotk.html)
+1. [Network switches](Network.html)
 2. [Hosts/Nodes](Nodes.html)
 3. [Haproxy LB stats](Haproxy.html)
 4. [Nginx status](Nginx.html)

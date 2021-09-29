@@ -14,7 +14,7 @@ First, verify that SNMP is working as expected, you will need snmpget and snmpwa
 
     docker exec smg snmpget -v2c -c private 192.168.10.1 sysDescr.0
 
-If that works we can proceed with configuring the SMG Autoconf target which would generate SMG configs to watch the device, using the [netws-snmp template](https://github.com/asen/smg/blob/master/smgconf/ac-templates/netsw-snmp.yml.ssp):
+If that works we can proceed with configuring the SMG Autoconf target which would generate SMG configs to watch the device, using the [netsw-snmp template](https://github.com/asen/smg/blob/master/smgconf/ac-templates/netsw-snmp.yml.ssp):
 
     cat > /opt/smg/data/conf/autoconf.d/racksw1.host-netsw.yml <<-EOH
 
@@ -23,6 +23,8 @@ If that works we can proceed with configuring the SMG Autoconf target which woul
       node_name: racksw1.host
       node_host: 192.168.10.1  # or resolve_name: true
       regen_delay: 1800 # this can be slow - run every 30 min instead of every minute
+      context:
+        snmp_community: private
 
     EOH
 

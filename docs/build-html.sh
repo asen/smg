@@ -19,9 +19,11 @@ pandoc --toc -s -f markdown --toc-depth=4 \
 
 SED=`which gsed 2>/dev/null || which sed`
 
-for ht in `ls -1 howto/` ; do
+mkdir -p howto/html
+
+for ht in `ls -1 howto/ | grep -v html` ; do
     ht_html=`echo $ht | $SED 's/\.md$/.html/g'`
-    pandoc -f markdown howto/$ht > howto/$ht_html
+    pandoc -f markdown howto/$ht > howto/html/$ht_html
 done
 
 echo "build-html.sh: Done"

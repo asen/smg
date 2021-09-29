@@ -18,9 +18,9 @@ The autconf private (conf/autoconf-private.d/) directory also lives under /opt/s
 Here are some example commands to get the SMG image up and running on a local Linux machine.
 
     $ mkdir smg-data smg-conf
-    $ docker run -d --name smg -p 9000:9000 -v smg-conf:/etc/smg/conf.d -v smg-data:/opt/smg/data gcr.io/asen-smg/smulegrapher:latest
+    $ docker run -d --name smg -p 9000:9000 -v ~/smg-conf:/etc/smg/conf.d -v ~/smg-data:/opt/smg/data gcr.io/asen-smg/smulegrapher:latest
 
-Point your browser to http://$DOCKER_HOST:9000 (the local metrics stats should show up in a minute or two)
+Point your browser to http://%DOCKER_HOST%:9000 (the local metrics stats should show up in a minute or two)
 
 Then add stuff under /etc/smg/conf.d or /opt/smg/data/conf/autoconf.d/ and to reload conig use one of:
 
@@ -28,12 +28,20 @@ Then add stuff under /etc/smg/conf.d or /opt/smg/data/conf/autoconf.d/ and to re
 
 or
 
-    $ curl -X POST http://$DOCKER_HOST:9000/reload
+    $ curl -X POST http://%DOCKER_HOST%:9000/reload
 
 Use the docker logs command to check for errors if something does not look right.
 
 Note that such setup is fine for small-scale operations (like up to a few thousands of graphs updated every minute). For more demanding/production setups it is recommended to use rrdcached for batching the writes and nginx to serve the images. 
 
-Use the [docker/docker-compose.yaml](https://github.com/asen/smg/blob/master/docker/docker-compose.yaml) file in the SMG repo to easily bring up a production-ready SMG setup. And check the [k8s/](https://github.com/asen/smg/tree/master/k8s/) dir for example production Kubernetes deployment.
+Use the [docker/docker-compose.yaml](https://github.com/asen/smg/blob/master/docker/docker-compose.yaml) file in the SMG repo to easily bring up a production-ready SMG setup. 
 
+    $ sudo mkdir -p /etc/smg/conf.d ; sudo mkdir -p /opt/smg/data ; sudo chown `whoami` /etc/smg/conf.d /opt/smg/data
+    $ git clone https://github.com/asen/smg.git
+    $ cd smg/docker
+    $ docker-compose up -d
+
+Point your browser to http://%DOCKER_HOST%:9080 (the local metrics stats should show up in a minute or two)
+
+And if you are running Kubernetes - check the [k8s/](https://github.com/asen/smg/tree/master/k8s/) dir for example production deployment.
 
