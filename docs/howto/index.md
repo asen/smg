@@ -2,7 +2,7 @@
 
 A pre-requisite to follow the howtos is to have a running SMG instance. Easiest is to follow the 
 
-0. [How to Run SMG](_Run_smg.html) howto.
+0. [How to Run SMG](Run_smg.html) howto.
 
 How to monitor
 
