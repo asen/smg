@@ -254,10 +254,11 @@ object SMGRrd {
     c.append(" 'VDEF:").append(lbl).append("pct=").append(lbl).append(",95,PERCENTNAN'")
     if ((!gopts.disable95pRule) && (!stacked)) c.append(" 'HRULE:").append(lbl).append("pct").append(clr).append("::dashes=5,10'")
     c.append(" 'GPRINT:").append(lbl).append(s":AVERAGE: avg$HTAB").append(numFmt(v)).append("'")
-    c.append(" 'GPRINT:").append(lbl).append(s":MAX: max$HTAB").append(numFmt(v)).append("'")
-    c.append(" 'GPRINT:").append(lbl).append(s"lst: last$HTAB").append(numFmt(v)).append("\\n'")
+    c.append(" 'GPRINT:").append(lbl).append(s":MIN: min$HTAB").append(numFmt(v)).append("'")
+    c.append(" 'GPRINT:").append(lbl).append(s":MAX: max$HTAB").append(numFmt(v)).append("\\n'")
     c.append(" 'GPRINT:").append(lbl).append(s"std:\\t\\t   std$HTAB").append(numFmt(v)).append("'")
-    c.append(" 'GPRINT:").append(lbl).append(s"pct: 95%%$HTAB").append(numFmt(v)).append("\\n'")
+    c.append(" 'GPRINT:").append(lbl).append(s"pct: 95%%$HTAB").append(numFmt(v)).append("'")
+    c.append(" 'GPRINT:").append(lbl).append(s"lst: last$HTAB").append(numFmt(v)).append("\\n'")
     c.toString
   }
 
