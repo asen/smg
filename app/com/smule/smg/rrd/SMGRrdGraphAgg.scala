@@ -125,7 +125,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
     resetDefLabelMakers()
     val cdefLabelMaker = new LabelMaker("cd_")
     val vit = aggObj.vars.iterator
-    var lastLabel = ""
+    var firstLabel = ""
     for (tpl <- allDefsAndLabelsByVar.zip(defLabelMakers)) {
       val cdefLabel = cdefLabelMaker.nextLabel // advance even if not graphed
       val allDefsAndLabels = tpl._1
@@ -143,12 +143,13 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
         if (aggObj.cdefVars.isEmpty) {
           val gvStr = graphVar(v, lbl, vlabel, colorMaker, first = false, stacked = aggObj.stack, gopts)
           c.append(gvStr)
-          lastLabel = lbl
+          if (firstLabel == "") firstLabel = lbl
         }
       }
     }
     if (aggObj.cdefVars.nonEmpty) {
       val cdefVarLabelMaker = new LabelMaker("cv_")
+      firstLabel == ""
       aggObj.cdefVars.foreach {cv =>
         val lbl = cdefVarLabelMaker.nextLabel
         val vlabel = lblFmt(cv.label.getOrElse(lbl))
@@ -160,10 +161,10 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
         }
         val gvStr = graphVar(cv, lbl, vlabel, colorMaker, first = false, stacked = aggObj.stack, gopts)
         c.append(gvStr)
-        lastLabel = lbl
+        if (firstLabel == "") firstLabel = lbl
       }
     }
-    c.append(lastUpdated(lastLabel))
+    c.append(lastUpdated(firstLabel))
     c.append(resolutionRrdStr(aggObj.interval, period, gopts, aggObj.rraDef, rrdConf))
     c.toString()
   }
@@ -221,7 +222,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
     val colorMaker = new ColorMaker()
     val c = new mutable.StringBuilder()
     var first = true
-    var lastLabel = ""
+    var firstLabel = ""
     val mygopts = GraphOptions.withSome(disablePop = true, disable95pRule = gopts.disable95pRule) // TODO support disablePop = false
     getAllDefsAndLabelsByVarGroup.foreach {t4 =>
       val cdef = t4._1
@@ -232,9 +233,9 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
       val gvStr = graphVar(v, lbl, vlabel, colorMaker, first = first, stacked = stacked, mygopts)
       first = false
       c.append(gvStr)
-      lastLabel = lbl
+      if (firstLabel == "") firstLabel = lbl
     }
-    c.append(lastUpdated(lastLabel))
+    c.append(lastUpdated(firstLabel))
     c.append(resolutionRrdStr(aggObj.interval, period, gopts, aggObj.rraDef, rrdConf))
     c.toString
   }

@@ -35,7 +35,7 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) extends SM
     var first = true
     val lblMaker = new LabelMaker()
     val colorMaker = new ColorMaker()
-    var lastLabel = ""
+    var firstLabel = ""
     objv.vars.zipWithIndex.foreach { t =>
       val rrdLbl = lblMaker.nextLabel // make sure labelmaker advances even if not graphed
       if (objv.graphVarsIndexes.isEmpty || objv.graphVarsIndexes.contains(t._2)) {
@@ -64,11 +64,12 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) extends SM
           first = false
           c.append(gvStr)
         }
-        lastLabel = rrdLbl
+        if (firstLabel == "") firstLabel = rrdLbl
       }
     }
     if (objv.cdefVars.nonEmpty){
       val cdefLblMaker = new LabelMaker("cd_")
+      firstLabel = ""
       objv.cdefVars.foreach { cv =>
         val cdefLabel = cdefLblMaker.nextLabel
         val vlabel = lblFmt(cv.label.getOrElse(cdefLabel))
@@ -82,10 +83,10 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) extends SM
         val gvStr = graphVar(cv, cdefLabel, vlabel, colorMaker, first = first, stacked = objv.stack, gopts)
         first = false
         c.append(gvStr)
-        lastLabel = cdefLabel
+        if (firstLabel == "") firstLabel = cdefLabel
       }
     }
-    c.append(lastUpdated(lastLabel))
+    c.append(lastUpdated(firstLabel))
     c.append(resolutionRrdStr(objv.interval, period, gopts, objv.rraDef, rrdConf))
     c.toString
   }
