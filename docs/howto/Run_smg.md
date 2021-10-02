@@ -22,7 +22,7 @@ Here are some example commands to get the SMG image up and running on a local Li
         -v /etc/smg/conf.d:/etc/smg/conf.d -v /opt/smg/data:/opt/smg/data \
         gcr.io/asen-smg/smulegrapher:latest
 
-Point your browser to http://%DOCKER_HOST%:9000 (the local SMG stats should show up in a minute or two). Note that its possible to run SMG in root-less container runtime (tested with podman docker emulation). Also the /etc/smg and /opt/smg dirs don;t need to be in a system-wide location (can be under your home dir), yet these are used with the examples in the howtos for consistency.
+Point your browser to http://%DOCKER_HOST%:9000 (the local SMG stats should show up in a minute or two). Note that its possible to run SMG in root-less container runtime (tested with podman docker emulation). Also the /etc/smg and /opt/smg dirs don't need to be in a system-wide location (can be under your home dir), yet these are used with the examples in the howtos for consistency.
 
 Then add stuff under /etc/smg/conf.d or /opt/smg/data/conf/autoconf.d/ and to reload conig use one of:
 
