@@ -1,6 +1,6 @@
 # How to monitor Network switches
 
-These days it is less common for people to need to monitor network switches as a lot of people run their services in some of the "cloud" vendors where the provider is owning and handling the actual underlying network infrastructure and that is transparent to their customers.
+These days it is less common for people to need to monitor network switches as a lot of companies run their services in some of the "cloud" vendors where the provider is owning and handling the actual underlying network infrastructure and that is transparent to their customers.
 
 Yet if you run something in your own data center chances are that this also involves some network infrastructure in the form of network router devices.
 
@@ -27,4 +27,8 @@ If that works we can proceed with configuring the SMG Autoconf target which woul
         snmp_community: private
 
     EOH
+
+Then reload SMG conf as described [here](Run_smg.html)
+
+As of this writing the template will generate one index for the device and a pair of graphs for each port - its traffic (ifHCInOctets/ifHCOutOctets converted in bits per sec) and ifOperStatus value - 1=up, 2=down, 3=tesing, 4=unknown, 5=dormant 6=notPresent 7=lowerLayerDown
 

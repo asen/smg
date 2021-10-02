@@ -35,6 +35,8 @@ We would create an autoconf target config file like this:
 
     EOH
 
+Then reload SMG conf as described [here](Run_smg.html)
+
 This will tell the autoconf plugin to use the output of the curl command and the haproxy template to generate actual SMG configs to poll for these stats and update RRDs from the more important ones.
 
 We also don't want the stats from the actual stats end-point (if dedicated as suggested above) so we are filtering that out using the filter_rxx ("regex exclude") value. Check the template source for additional properties which can be passed via the _context_ property.

@@ -1,5 +1,5 @@
 <h1 id="how-to-monitor-network-switches">How to monitor Network switches</h1>
-<p>These days it is less common for people to need to monitor network switches as a lot of people run their services in some of the “cloud” vendors where the provider is owning and handling the actual underlying network infrastructure and that is transparent to their customers.</p>
+<p>These days it is less common for people to need to monitor network switches as a lot of companies run their services in some of the “cloud” vendors where the provider is owning and handling the actual underlying network infrastructure and that is transparent to their customers.</p>
 <p>Yet if you run something in your own data center chances are that this also involves some network infrastructure in the form of network router devices.</p>
 <p>These can come from a bunch of vendors including Cisco, Arista etc and configring them is vendor-specific (and totally out of scope of this doc) but normally all of these support SNMP which needs to be enabled for monitoring to work.</p>
 <p>Ask your network administrator to enable SNMP (v2c) on the device and provide you with the IP address where that can be accessed, together with the SNMP “community string” (akin to password). Note that if you are using something like MRTG to get traffic graphs from these chances are that you already have these available.</p>
@@ -18,3 +18,5 @@
     snmp_community: private
 
 EOH</code></pre>
+<p>Then reload SMG conf as described <a href="Run_smg.html">here</a></p>
+<p>As of this writing the template will generate one index for the device and a pair of graphs for each port - its traffic (ifHCInOctets/ifHCOutOctets converted in bits per sec) and ifOperStatus value - 1=up, 2=down, 3=tesing, 4=unknown, 5=dormant 6=notPresent 7=lowerLayerDown</p>
