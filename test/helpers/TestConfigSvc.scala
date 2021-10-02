@@ -206,6 +206,10 @@ class TestConfigSvc() extends SMGConfigService {
   override val defaultInterval: Int = 60
   override val defaultTimeout: Int = 30
 
+  val smgImageHeaders: Map[String,String] = Map(
+    "Cache-Control" -> "max-age=0, no-cache, no-store, must-revalidate"
+  )
+
   override def sourceFromFile(fn: String): String = {
     val f = Source.fromFile(fn)
     val ret = f.mkString
