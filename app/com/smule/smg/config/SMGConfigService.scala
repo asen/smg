@@ -23,6 +23,8 @@ trait SMGConfigService {
   val defaultInterval: Int
   val defaultTimeout: Int
 
+  val smgImageHeaders: Map[String,String]
+
   /**
     * Get the current configuration as cached during startup or previous reload.
     *

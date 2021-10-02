@@ -1,8 +1,10 @@
 package controllers
 
-import java.io.File
+import com.smule.smg.config.SMGConfigService
 
+import java.io.File
 import com.smule.smg.core.SMGLogger
+
 import javax.inject.Inject
 import play.Environment
 import play.api.mvc.{Action, AnyContent, InjectedController}
@@ -12,7 +14,7 @@ import scala.concurrent.ExecutionContext
 /**
   * Created by asen on 10/12/16.
   */
-class Images  @Inject() (env: Environment)(implicit ec: ExecutionContext) extends InjectedController {
+class Images  @Inject() (env: Environment, configSvc: SMGConfigService)(implicit ec: ExecutionContext) extends InjectedController {
   val log = SMGLogger
 
   def at(rootPath: String, file: String): Action[AnyContent] = Action { request =>
@@ -22,7 +24,8 @@ class Images  @Inject() (env: Environment)(implicit ec: ExecutionContext) extend
     } else {
       val fileToServe = new File(env.getFile(rootPath), file)
       if (fileToServe.exists) {
-        Ok.sendFile(fileToServe, inline = true).withHeaders(CACHE_CONTROL -> "max-age=30")
+        Ok.sendFile(fileToServe, inline = true).
+          withHeaders(configSvc.smgImageHeaders.toSeq:_*)
       } else {
         NotFound
       }

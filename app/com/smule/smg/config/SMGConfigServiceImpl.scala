@@ -51,6 +51,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     }
   }
 
+  override val smgImageHeaders: Map[String,String] = configuration.
+    getOptional[Map[String,String]]("smg.imageHeaders").getOrElse(
+      Map(
+        "Cache-Control" -> "max-age=0, no-cache, no-store, must-revalidate"
+      )
+    )
+
   if (configuration.has("smg.timeoutCommand")){
     val tmtCmd = configuration.get[String]("smg.timeoutCommand")
     log.info("Overriding SMGCmd timeout command using " + tmtCmd)
