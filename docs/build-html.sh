@@ -15,6 +15,10 @@ pandoc --toc -s -f markdown --toc-depth=4 \
 
 pandoc --toc -s -f markdown --toc-depth=4 \
     --metadata title='Smule Grapher (SMG)' \
+    smg.md > smg.html
+
+pandoc --toc -s -f markdown --toc-depth=4 \
+    --metadata title='Smule Grapher (SMG) - docs index' \
     index.md > index.html
 
 SED=`which gsed 2>/dev/null || which sed`
