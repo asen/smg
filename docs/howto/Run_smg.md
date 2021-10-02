@@ -17,10 +17,12 @@ The autconf private (conf/autoconf-private.d/) directory also lives under /opt/s
 
 Here are some example commands to get the SMG image up and running on a local Linux machine.
 
-    $ mkdir smg-data smg-conf
-    $ docker run -d --name smg -p 9000:9000 -v ~/smg-conf:/etc/smg/conf.d -v ~/smg-data:/opt/smg/data gcr.io/asen-smg/smulegrapher:latest
+    $ sudo mkdir -p /opt/smg/data /etc/smg/conf.d ; sudo chown `whoami` /etc/smg/conf.d /opt/smg/data
+    $ docker run -d --name smg -p 9000:9000 \
+        -v /etc/smg/conf.d:/etc/smg/conf.d -v /opt/smg/data:/opt/smg/data \
+        gcr.io/asen-smg/smulegrapher:latest
 
-Point your browser to http://%DOCKER_HOST%:9000 (the local metrics stats should show up in a minute or two)
+Point your browser to http://%DOCKER_HOST%:9000 (the local SMG stats should show up in a minute or two). Note that its possible to run SMG in root-less container runtime (tested with podman docker emulation). Also the /etc/smg and /opt/smg dirs don;t need to be in a system-wide location (can be under your home dir), yet these are used with the examples in the howtos for consistency.
 
 Then add stuff under /etc/smg/conf.d or /opt/smg/data/conf/autoconf.d/ and to reload conig use one of:
 
@@ -40,6 +42,10 @@ Use the [docker/docker-compose.yaml](https://github.com/asen/smg/blob/master/doc
     $ git clone https://github.com/asen/smg.git
     $ cd smg/docker
     $ docker-compose up -d
+
+or (with podman)
+
+    $ podman-compose up -d
 
 Point your browser to http://%DOCKER_HOST%:9080 (the local metrics stats should show up in a minute or two)
 
