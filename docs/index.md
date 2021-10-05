@@ -1,8 +1,9 @@
 Welcome to the SMG documentation. There are several sections you might be interested in:
 
-- [The SMG Concepts and Configuration reference doc](smg.html) - 
-this is the "main" SMG documentation page, including high level concepts and configuration reference.
+- [The SMG Concepts doc](smg.html) - High level concepts and description of how SMG works.
 
-- [The SMG Monitoring HowTos](howto/index.html) - some example-driven documents describing how to monitor various services types using SMG
+- [The SMG Configuration Reference](smg-config.html) - All configuration objects supported by SMG and their properties.
 
-- [The History and Evolution of SMG](History_and_Evolution.html) - this document describes the history of SMG and covers a lot of details about how SMG works but also why it works that way.
+- [The SMG Monitoring HowTos](howto/index.html) - Some example-driven documents describing how to monitor various services types using SMG
+
+- [The History and Evolution of SMG](History_and_Evolution.html) - This document describes the history of SMG and covers a lot of details about how SMG works but also why it works that way.

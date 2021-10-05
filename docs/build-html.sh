@@ -14,8 +14,12 @@ pandoc --toc -s -f markdown --toc-depth=4 \
     History_and_Evolution.md > History_and_Evolution.html
 
 pandoc --toc -s -f markdown --toc-depth=4 \
-    --metadata title='Smule Grapher (SMG)' \
+    --metadata title='Smule Grapher (SMG) - Concepts Overview' \
     smg.md > smg.html
+
+pandoc --toc -s -f markdown --toc-depth=4 \
+    --metadata title='Smule Grapher (SMG) - Configuration Reference' \
+    smg-config.md > smg-config.html
 
 pandoc --toc -s -f markdown --toc-depth=4 \
     --metadata title='Smule Grapher (SMG) - docs index' \
