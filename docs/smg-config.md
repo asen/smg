@@ -11,9 +11,11 @@ All config items are defined as a list. I.e. the top-level yaml structure for a 
 <pre>
 ...
 - $rrd_dir: smgrrd
-- some.rrd.object:
+...
+- id: some.rrd.object
   ...
-- ^some.index.object:
+...
+- id: ^some.index.object
   ...
 ...
 </pre>
@@ -104,9 +106,9 @@ The following properties are all optional.
 
 - **pre\_fetch**: (default - None) - specify a [$pre\_fetch](#pre_fetch) command id to execute before this object command will be run.
 
-- **rra**: (default - None) - specify a [$rra\_def id](#rra_def) to use for this object. By default SMG will pick one based on object interval.
+- **rra**: (default - None) - specify a [rra\_def id](#rra_def) to use for this object. By default SMG will pick one based on object interval.
 
-- **notify-xxx**: - these are multiple properties which define monitoring alert notifications. Check [monitoring config](#monitoring) for details. Note that from the per-leve specifiers only notify-fail is relevant at this level.
+- **notify-fail**: - This specifies a [notification command](#notify-command) to execute when the object fetch command fails. Check [monitoring config](#monitoring) for details.
 
 - **labels**: (default - empty map) - a map of key/vaule pairs useful for filtering and grouping by.
 
@@ -114,7 +116,17 @@ The following properties are all optional.
 
 ### Pre-fetch command objects
 
-A $pre\_fetch defines an unique **id** and a **command** to execute, together with an optional **timeout** for the command (30 seconds by default) and an optional "parent" pre\_fetch id. If a **pass\_data** property is defined and is set to true the stdout of the command will be passed to all child commands as stdin. By default SMG will use the timestamp of the top-level pre-fetch for RRD updates. One can set the **ignorets** property to ignore the timstamp of the pre-fetch and use the first child timestamp which doesn't have that property. In addition pre\_fetch can have a **child\_conc** property (default 1 if not specified) which determines how many threads can execute this pre-fetch child pre-fetches (but not object commands which are always parallelized). One can also specify a **delay** expressed as a floating point value in seconds. This will cause the command (and it children) to be executed with a delay according to the specified number of seconds. If a negative delay is specified the command will be run with a random delay between 0 and (interval - abs(delay)) seconds. Pre fetch also supports **notify-fail** - to override alert recipients for failure and also **notify-disable**, **notify-backoff** etc. (check [monitoring config](#monitoring) for details). Here are two example pre_fetch definitions, one referencing the other as a parent:
+A pre\_fetch defines an unique **id** and a **command** to execute, together with an optional **timeout** for the command (30 seconds by default) and an optional "parent" pre\_fetch id.
+
+If a **pass\_data** property is defined and is set to true the stdout of the command will be passed to all child commands as stdin.
+
+By default SMG will use the timestamp of the top-level pre-fetch for RRD updates. One can set the **ignorets** property to ignore the timstamp of the pre-fetch and use the first child timestamp which doesn't have that property.
+
+In addition pre\_fetch can have a **child\_conc** property (default 1 if not specified) which determines how many threads can execute this pre-fetch child pre-fetches (but not object commands which are always parallelized).
+
+One can also specify a **delay** expressed as a floating point value in seconds. This will cause the command (and it children) to be executed with a delay according to the specified number of seconds. If a negative delay is specified the command will be run with a random delay between 0 and (interval - abs(delay)) seconds.
+
+Pre fetch also supports **notify-fail** - to override alert recipients for failure and also **notify-disable**, **notify-backoff** etc. (check [monitoring config](#monitoring) for details). Here are two example pre_fetch definitions, one referencing the other as a parent:
 
 <blockquote>
 <pre>
@@ -167,7 +179,7 @@ In addition to the "regular" RRD Objects described above, one can define "aggreg
   rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
   notify-fail: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
-  labels:                                               # optional - arbitrary map of key/valu labels, useful for filtering
+  labels:                                               # optional - arbitrary map of key/value labels, useful for filtering
     foo: bar                                            #            and grouping by
   vars:                                                 # optional list of all variables to graph. If not set the first object vars list will be used.
     - label: sl1min                                     # the variable label.

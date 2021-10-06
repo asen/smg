@@ -183,9 +183,11 @@
 <pre>
 ...
 - $rrd_dir: smgrrd
-- some.rrd.object:
+...
+- id: some.rrd.object
   ...
-- ^some.index.object:
+...
+- id: ^some.index.object
   ...
 ...
 </pre>
@@ -253,13 +255,18 @@
 <li><p><strong>rrd_init_source</strong>: (no default) - if defined SMG will pass –source <em>val</em> to rrdtool create. This can be used to rebuild some rrd using different step/RRAs etc. E.g. update the conf specifying rrd_init_source: object.id.old, then rename the actual rrd file from object.id.rrd to object.id.old. On the next run SMG will re-create the rrd using the newly specified config and populate the data from the pre-existing values. Check rrdtool docs for more information and caveats (Note: this feature requires recent rrdtool version supporting the –source option, 1.5.5+ is known to work)</p></li>
 <li><p><strong>stack</strong>: (default - false) - if set to true - stack graph lines on top of each other.</p></li>
 <li><p><strong>pre_fetch</strong>: (default - None) - specify a <a href="#pre_fetch">$pre_fetch</a> command id to execute before this object command will be run.</p></li>
-<li><p><strong>rra</strong>: (default - None) - specify a <a href="#rra_def">$rra_def id</a> to use for this object. By default SMG will pick one based on object interval.</p></li>
-<li><p><strong>notify-xxx</strong>: - these are multiple properties which define monitoring alert notifications. Check <a href="#monitoring">monitoring config</a> for details. Note that from the per-leve specifiers only notify-fail is relevant at this level.</p></li>
+<li><p><strong>rra</strong>: (default - None) - specify a <a href="#rra_def">rra_def id</a> to use for this object. By default SMG will pick one based on object interval.</p></li>
+<li><p><strong>notify-fail</strong>: - This specifies a <a href="#notify-command">notification command</a> to execute when the object fetch command fails. Check <a href="#monitoring">monitoring config</a> for details.</p></li>
 <li><p><strong>labels</strong>: (default - empty map) - a map of key/vaule pairs useful for filtering and grouping by.</p></li>
 </ul>
 <p><a name="pre_fetch" /></p>
 <h3 id="pre-fetch-command-objects">Pre-fetch command objects</h3>
-<p>A $pre_fetch defines an unique <strong>id</strong> and a <strong>command</strong> to execute, together with an optional <strong>timeout</strong> for the command (30 seconds by default) and an optional “parent” pre_fetch id. If a <strong>pass_data</strong> property is defined and is set to true the stdout of the command will be passed to all child commands as stdin. By default SMG will use the timestamp of the top-level pre-fetch for RRD updates. One can set the <strong>ignorets</strong> property to ignore the timstamp of the pre-fetch and use the first child timestamp which doesn’t have that property. In addition pre_fetch can have a <strong>child_conc</strong> property (default 1 if not specified) which determines how many threads can execute this pre-fetch child pre-fetches (but not object commands which are always parallelized). One can also specify a <strong>delay</strong> expressed as a floating point value in seconds. This will cause the command (and it children) to be executed with a delay according to the specified number of seconds. If a negative delay is specified the command will be run with a random delay between 0 and (interval - abs(delay)) seconds. Pre fetch also supports <strong>notify-fail</strong> - to override alert recipients for failure and also <strong>notify-disable</strong>, <strong>notify-backoff</strong> etc. (check <a href="#monitoring">monitoring config</a> for details). Here are two example pre_fetch definitions, one referencing the other as a parent:</p>
+<p>A pre_fetch defines an unique <strong>id</strong> and a <strong>command</strong> to execute, together with an optional <strong>timeout</strong> for the command (30 seconds by default) and an optional “parent” pre_fetch id.</p>
+<p>If a <strong>pass_data</strong> property is defined and is set to true the stdout of the command will be passed to all child commands as stdin.</p>
+<p>By default SMG will use the timestamp of the top-level pre-fetch for RRD updates. One can set the <strong>ignorets</strong> property to ignore the timstamp of the pre-fetch and use the first child timestamp which doesn’t have that property.</p>
+<p>In addition pre_fetch can have a <strong>child_conc</strong> property (default 1 if not specified) which determines how many threads can execute this pre-fetch child pre-fetches (but not object commands which are always parallelized).</p>
+<p>One can also specify a <strong>delay</strong> expressed as a floating point value in seconds. This will cause the command (and it children) to be executed with a delay according to the specified number of seconds. If a negative delay is specified the command will be run with a random delay between 0 and (interval - abs(delay)) seconds.</p>
+<p>Pre fetch also supports <strong>notify-fail</strong> - to override alert recipients for failure and also <strong>notify-disable</strong>, <strong>notify-backoff</strong> etc. (check <a href="#monitoring">monitoring config</a> for details). Here are two example pre_fetch definitions, one referencing the other as a parent:</p>
 <blockquote>
 <pre>
 
@@ -305,7 +312,7 @@ Old (deprecated) syntax - using "$pre\_fetch:" instead of "type: pre\_fetch":
   rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
   notify-fail: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
-  labels:                                               # optional - arbitrary map of key/valu labels, useful for filtering
+  labels:                                               # optional - arbitrary map of key/value labels, useful for filtering
     foo: bar                                            #            and grouping by
   vars:                                                 # optional list of all variables to graph. If not set the first object vars list will be used.
     - label: sl1min                                     # the variable label.
