@@ -20,290 +20,6 @@ All config items are defined as a list. I.e. the top-level yaml structure for a 
 
 Note that ordering matters in general - SMG will try to preserve the order of the graphs to be displayed to match the order in which the objects were defined.
 
-<a name="globals" />
-
-### Globals
-
-Global for SMG variables are defined as a name -> value pairs where the name is prefixed with '$' sign. Here is the list of supported global variables, together with their default values (all of these are optional):
-
-- **$rrd\_dir**: _"smgrrd"_ - directory where to store your rrd files. You probably want to change this on any production installation (for more demanding setups, may want to put that dir on an SSD drive). That dir must be writabe by the SMG user. This must be defined before object definitions in the config.
-
-- **$rrd\_dir\_levels**: _None_ - if set, it has to be a list of numbers separated with ':' symbol (e.g. "1:1"). In that case SMG will create and use sub-dir levels under rrd\_dir (one level per list item) using the MD5 hash value of the object id and respective number of bytes (for each level) from that hash as hex strings. Useful if want to keep track of hundreds of thousands of rrds where having them all in one dir could be a problem on some systems. Only set this once (attempt to set it second time in the config will be ignored). WARNING: Never change the value once you have rrds created, you will lose the data if you do so.
-
-
-- **$dash-default-cols**: _6_ - How many "columns" of graphs to display on the dashboard by default. SMG will insert a new line between graphs at that "column".
-
-- **$dash-default-rows**: _10_  - How many "rows" of graphs to display on the dashboard by default. This together with the number of "columns" determines the "page size" - how many graphs will be displayed on each graphs page.
-
-- **$auto-refresh-interval**: _300_ - page auto refresh interval (if enabled by default or via the UI). Set to 0 to completely disable auto-refresh.
-
-- **$default-auto-refresh**: _true_ - whether by default dashboard pages will reload automatically. This can be toggled on per page basis in the UI.
-
-- **$default-interval** - _60_ - default update interval for objects not specifying it. This must be defined in the config before object definitions lacking interval setting (and one can specify it multiple times, changing the value for subequently defined objects) if one wants to change it from the default.
-
-- **$default-timeout** - _30_ - default timeout for object fetch commands (when retrieving data for updates) not specifying it. This must be defined in the config before object definitions lacking interval setting (and one can specify it multiple times, changing the value for subequently defined objects) if one wants to change it from the default.
-
-<a name="img_dir" />
-
-- **$img\_dir**: _"public/smg"_ - where to output the graphed images. That dir must be writabe by the SMG user.
-
-- **$url\_prefix**: _"/assets/smg"_ - what is the base url path under which the image files will be accessible by the browser
-
-- **$rrd\_cache\_dir**: _"smgrrd"_ - sometimes (when wanting to graph an image from multiple rrd files residing on diff remotes) SMG needs to download the actual rrd files locally. These rrd files are stored under the $rrd\_cache\_dir value. That dir must be writabe by the SMG user.
-
-- **$rrd\_tool**: _rrdtool_ - the rrdtool command to use. Can specify full path if the version of rrdtool you want to use is not on the default PATH.
-
-<a name="rrd_socket" />
-
-- **$rrd\_socket**: - _(default is None)_. Otherwise one can specify a string value like unix:/path/to/socket.file. If specified it will be passed to the relevant rrdtool update, graph or fetch commands with the --daemon unix:/path/to/socket.file option. This in turn is intended for use with rrdcached (a rrdtool daemon used for doing updates more efficiently). rrdcached is highly recommended on more demanding setups.
-
-- **$rrdcached\_update\_batch\_size**: - _1_ - if set to more than 1 and $rrd\_socket is specified SMG will batch updates (with batch size of the value) and use socat and rrdcached protocol directly for even more efficient updates.
-
-- **$rrdcached\_socat\_command**: - _socat_ - the socat command to use when flushing batched writes. By default SMG will use _socat_ and expect it to be in the executables PATH.
-
-- **$rrdcached\_flush\_all\_on\_run**: - _false_ - whether to send FLUSHALL to rrdcached at the end of every run (only used when doing batched updates via rrdcached protocol)
-
-- **$rrdcached\_flush\_on\_read**: - _true_ - whether to send FLUSH _file_ to rrdcached before every read - fetch or graph (only used when doing batched updates via rrdcached protocol). Either this or $rrdcached\_flush\_all\_on\_run should be set to true in rrdcached batch update mode. Setting both to true can hurt efficiency and setting both to false would result in retrieving possibly stale data.
-
-- **$rrd\_graph\_width**: _607_ - the graph width passed to rrdtool when graphing
-
-- **$rrd\_graph\_height**: _152_ - the graph height passed to rrdtool when graphing
-
-- **$rrd\_graph\_font**: _"DEFAULT:0:monospace"_ - the graph font string passed to rrdtool when graphing
-
-- **$rrd\_graph\_dppp**: _3_ _(advanced)_ - how many data points are represented in a singe "width" pixel. Used to estimate displayed graph resolution (step)
-
-- **\$rrd\_graph\_dppi**: _None_ _(advanced)_ - how many data points can be represented in a singe image. If this is set **$rrd\_graph\_dppp** is ignored. Used to estimate displayed graph resolution/step
-
-- **\$rrd\_graph\_padding**: _83_ _(advanced)_ - the padding (in pixels) rrdtool adds to the configured **$rrd\_graph\_width** for the resulting image size. Used to estimate html cell widths.
-
-- **$rrd\_max\_args\_len**: _25000_ _(advanced)_ - The maximum length of a rrdtool command. If a resulting command exceeds that the rrdtool arguments will be passed via stdin instead of command-line args as it is by default.
-
-- **$monlog\_dir**: _"monlog"_ - the directory where the monitoring system saves logs with events in json format (one file per calendar date).
-
-- **$monstate\_dir**: _"monstate"_ - the directory where the monitoring system saves its memory state on shut down.
-
-- **$include**: _(no default value)_ "path/to/some/\*.yml" - whenever the SMG config parser encounters an $include global it will interpret its value as a filesystem "glob" (and possibly expand that to multiple files) and then process each of the files yielded from the glob as regular config files (these can have more $includes too)
-
-- **$search-max-levels**: _10_ - how many levels (of dotted tokens) to support in autocomplete. Lower to 2-3 or less if you run a cluster with hundreds of thousands of objects.
-
-<a name="index-tree-levels">
-
-- **$index-tree-levels**: _1_ - How many levels of indexes to display by default on the Configured Indexes page. The default value of 1 means to display only top level indexes, 2 would also display their children etc. Valid values are between 1 and 5.
-
-<a name="run-tree-levels">
-
-- **$run-tree-levels-display**: _1_ - Same as $index-tree-levels but applies to monitor state run trees. How many levels of fetch commands to display by default on the top level Run trees page.
-
-
-- **$max-url-size**: _8000_ - The maximum url size supported by browsers. SMG will use POST requests (instead of GET) if a filter URL would exceed that size. Only draw back is that the resulting URLs will not be shareable. This needs to be set to around 2000 for IE support, and can be raised to 32k if one does not care about Android and IE.
-
-<a name="remote" />
-
-- **$remote**: similar to $pre\_fetch $remote is special and is not a simple name -> value pair. A $remote defines an unique remote **id** and an **url** at which the remote SMG instance is accessible. Here is an example remote definition:
-
-<blockquote>
-<pre>
-- $remote:
-  id: another-dc
-  url: "http://smg.dc2.company.com:9080"
-# slave_id: dc1
-# graph_timeout_ms: 30000
-# config_fetch_timeout_ms: 300000
-</pre>
-</blockquote>
-
-> If the optional **slave\_id** parameter is provided it indicates that this instance is a "worker" in the context of that remote. Its value must be the id under this instance is configured on the "master". A slave instance will not load and display the relevant remote instance config and graphs but will only notify it on its own config changes.
-
-> One can run a setup where the "main" instance (can be two of them, for redundancy) has multiple remotes configured where the remote instances only have  the "main" one as configured (for them) remote (with slave\_id set). With such setup one only needs a  single "beefy" (more mem) "main" instance which will hold all available across the remotes objects and the other ones will only keep theirs.
-
-> The **graph\_timeout\_ms** and **config\_fetch\_timeout\_ms** values allow one to override the global timeouts for garph/monitor state API calls and config fetch (which can be much slower)
-
-- **$remote-graph-timeout-ms**: 30000 (30 sec) - default timeout when requesting graphs (and monitor states) from remote instances. Can be overridon in each remote definition.
-
-- **$remote-config-fetch-timeout-ms**: 300000 (5 min) - default imeout when fetching remote config. These can be big so normally thats much higher than the graph timeout value.
-
-- **$reload-slave-remotes**: _"false"_ - By default SMG will only notify "master" remote instances (ones defined with slave_id property). One can override this behavior and make it notify slave instances too by setting this to "true".
- 
-- **$proxy-disable**: _"false"_ - by default SMG will link to remote images via its /proxy/\<remote-id>/\<path-to-image>.png URL which in turn will proxy the request to the actual remote SMG instance. This behavior can be disabled by setting the $proxy-disable value to "true". In that case the end-user will need direct access to the respective remote instances.
-
-> Note that in production setups where there is already a reverse proxy serving the static images directly it is recommended to keep $proxy-disable to "false" (same as omitting it) and then to intercept the /proxy/\<remote-id> URLs at the reverse proxy and proxy these directly to the respective SMG instances (at their root URL) instead of hitting the local SMG one for proxying. Here is how an example reverse proxy configuration for apache could look like for a remote named "_some-dc_" where SMG is running on _smg1.some-dc.myorg.com_ and listening on port 9080 (possibly another reverse proxy there):
-
-<blockquote>
-<pre>
-        ProxyPass        /proxy/some-dc  http://smg1.some-dc.myorg.com:9080/
-        ProxyPassReverse /proxy/some-dc  http://smg1.some-dc.myorg.com:9080/
-</pre>
-</blockquote>
-
-> Check the [Running and troubleshooting](#running) section for more details on reverse proxy setup in production.
-
-
-- **$proxy-timeout**: _30000_ - this option can be used to adjust the proxy requests timeout (when these are handled by SMG and not the reverse proxy in front).
-
-
-<a name="rra_def" />
-
-- **$rra\_def**: - this is another global definition which represents an object instead of simple name -> value pair. Whenever rrdtool creates a new rrd file it must get a set of definitions for Round Robin Archives ( RRAs, explained better [here](http://oss.oetiker.ch/rrdtool/tut/rrd-beginners.en.html) ). A $rra\_def has an **id** and a list of RRA definitions under the **rra** key. The actual RRA definitions are strings and defined using rrdtool syntax. Here is how the default SMG RRA for 1 minute interval would look like if defined as $rra\_def:
-
-<blockquote>
-<pre>
-- $rra_def:
-  id: smg_1m
-  rra:
-    - "RRA:AVERAGE:0.5:1:5760"
-    - "RRA:AVERAGE:0.5:5:1152"
-    - "RRA:AVERAGE:0.5:30:1344"
-    - "RRA:AVERAGE:0.5:120:1440"
-    - "RRA:AVERAGE:0.5:360:5840"
-    - "RRA:AVERAGE:0.5:1440:1590"
-    - "RRA:MAX:0.5:1:5760"
-    - "RRA:MAX:0.5:5:1152"
-    - "RRA:MAX:0.5:30:1344"
-    - "RRA:MAX:0.5:120:1440"
-    - "RRA:MAX:0.5:360:5840"
-    - "RRA:MAX:0.5:1440:1590"
-</pre>
-</blockquote>
-
-> Note that normally one does not need to define or use any $rra\_def objects, the defaults which SMG will pick would work just fine for most of the cases (these have been inspired by mrtg/cacti). Still there are some use cases where one wants to use different RRAs - e.g. keep some important graphs at higher resolutions for longer period (the draw-back being a bigger RRD file size).
-
-
-<a name="notify-command">
-
-- **$notify-command** - this defines a named command object to be executed for delivery of alert notifications (can have many of those). The command id can then be referenced as "recipient" in notify-{crit/warn/spike} object/index or global definitions. Example $notify-command definitions, together with globals referencing them:
-
-<blockquote>
-<pre>
-- $notify-command:
-  id: mail-people
-  command: "smgscripts/notif-mail.sh 'asen@smule.com somebodyelse@smule.com' "
-- $notify-command:
-  id: pagerduty
-  command: "smgscripts/notif-pagerduty.sh"
-- $notify-crit: mail-people,pagerduty
-- $notify-warn: mail-people
-</pre>
-</blockquote>
-
-> The actual command gets executed with the following variables set by SMG in the child process environment:
-
-> - $SMG\_ALERT\_SEVERITY - one of  RECOVERY, ACKNOWLEDGEMENT, ANOMALY, WARNING, FAILED, CRITICAL, SMGERR, THROTTLED, UNTHROTTLED
-
-> - $SMG\_ALERT\_KEY - the affected object/var, pre-fetch or global issue identification string.
-
-> - $SMG\_ALERT\_SUBJECT - the "subject" for the message to be sent
-
-> - $SMG\_ALERT\_BODY - the "body" of the message to be sent
-
-> Check smgscripts/notif-mail.sh for an example of how this could work
-
-- **$notify-global**: a comma separated list of $notify-command ids, to be executed on any global SMG errors (usually - overlaps)
-
-- **$notify-crit**: a comma separated list of $notify-command ids, to be executed on any (global or object-specific) critical errors
-
-- **$notify-fail**: a comma separated list of $notify-command ids, to be executed on any (global or object-specific) "failed" (i.e. fetch command failure) errors
-
-- **$notify-warn**: a comma separated list of $notify-command ids, to be executed on any (global or object-specific) warning errors
-
-- **$notify-anom**: a comma separated list of $notify-command ids, to be executed on any anomaly (spike/drop) errors. Be warned that this can get noisy on large setups.
-
-- **\$notify-baseurl**: Base url to be used in alert notifications links, default is http://localhost:9000 (so you probaly want that set if you intend to use alert notifications). This can also be pointed to a different (master) SMG instance URL where the current one is configured. Set **$notify-remote** to be the id of the current instance as defined in the master config in that case.
-
-- **$notify-remote**: See $notify-baseurl above, default is none/local.
-
-- **$notify-backoff**: set the default "backoff" period or the interval at which non-recovered issues alerts are re-sent. Default is "6h".
-
-- **$notify-throttle-count**: Alert notifications support throttling, you can set the max messages sent during given interval. This sets the max messages (count) value. The default when not present is Int.MaxValue which effectively disables throttling.
-
-- **$notify-throttle-interval**: Alert notifications support throttling, you can set the max messages sent during given interval (in seconds). This sets the interval (default is 3600 or 1h).
-
-- **$notify-strikes**: (default: _3_) - how many consecutive error states to be considered a hard error and in turn - trigger alert notifications.
-
-- **$cdash**: Defining a custom dashboard. Check for details [below](#cdash)
-
-<a name="pre_fetch" />
-
-- **$pre\_fetch**: pre\_fetch is special and it is not a simple name -> value pair. A $pre\_fetch defines an unique **id** and a **command** to execute, together with an optional **timeout** for the command (30 seconds by default) and an optional "parent" pre\_fetch id. If a **pass\_data** property is defined and is set to true the stdout of the command will be passed to all child commands as stdin. By default SMG will use the timestamp of the top-level pre-fetch for RRD updates. One can set the **ignorets** property to ignore the timstamp of the pre-fetch and use the first child timestamp which doesn't have that property. In addition pre\_fetch can have a **child\_conc** property (default 1 if not specified) which determines how many threads can execute this pre-fetch child pre-fetches (but not object commands which are always parallelized). One can also specify a **delay** expressed as a floating point value in seconds. This will cause the command (and it children) to be executed with a delay according to the specified number of seconds. If a negative delay is specified the command will be run with a random delay between 0 and (interval - abs(delay)) seconds. Pre fetch also supports **notify-fail** - to override alert recipients for failure and also **notify-disable**, **notify-backoff** etc. (check [monitoring config](#monitoring) for details). Here are two example pre_fetch definitions, one referencing the other as a parent:
-
-<blockquote>
-<pre>
-
-    - $pre_fetch:
-      desc: "check if localhost is up"
-      id: host.host1.up
-      command: "ping -c 1 host1 >/dev/null"
-      notify-fail: mail-asen, notif-pd
-      child_conc: 2
-      ignorets: true
-      timeout: 5
-
-    - $pre_fetch:
-      id: host.host1.snmp.vals
-      command: "snmp_get.sh o1 laLoad.1 laLoad.2 ssCpuRawUser.0 ssCpuRawNice.0 ..."
-      pre_fetch: host.host1.up
-      pass_data: true
-      timeout: 30
-      delay: 5.5
-
-Alternate (new) syntax:
-
-    - type: pre_fetch
-      desc: "check if localhost is up"
-      id: host.host1.up
-      command: "ping -c 1 host1 >/dev/null"
-      notify-fail: mail-asen, notif-pd
-      child_conc: 2
-      ignorets: true
-      timeout: 5
-
-    - type: pre_fetch
-      id: host.host1.snmp.vals
-      command: "snmp_get.sh o1 laLoad.1 laLoad.2 ssCpuRawUser.0 ssCpuRawNice.0 ..."
-      pre_fetch: host.host1.up
-      pass_data: true
-      timeout: 30
-      delay: 5.5
-
-</pre>
-</blockquote>
-
-> As explained in the [concepts overview](#concepts-pre_fetch) SMG RRD objects can specify a pre\_fetch command to execute before their own command gets executed (for the current interval run). That way multiple objects can be updated from given source (e.g. host/service) while hitting it only once per interval. Pre\_fetch itself can have another pre\_fetch defined as a parent and one can form command trees to be run top-to-bottom (stopping on failure).
-
-> Note that the "run tree" defined in this way must not have cycles which can be created in theory by circularly pointing pre\_fetch parents to each other (possibly via other ones). Currently SMG will reject the config update if circular parent depenencies in the run-tree are detected (detection is simply having a hard limit of max 10 parent levels when constructing the run trees).
-
-<a name="interval_def" />
-
-- **$interval\_def**: similar to pre\_fetch  interval\_def is special and it is not a simple name -> value pair. It has a mandatory **interval** property specifying the interval (in seconds) for which this applies and optional **threads** property specifying max number of threads (default is 4 and if set to 0 it will be dynamically set to the number of cpu cores available) and and a **pool** property specifying the type of thread pool - one of FIXED (default) and WORK_STEALING. Examples:
-
-<blockquote>
-<pre>
-
-    - $interval_def:
-      interval: 60
-      threads: 20
-      pool: FIXED
-
-    - $interval_def:
-      interval: 200
-      threads: 4
-      pool: WORK_STEALING
-
-Alternate (new) syntax:
-
-    - type: interval_def:
-      interval: 60
-      threads: 20
-      pool: FIXED
-
-    - type: interval_def:
-      interval: 200
-      threads: 0 # will use num cpu cores
-      pool: WORK_STEALING
-
-</pre>
-</blockquote>
-
 <a name="rrd-objects" />
 
 ### RRD objects
@@ -393,6 +109,45 @@ The following properties are all optional.
 - **notify-xxx**: - these are multiple properties which define monitoring alert notifications. Check [monitoring config](#monitoring) for details. Note that from the per-leve specifiers only notify-fail is relevant at this level.
 
 - **labels**: (default - empty map) - a map of key/vaule pairs useful for filtering and grouping by.
+
+<a name="pre_fetch" />
+
+### Pre-fetch command objects
+
+A $pre\_fetch defines an unique **id** and a **command** to execute, together with an optional **timeout** for the command (30 seconds by default) and an optional "parent" pre\_fetch id. If a **pass\_data** property is defined and is set to true the stdout of the command will be passed to all child commands as stdin. By default SMG will use the timestamp of the top-level pre-fetch for RRD updates. One can set the **ignorets** property to ignore the timstamp of the pre-fetch and use the first child timestamp which doesn't have that property. In addition pre\_fetch can have a **child\_conc** property (default 1 if not specified) which determines how many threads can execute this pre-fetch child pre-fetches (but not object commands which are always parallelized). One can also specify a **delay** expressed as a floating point value in seconds. This will cause the command (and it children) to be executed with a delay according to the specified number of seconds. If a negative delay is specified the command will be run with a random delay between 0 and (interval - abs(delay)) seconds. Pre fetch also supports **notify-fail** - to override alert recipients for failure and also **notify-disable**, **notify-backoff** etc. (check [monitoring config](#monitoring) for details). Here are two example pre_fetch definitions, one referencing the other as a parent:
+
+<blockquote>
+<pre>
+
+    - type: pre_fetch
+      desc: "check if localhost is up"
+      id: host.host1.up
+      command: "ping -c 1 host1 >/dev/null"
+      notify-fail: mail-asen, notif-pd
+      child_conc: 2
+      ignorets: true
+      timeout: 5
+
+    - type: pre_fetch
+      id: host.host1.snmp.vals
+      command: "snmp_get.sh o1 laLoad.1 laLoad.2 ssCpuRawUser.0 ssCpuRawNice.0 ..."
+      pre_fetch: host.host1.up
+      pass_data: true
+      timeout: 30
+      delay: 5.5
+
+Old (deprecated) syntax - using "$pre\_fetch:" instead of "type: pre\_fetch":
+
+    - $pre_fetch:
+      id: host.host1.up
+      ...
+
+</pre>
+</blockquote>
+
+As explained in the [concepts overview](smg.html#concepts-pre_fetch) SMG RRD objects can specify a pre\_fetch command to execute before their own command gets executed (for the current interval run). That way multiple objects can be updated from given source (e.g. host/service) while hitting it only once per interval. Pre\_fetch itself can have another pre\_fetch defined as a parent and one can form command trees to be run top-to-bottom (stopping on failure).
+
+Note that the "run tree" defined in this way must not have cycles which can be created in theory by circularly pointing pre\_fetch parents to each other (possibly via other ones). Currently SMG will reject the config update if circular parent depenencies in the run-tree are detected (detection is simply having a hard limit of max 10 parent levels when constructing the run trees).
 
 <a name="rrd-agg-objects" />
 
@@ -492,6 +247,34 @@ View objects support the following properties:
 
 > The cdef expression can be translated as (form right to left): _Divide the value of ( the product of the 2nd ($ds1) var with 100 ) by the value of the 1st ($ds0) var_. Or _$ds1 \* 100 / $ds0_ in more conventional notation. In our case the $ds0 represents "requests/sec" and $ds1 represents "cache hits/sec". So that expression is calculating the cache hit % (from all requests). Rddtool has great documentation on [RPN expressions](http://oss.oetiker.ch/rrdtool/tut/rpntutorial.en.html) and I strongly recommend reading that for anyone who wants to write cdef expressions.
 
+### Interval definitions
+
+<a name="interval_def" />
+
+The interval\_def object defines the behavior of the thread pool associated with given poll interval. It has a mandatory **interval** property specifying the interval (in seconds) for which this applies and optional **threads** property specifying max number of threads (default is 4 and if set to 0 it will be dynamically set to the number of cpu cores available) and and a **pool** property specifying the type of thread pool - one of FIXED (default) and WORK_STEALING. Examples:
+
+<blockquote>
+<pre>
+    - type: interval_def
+      interval: 60
+      threads: 20
+      pool: FIXED
+
+    - type: interval_def
+      interval: 200
+      threads: 0 # will use num cpu cores
+      pool: WORK_STEALING
+
+Old (deprecated) syntax:
+
+    - $interval_def:
+      interval: 60
+      ...
+
+</pre>
+</blockquote>
+
+Note that these are optional - smg will assume some sane defaults if they are omitted but depending on the workload chances are that some tuning of the number of threads doing the polling may be needed.
 
 <a name="indexes" />
 
@@ -621,82 +404,35 @@ Only difference in defining a hidden index from a regular one is that it has a '
 
 Currently hidden indexes are only useful in the context of monitoring - to define a group of objects for which in turn to define alert thresholds, but not necessarily clutter the main page with all of the groups.
 
-<a name="cdash" />
+<a name="notify-command">
 
-### Custom dashboards configuration
+### Notification commands
 
-Custom dashboards are defined in the yaml configuration using the **$cdash** global variable.
+The notify-command object defines a named command object to be executed for delivery of alert notifications (can have many of those). The command id can then be referenced as "recipient" in notify-{crit/warn/spike} object/index or global definitions. Example notify-command definitions, together with globals referencing them:
 
-The $cdash keyword defines a yaml map which must have an unique **id** property, an optional **title** and a list of **items** of various types. All item types have some common set of properties - an unique **id**, an optional **title**, **width** and **height** properties. The other mandatory propert is the **type** which can be one of the following:
+<blockquote>
+<pre>
+- type: notify-command
+  id: mail-people
+  command: "smgscripts/notif-mail.sh 'asen@smule.com somebodyelse@smule.com' "
 
-- *IndexGraphs* - the graphs produced by some defined in smg index. This item type requires an **ix** property specifying the index id. It also supports **offset** and **limit** properties in the list of graphs (default is to show all).
+- type: notify-command
+  id: pagerduty
+  command: "smgscripts/notif-pagerduty.sh"
 
-- *IndexStates* - svg heatmaps representing index states. Indexes are specified using the **ixes** propery which is a list of index ids. The svg image width is specified via the **img\_width** property.
+- $notify-crit: mail-people,pagerduty
+- $notify-warn: mail-people
+</pre>
+</blockquote>
 
-- *MonitorProblems* - current problems as visible on the monitor page. Supports customizing what is displayed using **ms** (minimum alert level) filter and also **soft** and **slncd** filter flags.
+The actual command gets executed with the following variables set by SMG in the child process environment:
 
-- *MonitorLog* - recent monitor/log entries. Supports customizing what is displayed using **ms** (minimum alert level) filter and also **soft** and **slncd** filter flags.
+- $SMG\_ALERT\_SEVERITY - one of  RECOVERY, ACKNOWLEDGEMENT, ANOMALY, WARNING, FAILED, CRITICAL, SMGERR, THROTTLED, UNTHROTTLED
+- $SMG\_ALERT\_KEY - the affected object/var, pre-fetch or global issue identification string.
+- $SMG\_ALERT\_SUBJECT - the "subject" for the message to be sent
+- $SMG\_ALERT\_BODY - the "body" of the message to be sent
 
-- *Plugin* - plugins can implement custom dashboard items and using custom (plugin-specific) configuration.
-
-- *External* - and external web page displayed in an iframe. Requires an **url** parameter and a separate **fheight** (frame height) property from the standard **height**.
-
-- *Container* - this is a special type of item which is a container for other items specified as a list under the **items** property.
-
-Example:
-
-    - $cdash:
-      id: noc
-      title: NOC
-      items:
-        - id: alerts
-          title: Active alerts
-          type: MonitorProblems
-          width: 350
-          height: 600
-        - id: alert-log
-          title: Alert Log
-          type: MonitorLog
-          width: 350
-          height: 600
-          limit: 50
-          ms: WARNING
-        - id: jmx.premote-graphs
-          type: IndexGraphs
-          title: jmx.premote Graphs
-          width: 700
-          height: 600
-          ix: jmx.premote
-          limit: 2
-        - id: group1
-          type: Container
-          width: 700
-          height: 800
-          items:
-          - id: index.states
-            title: Index States
-            type: IndexStates
-            width: 450
-            height: 500
-            img_width: 300
-            ixes:
-              - jmx.premote
-              - localhost
-          - id: calc-netext
-            type: Plugin
-            width: 700
-            height: 300
-            plugin_id: calc
-            ix: some.id
-        - id: google
-          title: External web page
-          type: External
-          width: 800
-          height: 620
-          fheight: 600
-          url: https://google.com/
-
-
+Check smgscripts/notif-mail.sh for an example of how this could work
 
 <a name="monitoring" />
 
@@ -842,6 +578,257 @@ The alerts property is an array of yaml objects each specifying a "label" and on
     - label: 7
       alert-p-mon-anom: ""
 </pre>
+
+<a name="remote" />
+
+### Remote SMG instances
+
+A $remote defines an unique remote **id** and an **url** at which the remote SMG instance is accessible. Here is an example remote definition:
+
+<blockquote>
+<pre>
+- type: remote
+  id: another-dc
+  url: "http://smg.dc2.company.com:9080"
+# slave_id: dc1
+# graph_timeout_ms: 30000
+# config_fetch_timeout_ms: 300000
+</pre>
+</blockquote>
+
+If the optional **slave\_id** parameter is provided it indicates that this instance is a "worker" in the context of that remote. Its value must be the id under this instance is configured on the "master". A slave instance will not load and display the relevant remote instance config and graphs but will only notify it on its own config changes.
+
+One can run a setup where the "main" instance (can be two of them, for redundancy) has multiple remotes configured where the remote instances only have  the "main" one as configured (for them) remote (with slave\_id set). With such setup one only needs a  single "beefy" (more mem) "main" instance which will hold all available across the remotes objects and the other ones will only keep theirs.
+
+The **graph\_timeout\_ms** and **config\_fetch\_timeout\_ms** values allow one to override the global timeouts for garph/monitor state API calls and config fetch (which can be much slower)
+
+<a name="rra_def" />
+
+### Custom RRA definitions 
+
+Whenever rrdtool creates a new rrd file it must get a set of definitions for Round Robin Archives ( RRAs, explained better [here](http://oss.oetiker.ch/rrdtool/tut/rrd-beginners.en.html) ). A rra\_def has an **id** and a list of RRA definitions under the **rra** key. The actual RRA definitions are strings and defined using rrdtool syntax. Here is how the default SMG RRA for 1 minute interval would look like if defined as $rra\_def:
+
+<blockquote>
+<pre>
+- type: rra_def
+  id: smg_1m
+  rra:
+    - "RRA:AVERAGE:0.5:1:5760"
+    - "RRA:AVERAGE:0.5:5:1152"
+    - "RRA:AVERAGE:0.5:30:1344"
+    - "RRA:AVERAGE:0.5:120:1440"
+    - "RRA:AVERAGE:0.5:360:5840"
+    - "RRA:AVERAGE:0.5:1440:1590"
+    - "RRA:MAX:0.5:1:5760"
+    - "RRA:MAX:0.5:5:1152"
+    - "RRA:MAX:0.5:30:1344"
+    - "RRA:MAX:0.5:120:1440"
+    - "RRA:MAX:0.5:360:5840"
+    - "RRA:MAX:0.5:1440:1590"
+</pre>
+</blockquote>
+
+> Note that normally one does not need to define or use any $rra\_def objects, the defaults which SMG will pick would work just fine for most of the cases (these have been inspired by mrtg/cacti). Still there are some use cases where one wants to use different RRAs - e.g. keep some important graphs at higher resolutions for longer period (the draw-back being a bigger RRD file size).
+
+
+<a name="globals" />
+
+### Globals
+
+Global for SMG variables are defined as a name -> value pairs where the name is prefixed with '$' sign. Here is the list of supported global variables, together with their default values (all of these are optional):
+
+- **$rrd\_dir**: _"smgrrd"_ - directory where to store your rrd files. You probably want to change this on any production installation (for more demanding setups, may want to put that dir on an SSD drive). That dir must be writabe by the SMG user. This must be defined before object definitions in the config.
+
+- **$rrd\_dir\_levels**: _None_ - if set, it has to be a list of numbers separated with ':' symbol (e.g. "1:1"). In that case SMG will create and use sub-dir levels under rrd\_dir (one level per list item) using the MD5 hash value of the object id and respective number of bytes (for each level) from that hash as hex strings. Useful if want to keep track of hundreds of thousands of rrds where having them all in one dir could be a problem on some systems. Only set this once (attempt to set it second time in the config will be ignored). WARNING: Never change the value once you have rrds created, you will lose the data if you do so.
+
+
+- **$dash-default-cols**: _6_ - How many "columns" of graphs to display on the dashboard by default. SMG will insert a new line between graphs at that "column".
+
+- **$dash-default-rows**: _10_  - How many "rows" of graphs to display on the dashboard by default. This together with the number of "columns" determines the "page size" - how many graphs will be displayed on each graphs page.
+
+- **$auto-refresh-interval**: _300_ - page auto refresh interval (if enabled by default or via the UI). Set to 0 to completely disable auto-refresh.
+
+- **$default-auto-refresh**: _true_ - whether by default dashboard pages will reload automatically. This can be toggled on per page basis in the UI.
+
+- **$default-interval** - _60_ - default update interval for objects not specifying it. This must be defined in the config before object definitions lacking interval setting (and one can specify it multiple times, changing the value for subequently defined objects) if one wants to change it from the default.
+
+- **$default-timeout** - _30_ - default timeout for object fetch commands (when retrieving data for updates) not specifying it. This must be defined in the config before object definitions lacking interval setting (and one can specify it multiple times, changing the value for subequently defined objects) if one wants to change it from the default.
+
+<a name="img_dir" />
+
+- **$img\_dir**: _"public/smg"_ - where to output the graphed images. That dir must be writabe by the SMG user.
+
+- **$url\_prefix**: _"/assets/smg"_ - what is the base url path under which the image files will be accessible by the browser
+
+- **$rrd\_cache\_dir**: _"smgrrd"_ - sometimes (when wanting to graph an image from multiple rrd files residing on diff remotes) SMG needs to download the actual rrd files locally. These rrd files are stored under the $rrd\_cache\_dir value. That dir must be writabe by the SMG user.
+
+- **$rrd\_tool**: _rrdtool_ - the rrdtool command to use. Can specify full path if the version of rrdtool you want to use is not on the default PATH.
+
+<a name="rrd_socket" />
+
+- **$rrd\_socket**: - _(default is None)_. Otherwise one can specify a string value like unix:/path/to/socket.file. If specified it will be passed to the relevant rrdtool update, graph or fetch commands with the --daemon unix:/path/to/socket.file option. This in turn is intended for use with rrdcached (a rrdtool daemon used for doing updates more efficiently). rrdcached is highly recommended on more demanding setups.
+
+- **$rrdcached\_update\_batch\_size**: - _1_ - if set to more than 1 and $rrd\_socket is specified SMG will batch updates (with batch size of the value) and use socat and rrdcached protocol directly for even more efficient updates.
+
+- **$rrdcached\_socat\_command**: - _socat_ - the socat command to use when flushing batched writes. By default SMG will use _socat_ and expect it to be in the executables PATH.
+
+- **$rrdcached\_flush\_all\_on\_run**: - _false_ - whether to send FLUSHALL to rrdcached at the end of every run (only used when doing batched updates via rrdcached protocol)
+
+- **$rrdcached\_flush\_on\_read**: - _true_ - whether to send FLUSH _file_ to rrdcached before every read - fetch or graph (only used when doing batched updates via rrdcached protocol). Either this or $rrdcached\_flush\_all\_on\_run should be set to true in rrdcached batch update mode. Setting both to true can hurt efficiency and setting both to false would result in retrieving possibly stale data.
+
+- **$rrd\_graph\_width**: _607_ - the graph width passed to rrdtool when graphing
+
+- **$rrd\_graph\_height**: _152_ - the graph height passed to rrdtool when graphing
+
+- **$rrd\_graph\_font**: _"DEFAULT:0:monospace"_ - the graph font string passed to rrdtool when graphing
+
+- **$rrd\_graph\_dppp**: _3_ _(advanced)_ - how many data points are represented in a singe "width" pixel. Used to estimate displayed graph resolution (step)
+
+- **\$rrd\_graph\_dppi**: _None_ _(advanced)_ - how many data points can be represented in a singe image. If this is set **$rrd\_graph\_dppp** is ignored. Used to estimate displayed graph resolution/step
+
+- **\$rrd\_graph\_padding**: _83_ _(advanced)_ - the padding (in pixels) rrdtool adds to the configured **$rrd\_graph\_width** for the resulting image size. Used to estimate html cell widths.
+
+- **$rrd\_max\_args\_len**: _25000_ _(advanced)_ - The maximum length of a rrdtool command. If a resulting command exceeds that the rrdtool arguments will be passed via stdin instead of command-line args as it is by default.
+
+- **$monlog\_dir**: _"monlog"_ - the directory where the monitoring system saves logs with events in json format (one file per calendar date).
+
+- **$monstate\_dir**: _"monstate"_ - the directory where the monitoring system saves its memory state on shut down.
+
+- **$include**: _(no default value)_ "path/to/some/\*.yml" - whenever the SMG config parser encounters an $include global it will interpret its value as a filesystem "glob" (and possibly expand that to multiple files) and then process each of the files yielded from the glob as regular config files (these can have more $includes too)
+
+- **$search-max-levels**: _10_ - how many levels (of dotted tokens) to support in autocomplete. Lower to 2-3 or less if you run a cluster with hundreds of thousands of objects.
+
+<a name="index-tree-levels">
+
+- **$index-tree-levels**: _1_ - How many levels of indexes to display by default on the Configured Indexes page. The default value of 1 means to display only top level indexes, 2 would also display their children etc. Valid values are between 1 and 5.
+
+<a name="run-tree-levels">
+
+- **$run-tree-levels-display**: _1_ - Same as $index-tree-levels but applies to monitor state run trees. How many levels of fetch commands to display by default on the top level Run trees page.
+
+
+- **$max-url-size**: _8000_ - The maximum url size supported by browsers. SMG will use POST requests (instead of GET) if a filter URL would exceed that size. Only draw back is that the resulting URLs will not be shareable. This needs to be set to around 2000 for IE support, and can be raised to 32k if one does not care about Android and IE.
+
+
+- **$remote-graph-timeout-ms**: 30000 (30 sec) - default timeout when requesting graphs (and monitor states) from remote instances. Can be overridon in each remote definition.
+
+- **$remote-config-fetch-timeout-ms**: 300000 (5 min) - default imeout when fetching remote config. These can be big so normally thats much higher than the graph timeout value.
+
+- **$reload-slave-remotes**: _"false"_ - By default SMG will only notify "master" remote instances (ones defined with slave_id property). One can override this behavior and make it notify slave instances too by setting this to "true".
+ 
+- **$proxy-disable**: _"false"_ - by default SMG will link to remote images via its /proxy/\<remote-id>/\<path-to-image>.png URL which in turn will proxy the request to the actual remote SMG instance. This behavior can be disabled by setting the $proxy-disable value to "true". In that case the end-user will need direct access to the respective remote instances.
+
+> Note that in production setups where there is already a reverse proxy serving the static images directly it is recommended to keep $proxy-disable to "false" (same as omitting it) and then to intercept the /proxy/\<remote-id> URLs at the reverse proxy and proxy these directly to the respective SMG instances (at their root URL) instead of hitting the local SMG one for proxying. Here is how an example reverse proxy configuration for apache could look like for a remote named "_some-dc_" where SMG is running on _smg1.some-dc.myorg.com_ and listening on port 9080 (possibly another reverse proxy there):
+
+<blockquote>
+<pre>
+        ProxyPass        /proxy/some-dc  http://smg1.some-dc.myorg.com:9080/
+        ProxyPassReverse /proxy/some-dc  http://smg1.some-dc.myorg.com:9080/
+</pre>
+</blockquote>
+
+> Check the [Running and troubleshooting](#running) section for more details on reverse proxy setup in production.
+
+
+- **$proxy-timeout**: _30000_ - this option can be used to adjust the proxy requests timeout (when these are handled by SMG and not the reverse proxy in front).
+
+
+- **$notify-global**: a comma separated list of $notify-command ids, to be executed on any global SMG errors (usually - overlaps)
+
+- **$notify-crit**: a comma separated list of $notify-command ids, to be executed on any (global or object-specific) critical errors
+
+- **$notify-fail**: a comma separated list of $notify-command ids, to be executed on any (global or object-specific) "failed" (i.e. fetch command failure) errors
+
+- **$notify-warn**: a comma separated list of $notify-command ids, to be executed on any (global or object-specific) warning errors
+
+- **$notify-anom**: a comma separated list of $notify-command ids, to be executed on any anomaly (spike/drop) errors. Be warned that this can get noisy on large setups.
+
+- **\$notify-baseurl**: Base url to be used in alert notifications links, default is http://localhost:9000 (so you probaly want that set if you intend to use alert notifications). This can also be pointed to a different (master) SMG instance URL where the current one is configured. Set **$notify-remote** to be the id of the current instance as defined in the master config in that case.
+
+- **$notify-remote**: See $notify-baseurl above, default is none/local.
+
+- **$notify-backoff**: set the default "backoff" period or the interval at which non-recovered issues alerts are re-sent. Default is "6h".
+
+- **$notify-throttle-count**: Alert notifications support throttling, you can set the max messages sent during given interval. This sets the max messages (count) value. The default when not present is Int.MaxValue which effectively disables throttling.
+
+- **$notify-throttle-interval**: Alert notifications support throttling, you can set the max messages sent during given interval (in seconds). This sets the interval (default is 3600 or 1h).
+
+- **$notify-strikes**: (default: _3_) - how many consecutive error states to be considered a hard error and in turn - trigger alert notifications.
+
+<a name="cdash" />
+
+### Custom dashboards configuration
+
+Custom dashboards are defined in the yaml configuration using the **$cdash** global variable.
+
+The $cdash keyword defines a yaml map which must have an unique **id** property, an optional **title** and a list of **items** of various types. All item types have some common set of properties - an unique **id**, an optional **title**, **width** and **height** properties. The other mandatory propert is the **type** which can be one of the following:
+
+- *IndexGraphs* - the graphs produced by some defined in smg index. This item type requires an **ix** property specifying the index id. It also supports **offset** and **limit** properties in the list of graphs (default is to show all).
+
+- *IndexStates* - svg heatmaps representing index states. Indexes are specified using the **ixes** propery which is a list of index ids. The svg image width is specified via the **img\_width** property.
+
+- *MonitorProblems* - current problems as visible on the monitor page. Supports customizing what is displayed using **ms** (minimum alert level) filter and also **soft** and **slncd** filter flags.
+
+- *MonitorLog* - recent monitor/log entries. Supports customizing what is displayed using **ms** (minimum alert level) filter and also **soft** and **slncd** filter flags.
+
+- *Plugin* - plugins can implement custom dashboard items and using custom (plugin-specific) configuration.
+
+- *External* - and external web page displayed in an iframe. Requires an **url** parameter and a separate **fheight** (frame height) property from the standard **height**.
+
+- *Container* - this is a special type of item which is a container for other items specified as a list under the **items** property.
+
+Example:
+
+    - type: cdash
+      id: noc
+      title: NOC
+      items:
+        - id: alerts
+          title: Active alerts
+          type: MonitorProblems
+          width: 350
+          height: 600
+        - id: alert-log
+          title: Alert Log
+          type: MonitorLog
+          width: 350
+          height: 600
+          limit: 50
+          ms: WARNING
+        - id: jmx.premote-graphs
+          type: IndexGraphs
+          title: jmx.premote Graphs
+          width: 700
+          height: 600
+          ix: jmx.premote
+          limit: 2
+        - id: group1
+          type: Container
+          width: 700
+          height: 800
+          items:
+          - id: index.states
+            title: Index States
+            type: IndexStates
+            width: 450
+            height: 500
+            img_width: 300
+            ixes:
+              - jmx.premote
+              - localhost
+          - id: calc-netext
+            type: Plugin
+            width: 700
+            height: 300
+            plugin_id: calc
+            ix: some.id
+        - id: google
+          title: External web page
+          type: External
+          width: 800
+          height: 620
+          fheight: 600
+          url: https://google.com/
 
 
 <a name="plugins-conf" />
