@@ -6,7 +6,7 @@ The SNMP template is older and its origins come from some (old) [cacti](https://
 
 These would include stats like sysload, cpu usage of the various types (stacked on top with a sum equal to 100 x number of cores), interrupts/context switches, memory usage, block device i/o, network i/o, network established/new connections and disk usage.
 
-By default these will add a top-level ICMP "ping" command which acts like a host up/down check (can be overriden via a "add_ping: false" context variable). Then the actual stats fetching commands would be children of that ping command.
+By default these will add a top-level ICMP "ping" command which acts like a host up/down check (can be overriden via a "add_ping: false" context variable). Then the actual stats fetching commands would be children of that ping command. Both will also define an index for the host which can be used as a parent for service indexes.
 
 The setup details are slightly different depending on the monitoring agent used (node_exporter or SNMP).
 
@@ -52,9 +52,9 @@ Then reload SMG conf as described [here](Run_smg.html)
 
 The [node-exporter template](https://github.com/asen/smg/blob/master/smgconf/ac-templates/node-exporter.yml.ssp) can be tweaked using context params.
 
-By default it will add a top-level ping command against the node_host for a host up/down check. This can be disabled by providing an "add_ping: false" context parameter. The ping command id would be in the form "%id_prefix%.%node_name%.ping" which with the default id_prefix of "host." and node name of "www1.domain" would map to "host.www1.domain.ping" pre_fetch id. This pre_fetch id can be passed to other/service templates defined for the same host via a "pre_fetch: host.www1.domain.ping" context var which will make sure that you get a single alert when the host goes down, vs alerts for every service running on it.
+As mentioned above and by default it will add a top-level ping command against the node_host for a host up/down check. This can be disabled by providing an "add_ping: false" context parameter. The ping command id would be in the form "%id_prefix%.%node_name%.ping" which with the default id_prefix of "host." and node name of "www1.domain" would map to "host.www1.domain.ping" pre_fetch id. This pre_fetch id can be passed to other/service templates defined for the same host via a "pre_fetch: host.www1.domain.ping" context var which will make sure that you get a single alert when the host goes down, vs alerts for every service running on it.
 
-It will also define a top-level (unless parent_index context var is supplied) index for the host which by default is named "%id_prefix%.%node_name%" which with the default id_prefix of "host." and node name of www1.domain would map to an index named "host.www1.domain". This index name can be supplied to other templates applied to this host via a "parent_index: host.www1.domain" context variable and that will keep all service stats relevant to a given Node under the same index.
+It will also define an index for the host which by default is named "%id_prefix%.%node_name%" which with the default id_prefix of "host." and node name of www1.domain would map to an index named "host.www1.domain". This index name can be supplied to other templates applied to this host via a "parent_index: host.www1.domain" context variable and that will keep all service stats relevant to a given Node under the same index.
 
 Check the context variables at the top of the template source for all currently supported options (TODO: document these here)
 
