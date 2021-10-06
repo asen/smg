@@ -20,23 +20,6 @@ All config items are defined as a list. I.e. the top-level yaml structure for a 
 
 Note that ordering matters in general - SMG will try to preserve the order of the graphs to be displayed to match the order in which the objects were defined.
 
-<a name="config-toc" />
-
-#### Configuration Reference - TOC
-
-1. [Globals](#globals)
-    1. [Pre-fetch](#pre_fetch)
-    1. [Interval thread pools](#interval_def)
-1. [RRD objects](#rrd-objects)
-1. [Aggregate RRD objects](#rrd-agg-objects)
-1. [View objects](#view-objects)
-1. [Indexes](#indexes)
-1. [Hidden Indexes](#hindexes)
-1. [Custom dashboards configuration](#cdash)
-1. [Monitoring configuration](#monitoring)
-1. [Bundled Plugins configuration](#plugins-conf)
-
-
 <a name="globals" />
 
 ### Globals
@@ -289,8 +272,6 @@ Alternate (new) syntax:
 
 > Note that the "run tree" defined in this way must not have cycles which can be created in theory by circularly pointing pre\_fetch parents to each other (possibly via other ones). Currently SMG will reject the config update if circular parent depenencies in the run-tree are detected (detection is simply having a hard limit of max 10 parent levels when constructing the run trees).
 
-<a name="rrd-objects" />
-
 <a name="interval_def" />
 
 - **$interval\_def**: similar to pre\_fetch  interval\_def is special and it is not a simple name -> value pair. It has a mandatory **interval** property specifying the interval (in seconds) for which this applies and optional **threads** property specifying max number of threads (default is 4 and if set to 0 it will be dynamically set to the number of cpu cores available) and and a **pool** property specifying the type of thread pool - one of FIXED (default) and WORK_STEALING. Examples:
@@ -322,6 +303,8 @@ Alternate (new) syntax:
 
 </pre>
 </blockquote>
+
+<a name="rrd-objects" />
 
 ### RRD objects
 

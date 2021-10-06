@@ -4,7 +4,9 @@
 
 ### What is it
 
-Smule Grapher (SMG) is a Play 2.x/Scala app used to retrieve data from arbitrary monitored services (generally - using external/bash commands) and using rrdtool to maintain many RRD databases with the retrieved data and then plot and display time-series graphs (and more) from them.
+Smule Grapher (SMG) is a Play 2.x/Scala app used to retrieve data from arbitrary monitored services (generally - using external/bash commands) and using [rrdtool](https://oss.oetiker.ch/rrdtool/) to maintain many RRD databases with the retrieved data and then plot and display time-series graphs (and much more) from them.
+
+(IMHO) These days there is a monitoring tools gap introduced by abandoining Nagios and its "checks" in favor of Prometheus and its "metrics". SMG can fill that gap for you an can be used as a replacement of any (or both) of these in a lot of use cases.
 
 Some Features:
 
@@ -43,7 +45,7 @@ SMG's main page (/) displays a list of [configured top-level indexes](#concepts-
 
 ## Concepts overview
 
-SMG uses the (excellent) [rrdtool](http://oss.oetiker.ch/rrdtool/) tool to store the values it fetches from external services into so called Round Robin Database (RRD) files. Both cacti and mrtg (in rrdtool mode) use rrdtool, so chances are you are already familiar with what to expect from these. Check the tool homepage for more details but in a nutshell RRD files are with fixed (upon creation) size which store series of numbers over different periods using bigger averaging steps the older the data gets. So rrdtool (and in turn - SMG) keeps most recent data (by default - 96h in SMG) into the minimal for SMG run interval (default -every minute) granularity (which corresponds to maximal resolution) and older data gets averaged over longer period and kept like that (at smaller resolution).
+SMG uses the (excellent) [rrdtool](http://oss.oetiker.ch/rrdtool/) tool to store the values it fetches from external services into so called Round Robin Database (RRD) files. Check the tool homepage for more details but in a nutshell RRD files are with fixed (upon creation) size which store series of numbers over different periods using bigger averaging steps the older the data gets. So rrdtool (and in turn - SMG) keeps most recent data (by default - 96h in SMG) into the minimal for SMG run interval (default - every-minute) granularity (which corresponds to maximal resolution) and older data gets averaged over longer period and kept like that (at smaller resolution).
 
 
 ### Concepts - TOC
@@ -77,11 +79,11 @@ Each rrd object also defines one or more variables (**vars**) and the external *
 
 Every RRD object also has an **interval** associated with it. That determines how often the command specified in the config will be executed and its output (numbers) recorded in the RRD file. The default interval if not specified in the config is 60 seconds (or every minute).
 
-Check [RRD Objects configuration](#rrd-objects) for more details on what properties are supported for given RRD object.
+Check [RRD Objects configuration](smg-config.html#rrd-objects) for more details on what properties are supported for given RRD object.
 
 In addition to regular RRD objects (with values for update coming from external command output) SMG supports Aggregate Rrd Objects. These don't have their own command to run but instead use values fetched for multiple other regular RRD objects to produce a single aggregate value for every variable defined and then update that in a RRD file. These are distinguished from regular RRD objects by prepending a '+' to the object id in the yaml config.
 
-Check [Aggregate RRD Objects configuration](#rrd-agg-objects) for more details on what properties are supported for given Aggregate RRD object.
+Check [Aggregate RRD Objects configuration](smg-config.html#rrd-agg-objects) for more details on what properties are supported for given Aggregate RRD object.
 
 <a name="concepts-intervals" />
 
@@ -95,9 +97,9 @@ By default SMG will use its internal scheduler to trigger the regular runs. With
 
 ### pre_fetch and run command trees
 
-One important thing when trying to get and update RRDs for tens of thousands of values from remote servers every minute is to reduce the number of remote connections one has to make to the target (monitored) servers. For example in mrtg (and if not misatken - in cacti too) every object configured results in a call to a separate external command getting remote data and/or a SNMP get.
+One important thing when trying to get and update RRDs for tens of thousands of values from remote servers every minute is to reduce the number of remote connections one has to make to the target (monitored) servers. For example in mrtg, nagios (and if not misatken - in cacti too) every check/graph object configured results in a call to a separate external command getting remote data and/or a SNMP get.
 
-Instead (and ideally) we would use a single command to get all the values we want from a given host and then possibly produce many rrd objects and graphs from these. 
+Instead (and ideally) we would use a single command to get all the values we want from a given host and then possibly produce many rrd objects and graphs from these. Note that this is how Prometheus works with its /metrcis calls but that only works over http.
 
 This is where SMG's pre\_fetch simplifies things - it is a special config object defining an id and a command to execute. Then RRD objects can have a pre\_fetch attribute specified with a value - the mentioned pre\_fetch id.
 
@@ -111,7 +113,7 @@ An important note is that SMG will execute child pre-fetch commands in sequence 
 
 ### Period since and period length
 
-By default SMG will plot graphs for a period starting at some point back in time and ending "now". The starting point is determined by the **Period Since** UI param (default is 24h). Sometimes one may want to use a different end point in the graphs than "now". This can be requested using the **Period Len** UI param, specifying how long period the graphs should cover (starting at the point defined with Period Since). Both parameters and their format are described in detail [here](#period)
+By default SMG will plot graphs for a period starting at some point back in time and ending "now". The starting point is determined by the **Period Since** UI param (default is 24h). Sometimes one may want to use a different end point in the graphs than "now". This can be requested using the **Period Len** UI param, specifying how long period the graphs should cover (starting at the point defined with Period Since). Both parameters and their format are described in detail [here](smg-config.html#period)
 
 
 <a name="concepts-filters" />
@@ -179,20 +181,20 @@ Currently one can filter by object id, object title and [remote instance](#conce
 
 #### Index filter
 
-- Where Index ([described below](#indexes)) itself defines a filter, the index id is a "first class" filter member too. So when visiting an Index url one sees the index filter separately from the user filter and the user filter works only within the already filtered by the index filter list of objects. The UI provides options to remove the index filter or merge it with the user filter resulting in an "index-free" filter.
+- Where Index ([described here](smg-config.html#indexes)) itself defines a filter, the index id is a "first class" filter member too. So when visiting an Index url one sees the index filter separately from the user filter and the user filter works only within the already filtered by the index filter list of objects. The UI provides options to remove the index filter or merge it with the user filter resulting in an "index-free" filter.
 
 
 <a name="concepts-indexes" />
 
 ### Indexes
 
-An index is basically a named filter with some additional properties. One can configure indexes in the yaml config and SMG can auto-discover indexes with good object ids structure. Indexes can be structured in a hierarchy where each index can specify a parent index id. The main SMG page currently displays all top-level indexes (ones which don't have a parent) and also the a configurable number of levels after that (using the [$index-tree-levels](#index-tree-levels) global var). Check [the index config section](#indexes) for more details on indexes.
+An index is basically a named filter with some additional properties. One can configure indexes in the yaml config and SMG can auto-discover indexes with good object ids structure. Indexes can be structured in a hierarchy where each index can specify a parent index id. The main SMG page currently displays all top-level indexes (ones which don't have a parent) and also the a configurable number of levels after that (using the [$index-tree-levels](#index-tree-levels) global var). Check [the index config section](smg-config.html#indexes) for more details on indexes.
 
 <a name="concepts-cdash" />
 
 ### Custom dashboards
 
-The custom dashboard represents a single page which can combine the graphs outputs from multiple indexes on a single page. The layout of the page can defined using sizes in the configuration. In addition it can display monitor states and/or logs plus external items via iframe. Check the [$cdash](#cdash) config options for more details.
+The custom dashboard represents a single page which can combine the graphs outputs from multiple indexes. The layout of the page can be defined using sizes in the configuration. In addition it can display monitor states and/or logs plus external items via iframe. Check the [$cdash](smg-config.html#cdash) config options for more details.
 
 <a name="concepts-gopts" />
 
@@ -242,7 +244,7 @@ A special case of sorting is group by (with value of x-sort=-1). In this case gr
 
 ### Aggregate functions
 
-SMG supports "aggregating" graphs for objects which have identical set of [variables definitions](#obj-vars) using one of the currently available functions (these are available as buttons on the graphs display page): 
+SMG supports "aggregating" graphs for objects which have identical set of [variables definitions](smg-config.html#obj-vars) using one of the currently available functions (these are available as buttons on the graphs display page): 
 
 - **GROUP** - just putting the same type graphs together in a single graph
 - **STACK** - stacking the graph lines on top of each other
@@ -262,15 +264,13 @@ In addition to the mentioned RRD objects, SMG also supports *View objects*. Thes
 
 By default every RRD Object is also a View object so one does not need to explicitly define View objects except in some cases described below. 
 
-*Note: the next paragraphs are somewhat advanced topic, feel free to skip if reading for first time and/or not familiar with rrdtool*
-
-View objects are useful to display a subset of an existing RRD object vars (lines) and/or re-order them via the [gv ("graph vars")](#gv) config value.
+View objects are useful to display a subset of an existing RRD object vars (lines) and/or re-order them via the [gv ("graph vars")](smg-config.html#gv) config value.
  
 The other use case of View objects is that these support special *cdef variables*. rrdtool supports complex arithmetic expressions (using the available variables) to calculate plotted values. More details [here](http://oss.oetiker.ch/rrdtool/tut/cdeftutorial.en.html).
 
 One example use case for this is varnish stats - varnishstat reports separate "requests" and "cache hit" (simple) counters. Normally one defines these as COUNTERs in rrdtool and gets an "average rate" (number/sec) when plotting/fetching csv. So we can define a special cdef variable in SMG which divides the "cache hit" rate (x 100) by the total "requests" and we effectively get an average "cache hit percentage" for the given period.
 
-Check the [Cdef variables](#cdef_vars) section for more details.
+Check the [Cdef variables](smg-config.html#cdef_vars) section for more details.
 
 <a name="concepts-remotes" />
 
@@ -324,7 +324,7 @@ At a high level plugins can do a bunch of things:
 
 - rrdchk - being able to check and fix rrd files for cinsistency with configuration
 
-- scrape - a "Prometheus replacement" plugin which can generate SMG objects/configs from "scrape targets" wich are http end-points exposing metrics in specifc (OpenMetrics) format, usually at /metrics URL. Note that SMG itself exposes such /metrics end-point and the scrape plugin is enabled to process localhost:9000/metrcis by default. TODO - config reference doc.
+- scrape - a "Prometheus replacement" plugin which can generate SMG objects/configs from "scrape targets" wich are http end-points exposing metrics in specifc (OpenMetrics) format, usually at /metrics URL. Note that SMG itself exposes such /metrics end-point and the scrape plugin is enabled to process localhost:9000/metrcis by default. TODO - config reference doc. The "Prometheus replacement" part is now deprecated in favor of autoconf which can do the same using the openmetrics template.
 
 - autoconf - this is very similar to the scrape plugin but can support arbitrary protocols via special "templates" - essentially specifying the "type: of service being monitored. That allows monitoring using the native service protocols and nit needing prometheus "exporters". TODO - config reference doc.
 
@@ -341,9 +341,7 @@ At a high level plugins can do a bunch of things:
 SMG main function is to fetch many values from various services and keep RRD databases updated using that information. Also in traditional setups one might run mrtg or cacti (or SMG) for graphing and nagios for 
 alerting. This implies that a lot of values are fetched twice - once for nagios and once for graphing. So it makes sense to be able to define alerts based on the wealth of values SMG fetches and avoid the double-hit on the target servers.
 
-The original idea for SMG monitoring was to be implemented as plugins fetching the data from the rrd files and determining whether values are within thresholds. This also allows one to check data at arbitrary (as available in the RRD files) resolution for desired periods.
-
-Unfortunately there is one significant issue with that approach - it is too heavy to apply on all objects (based on experience it can almost half the number of objects SMG is capable to update every minute on given hardware). 
+The original idea for SMG monitoring was to be implemented as plugins fetching the data from the rrd files and determining whether values are within thresholds. This also allows one to check data at arbitrary (as available in the RRD files) resolution for desired periods. Unfortunately there is one significant issue with that approach - it is too heavy to apply on all objects (based on experience it can almost half the number of objects SMG is capable to update every minute on given hardware). 
 
 This is not acceptable so now (as of v0.2) SMG has built-in monitoring based on a "live" (in memory) data feed consisting of all the values fetched for RRD updates. One can define alerts (acceptable values/ranges) in SMG as part of the object variables configurations or as part of indexes (including "hidden" indexes which sole current purpose is to define alerts).
 
@@ -361,7 +359,7 @@ The [monitoring page](/monitor) page displays all (local or remote) current prob
 
 - **SMGERR** - global SMG error. Usually - overlapping runs (or SMG bug).
 
-Check [monitoring configuration](#monitoring) for more details on how the thresholds are defined in the yaml configuration.
+Check [monitoring configuration](smg-config.html#monitoring) for more details on how the thresholds are defined in the yaml configuration.
 
 These states come in two flavors - "**HARD**" (at least consecutive 3 non-ok states) and "**SOFT**" (less than 3 consecutive non-ok states). The OK state is always HARD. These concepts are borrowed from nagios.
 
@@ -422,7 +420,7 @@ There are some additional checks to see whether it is a spike or drop but overal
 
 * Point your browser to http://$DOCKER_HOST:9000 (the local metrics stats should show up in a minute or two)
 
-* Then add stuff under /etc/smg/conf.d and to reload conig use one of:
+* Then add stuff under /etc/smg/conf.d (and/or /opt/smg/data/conf/autoconf.d) and to reload conig use one of:
     * docker exec smg /opt/smg/inst/smg/smgscripts/reload-conf.sh
     * curl -X POST http://$DOCKER_HOST:9000/reload
 
@@ -477,11 +475,11 @@ SMG comes as a pre-built tgz archive named like _smg-$VERSION.tgz_ (e.g. smg-0.3
 
 SMG comes with start and stop and scripts which in the above example would be available as:
 
-- **/opt/smg/start-smg.sh**  - use this to start SMG as a daemon process. It requires JAVA_HOME to be pointed to a Java 8 installation.
+- **/opt/smg/start-smg.sh**  - use this to start SMG as a daemon process. It requires JAVA_HOME to be pointed to a supported Java installation.
 
 - **/opt/smg/stop-smg.sh**  - use this to gracefully stop the running as a daemon SMG process.
 
-Before you start SMG you need to create a basic **/etc/smg/config.yml** file and likely define at least a few RRD objects. One can use the smgconf/config.yml file inside the installation dir as example and should check the [configuration reference](#config) for more details. Note that SMG will happily start with empty objects list (not that this is much useful beyond the ability to access this documentation when setting up).
+Before you start SMG you need to create a basic **/etc/smg/config.yml** file and likely define at least a few RRD objects. One can use the smgconf/config.yml file inside the installation dir as example and should check the [configuration reference](smg-config.html#config) for more details. Note that SMG will happily start with empty objects list (not that this is much useful beyond the ability to access this documentation when setting up).
 
 Once you start SMG you can access it by pointing your browser at port 9000 (this is the default listen port). If using the httpd.conf example above, that would be port 9080.
 
