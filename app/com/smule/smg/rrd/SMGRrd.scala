@@ -239,8 +239,10 @@ object SMGRrd {
   def substCdefEx(cdef: String, dsLbl: String, dsSx: String): String = cdef.replaceAll("(\\$ds\\d+)","$1" + dsSx).replaceAll("\\$ds", dsLbl)
 
   private val HTAB4 = "    " // 4 spaces
-  private val HTAB3 = "   " // 3 spaces
-  private val HTAB2 = "  " // 2 spaces
+//  private val HTAB3 = "   " // 3 spaces
+//  private val HTAB2 = "  " // 2 spaces
+  private val HTAB1 = " " // 1 space
+  private val HTAB0 = "" // 0 spaces
 
   def graphVar(v: SMGObjectVar, lbl: String, vlabel: String, colorMaker: ColorMaker,
                first: Boolean, stacked: Boolean, gopts: GraphOptions) : String = {
@@ -256,12 +258,12 @@ object SMGRrd {
     c.append(" 'VDEF:").append(lbl).append("std=").append(lbl).append(",STDEV'")
     c.append(" 'VDEF:").append(lbl).append("pct=").append(lbl).append(",95,PERCENTNAN'")
     if ((!gopts.disable95pRule) && (!stacked)) c.append(" 'HRULE:").append(lbl).append("pct").append(clr).append("::dashes=5,10'")
-    c.append(" 'GPRINT:").append(lbl).append(s":AVERAGE:avg$HTAB2").append(numFmt(v)).append("'")
-    c.append(" 'GPRINT:").append(lbl).append(s":MIN: min$HTAB2").append(numFmt(v)).append("'")
-    c.append(" 'GPRINT:").append(lbl).append(s":MAX: max$HTAB2").append(numFmt(v)).append("\\n'")
-    c.append(" 'GPRINT:").append(lbl).append(s"std:${vlabelSpaces}${HTAB4}std$HTAB2").append(numFmt(v)).append("'")
-    c.append(" 'GPRINT:").append(lbl).append(s"pct: 95%%$HTAB2").append(numFmt(v)).append("'")
-    c.append(" 'GPRINT:").append(lbl).append(s"lst: last ").append(numFmt(v)).append("\\n'")
+    c.append(" 'GPRINT:").append(lbl).append(s":AVERAGE:avg${HTAB1}").append(numFmt(v)).append("'")
+    c.append(" 'GPRINT:").append(lbl).append(s":MIN: min${HTAB1}").append(numFmt(v)).append("'")
+    c.append(" 'GPRINT:").append(lbl).append(s":MAX: max${HTAB1}").append(numFmt(v)).append("\\n'")
+    c.append(" 'GPRINT:").append(lbl).append(s"std:${vlabelSpaces}${HTAB4}std${HTAB1}").append(numFmt(v)).append("'")
+    c.append(" 'GPRINT:").append(lbl).append(s"pct: 95%%${HTAB1}").append(numFmt(v)).append("'")
+    c.append(" 'GPRINT:").append(lbl).append(s"lst: last${HTAB0}").append(numFmt(v)).append("\\n'")
     c.toString
   }
 
