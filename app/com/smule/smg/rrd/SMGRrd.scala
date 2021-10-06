@@ -246,6 +246,7 @@ object SMGRrd {
     val stackStr = if ((!first) && stacked) ":STACK" else ""
     val c = new mutable.StringBuilder()
     val clr = lineColor(v,colorMaker)
+    val vlabelSpaces = vlabel.toCharArray.map(_ => ' ').mkString
     c.append(" '").append(lineType(v)).append(":").append(lbl).append(clr).append(":").append(vlabel).append(stackStr).append("'")
     if ((!gopts.disablePop) && (!stacked)) {
       c.append(" '").append(lineType(v)).append(":pp_").append(lbl).append(clr).append("::dashes=2,4").append("'")
@@ -257,14 +258,14 @@ object SMGRrd {
     c.append(" 'GPRINT:").append(lbl).append(s":AVERAGE:avg$HTAB4").append(numFmt(v)).append("'")
     c.append(" 'GPRINT:").append(lbl).append(s":MIN: min$HTAB4").append(numFmt(v)).append("'")
     c.append(" 'GPRINT:").append(lbl).append(s":MAX: max$HTAB4").append(numFmt(v)).append("\\n'")
-    c.append(" 'GPRINT:").append(lbl).append(s"std:\\t\\t${HTAB4}std$HTAB4").append(numFmt(v)).append("'")
+    c.append(" 'GPRINT:").append(lbl).append(s"std:${vlabelSpaces}\\t${HTAB4}std$HTAB4").append(numFmt(v)).append("'")
     c.append(" 'GPRINT:").append(lbl).append(s"pct: 95%%$HTAB4").append(numFmt(v)).append("'")
     c.append(" 'GPRINT:").append(lbl).append(s"lst: last${HTAB3}").append(numFmt(v)).append("\\n'")
     c.toString
   }
 
   def lastUpdated(forLabel: String): String = if (forLabel != "")
-    " 'COMMENT:\\s' 'GPRINT:" + forLabel + "lst:last data point from %Y-%m-%d %H\\:%M:strftime' "
+    " 'COMMENT:\\s' 'GPRINT:" + forLabel + "lst:last data point from %Y-%m-%d %H\\:%M\\:%S %z:strftime' "
   else ""
 
   def resolutionRrdStr(interval: Int, period: String, gopts: GraphOptions,
