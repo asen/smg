@@ -258,7 +258,7 @@ object SMGRrd {
     c.append(" 'GPRINT:").append(lbl).append(s":AVERAGE:avg$HTAB4").append(numFmt(v)).append("'")
     c.append(" 'GPRINT:").append(lbl).append(s":MIN: min$HTAB4").append(numFmt(v)).append("'")
     c.append(" 'GPRINT:").append(lbl).append(s":MAX: max$HTAB4").append(numFmt(v)).append("\\n'")
-    c.append(" 'GPRINT:").append(lbl).append(s"std:${vlabelSpaces}\\t${HTAB4}std$HTAB4").append(numFmt(v)).append("'")
+    c.append(" 'GPRINT:").append(lbl).append(s"std:${vlabelSpaces}${HTAB4}std$HTAB4").append(numFmt(v)).append("'")
     c.append(" 'GPRINT:").append(lbl).append(s"pct: 95%%$HTAB4").append(numFmt(v)).append("'")
     c.append(" 'GPRINT:").append(lbl).append(s"lst: last${HTAB3}").append(numFmt(v)).append("\\n'")
     c.toString
