@@ -163,17 +163,11 @@ The following properties are all optional.
 
 ## Pre-fetch command objects
 
-A pre\_fetch defines an unique **id** and a **command** to execute, together with an optional **timeout** for the command (30 seconds by default) and an optional "parent" pre\_fetch id.
+As explained in the [concepts overview](smg.html#concepts-pre_fetch) SMG RRD objects can specify a pre\_fetch command to execute before their own command gets executed (for every interval run). That way multiple objects can be updated from given source (e.g. host/service) while hitting it only once per interval. Pre\_fetch itself can have another pre\_fetch defined as a parent and one can form command trees to be run top-to-bottom (stopping on failure).
 
-If a **pass\_data** property is defined and is set to true the stdout of the command will be passed to all child commands as stdin.
+Note that the "run tree" defined in this way must not have cycles which can be created in theory by circularly pointing pre\_fetch parents to each other (possibly via other ones). Currently SMG will reject the config update if circular parent depenencies in the run-tree are detected (detection is simply having a hard limit of max 10 parent levels when constructing the run trees).
 
-By default SMG will use the timestamp of the top-level pre-fetch for RRD updates. One can set the **ignorets** property to ignore the timstamp of the pre-fetch and use the first child timestamp which doesn't have that property.
-
-In addition pre\_fetch can have a **child\_conc** property (default 1 if not specified) which determines how many threads can execute this pre-fetch child pre-fetches (but not object commands which are always parallelized).
-
-One can also specify a **delay** expressed as a floating point value in seconds. This will cause the command (and it children) to be executed with a delay according to the specified number of seconds. If a negative delay is specified the command will be run with a random delay between 0 and (interval - abs(delay)) seconds.
-
-Pre fetch also supports **notify-fail** - to override alert recipients for failure and also **notify-disable**, **notify-backoff** etc. (check [monitoring config](#monitoring) for details). Here are two example pre_fetch definitions, one referencing the other as a parent:
+Here are two example pre_fetch definitions, one referencing the other as a parent:
 
 <blockquote>
 <pre>
@@ -207,9 +201,17 @@ Old (deprecated) syntax - using "$pre\_fetch:" instead of "type: pre\_fetch":
 </pre>
 </blockquote>
 
-As explained in the [concepts overview](smg.html#concepts-pre_fetch) SMG RRD objects can specify a pre\_fetch command to execute before their own command gets executed (for the current interval run). That way multiple objects can be updated from given source (e.g. host/service) while hitting it only once per interval. Pre\_fetch itself can have another pre\_fetch defined as a parent and one can form command trees to be run top-to-bottom (stopping on failure).
+A pre\_fetch defines an unique **id** and a **command** to execute, together with an optional **timeout** for the command (30 seconds by default) and an optional "parent" pre\_fetch id.
 
-Note that the "run tree" defined in this way must not have cycles which can be created in theory by circularly pointing pre\_fetch parents to each other (possibly via other ones). Currently SMG will reject the config update if circular parent depenencies in the run-tree are detected (detection is simply having a hard limit of max 10 parent levels when constructing the run trees).
+If a **pass\_data** property is defined and is set to true the stdout of the command will be passed to all child commands as stdin.
+
+By default SMG will use the timestamp of the top-level pre-fetch for RRD updates. One can set the **ignorets** property to ignore the timstamp of the pre-fetch and use the first child timestamp which doesn't have that property.
+
+In addition pre\_fetch can have a **child\_conc** property (default 1 if not specified) which determines how many threads can execute this pre-fetch child pre-fetches (but not object commands which are always parallelized).
+
+One can also specify a **delay** expressed as a floating point value in seconds. This will cause the command (and it children) to be executed with a delay according to the specified number of seconds. If a negative delay is specified the command will be run with a random delay between 0 and (interval - abs(delay)) seconds.
+
+Pre fetch also supports **notify-fail** - to override alert recipients for failure and also **notify-disable**, **notify-backoff** etc. (check [monitoring config](#monitoring) for details).
 
 <a name="rrd-agg-objects" />
 
