@@ -25,6 +25,11 @@ Note that ordering matters in general - SMG will try to preserve the order of th
 Apart from [global variables](#globals) which are in the form of "- $name: value" pairs, SMG has several types of structured objects. These can be indicated by their "type" property or for some - it can be inferred by the first character of the object id: '+' indicating an [Aggregate object](#rrd-agg-objects), '^' - an [Index](#indexes), and '~' - a [Hidden index](#hindexes). An object with no type and none of the special id prefix characters is assumed to be a [RRD](#rrd-objects) or a [Graph](#view-objects) object. So normally an object definition woul look like:
 
 <pre>
+# id-prefix-typed objects - the (possibly prefixed) id is just a named property
+- id: ...
+  ...
+
+# explicitly-typed objects have the type and id as named properties
 - type: object_type
   id: ...
   ...
@@ -33,18 +38,15 @@ Apart from [global variables](#globals) which are in the form of "- $name: value
 A side note is that originally all object types would be defined using key -> (values map) syntax looking like this:
 
 <pre>
+# id-prefix-typed objects - key is the (possibly prefixed) id
+  - object_id:
+      ...
+  - +agg_object_id:
+      ...
 # explicitly-typed objects - key is the type
   - $object_type:
       id: ...
       ...
-
-# id-prefix-typed objects - key is the (possibly prefixed) id
-  - object_id:
-      ...
-
-  - +agg_object_id:
-      ...
-
 </pre>
 
 While now deprecated, this syntax is still suported and can be seen in older config templates and/or examples.
