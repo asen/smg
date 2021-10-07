@@ -31,7 +31,7 @@ mkdir -p howto/html
 
 for ht in `ls -1 howto/ | grep -v html` ; do
     ht_html=`echo $ht | $SED 's/\.md$/.html/g'`
-    pandoc -f markdown howto/$ht > howto/html/$ht_html
+    pandoc -s --metadata title="SMG Howtos" -f markdown howto/$ht > howto/html/$ht_html
 done
 
 echo "build-html.sh: Done"

@@ -1,6 +1,6 @@
 # How to monitor Haproxy Load Balancers
 
-Since some point in time it is possible to build Haproxy with a built-in Prometheus exporter. SMG does not need that and can use the natife Haproxy "stats" end-point for monitoring.
+Since some point in time it is possible to build Haproxy with a built-in Prometheus exporter. SMG does not need that and can use the native Haproxy "stats" end-point for monitoring.
 
 I recommend exposing that on different than the default front-end port (and having it not accessible from the Internet), this is less important for "Internal" LBs which are not accessible from the Internet anyway.
 

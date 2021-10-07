@@ -12,7 +12,7 @@ All config items are defined as a list. I.e. the top-level yaml structure for a 
 ...
 
 - $rrd_dir: smgrrd
-
+- $include: /path/to/conf/*.yml
 ...
 
 - id: some.rrd.object
@@ -33,9 +33,9 @@ Apart from [global variables](#globals) which are in the form of "- $name: value
 <pre>
 # id-prefix-typed objects - the (possibly prefixed) id
 # is just a named property
-- id: object_id
+- id: object.id
   ...
-- id: +agg_object_id
+- id: +agg.object.id
   ...
 
 # explicitly-typed objects have the type and id as
@@ -45,24 +45,27 @@ Apart from [global variables](#globals) which are in the form of "- $name: value
   ...
 </pre>
 
-A side note is that originally all object types would be defined using key -> (prop1 -> value1, ...) syntax where the above would look like this:
+Normally the top-level config file would only contain globals including a bunch of "- $include: ..." definitions and the actual config files defining these objects would be drop-in files in sub-directories. For example the SMG container image already bundles an /etc/smg/config.yml file which in turn includes a bunch of common directories/globs including **/etc/smg/conf.d/\*.yml** (where one can drop yml files, which in turn can also include other dirs/globs) and **/opt/smg/data/conf/autoconf-private.d/\*.yml** (where by default the Autoconf plugin will drop and remove its per-target template outputs)
 
+> A side note is that originally all object types would be defined using key -> (prop1 -> value1, ...) syntax where the above would look like this:
+
+> 
 <pre>
-# id-prefix-typed objects - key is the (possibly
-# prefixed) id
-- object_id:
-    ...
-- +agg_object_id:
-    ...
-
-# explicitly-typed objects - key is the type
-# (these used to be special cases of globals)
-- $object_type:
-    id: ...
-    ...
+>  # id-prefix-typed objects - key is the (possibly
+>  # prefixed) id
+>  - object.id:
+>      ...
+>  - +agg.object.id:
+>      ...
+>
+>  # explicitly-typed objects - key is the type
+>  # (these used to be special cases of globals)
+>  - $object_type:
+>      id: ...
+>      ...
 </pre>
 
-While now deprecated, this syntax is still suported and can be seen in older config templates and/or examples.
+> While now deprecated, this syntax is still suported and can be seen in older config templates and/or examples.
 
 <a name="rrd-objects" />
 
@@ -242,7 +245,7 @@ As of v1.4+ SMG also supports supplying _filter_ property instead of ids list (t
 
 ## View (Graph) objects
 
-As mentioned in the [concepts overview](#concepts-view-objects) every RRD object is implicitly also a View object. Additional View objects can be defined in the configuration by referencing existing RRD objects too. These have two main purposes:
+As mentioned in the [concepts overview](smg.html#concepts-view-objects) every RRD object is implicitly also a View object. Additional View objects can be defined in the configuration by referencing existing RRD objects too. These have two main purposes:
 
 - to be able to graph only a subset of the RRD object vars and/or change their order by specifying the graphed vars as a list of indexes in the RRD object vars (see [gv](#gv) below). Here is an example configuration for such an object (this will graph only the second var from the list of the referenced object vars).
 
@@ -299,7 +302,7 @@ View objects support the following properties:
           cdef: "$ds1,100,*,$ds0,/"
 </pre>
 
-> The cdef expression can be translated as (form right to left): _Divide the value of ( the product of the 2nd ($ds1) var with 100 ) by the value of the 1st ($ds0) var_. Or _$ds1 \* 100 / $ds0_ in more conventional notation. In our case the $ds0 represents "requests/sec" and $ds1 represents "cache hits/sec". So that expression is calculating the cache hit % (from all requests). Rddtool has great documentation on [RPN expressions](http://oss.oetiker.ch/rrdtool/tut/rpntutorial.en.html) and I strongly recommend reading that for anyone who wants to write cdef expressions.
+> The cdef expression can be translated as (form right to left): *Divide the value of ( the product of the 2nd (ds1) var with 100 ) by the value of the 1st (ds0) var*. Or *ds1 \* 100 / ds0* in more conventional notation. In our case the ds0 represents "requests/sec" and ds1 represents "cache hits/sec". So that expression is calculating the cache hit % (from all requests). Rddtool has great documentation on [RPN expressions](http://oss.oetiker.ch/rrdtool/tut/rpntutorial.en.html) and I strongly recommend reading that for anyone who wants to write cdef expressions.
 
 ## Interval definitions
 
@@ -385,7 +388,7 @@ Index objects support the following properties:
     _ _M_ - for minutes
     - (None, just a number) - assumed to be seconds. The end point of the graphs can be set to be different than "now" by using a "period length" (**pl**) [graph option](#graph-options).
 
-- **agg\_op**: (default - None) - A SMG aggregate operation string (one of _GROUP_, _STACK_, _SUM_, _SUMN_, _AVG_, _MAX_ or _MIN_ ). If that is specified SMG will directly apply the respective [aggregate operation](#concepts-aggregate-functions) to the graphs resulting from the filter, before display.
+- **agg\_op**: (default - None) - A SMG aggregate operation string (one of _GROUP_, _STACK_, _SUM_, _SUMN_, _AVG_, _MAX_ or _MIN_ ). If that is specified SMG will directly apply the respective [aggregate operation](smg.html#concepts-aggregate-functions) to the graphs resulting from the filter, before display.
 
 - **gb**: (default - None) - Group By val (TODO)
 
@@ -448,7 +451,7 @@ The remaining properties represent "Graph Options" - generally specifying some n
 
 - **maxy**: (maximum Y-value, default None) - a number setting a hard max limit on the Y-axis value of the displayed graphs.
 
-- **xsort**: (integer, default 0) - When different than 0 SMG will treat that as a request to sort the outputted (on the page) graphs by the average value of the var which (1-based) index is equal to xsort. E.g set to 1 to sort by the first variable, 2 for the second etc. Graphs which have less variables than the requested xsort index will remain unsorted. Sorting is also described [here](#concepts-sorting).
+- **xsort**: (integer, default 0) - When different than 0 SMG will treat that as a request to sort the outputted (on the page) graphs by the average value of the var which (1-based) index is equal to xsort. E.g set to 1 to sort by the first variable, 2 for the second etc. Graphs which have less variables than the requested xsort index will remain unsorted. Sorting is also described [here](smg.html#concepts-sorting).
 
 
 <a name="hindexes" />
@@ -560,7 +563,7 @@ The built-in "mon" plugin implements the following three checks
                          #   week/month (if specified)
 </pre>
 
-Check [here](#concepts-anomaly) for more details on how alert-p-mon-anom/anomaly detection works.
+Check [here](smg.html#concepts-anomaly) for more details on how alert-p-mon-anom/anomaly detection works.
 
 In addition to alert-\* properties one can also define the following notify- settings, specifying a list of "recipients" ($notify-command ids) to be exectuted on "hard" errors (and recoveries) at the appropriate severity level (crit/warn/spike), the special "notify-disable" flag explicitly disabling notifications for the applicable object var or the notify-backoff value specifying at what interval non-recovered object alert notifications should be re-sent. The notify-strikes value determines how many consecutive error states to be considered a hard error and in turn - trigger alert notifications.
 

@@ -192,7 +192,7 @@
 ...
 
 - $rrd_dir: smgrrd
-
+- $include: /path/to/conf/*.yml
 ...
 
 - id: some.rrd.object
@@ -210,9 +210,9 @@
 <pre>
 # id-prefix-typed objects - the (possibly prefixed) id
 # is just a named property
-- id: object_id
+- id: object.id
   ...
-- id: +agg_object_id
+- id: +agg.object.id
   ...
 
 # explicitly-typed objects have the type and id as
@@ -221,22 +221,29 @@
   id: ...
   ...
 </pre>
+<p>Normally the top-level config file would only contain globals including a bunch of “- $include: …” definitions and the actual config files defining these objects would be drop-in files in sub-directories. For example the SMG container image already bundles an /etc/smg/config.yml file which in turn includes a bunch of common directories/globs including <strong>/etc/smg/conf.d/*.yml</strong> (where one can drop yml files, which in turn can also include other dirs/globs) and <strong>/opt/smg/data/conf/autoconf-private.d/*.yml</strong> (where by default the Autoconf plugin will drop and remove its per-target template outputs)</p>
+<blockquote>
 <p>A side note is that originally all object types would be defined using key -&gt; (prop1 -&gt; value1, …) syntax where the above would look like this:</p>
+</blockquote>
+<blockquote>
 <pre>
-# id-prefix-typed objects - key is the (possibly
-# prefixed) id
-- object_id:
-    ...
-- +agg_object_id:
-    ...
+ # id-prefix-typed objects - key is the (possibly
+ # prefixed) id
+ - object.id:
+     ...
+ - +agg.object.id:
+     ...
 
-# explicitly-typed objects - key is the type
-# (these used to be special cases of globals)
-- $object_type:
-    id: ...
-    ...
+ # explicitly-typed objects - key is the type
+ # (these used to be special cases of globals)
+ - $object_type:
+     id: ...
+     ...
 </pre>
+</blockquote>
+<blockquote>
 <p>While now deprecated, this syntax is still suported and can be seen in older config templates and/or examples.</p>
+</blockquote>
 <p><a name="rrd-objects" /></p>
 <h2 id="rrd-objects">RRD objects</h2>
 <p>RRD objects usually represent the majority of the SMG config. These define a rrd file to be updated, its structure, the interval on which we want to update it and the command to use to retrieve the values to update. A rrd object is represented by a yaml structure which could look like this:</p>
@@ -373,7 +380,7 @@ Old (deprecated) syntax - using "$pre\_fetch:" instead of "type: pre\_fetch":
 <p>As of v1.4+ SMG also supports supplying <em>filter</em> property instead of ids list (technically - it is possible to use and combine both). The filter property value is a map representing a standard (regex-based) SMG Filter which in turn is applied at config generation time to the entire list of RRD objects defined in the config. Note that this filter can only work with local objects.</p>
 <p><a name="view-objects" /></p>
 <h2 id="view-graph-objects">View (Graph) objects</h2>
-<p>As mentioned in the <a href="#concepts-view-objects">concepts overview</a> every RRD object is implicitly also a View object. Additional View objects can be defined in the configuration by referencing existing RRD objects too. These have two main purposes:</p>
+<p>As mentioned in the <a href="smg.html#concepts-view-objects">concepts overview</a> every RRD object is implicitly also a View object. Additional View objects can be defined in the configuration by referencing existing RRD objects too. These have two main purposes:</p>
 <ul>
 <li>to be able to graph only a subset of the RRD object vars and/or change their order by specifying the graphed vars as a list of indexes in the RRD object vars (see <a href="#gv">gv</a> below). Here is an example configuration for such an object (this will graph only the second var from the list of the referenced object vars).</li>
 </ul>
@@ -425,7 +432,7 @@ Old (deprecated) syntax - using "$pre\_fetch:" instead of "type: pre\_fetch":
           cdef: "$ds1,100,*,$ds0,/"
 </pre>
 <blockquote>
-<p>The cdef expression can be translated as (form right to left): <em>Divide the value of ( the product of the 2nd (<span class="math inline"><em>d</em><em>s</em>1)<em>v</em><em>a</em><em>r</em><em>w</em><em>i</em><em>t</em><em>h</em>100)<em>b</em><em>y</em><em>t</em><em>h</em><em>e</em><em>v</em><em>a</em><em>l</em><em>u</em><em>e</em><em>o</em><em>f</em><em>t</em><em>h</em><em>e</em>1<em>s</em><em>t</em>(</span>ds0) var</em>. Or <em>$ds1 * 100 / $ds0</em> in more conventional notation. In our case the $ds0 represents “requests/sec” and $ds1 represents “cache hits/sec”. So that expression is calculating the cache hit % (from all requests). Rddtool has great documentation on <a href="http://oss.oetiker.ch/rrdtool/tut/rpntutorial.en.html">RPN expressions</a> and I strongly recommend reading that for anyone who wants to write cdef expressions.</p>
+<p>The cdef expression can be translated as (form right to left): <em>Divide the value of ( the product of the 2nd (ds1) var with 100 ) by the value of the 1st (ds0) var</em>. Or <em>ds1 * 100 / ds0</em> in more conventional notation. In our case the ds0 represents “requests/sec” and ds1 represents “cache hits/sec”. So that expression is calculating the cache hit % (from all requests). Rddtool has great documentation on <a href="http://oss.oetiker.ch/rrdtool/tut/rpntutorial.en.html">RPN expressions</a> and I strongly recommend reading that for anyone who wants to write cdef expressions.</p>
 </blockquote>
 <h2 id="interval-definitions">Interval definitions</h2>
 <p><a name="interval_def" /></p>
@@ -496,7 +503,7 @@ Old (deprecated) syntax:
 <li><em>h</em> - for hours _ <em>M</em> - for minutes</li>
 <li>(None, just a number) - assumed to be seconds. The end point of the graphs can be set to be different than “now” by using a “period length” (<strong>pl</strong>) <a href="#graph-options">graph option</a>.</li>
 </ul></li>
-<li><p><strong>agg_op</strong>: (default - None) - A SMG aggregate operation string (one of <em>GROUP</em>, <em>STACK</em>, <em>SUM</em>, <em>SUMN</em>, <em>AVG</em>, <em>MAX</em> or <em>MIN</em> ). If that is specified SMG will directly apply the respective <a href="#concepts-aggregate-functions">aggregate operation</a> to the graphs resulting from the filter, before display.</p></li>
+<li><p><strong>agg_op</strong>: (default - None) - A SMG aggregate operation string (one of <em>GROUP</em>, <em>STACK</em>, <em>SUM</em>, <em>SUMN</em>, <em>AVG</em>, <em>MAX</em> or <em>MIN</em> ). If that is specified SMG will directly apply the respective <a href="smg.html#concepts-aggregate-functions">aggregate operation</a> to the graphs resulting from the filter, before display.</p></li>
 <li><p><strong>gb</strong>: (default - None) - Group By val (TODO)</p></li>
 <li><p><strong>gbp</strong>: (default - None) - Grup By “param” val (TODO)</p></li>
 <li><p><strong>xagg</strong>: (default - false) - By default, when SMG is executing aggregate operations it will execute them “per-remote” - result will have the aggrgeate graphs split and displayed by the remote instance they “live” in. It is possible to request aggregation across all remotes too - by setting the xagg value to <em>true</em>. Note that this is a relatively expensive operation - SMG has to download all neded remote RRD files to be able to produce a single graph from them so results can be expected to be a bit slower than normally.</p></li>
@@ -534,7 +541,7 @@ Old (deprecated) syntax:
 <li><p><strong>dpp</strong>: (disable period-over-period, default false) - by default SMG will plot two lines for every var in the graph - one (solid) for the values in the period and another (same color but dotted) - for the values covering the previous period (of same size). If desired one can disable that behavior by setting dpp to <em>true</em></p></li>
 <li><p><strong>d95p</strong>: (disable 95%-ile ruler, default false) - by default SMG will plot a horisontal flat line (“ruler”) at the calculated maximum 95%-ile value (basically, removing the top-5% values, considered outliers). If desired one can disable the plotting of that line by setting d95p value to <em>true</em></p></li>
 <li><p><strong>maxy</strong>: (maximum Y-value, default None) - a number setting a hard max limit on the Y-axis value of the displayed graphs.</p></li>
-<li><p><strong>xsort</strong>: (integer, default 0) - When different than 0 SMG will treat that as a request to sort the outputted (on the page) graphs by the average value of the var which (1-based) index is equal to xsort. E.g set to 1 to sort by the first variable, 2 for the second etc. Graphs which have less variables than the requested xsort index will remain unsorted. Sorting is also described <a href="#concepts-sorting">here</a>.</p></li>
+<li><p><strong>xsort</strong>: (integer, default 0) - When different than 0 SMG will treat that as a request to sort the outputted (on the page) graphs by the average value of the var which (1-based) index is equal to xsort. E.g set to 1 to sort by the first variable, 2 for the second etc. Graphs which have less variables than the requested xsort index will remain unsorted. Sorting is also described <a href="smg.html#concepts-sorting">here</a>.</p></li>
 </ul>
 <p><a name="hindexes" /></p>
 <h2 id="hidden-indexes">Hidden Indexes</h2>
@@ -630,7 +637,7 @@ Old (deprecated) syntax:
                          #   when the current time is within the time of day (if specified) and day of
                          #   week/month (if specified)
 </pre>
-<p>Check <a href="#concepts-anomaly">here</a> for more details on how alert-p-mon-anom/anomaly detection works.</p>
+<p>Check <a href="smg.html#concepts-anomaly">here</a> for more details on how alert-p-mon-anom/anomaly detection works.</p>
 <p>In addition to alert-* properties one can also define the following notify- settings, specifying a list of “recipients” ($notify-command ids) to be exectuted on “hard” errors (and recoveries) at the appropriate severity level (crit/warn/spike), the special “notify-disable” flag explicitly disabling notifications for the applicable object var or the notify-backoff value specifying at what interval non-recovered object alert notifications should be re-sent. The notify-strikes value determines how many consecutive error states to be considered a hard error and in turn - trigger alert notifications.</p>
 <pre><code>notify-crit: notify-cmd-id-1,notify-cmd-id-2,...
 # (notify-fail is not relevant for var states)
