@@ -494,6 +494,7 @@ Check smgscripts/notif-mail.sh for an example of how this could work
 
 Every object variable (mapping to a graph line) can have zero or more alert configurations applied. Each alert config is a key -> value pair where the key is a special keyword recognized by SMG and the value usually represents some alert threshold. Currently the following alert keywords are defined:
 
+<pre>
     alert-warn: NUM      # same as alert-warn-gte
     alert-warn-gte: NUM  # warning alert if value greater than or equal to NUM
     alert-warn-gt: NUM   # warning alert if value greater than NUM
@@ -509,9 +510,11 @@ Every object variable (mapping to a graph line) can have zero or more alert conf
     alert-crit-eq: NUM   # critical alert if value is equal to NUM
     alert-crit-neq: NUM   # critical alert if value is equal to NUM
     alert-p-<pluginId>-<checkId>: # configure a plugin-implemented check for the value
+</pre>
 
 The built-in "mon" plugin implements the following three checks
 
+<pre>
     alert-p-mon-anom: "" # anomaly alert - detecting unusual spikes or drops
                          #   it accepts a string with 3 values separated by ":"
                          #   the default value (when empty string is provided) is
@@ -554,6 +557,7 @@ The built-in "mon" plugin implements the following three checks
                          #   by -) hour and minute (separated by _). The check can only trigger alerts
                          #   when the current time is within the time of day (if specified) and day of
                          #   week/month (if specified)
+</pre>
 
 Check [here](#concepts-anomaly) for more details on how alert-p-mon-anom/anomaly detection works.
 
