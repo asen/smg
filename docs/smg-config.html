@@ -159,7 +159,7 @@
 <li><a href="#rrd-objects">RRD objects</a></li>
 <li><a href="#pre-fetch-command-objects">Pre-fetch command objects</a></li>
 <li><a href="#aggrgegate-rrd-objects">Aggrgegate RRD objects</a></li>
-<li><a href="#view-objects">View objects</a></li>
+<li><a href="#view-graph-objects">View (Graph) objects</a></li>
 <li><a href="#interval-definitions">Interval definitions</a></li>
 <li><a href="#indexes">Indexes</a>
 <ul>
@@ -192,6 +192,28 @@
 ...
 </pre>
 <p>Note that ordering matters in general - SMG will try to preserve the order of the graphs to be displayed to match the order in which the objects were defined.</p>
+<p>Apart from <a href="#globals">global variables</a> which are in the form of “- $name: value” pairs, SMG has several types of structured objects. These can be indicated by their “type” property or for some - it can be inferred by the first character of the object id: ‘+’ indicating an <a href="#rrd-agg-objects">Aggregate object</a>, ‘^’ - an <a href="#indexes">Index</a>, and ‘~’ - a <a href="#hindexes">Hidden index</a>. An object with no type and none of the special id prefix characters is assumed to be a <a href="#rrd-objects">RRD</a> or a <a href="#view-objects">Graph</a> object. So normally an object definition woul look like:</p>
+<pre>
+- type: object_type
+  id: ...
+  ...
+</pre>
+<p>A side note is that originally all object types would be defined using key -&gt; (values map) syntax looking like this:</p>
+<pre>
+# explicitly-typed objects - key is the type
+  - $object_type:
+      id: ...
+      ...
+
+# id-prefix-typed objects - key is the (possibly prefixed) id
+  - object_id:
+      ...
+
+  - +agg_object_id:
+      ...
+
+</pre>
+<p>While now deprecated, this syntax is still suported and can be seen in older config templates and/or examples.</p>
 <p><a name="rrd-objects" /></p>
 <h3 id="rrd-objects">RRD objects</h3>
 <p>RRD objects usually represent the majority of the SMG config. These define a rrd file to be updated, its structure, the interval on which we want to update it and the command to use to retrieve the values to update. A rrd object is represented by a yaml structure which could look like this:</p>
@@ -327,7 +349,7 @@ Old (deprecated) syntax - using "$pre\_fetch:" instead of "type: pre\_fetch":
 <p>As mentioned in the yaml comments above, some of the properties of the aggregate object will be assumed from the first object vars list, unless explicitly defined. It is up to the config to ensure that the list of objects to aggregate is compatible (and meaningful).</p>
 <p>As of v1.4+ SMG also supports supplying <em>filter</em> property instead of ids list (technically - it is possible to use and combine both). The filter property value is a map representing a standard (regex-based) SMG Filter which in turn is applied at config generation time to the entire list of RRD objects defined in the config. Note that this filter can only work with local objects.</p>
 <p><a name="view-objects" /></p>
-<h3 id="view-objects">View objects</h3>
+<h3 id="view-graph-objects">View (Graph) objects</h3>
 <p>As mentioned in the <a href="#concepts-view-objects">concepts overview</a> every RRD object is implicitly also a View object. Additional View objects can be defined in the configuration by referencing existing RRD objects too. These have two main purposes:</p>
 <ul>
 <li>to be able to graph only a subset of the RRD object vars and/or change their order by specifying the graphed vars as a list of indexes in the RRD object vars (see <a href="#gv">gv</a> below). Here is an example configuration for such an object (this will graph only the second var from the list of the referenced object vars).</li>
