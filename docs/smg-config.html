@@ -165,7 +165,8 @@
 <li><a href="#interval-definitions">Interval definitions</a></li>
 <li><a href="#indexes">Indexes</a>
 <ul>
-<li><a href="#filters-and-graph-options">Filters and graph options</a></li>
+<li><a href="#filter">Filter</a></li>
+<li><a href="#graph-options">Graph options</a></li>
 </ul></li>
 <li><a href="#hidden-indexes">Hidden Indexes</a></li>
 <li><a href="#notification-commands">Notification commands</a></li>
@@ -503,7 +504,8 @@ Old (deprecated) syntax:
 <li><em>y</em> - for years,</li>
 <li><em>m</em> - this is currently used for both minutes and months, If the number is less than 13 it will be considered to be a month otherwise - minutes. Use M to force specifying minutes.</li>
 <li><em>d</em> - for days</li>
-<li><em>h</em> - for hours _ <em>M</em> - for minutes</li>
+<li><em>h</em> - for hours</li>
+<li><em>M</em> - for minutes</li>
 <li>(None, just a number) - assumed to be seconds. The end point of the graphs can be set to be different than “now” by using a “period length” (<strong>pl</strong>) <a href="#graph-options">graph option</a>.</li>
 </ul></li>
 <li><p><strong>agg_op</strong>: (default - None) - A SMG aggregate operation string (one of <em>GROUP</em>, <em>STACK</em>, <em>SUM</em>, <em>SUMN</em>, <em>AVG</em>, <em>MAX</em> or <em>MIN</em> ). If that is specified SMG will directly apply the respective <a href="smg.html#concepts-aggregate-functions">aggregate operation</a> to the graphs resulting from the filter, before display.</p></li>
@@ -515,7 +517,7 @@ Old (deprecated) syntax:
 </ul>
 <p>The remaining index properties represent a filter (with graph options). These deserve thir own subsection:</p>
 <p><a name="filters" /></p>
-<h3 id="filters-and-graph-options">Filters and graph options</h3>
+<h3 id="filter">Filter</h3>
 <p>A filter (and its graph options) is configured as part of an index definition using the following properties (along with the rest index properties):</p>
 <ul>
 <li><p><strong>trx</strong> (Text Regex) - when set, only objects with titles, object ids, graph labels or measurement units matching the specified regular expressions will be matched by the filter.</p></li>
@@ -526,17 +528,19 @@ Old (deprecated) syntax:
 <li><p><strong>prx</strong> (Parent regex filter) - when set, only object with parent/pre_fetch ids matching the specified regular expressions will be matched by the filter.</p></li>
 <li><p><strong>lbls</strong> (Labels expression filter) - when set, only objects which have object labels matching the provided label expression will be matched by the filter. Note that object labels are a new feature (and separate from object vars graph display labels). Label expressions can consist of:</p>
 <ul>
-<li>just a label name - in which case object labels having that label name will match regardless of their label value</li>
-<li>label-name=label-value - both the name and the value must mutch</li>
-<li>label-name!=label-value - object must have label with the specified name but value must be different than label-value</li>
-<li>label-name=~label-value - label value is treated as regex and object’s value for the same label must match that.</li>
-<li>label-name!=~label-value - label value is treated as regex and object’s value for the same label must NOT match that. All of these can be prepended with an ! to inverse their effect (i.e. whetehr to include or exclude matching objects). The labels filter supports multiple expressions sepaarted by space. This means that spaces in label value filters are not currently supported (as a workaround - use regex and ).</li>
-</ul></li>
+<li><p>just a label name - in which case object labels having that label name will match regardless of their label value</p></li>
+<li><p>label-name=label-value - both the name and the value must mutch</p></li>
+<li><p>label-name!=label-value - object must have label with the specified name but value must be different than label-value</p></li>
+<li><p>label-name=~label-value - label value is treated as regex and object’s value for the same label must match that.</p></li>
+<li><p>label-name!=~label-value - label value is treated as regex and object’s value for the same label must NOT match that.</p></li>
+</ul>
+<p>All of these can be prepended with an ! to inverse their effect (i.e. whetehr to include or exclude matching objects). The labels filter supports multiple expressions sepaarted by space. This means that spaces in label value filters are not currently supported (as a workaround - use regex and \s).</p></li>
 <li><p><strong>remote</strong> (Remote instance, by default - None, meaning local). This should be either set to “*” (quoted in the yaml as the asterisk is special char) which means that this filter should filter across all available remotes or not set at all (meaning “local” filtering). When SMG displays remote index it will automatically populate its value when displaying (note that the “remote” definition is only meaningful in the context of another remote which references the former as some <em>remote id</em>).</p></li>
-<li><p><strong>dhmap</strong> - (TODO) when set to true, SMG will not display Monitoring heatmap for that index.</p></li>
+<li><p><strong>dhmap</strong> - (TODO) when set to true, SMG will disable (not display) Monitoring heatmap for that index.</p></li>
 <li><p><strong>alerts</strong> - alert configurations defined for all objects matching this index. Check <a href="#monitoring">monitoring configuration</a> for more details.</p></li>
 </ul>
 <p><a name="graph-options" /></p>
+<h3 id="graph-options">Graph options</h3>
 <p>The remaining properties represent “Graph Options” - generally specifying some non-default options to display graphs. These are rarely specified in index definitions but more often - come from UI requests.</p>
 <ul>
 <li><p><strong>step</strong>: (default None, which means automatic) - an integer (in seconds) specifying how many seconds should a data point in the graph represent. This is rarely needed as SMG (rrdtool actually) will pick an optimal step (a.k.a. resolution) depending on the requested period and available RRAs.</p></li>
@@ -837,8 +841,8 @@ notify-strikes: 3</code></pre>
 </ul>
 <p><a name="cdash" /></p>
 <h2 id="custom-dashboards-configuration">Custom dashboards configuration</h2>
-<p>Custom dashboards are defined in the yaml configuration using the <strong>$cdash</strong> global variable.</p>
-<p>The $cdash keyword defines a yaml map which must have an unique <strong>id</strong> property, an optional <strong>title</strong> and a list of <strong>items</strong> of various types. All item types have some common set of properties - an unique <strong>id</strong>, an optional <strong>title</strong>, <strong>width</strong> and <strong>height</strong> properties. The other mandatory propert is the <strong>type</strong> which can be one of the following:</p>
+<p>Custom dashboards are defined in the yaml configuration using an object of type <strong>cdash</strong>.</p>
+<p>The cdash object is a yaml map which must have an unique <strong>id</strong> property, an optional <strong>title</strong> and a list of <strong>items</strong> of various types. All item types have some common set of properties - an unique <strong>id</strong>, an optional <strong>title</strong>, <strong>width</strong> and <strong>height</strong> properties. The other mandatory propert is the <strong>type</strong> which can be one of the following:</p>
 <ul>
 <li><p><em>IndexGraphs</em> - the graphs produced by some defined in smg index. This item type requires an <strong>ix</strong> property specifying the index id. It also supports <strong>offset</strong> and <strong>limit</strong> properties in the list of graphs (default is to show all).</p></li>
 <li><p><em>IndexStates</em> - svg heatmaps representing index states. Indexes are specified using the <strong>ixes</strong> propery which is a list of index ids. The svg image width is specified via the <strong>img_width</strong> property.</p></li>

@@ -394,7 +394,7 @@ Index objects support the following properties:
     - _m_ - this is currently used for both minutes and months, If the number is less than 13 it will be considered to be a month otherwise - minutes. Use M to force specifying minutes.
     - _d_ - for days
     - _h_ - for hours
-    _ _M_ - for minutes
+    - _M_ - for minutes
     - (None, just a number) - assumed to be seconds. The end point of the graphs can be set to be different than "now" by using a "period length" (**pl**) [graph option](#graph-options).
 
 - **agg\_op**: (default - None) - A SMG aggregate operation string (one of _GROUP_, _STACK_, _SUM_, _SUMN_, _AVG_, _MAX_ or _MIN_ ). If that is specified SMG will directly apply the respective [aggregate operation](smg.html#concepts-aggregate-functions) to the graphs resulting from the filter, before display.
@@ -413,7 +413,7 @@ The remaining index properties represent a filter (with graph options). These de
 
 <a name="filters" />
 
-### Filters and graph options
+### Filter
 
 A filter (and its graph options) is configured as part of an index definition using the following properties (along with the rest index properties):
 
@@ -431,22 +431,29 @@ A filter (and its graph options) is configured as part of an index definition us
 
 - **lbls** (Labels expression filter) - when set, only objects which have object labels matching the provided label expression will be matched by the filter. Note that object labels are a new feature (and separate from object vars graph display labels).
     Label expressions can consist of:
+    
     - just a label name - in which case object labels having that label name will match regardless of their label value
+    
     - label-name=label-value - both the name and the value must mutch
+    
     - label-name!=label-value - object must have label with the specified name but value must be different than label-value
+    
     - label-name=~label-value - label value is treated as regex and object's value for the same label must match that.
+    
     - label-name!=~label-value - label value is treated as regex and object's value for the same label must NOT match that.
-    All of these can be prepended with an ! to inverse their effect (i.e. whetehr to include or exclude matching objects). The labels filter supports multiple expressions sepaarted by space. This means that spaces in label value filters are not currently supported (as a workaround - use regex and \s).
+    
+  All of these can be prepended with an ! to inverse their effect (i.e. whetehr to include or exclude matching objects). The labels filter supports multiple expressions sepaarted by space. This means that spaces in label value filters are not currently supported (as a workaround - use regex and \\s).
 
 
 - **remote** (Remote instance, by default - None, meaning local). This should be either set to "\*" (quoted in the yaml as the asterisk is special char) which means that this filter should filter across all available remotes or not set at all (meaning "local" filtering). When SMG displays remote index it will automatically populate its value when displaying (note that the "remote" definition is only meaningful in the context of another remote which references the former as some _remote id_).
 
-- **dhmap** - (TODO) when set to true, SMG will not display Monitoring heatmap for that index.
+- **dhmap** - (TODO) when set to true, SMG will disable (not display) Monitoring heatmap for that index.
 
 - **alerts** - alert configurations defined for all objects matching this index. Check [monitoring configuration](#monitoring) for more details.
 
-
 <a name="graph-options" />
+
+### Graph options
 
 The remaining properties represent "Graph Options" - generally specifying some non-default options to display graphs. These are rarely specified in index definitions but more often - come from UI requests.
 
@@ -832,9 +839,9 @@ Global for SMG variables are defined as a name -> value pairs where the name is 
 
 ## Custom dashboards configuration
 
-Custom dashboards are defined in the yaml configuration using the **$cdash** global variable.
+Custom dashboards are defined in the yaml configuration using an object of type **cdash**.
 
-The $cdash keyword defines a yaml map which must have an unique **id** property, an optional **title** and a list of **items** of various types. All item types have some common set of properties - an unique **id**, an optional **title**, **width** and **height** properties. The other mandatory propert is the **type** which can be one of the following:
+The cdash object is a yaml map which must have an unique **id** property, an optional **title** and a list of **items** of various types. All item types have some common set of properties - an unique **id**, an optional **title**, **width** and **height** properties. The other mandatory propert is the **type** which can be one of the following:
 
 - *IndexGraphs* - the graphs produced by some defined in smg index. This item type requires an **ix** property specifying the index id. It also supports **offset** and **limit** properties in the list of graphs (default is to show all).
 
