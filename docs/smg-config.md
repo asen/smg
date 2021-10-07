@@ -1,6 +1,6 @@
 
 
-## Configuration Reference
+## Configuration overview
 
 SMG uses [yaml](http://yaml.org/) for its configuration file format. Yaml is flexible and it is both easy to read and write.
 
@@ -10,13 +10,19 @@ All config items are defined as a list. I.e. the top-level yaml structure for a 
 
 <pre>
 ...
+
 - $rrd_dir: smgrrd
+
 ...
+
 - id: some.rrd.object
   ...
+
 ...
+
 - id: ^some.index.object
   ...
+
 ...
 </pre>
 
@@ -25,35 +31,42 @@ Note that ordering matters in general - SMG will try to preserve the order of th
 Apart from [global variables](#globals) which are in the form of "- $name: value" pairs, SMG has several types of structured objects. These can be indicated by their "type" property or for some - it can be inferred by the first character of the object id: '+' indicating an [Aggregate object](#rrd-agg-objects), '^' - an [Index](#indexes), and '~' - a [Hidden index](#hindexes). An object with no type and none of the special id prefix characters is assumed to be a [RRD](#rrd-objects) or a [Graph](#view-objects) object. So normally an object definition woul look like:
 
 <pre>
-# id-prefix-typed objects - the (possibly prefixed) id is just a named property
-- id: ...
+# id-prefix-typed objects - the (possibly prefixed) id
+# is just a named property
+- id: object_id
+  ...
+- id: +agg_object_id
   ...
 
-# explicitly-typed objects have the type and id as named properties
+# explicitly-typed objects have the type and id as
+# named properties
 - type: object_type
   id: ...
   ...
 </pre>
 
-A side note is that originally all object types would be defined using key -> (values map) syntax looking like this:
+A side note is that originally all object types would be defined using key -> (prop1 -> value1, ...) syntax where the above would look like this:
 
 <pre>
-# id-prefix-typed objects - key is the (possibly prefixed) id
-  - object_id:
-      ...
-  - +agg_object_id:
-      ...
+# id-prefix-typed objects - key is the (possibly
+# prefixed) id
+- object_id:
+    ...
+- +agg_object_id:
+    ...
+
 # explicitly-typed objects - key is the type
-  - $object_type:
-      id: ...
-      ...
+# (these used to be special cases of globals)
+- $object_type:
+    id: ...
+    ...
 </pre>
 
 While now deprecated, this syntax is still suported and can be seen in older config templates and/or examples.
 
 <a name="rrd-objects" />
 
-### RRD objects
+## RRD objects
 
 RRD objects usually represent the majority of the SMG config. These define a rrd file to be updated, its structure, the interval on which we want to update it and the command to use to retrieve the values to update. A rrd object is represented by a yaml structure which could look like this:
 
@@ -63,15 +76,15 @@ RRD objects usually represent the majority of the SMG config. These define a rrd
   timeout: 30                                           # optional - fetch command timeout, default 30
   title: "Localhost sysload (1/5/15 min)"               # optional title - object id will be used if no title is present
   interval: 60                                          # optional - default is 60
-  data_delay: 0                                          # optional - default 0
-  delay: 0.0                                            # optional - default 0.0
+  data_delay: 0                                         # optional - default 0
+  delay: 0                                              # optional - default 0
   rrd_type: GAUGE                                       # optional - default is GAUGE. Can be COUNTER etc (check rrdtool docs)
   rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
   pre_fetch: some_pf_id                                 # optional - specify pre_fetch command id.
   notify-fail: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
-  labels:                                               # optional - arbitrary map of key/valu labels, useful for filtering
-    foo: bar                                            #            and grouping by
+  labels:                                               # optional - arbitrary map of key/valu labels, useful for
+    foo: bar                                            #            filtering and grouping by
   vars:                                                 # mandatory list of all variables to graph
     - label: sl1min                                     # the variable label.
       min: 0                                            # optional - min accepted rrd value, default 0
@@ -143,7 +156,7 @@ The following properties are all optional.
 
 <a name="pre_fetch" />
 
-### Pre-fetch command objects
+## Pre-fetch command objects
 
 A pre\_fetch defines an unique **id** and a **command** to execute, together with an optional **timeout** for the command (30 seconds by default) and an optional "parent" pre\_fetch id.
 
@@ -192,7 +205,7 @@ Note that the "run tree" defined in this way must not have cycles which can be c
 
 <a name="rrd-agg-objects" />
 
-### Aggrgegate RRD objects
+## Aggrgegate RRD objects
 
 In addition to the "regular" RRD Objects described above, one can define "aggregate" RRD Objects. Simiar to the aggregate functions which can be applied on multiple View objects, the aggrgeate RRD objects represent values produced by applying an aggregate function (SUM, AVG, etc) to a set of update objects. The resulting value is then updated in a RRD file and the object also represents a View object subject to display and view aggregation functions. An aggrgegate RRD object is defined by prepending a '+' to the object id. Example:
 
@@ -227,7 +240,7 @@ As of v1.4+ SMG also supports supplying _filter_ property instead of ids list (t
 
 <a name="view-objects" />
 
-### View (Graph) objects
+## View (Graph) objects
 
 As mentioned in the [concepts overview](#concepts-view-objects) every RRD object is implicitly also a View object. Additional View objects can be defined in the configuration by referencing existing RRD objects too. These have two main purposes:
 
@@ -288,7 +301,7 @@ View objects support the following properties:
 
 > The cdef expression can be translated as (form right to left): _Divide the value of ( the product of the 2nd ($ds1) var with 100 ) by the value of the 1st ($ds0) var_. Or _$ds1 \* 100 / $ds0_ in more conventional notation. In our case the $ds0 represents "requests/sec" and $ds1 represents "cache hits/sec". So that expression is calculating the cache hit % (from all requests). Rddtool has great documentation on [RPN expressions](http://oss.oetiker.ch/rrdtool/tut/rpntutorial.en.html) and I strongly recommend reading that for anyone who wants to write cdef expressions.
 
-### Interval definitions
+## Interval definitions
 
 <a name="interval_def" />
 
@@ -319,7 +332,7 @@ Note that these are optional - smg will assume some sane defaults if they are om
 
 <a name="indexes" />
 
-### Indexes
+## Indexes
 
 In SMG an "index" represents a named "filter" which can be used to identify and display a group of graphs together. Also an index can define a parent and child indexes, so one can define a tree-like navigational structure using indexes. If an index does not have a parent index it is considered a "top-level" index. All top-level indexes are displayed on the SMG main page (by remote), together with their first-level child indexes.
 
@@ -387,7 +400,7 @@ The remaining index properties represent a filter (with graph options). These de
 
 <a name="filters" />
 
-#### Filters and graph options
+### Filters and graph options
 
 A filter (and its graph options) is configured as part of an index definition using the following properties (along with the rest index properties):
 
@@ -410,8 +423,8 @@ A filter (and its graph options) is configured as part of an index definition us
     - label-name!=label-value - object must have label with the specified name but value must be different than label-value
     - label-name=~label-value - label value is treated as regex and object's value for the same label must match that.
     - label-name!=~label-value - label value is treated as regex and object's value for the same label must NOT match that.
-    All of these can be prepended with an ! to inverse their effect (i.e. whetehr to include or exclude matching objects). The labels filter supports multiple expressions sepaarted by space. This means that spaces in label value filters are not currently supported (as a workaround - use regex and \s). 
-  
+    All of these can be prepended with an ! to inverse their effect (i.e. whetehr to include or exclude matching objects). The labels filter supports multiple expressions sepaarted by space. This means that spaces in label value filters are not currently supported (as a workaround - use regex and \s).
+
 
 - **remote** (Remote instance, by default - None, meaning local). This should be either set to "\*" (quoted in the yaml as the asterisk is special char) which means that this filter should filter across all available remotes or not set at all (meaning "local" filtering). When SMG displays remote index it will automatically populate its value when displaying (note that the "remote" definition is only meaningful in the context of another remote which references the former as some _remote id_).
 
@@ -439,7 +452,7 @@ The remaining properties represent "Graph Options" - generally specifying some n
 
 <a name="hindexes" />
 
-### Hidden Indexes
+## Hidden Indexes
 
 Only difference in defining a hidden index from a regular one is that it has a '~' character in the beginning of the index object id (instead of '^') and the only difference in behavior is that the hidden one is not displayed on the index page(s).
 
@@ -447,7 +460,7 @@ Currently hidden indexes are only useful in the context of monitoring - to defin
 
 <a name="notify-command">
 
-### Notification commands
+## Notification commands
 
 The notify-command object defines a named command object to be executed for delivery of alert notifications (can have many of those). The command id can then be referenced as "recipient" in notify-{crit/warn/spike} object/index or global definitions. Example notify-command definitions, together with globals referencing them:
 
@@ -477,7 +490,7 @@ Check smgscripts/notif-mail.sh for an example of how this could work
 
 <a name="monitoring" />
 
-### Monitoring configuration
+## Monitoring configuration
 
 Every object variable (mapping to a graph line) can have zero or more alert configurations applied. Each alert config is a key -> value pair where the key is a special keyword recognized by SMG and the value usually represents some alert threshold. Currently the following alert keywords are defined:
 
@@ -547,7 +560,7 @@ Check [here](#concepts-anomaly) for more details on how alert-p-mon-anom/anomaly
 In addition to alert-\* properties one can also define the following notify- settings, specifying a list of "recipients" ($notify-command ids) to be exectuted on "hard" errors (and recoveries) at the appropriate severity level (crit/warn/spike), the special "notify-disable" flag explicitly disabling notifications for the applicable object var or the notify-backoff value specifying at what interval non-recovered object alert notifications should be re-sent. The notify-strikes value determines how many consecutive error states to be considered a hard error and in turn - trigger alert notifications.
 
     notify-crit: notify-cmd-id-1,notify-cmd-id-2,...
-    # (Not relevant for var states) 
+    # (notify-fail is not relevant for var states)
     notify-fail: notify-cmd-id-1,notify-cmd-id-2,...
     notify-warn: notify-cmd-id-1,notify-cmd-id-2,...
     notify-anom: notify-cmd-id-1,notify-cmd-id-2,...
@@ -622,7 +635,7 @@ The alerts property is an array of yaml objects each specifying a "label" and on
 
 <a name="remote" />
 
-### Remote SMG instances
+## Remote SMG instances
 
 A $remote defines an unique remote **id** and an **url** at which the remote SMG instance is accessible. Here is an example remote definition:
 
@@ -645,7 +658,7 @@ The **graph\_timeout\_ms** and **config\_fetch\_timeout\_ms** values allow one t
 
 <a name="rra_def" />
 
-### Custom RRA definitions 
+## Custom RRA definitions
 
 Whenever rrdtool creates a new rrd file it must get a set of definitions for Round Robin Archives ( RRAs, explained better [here](http://oss.oetiker.ch/rrdtool/tut/rrd-beginners.en.html) ). A rra\_def has an **id** and a list of RRA definitions under the **rra** key. The actual RRA definitions are strings and defined using rrdtool syntax. Here is how the default SMG RRA for 1 minute interval would look like if defined as $rra\_def:
 
@@ -674,7 +687,7 @@ Whenever rrdtool creates a new rrd file it must get a set of definitions for Rou
 
 <a name="globals" />
 
-### Globals
+## Globals
 
 Global for SMG variables are defined as a name -> value pairs where the name is prefixed with '$' sign. Here is the list of supported global variables, together with their default values (all of these are optional):
 
@@ -756,7 +769,7 @@ Global for SMG variables are defined as a name -> value pairs where the name is 
 - **$remote-config-fetch-timeout-ms**: 300000 (5 min) - default imeout when fetching remote config. These can be big so normally thats much higher than the graph timeout value.
 
 - **$reload-slave-remotes**: _"false"_ - By default SMG will only notify "master" remote instances (ones defined with slave_id property). One can override this behavior and make it notify slave instances too by setting this to "true".
- 
+
 - **$proxy-disable**: _"false"_ - by default SMG will link to remote images via its /proxy/\<remote-id>/\<path-to-image>.png URL which in turn will proxy the request to the actual remote SMG instance. This behavior can be disabled by setting the $proxy-disable value to "true". In that case the end-user will need direct access to the respective remote instances.
 
 > Note that in production setups where there is already a reverse proxy serving the static images directly it is recommended to keep $proxy-disable to "false" (same as omitting it) and then to intercept the /proxy/\<remote-id> URLs at the reverse proxy and proxy these directly to the respective SMG instances (at their root URL) instead of hitting the local SMG one for proxying. Here is how an example reverse proxy configuration for apache could look like for a remote named "_some-dc_" where SMG is running on _smg1.some-dc.myorg.com_ and listening on port 9080 (possibly another reverse proxy there):
@@ -798,7 +811,7 @@ Global for SMG variables are defined as a name -> value pairs where the name is 
 
 <a name="cdash" />
 
-### Custom dashboards configuration
+## Custom dashboards configuration
 
 Custom dashboards are defined in the yaml configuration using the **$cdash** global variable.
 
@@ -875,7 +888,7 @@ Example:
 <a name="plugins-conf" />
 
 ## Bundled Plugins configuration
- 
+
 - **calc** - exposes UI for graphing the result of arbitrary math expressions Conf file (smgconf/calc-plugin.yml) supports pre-defined expressions which will show up in the UI for easy access. Example
 
 <pre>

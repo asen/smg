@@ -154,8 +154,7 @@
 </header>
 <nav id="TOC" role="doc-toc">
 <ul>
-<li><a href="#configuration-reference">Configuration Reference</a>
-<ul>
+<li><a href="#configuration-overview">Configuration overview</a></li>
 <li><a href="#rrd-objects">RRD objects</a></li>
 <li><a href="#pre-fetch-command-objects">Pre-fetch command objects</a></li>
 <li><a href="#aggrgegate-rrd-objects">Aggrgegate RRD objects</a></li>
@@ -172,52 +171,64 @@
 <li><a href="#custom-rra-definitions">Custom RRA definitions</a></li>
 <li><a href="#globals">Globals</a></li>
 <li><a href="#custom-dashboards-configuration">Custom dashboards configuration</a></li>
-</ul></li>
 <li><a href="#bundled-plugins-configuration">Bundled Plugins configuration</a></li>
 </ul>
 </nav>
-<h2 id="configuration-reference">Configuration Reference</h2>
+<h2 id="configuration-overview">Configuration overview</h2>
 <p>SMG uses <a href="http://yaml.org/">yaml</a> for its configuration file format. Yaml is flexible and it is both easy to read and write.</p>
 <p>By default SMG will look for a file named <strong>/etc/smg/config.yml</strong> and read its configuration from there. That file name can be changed in the <em>conf/application.conf</em> file inside the SMG installation dir, if desired.</p>
 <p>All config items are defined as a list. I.e. the top-level yaml structure for a config file must be a list (SMG will fail to parse it otherwise). This basically means that every object definition starts with a dash at the beggining of a line, e.g.:</p>
 <pre>
 ...
+
 - $rrd_dir: smgrrd
+
 ...
+
 - id: some.rrd.object
   ...
+
 ...
+
 - id: ^some.index.object
   ...
+
 ...
 </pre>
 <p>Note that ordering matters in general - SMG will try to preserve the order of the graphs to be displayed to match the order in which the objects were defined.</p>
 <p>Apart from <a href="#globals">global variables</a> which are in the form of “- $name: value” pairs, SMG has several types of structured objects. These can be indicated by their “type” property or for some - it can be inferred by the first character of the object id: ‘+’ indicating an <a href="#rrd-agg-objects">Aggregate object</a>, ‘^’ - an <a href="#indexes">Index</a>, and ‘~’ - a <a href="#hindexes">Hidden index</a>. An object with no type and none of the special id prefix characters is assumed to be a <a href="#rrd-objects">RRD</a> or a <a href="#view-objects">Graph</a> object. So normally an object definition woul look like:</p>
 <pre>
-# id-prefix-typed objects - the (possibly prefixed) id is just a named property
-- id: ...
+# id-prefix-typed objects - the (possibly prefixed) id
+# is just a named property
+- id: object_id
+  ...
+- id: +agg_object_id
   ...
 
-# explicitly-typed objects have the type and id as named properties
+# explicitly-typed objects have the type and id as
+# named properties
 - type: object_type
   id: ...
   ...
 </pre>
-<p>A side note is that originally all object types would be defined using key -&gt; (values map) syntax looking like this:</p>
+<p>A side note is that originally all object types would be defined using key -&gt; (prop1 -&gt; value1, …) syntax where the above would look like this:</p>
 <pre>
-# id-prefix-typed objects - key is the (possibly prefixed) id
-  - object_id:
-      ...
-  - +agg_object_id:
-      ...
+# id-prefix-typed objects - key is the (possibly
+# prefixed) id
+- object_id:
+    ...
+- +agg_object_id:
+    ...
+
 # explicitly-typed objects - key is the type
-  - $object_type:
-      id: ...
-      ...
+# (these used to be special cases of globals)
+- $object_type:
+    id: ...
+    ...
 </pre>
 <p>While now deprecated, this syntax is still suported and can be seen in older config templates and/or examples.</p>
 <p><a name="rrd-objects" /></p>
-<h3 id="rrd-objects">RRD objects</h3>
+<h2 id="rrd-objects">RRD objects</h2>
 <p>RRD objects usually represent the majority of the SMG config. These define a rrd file to be updated, its structure, the interval on which we want to update it and the command to use to retrieve the values to update. A rrd object is represented by a yaml structure which could look like this:</p>
 <pre>
 - id: host.localhost.sysload                            # rrd object id
@@ -225,15 +236,15 @@
   timeout: 30                                           # optional - fetch command timeout, default 30
   title: "Localhost sysload (1/5/15 min)"               # optional title - object id will be used if no title is present
   interval: 60                                          # optional - default is 60
-  data_delay: 0                                          # optional - default 0
-  delay: 0.0                                            # optional - default 0.0
+  data_delay: 0                                         # optional - default 0
+  delay: 0                                              # optional - default 0
   rrd_type: GAUGE                                       # optional - default is GAUGE. Can be COUNTER etc (check rrdtool docs)
   rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
   pre_fetch: some_pf_id                                 # optional - specify pre_fetch command id.
   notify-fail: mail-asen,notif-pd                       # optional - sent command failures to these recipients (see notify- conf below)
-  labels:                                               # optional - arbitrary map of key/valu labels, useful for filtering
-    foo: bar                                            #            and grouping by
+  labels:                                               # optional - arbitrary map of key/valu labels, useful for
+    foo: bar                                            #            filtering and grouping by
   vars:                                                 # mandatory list of all variables to graph
     - label: sl1min                                     # the variable label.
       min: 0                                            # optional - min accepted rrd value, default 0
@@ -284,7 +295,7 @@
 <li><p><strong>labels</strong>: (default - empty map) - a map of key/vaule pairs useful for filtering and grouping by.</p></li>
 </ul>
 <p><a name="pre_fetch" /></p>
-<h3 id="pre-fetch-command-objects">Pre-fetch command objects</h3>
+<h2 id="pre-fetch-command-objects">Pre-fetch command objects</h2>
 <p>A pre_fetch defines an unique <strong>id</strong> and a <strong>command</strong> to execute, together with an optional <strong>timeout</strong> for the command (30 seconds by default) and an optional “parent” pre_fetch id.</p>
 <p>If a <strong>pass_data</strong> property is defined and is set to true the stdout of the command will be passed to all child commands as stdin.</p>
 <p>By default SMG will use the timestamp of the top-level pre-fetch for RRD updates. One can set the <strong>ignorets</strong> property to ignore the timstamp of the pre-fetch and use the first child timestamp which doesn’t have that property.</p>
@@ -322,7 +333,7 @@ Old (deprecated) syntax - using "$pre\_fetch:" instead of "type: pre\_fetch":
 <p>As explained in the <a href="smg.html#concepts-pre_fetch">concepts overview</a> SMG RRD objects can specify a pre_fetch command to execute before their own command gets executed (for the current interval run). That way multiple objects can be updated from given source (e.g. host/service) while hitting it only once per interval. Pre_fetch itself can have another pre_fetch defined as a parent and one can form command trees to be run top-to-bottom (stopping on failure).</p>
 <p>Note that the “run tree” defined in this way must not have cycles which can be created in theory by circularly pointing pre_fetch parents to each other (possibly via other ones). Currently SMG will reject the config update if circular parent depenencies in the run-tree are detected (detection is simply having a hard limit of max 10 parent levels when constructing the run trees).</p>
 <p><a name="rrd-agg-objects" /></p>
-<h3 id="aggrgegate-rrd-objects">Aggrgegate RRD objects</h3>
+<h2 id="aggrgegate-rrd-objects">Aggrgegate RRD objects</h2>
 <p>In addition to the “regular” RRD Objects described above, one can define “aggregate” RRD Objects. Simiar to the aggregate functions which can be applied on multiple View objects, the aggrgeate RRD objects represent values produced by applying an aggregate function (SUM, AVG, etc) to a set of update objects. The resulting value is then updated in a RRD file and the object also represents a View object subject to display and view aggregation functions. An aggrgegate RRD object is defined by prepending a ‘+’ to the object id. Example:</p>
 <pre>
 - id: +agg.hosts.sysload                                # aggregate rrd object id, must start with + char
@@ -351,7 +362,7 @@ Old (deprecated) syntax - using "$pre\_fetch:" instead of "type: pre\_fetch":
 <p>As mentioned in the yaml comments above, some of the properties of the aggregate object will be assumed from the first object vars list, unless explicitly defined. It is up to the config to ensure that the list of objects to aggregate is compatible (and meaningful).</p>
 <p>As of v1.4+ SMG also supports supplying <em>filter</em> property instead of ids list (technically - it is possible to use and combine both). The filter property value is a map representing a standard (regex-based) SMG Filter which in turn is applied at config generation time to the entire list of RRD objects defined in the config. Note that this filter can only work with local objects.</p>
 <p><a name="view-objects" /></p>
-<h3 id="view-graph-objects">View (Graph) objects</h3>
+<h2 id="view-graph-objects">View (Graph) objects</h2>
 <p>As mentioned in the <a href="#concepts-view-objects">concepts overview</a> every RRD object is implicitly also a View object. Additional View objects can be defined in the configuration by referencing existing RRD objects too. These have two main purposes:</p>
 <ul>
 <li>to be able to graph only a subset of the RRD object vars and/or change their order by specifying the graphed vars as a list of indexes in the RRD object vars (see <a href="#gv">gv</a> below). Here is an example configuration for such an object (this will graph only the second var from the list of the referenced object vars).</li>
@@ -406,7 +417,7 @@ Old (deprecated) syntax - using "$pre\_fetch:" instead of "type: pre\_fetch":
 <blockquote>
 <p>The cdef expression can be translated as (form right to left): <em>Divide the value of ( the product of the 2nd (<span class="math inline"><em>d</em><em>s</em>1)<em>v</em><em>a</em><em>r</em><em>w</em><em>i</em><em>t</em><em>h</em>100)<em>b</em><em>y</em><em>t</em><em>h</em><em>e</em><em>v</em><em>a</em><em>l</em><em>u</em><em>e</em><em>o</em><em>f</em><em>t</em><em>h</em><em>e</em>1<em>s</em><em>t</em>(</span>ds0) var</em>. Or <em>$ds1 * 100 / $ds0</em> in more conventional notation. In our case the $ds0 represents “requests/sec” and $ds1 represents “cache hits/sec”. So that expression is calculating the cache hit % (from all requests). Rddtool has great documentation on <a href="http://oss.oetiker.ch/rrdtool/tut/rpntutorial.en.html">RPN expressions</a> and I strongly recommend reading that for anyone who wants to write cdef expressions.</p>
 </blockquote>
-<h3 id="interval-definitions">Interval definitions</h3>
+<h2 id="interval-definitions">Interval definitions</h2>
 <p><a name="interval_def" /></p>
 <p>The interval_def object defines the behavior of the thread pool associated with given poll interval. It has a mandatory <strong>interval</strong> property specifying the interval (in seconds) for which this applies and optional <strong>threads</strong> property specifying max number of threads (default is 4 and if set to 0 it will be dynamically set to the number of cpu cores available) and and a <strong>pool</strong> property specifying the type of thread pool - one of FIXED (default) and WORK_STEALING. Examples:</p>
 <blockquote>
@@ -431,7 +442,7 @@ Old (deprecated) syntax:
 </blockquote>
 <p>Note that these are optional - smg will assume some sane defaults if they are omitted but depending on the workload chances are that some tuning of the number of threads doing the polling may be needed.</p>
 <p><a name="indexes" /></p>
-<h3 id="indexes">Indexes</h3>
+<h2 id="indexes">Indexes</h2>
 <p>In SMG an “index” represents a named “filter” which can be used to identify and display a group of graphs together. Also an index can define a parent and child indexes, so one can define a tree-like navigational structure using indexes. If an index does not have a parent index it is considered a “top-level” index. All top-level indexes are displayed on the SMG main page (by remote), together with their first-level child indexes.</p>
 <p>Index objects are defined in the yaml along with the RRD and View objects and their object ids start with the <em>‘^’</em> special symbol.</p>
 <p>Here is an example Index definition:</p>
@@ -483,7 +494,7 @@ Old (deprecated) syntax:
 </ul>
 <p>The remaining index properties represent a filter (with graph options). These deserve thir own subsection:</p>
 <p><a name="filters" /></p>
-<h4 id="filters-and-graph-options">Filters and graph options</h4>
+<h3 id="filters-and-graph-options">Filters and graph options</h3>
 <p>A filter (and its graph options) is configured as part of an index definition using the following properties (along with the rest index properties):</p>
 <ul>
 <li><p><strong>trx</strong> (Text Regex) - when set, only objects with titles, object ids, graph labels or measurement units matching the specified regular expressions will be matched by the filter.</p></li>
@@ -515,11 +526,11 @@ Old (deprecated) syntax:
 <li><p><strong>xsort</strong>: (integer, default 0) - When different than 0 SMG will treat that as a request to sort the outputted (on the page) graphs by the average value of the var which (1-based) index is equal to xsort. E.g set to 1 to sort by the first variable, 2 for the second etc. Graphs which have less variables than the requested xsort index will remain unsorted. Sorting is also described <a href="#concepts-sorting">here</a>.</p></li>
 </ul>
 <p><a name="hindexes" /></p>
-<h3 id="hidden-indexes">Hidden Indexes</h3>
+<h2 id="hidden-indexes">Hidden Indexes</h2>
 <p>Only difference in defining a hidden index from a regular one is that it has a ‘~’ character in the beginning of the index object id (instead of ‘^’) and the only difference in behavior is that the hidden one is not displayed on the index page(s).</p>
 <p>Currently hidden indexes are only useful in the context of monitoring - to define a group of objects for which in turn to define alert thresholds, but not necessarily clutter the main page with all of the groups.</p>
 <p><a name="notify-command"></p>
-<h3 id="notification-commands">Notification commands</h3>
+<h2 id="notification-commands">Notification commands</h2>
 <p>The notify-command object defines a named command object to be executed for delivery of alert notifications (can have many of those). The command id can then be referenced as “recipient” in notify-{crit/warn/spike} object/index or global definitions. Example notify-command definitions, together with globals referencing them:</p>
 <blockquote>
 <pre>
@@ -544,7 +555,7 @@ Old (deprecated) syntax:
 </ul>
 <p>Check smgscripts/notif-mail.sh for an example of how this could work</p>
 <p><a name="monitoring" /></p>
-<h3 id="monitoring-configuration">Monitoring configuration</h3>
+<h2 id="monitoring-configuration">Monitoring configuration</h2>
 <p>Every object variable (mapping to a graph line) can have zero or more alert configurations applied. Each alert config is a key -&gt; value pair where the key is a special keyword recognized by SMG and the value usually represents some alert threshold. Currently the following alert keywords are defined:</p>
 <pre><code>alert-warn: NUM      # same as alert-warn-gte
 alert-warn-gte: NUM  # warning alert if value greater than or equal to NUM
@@ -607,7 +618,7 @@ alert-p-mon-ex: &quot;...&quot; # &quot;Extended&quot; check, supporting some sp
 <p>Check <a href="#concepts-anomaly">here</a> for more details on how alert-p-mon-anom/anomaly detection works.</p>
 <p>In addition to alert-* properties one can also define the following notify- settings, specifying a list of “recipients” ($notify-command ids) to be exectuted on “hard” errors (and recoveries) at the appropriate severity level (crit/warn/spike), the special “notify-disable” flag explicitly disabling notifications for the applicable object var or the notify-backoff value specifying at what interval non-recovered object alert notifications should be re-sent. The notify-strikes value determines how many consecutive error states to be considered a hard error and in turn - trigger alert notifications.</p>
 <pre><code>notify-crit: notify-cmd-id-1,notify-cmd-id-2,...
-# (Not relevant for var states) 
+# (notify-fail is not relevant for var states)
 notify-fail: notify-cmd-id-1,notify-cmd-id-2,...
 notify-warn: notify-cmd-id-1,notify-cmd-id-2,...
 notify-anom: notify-cmd-id-1,notify-cmd-id-2,...
@@ -679,7 +690,7 @@ notify-strikes: 3</code></pre>
       alert-p-mon-anom: ""
 </pre>
 <p><a name="remote" /></p>
-<h3 id="remote-smg-instances">Remote SMG instances</h3>
+<h2 id="remote-smg-instances">Remote SMG instances</h2>
 <p>A $remote defines an unique remote <strong>id</strong> and an <strong>url</strong> at which the remote SMG instance is accessible. Here is an example remote definition:</p>
 <blockquote>
 <pre>
@@ -695,7 +706,7 @@ notify-strikes: 3</code></pre>
 <p>One can run a setup where the “main” instance (can be two of them, for redundancy) has multiple remotes configured where the remote instances only have the “main” one as configured (for them) remote (with slave_id set). With such setup one only needs a single “beefy” (more mem) “main” instance which will hold all available across the remotes objects and the other ones will only keep theirs.</p>
 <p>The <strong>graph_timeout_ms</strong> and <strong>config_fetch_timeout_ms</strong> values allow one to override the global timeouts for garph/monitor state API calls and config fetch (which can be much slower)</p>
 <p><a name="rra_def" /></p>
-<h3 id="custom-rra-definitions">Custom RRA definitions</h3>
+<h2 id="custom-rra-definitions">Custom RRA definitions</h2>
 <p>Whenever rrdtool creates a new rrd file it must get a set of definitions for Round Robin Archives ( RRAs, explained better <a href="http://oss.oetiker.ch/rrdtool/tut/rrd-beginners.en.html">here</a> ). A rra_def has an <strong>id</strong> and a list of RRA definitions under the <strong>rra</strong> key. The actual RRA definitions are strings and defined using rrdtool syntax. Here is how the default SMG RRA for 1 minute interval would look like if defined as $rra_def:</p>
 <blockquote>
 <pre>
@@ -720,7 +731,7 @@ notify-strikes: 3</code></pre>
 <p>Note that normally one does not need to define or use any $rra_def objects, the defaults which SMG will pick would work just fine for most of the cases (these have been inspired by mrtg/cacti). Still there are some use cases where one wants to use different RRAs - e.g. keep some important graphs at higher resolutions for longer period (the draw-back being a bigger RRD file size).</p>
 </blockquote>
 <p><a name="globals" /></p>
-<h3 id="globals">Globals</h3>
+<h2 id="globals">Globals</h2>
 <p>Global for SMG variables are defined as a name -&gt; value pairs where the name is prefixed with ‘$’ sign. Here is the list of supported global variables, together with their default values (all of these are optional):</p>
 <ul>
 <li><p><strong>$rrd_dir</strong>: <em>“smgrrd”</em> - directory where to store your rrd files. You probably want to change this on any production installation (for more demanding setups, may want to put that dir on an SSD drive). That dir must be writabe by the SMG user. This must be defined before object definitions in the config.</p></li>
@@ -798,7 +809,7 @@ notify-strikes: 3</code></pre>
 <li><p><strong>$notify-strikes</strong>: (default: <em>3</em>) - how many consecutive error states to be considered a hard error and in turn - trigger alert notifications.</p></li>
 </ul>
 <p><a name="cdash" /></p>
-<h3 id="custom-dashboards-configuration">Custom dashboards configuration</h3>
+<h2 id="custom-dashboards-configuration">Custom dashboards configuration</h2>
 <p>Custom dashboards are defined in the yaml configuration using the <strong>$cdash</strong> global variable.</p>
 <p>The $cdash keyword defines a yaml map which must have an unique <strong>id</strong> property, an optional <strong>title</strong> and a list of <strong>items</strong> of various types. All item types have some common set of properties - an unique <strong>id</strong>, an optional <strong>title</strong>, <strong>width</strong> and <strong>height</strong> properties. The other mandatory propert is the <strong>type</strong> which can be one of the following:</p>
 <ul>
