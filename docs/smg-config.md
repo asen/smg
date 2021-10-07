@@ -350,6 +350,7 @@ Here is an example Index definition:
       rx: ...                    # optional filter: regex to match against rrd object id. Ignored if null (which is the default).
       rxx: ...                   # optional filter: exclude objects which ids match the supplied regex. Ignored if null (which is the default).
       trx: ...                   # optional filter: regex to match against object text representation (including title, var names etc). Ignored if null (which is the default).
+      lbls: "foo=bar ..."        $ optional filter: labels filter expression, see below for examples
       agg_op: ...                # optional "aggregate op"
       gb: ...                    # optional "group by" value
       gbp: ...                   # optional "group by param" value
