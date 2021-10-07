@@ -101,7 +101,7 @@ Most properties are optional except:
 
 - **object id** - in the old syntax that would be the key after the dash defining the start of the object, *host.localhost.sysload* in the example. The new syntax explicitly sets the id key/value. It must be unique for the local SMG instance and consist only of alpha-numeric characters and the '\_', '-' and '.' symbols. By convention, ids should be defined like **&lt;class>.&lt;subclass>\[.&lt;subclass>\...].&lt;object>**, e.g. _host.o1.cpu_ or _host.o1.diskused.var_. Following that convention is not enforced by SMG but using it helps it discover "automatic indexes" and also makes it much easier to write [index (filter) definitions](#indexes) and in general - navigate around SMG.
 
-- **command**: is a mandatory property and its value must be a system command (string) which (retrieves and) outputs the numeric values we want tracked, each on a separate line. Note that SMG only cares about the first N lines of the output (where N is the number of vars, see below) from the script and will ignore excess lines (this is for compatibility with mrtg scripts which output uptime and hostname after values). If the command ouptuts less lines than expected or these are not numeric values, an error will be generated and NaN values will be recorded in the RRD file time series.
+- **command**: is a mandatory property and its value must be a system or [plugin](#plugin-cc) command (string) which (retrieves and) outputs the numeric values we want tracked, each on a separate line. Note that SMG only cares about the first N lines of the output (where N is the number of vars, see below) from the script and will ignore excess lines (this is for compatibility with mrtg scripts which output uptime and hostname after values). If the command ouptuts less lines than expected or these are not numeric values, an error will be generated and NaN values will be recorded in the RRD file time series.
 
 <a name="obj-vars">
 
@@ -889,6 +889,8 @@ Example:
 
 ## Bundled Plugins configuration
 
+### Calc Plugin
+
 - **calc** - exposes UI for graphing the result of arbitrary math expressions Conf file (smgconf/calc-plugin.yml) supports pre-defined expressions which will show up in the UI for easy access. Example
 
 <pre>
@@ -903,6 +905,10 @@ Example:
             dpp: off
             d95p: off
 </pre>
+
+<a name="plugins-cc" />
+
+### Common Commands Plugin
 
 - **cc** - "Common Commands" plugin, exposes commands to use in the regular object commands. Subcommands:
 
@@ -1023,6 +1029,51 @@ Example:
             parse and get in one shot, no parse options supported
     </pre>
 
+### JMX Plugin
+
+- **jmx** - exposes the following commands to be used in configs
+    - :jmx con host:port
+    - :jmx get host:port jmxObj jmxAttr1 jmxAttr2..
+    <pre>
+        :jmx get host:port java.lang:type=Memory HeapMemoryUsage:used HeapMemoryUsage:committed
+    </pre>
+
+### Scrape Plugin
+
+Note: The automatic config generation from scrape plugin is now deprecated. AutoConf and its openmetrics template essentially replace that in a more consistent manner.
+
+- **scrape** - Plugin to natively handle metrics exposed in OpenMetrics (Prometehus) format. See smgconf/scrape-plugin.yml for example target configuration (the local SMG instance). The Scrape plugin implements SMG objects config generation based on Prometheus/OpenMetrics URL (or data). So (just like Prometheus) it is possible to configure only scrape targets (/metrcis URLs) and the included stats will be auto discovered by SMG. Scrape needs a SMG conf output dir which it can manage (add/remove confs) if told to do so. That directory MUST be included by the regular SMG conf (/etc/smg/config.yml). This is the case with the "official" docker image/config. Scrape defines the following plugin commands (used by the generated SMG conf):
+  - :scrape http <url> - a plain http(s) call to GET a http response from the provided url, can also be done with curl instead. This command accepts two options:
+    - :scrape http :secure <url> - by default it will ignore ssl cert errors unless :secure is specified.
+    - :scrape http :tokenf /path/to/token_file <url> - the contents of the token_file will be used as an "Authorization: Bearer <token>" value. Useful when deployed in k8s and need to access protected resources for monitoring via ServiceAccount
+  - :scrape parse - parse the output of an :http (or curl) command into internal representation. Must be defined as a child of a command outputting metrcis data (text), so in theory it doesn't *have* to be retreived over HTTP. The internal representation converts all metrics (lines) to a map of key -> value pairs where the key is generated from the metrics name and all labels (these have to be unique for Prometheus to work too). Also check :scrape get below.
+  - :scrape fetch \[:secure\] \[:tokenf /path/to/token_file\] <url> - a combined :http and :parse command - get the metrics URL and parse the data in one shot. Fetch supports the same :secure and :tokenf options and also requires an URL argument
+  - :scrape get <uid1> \[<uid2>...\] - retrieve a value from parsed OpenMetrics stats. Must be defined as a child of either a :fetch or a :parse command. The uids are generated at parse time and are predictable - it represents the metric name and all labels key/values appended to it and separated by dots. "Unsafe" SMG object id characters are converted to underscore. In te unlikely case of id conflict after that conversion is done the conflicting uids will have an additional ._N suffix where N is the position of the object in the list of conflicting uids.
+
+### Autoconf Plugin
+
+- **autoconf** - TODO
+  See smgconf/autoconf-plugin.yml and smgconf/ac-templates/
+
+### Kube Plugin
+
+- **kube** - TODO
+  See smgconf/kube-plugin.yml
+
+### Mon Plugin
+
+- **mon** - exposes the following alert definitions
+    - alert-p-mon-anom: "change_thresh:short_period:long_period"
+        - e.g. alert-p-mon-anom: "1.5:30m:30h"
+    - alert-p-mon-ex: "period:warn_op-warn_thresh:crit_op-crit_thresh:active_time"
+        - e.g. alert-p-mon-ex: "24h:lt-0.7:lt-0.5:18_00-20_00*mon"
+    - alert-p-mon-pop: "long_per-short_per:op:warn_thresh:optional_crit_thresh"
+        - e.g. alert-p-mon-pop: "24h-5m:lt:0.7" - check the short_per (5m) average value against the same value long_per (24h) ago, and compare the difference  (proportion) using the provided op (lt, can be lt, lte, gt, gte) against the configured warning (0.7) and optional critical thresholds  
+
+### InfluxDb plugin
+
+This is able to forward all updates to an InfluxDb URL. Somehwat underdeveloped.
+
 - **influxdb** - influxdb config is specified using the following globals (part of the SMG config), with defaults:
     <pre>
     - $influxdb_write_host_port: "localhost:8086"
@@ -1033,33 +1084,3 @@ Example:
     - $influxdb_strip_group_index: true
     </pre>
 
-
-- **jmx** - exposes the following commands to be used in configs
-    - :jmx con host:port
-    - :jmx get host:port jmxObj jmxAttr1 jmxAttr2..
-    <pre>
-        :jmx get host:port java.lang:type=Memory HeapMemoryUsage:used HeapMemoryUsage:committed
-    </pre>
-
-- **scrape** - Plugin to natively handle metrics exposed in OpenMetrics (Prometehus) format. See smgconf/scrape-plugin.yml for example target configuration (the local SMG instance). The Scrape plugin implements SMG objects config generation based on
-Prometheus/OpenMetrics URL (or data). So (just like Prometheus) it is possible to configure only scrape targets (/metrcis URLs) and the included stats will be auto discovered by SMG. Scrape needs a SMG conf output dir which it can manage (add/remove confs) if told to do so. That directory MUST be included by the regular SMG conf (/etc/smg/config.yml). This is the case with the "official" docker image/config. Scrape defines the following plugin commands (used by the generated SMG conf):
-  - :scrape http <url> - a plain http(s) call to GET a http response from the provided url, can also be done with curl instead. This command accepts two options:
-    - :scrape http :secure <url> - by default it will ignore ssl cert errors unless :secure is specified.
-    - :scrape http :tokenf /path/to/token_file <url> - the contents of the token_file will be used as an "Authorization: Bearer <token>" value. Useful when deployed in k8s and need to access protected resources for monitoring via ServiceAccount
-  - :scrape parse - parse the output of an :http (or curl) command into internal representation. Must be defined as a child of a command outputting metrcis data (text), so in theory it doesn't *have* to be retreived over HTTP. The internal representation converts all metrics (lines) to a map of key -> value pairs where the key is generated from the metrics name and all labels (these have to be unique for Prometheus to work too). Also check :scrape get below.
-  - :scrape fetch \[:secure\] \[:tokenf /path/to/token_file\] <url> - a combined :http and :parse command - get the metrics URL and parse the data in one shot. Fetch supports the same :secure and :tokenf options and also requires an URL argument
-  - :scrape get <uid1> \[<uid2>...\] - retrieve a value from parsed OpenMetrics stats. Must be defined as a child of either a :fetch or a :parse command. The uids are generated at parse time and are predictable - it represents the metric name and all labels key/values appended to it and separated by dots. "Unsafe" SMG object id characters are converted to underscore. In te unlikely case of id conflict after that conversion is done the conflicting uids will have an additional ._N suffix where N is the position of the object in the list of conflicting uids.
-
-- **autoconf** - TODO
-  See smgconf/autoconf-plugin.yml and smgconf/ac-templates/
-
-- **kube** - TODO
-  See smgconf/kube-plugin.yml
-
-- **mon** - exposes the following alert definitions
-    - alert-p-mon-anom: "change_thresh:short_period:long_period"
-        - e.g. alert-p-mon-anom: "1.5:30m:30h"
-    - alert-p-mon-ex: "period:warn_op-warn_thresh:crit_op-crit_thresh:active_time"
-        - e.g. alert-p-mon-ex: "24h:lt-0.7:lt-0.5:18_00-20_00*mon"
-    - alert-p-mon-pop: "long_per-short_per:op:warn_thresh:optional_crit_thresh"
-        - e.g. alert-p-mon-pop: "24h-5m:lt:0.7" - check the short_per (5m) average value against the same value long_per (24h) ago, and compare the difference  (proportion) using the provided op (lt, can be lt, lte, gt, gte) against the configured warning (0.7) and optional critical thresholds  
