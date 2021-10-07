@@ -28,7 +28,7 @@ All config items are defined as a list. I.e. the top-level yaml structure for a 
 
 Note that ordering matters in general - SMG will try to preserve the order of the graphs to be displayed to match the order in which the objects were defined.
 
-Apart from [global variables](#globals) which are in the form of "- $name: value" pairs, SMG has several types of structured objects. These can be indicated by their "type" property or for some - it can be inferred by the first character of the object id: '+' indicating an [Aggregate object](#rrd-agg-objects), '^' - an [Index](#indexes), and '~' - a [Hidden index](#hindexes). An object with no type and none of the special id prefix characters is assumed to be a [RRD](#rrd-objects) or a [Graph](#view-objects) object. So normally an object definition woul look like:
+Apart from [global variables](#globals) which are in the form of "- $name: value" pairs, SMG has several types of structured objects. These can be indicated by their "type" property or for some - it can be inferred by the first character of the object id: '+' indicating an [Aggregate object](#rrd-agg-objects), '^' - an [Index](#indexes), and '~' - a [Hidden index](#hindexes). An object with no type and none of the special id prefix characters is assumed to be a [RRD](#rrd-objects) or a [Graph](#view-objects) object. So normally an object definition would look like:
 
 <pre>
 # id-prefix-typed objects - the (possibly prefixed) id
@@ -47,7 +47,9 @@ Apart from [global variables](#globals) which are in the form of "- $name: value
 
 Normally the top-level config file would only contain globals including a bunch of "- $include: ..." definitions and the actual config files defining these objects would be drop-in files in sub-directories. For example the SMG container image already bundles an /etc/smg/config.yml file which in turn includes a bunch of common directories/globs including **/etc/smg/conf.d/\*.yml** (where one can drop yml files, which in turn can also include other dirs/globs) and **/opt/smg/data/conf/autoconf-private.d/\*.yml** (where by default the Autoconf plugin will drop and remove its per-target template outputs)
 
-> A side note is that originally all object types would be defined using key -> (prop1 -> value1, ...) syntax where the above would look like this:
+### Old (deprecated) format
+
+A side note is that originally all object types would be defined using key -> (prop1 -> value1, ...) syntax where the above would look like this:
 
 > 
 <pre>
@@ -65,7 +67,7 @@ Normally the top-level config file would only contain globals including a bunch 
 >      ...
 </pre>
 
-> While now deprecated, this syntax is still suported and can be seen in older config templates and/or examples.
+While now deprecated, this syntax is still suported and can be seen in older config templates and/or examples.
 
 <a name="rrd-objects" />
 
@@ -80,7 +82,7 @@ RRD objects usually represent the majority of the SMG config. These define a rrd
   title: "Localhost sysload (1/5/15 min)"               # optional title - object id will be used if no title is present
   interval: 60                                          # optional - default is 60
   data_delay: 0                                         # optional - default 0
-  delay: 0                                              # optional - default 0
+  delay: 0.0                                            # optional - default 0.0
   rrd_type: GAUGE                                       # optional - default is GAUGE. Can be COUNTER etc (check rrdtool docs)
   rrd_init_source: "/path/to/existing/file.rrd"         # optional - if defined SMG will pass --source <val> to rrdtool create
   stack: false                                          # optional - stack graph lines if true, default - false
@@ -192,8 +194,11 @@ Pre fetch also supports **notify-fail** - to override alert recipients for failu
       pass_data: true
       timeout: 30
       delay: 5.5
+</pre>
 
 Old (deprecated) syntax - using "$pre\_fetch:" instead of "type: pre\_fetch":
+
+<pre>
 
     - $pre_fetch:
       id: host.host1.up
@@ -208,9 +213,9 @@ Note that the "run tree" defined in this way must not have cycles which can be c
 
 <a name="rrd-agg-objects" />
 
-## Aggrgegate RRD objects
+## Aggregate RRD objects
 
-In addition to the "regular" RRD Objects described above, one can define "aggregate" RRD Objects. Simiar to the aggregate functions which can be applied on multiple View objects, the aggrgeate RRD objects represent values produced by applying an aggregate function (SUM, AVG, etc) to a set of update objects. The resulting value is then updated in a RRD file and the object also represents a View object subject to display and view aggregation functions. An aggrgegate RRD object is defined by prepending a '+' to the object id. Example:
+In addition to the "regular" RRD Objects described above, one can define "aggregate" RRD Objects. Simiar to the aggregate functions which can be applied on multiple View objects, the aggrgeate RRD objects represent values produced by applying an aggregate function (SUM, AVG, etc, also a special RPN op) to a set of update objects. The resulting value is then updated in a RRD file and the object also represents a View object subject to display and view aggregation functions. An aggrgegate RRD object is defined by prepending a '+' to the object id. Example:
 
 <pre>
 - id: +agg.hosts.sysload                                # aggregate rrd object id, must start with + char
@@ -238,6 +243,8 @@ In addition to the "regular" RRD Objects described above, one can define "aggreg
 </pre>
 
 As mentioned in the yaml comments above, some of the properties of the aggregate object will be assumed from the first object vars list, unless explicitly defined. It is up to the config to ensure that the list of objects to aggregate is compatible (and meaningful).
+
+There is one additional aggregate operation supported by aggregate objects which is currently not supported by the UI - the RPN:_expression_ op. The syntax for this is like "op: RPN:\$ds0,\$ds1,+". That would apply the rpn operation on each of the vars of the list of objects where ds0 would map to the first object value, ds1 to the second one and so on.
 
 As of v1.4+ SMG also supports supplying _filter_ property instead of ids list (technically - it is possible to use and combine both). The filter property value is a map representing a standard (regex-based) SMG Filter which in turn is applied at config generation time to the entire list of RRD objects defined in the config. Note that this filter can only work with local objects.
 
@@ -513,54 +520,56 @@ Every object variable (mapping to a graph line) can have zero or more alert conf
     alert-crit-lt: NUM   # critical alert if value is less than NUM
     alert-crit-eq: NUM   # critical alert if value is equal to NUM
     alert-crit-neq: NUM   # critical alert if value is equal to NUM
-    alert-p-<pluginId>-<checkId>: # configure a plugin-implemented check for the value
+    alert-p-_pluginId_-_checkId_: # configure a plugin-implemented check for the value
 </pre>
 
 The built-in "mon" plugin implements the following three checks
 
 <pre>
-    alert-p-mon-anom: "" # anomaly alert - detecting unusual spikes or drops
-                         #   it accepts a string with 3 values separated by ":"
-                         #   the default value (when empty string is provided) is
-                         #   "1.5:30m:30h" which means 1.5 (relative) change
-                         #   in the last 30 minutes period compared to the previous
-                         #   30h period.
-    alert-p-mon-pop: "..." # period over period value check - detecting if the current
-                         #   value has changed with certain thresholds over the same value
-                         #   some period ago. It accepts a string with 4 values separated
-                         #   by ":".
-                         #   The first value is a period and an optional resolution
-                         #   separated by "-". E.g. "24h-1M" means compare with value 24 hrs
-                         #   ago over a 1 minute average. If the -1M part is omitted the
-                         #   object interval will be used as resolution (that would be the
-                         #   highest available resolution in the RRD file).
-                         #   The second value is the comparison operator - one of lt(e),
-                         #   gt(e) or eq.
-                         #   The third and fourth values are the warning and critical
-                         #   thresholds of change.
-                         #   E.g. to define an warning alert if some value drops below 0.7
-                         #   from yesterday and a critical alert if the value drops below 0.5
-                         #   from yesterday, at a 5min-average resolution, one can use the
-                         #   following config string: "24h-5M:lt:0.7:0.5"
-                         #   Both warning and critical thresholds are optional, e.g. use
-                         #   something like "24h:lt:0.7" to set only a warning threshold and
-                         #   something like "24h:lt::0.5" to set only critical threshold.
-    alert-p-mon-ex: "..." # "Extended" check, supporting some special use cases, mainly related
-                         #   to using different data resoulution than the update inteval (e.g.
-                         #   to check the hourly average of given value despite the value being
-                         #   updated every minute. Format is
-                         #   "<step>:<op>-<warn_thresh>:<op>-<crit_thresh>[:HH_MM-HH_MM[*<day>],...]"
-                         #   step is the time resolution at which we want the current value fetched
-                         #   op is one of gt, gte, eq, lte, lt
-                         #   warn_thresh and crit_thresh are the respective warning and critical
-                         #   threshold numbers.
-                         #   The final portion is optional and is a comma separated list of time
-                         #   period specifications. Time period is specified by setting time of day
-                         #   and/or day of week (first 3 letters from English weekdays) or month (number),
-                         #   separated via *. The time of day is defined as a start and end (separated
-                         #   by -) hour and minute (separated by _). The check can only trigger alerts
-                         #   when the current time is within the time of day (if specified) and day of
-                         #   week/month (if specified)
+  alert-p-mon-anom: "" # anomaly alert - detecting unusual spikes or drops
+                       #   it accepts a string with 3 values separated by ":"
+                       #   the default value (when empty string is provided) is
+                       #   "1.5:30m:30h" which means 1.5 (relative) change
+                       #   in the last 30 minutes period compared to the previous
+                       #   30h period.
+
+  alert-p-mon-pop: ... # period over period value check - detecting if the current
+                       #   value has changed with certain thresholds over the same value
+                       #   some period ago. It accepts a string with 4 values separated
+                       #   by ":".
+                       #   The first value is a period and an optional resolution
+                       #   separated by "-". E.g. "24h-1M" means compare with value 24 hrs
+                       #   ago over a 1 minute average. If the -1M part is omitted the
+                       #   object interval will be used as resolution (that would be the
+                       #   highest available resolution in the RRD file).
+                       #   The second value is the comparison operator - one of lt(e),
+                       #   gt(e) or eq.
+                       #   The third and fourth values are the warning and critical
+                       #   thresholds of change.
+                       #   E.g. to define an warning alert if some value drops below 0.7
+                       #   from yesterday and a critical alert if the value drops below 0.5
+                       #   from yesterday, at a 5min-average resolution, one can use the
+                       #   following config string: "24h-5M:lt:0.7:0.5"
+                       #   Both warning and critical thresholds are optional, e.g. use
+                       #   something like "24h:lt:0.7" to set only a warning threshold and
+                       #   something like "24h:lt::0.5" to set only critical threshold.
+
+  alert-p-mon-ex: ...  # "Extended" check, supporting some special use cases, mainly related
+                       #   to using different data resoulution than the update inteval (e.g.
+                       #   to check the hourly average of given value despite the value being
+                       #   updated every minute. Format is
+                       #   "_step_:_op_-_warn_thresh_:_op_-_crit_thresh_[:HH_MM-HH_MM[*_day_],...]"
+                       #   step is the time resolution at which we want the current value fetched
+                       #   op is one of gt, gte, eq, lte, lt
+                       #   warn_thresh and crit_thresh are the respective warning and critical
+                       #   threshold numbers.
+                       #   The final portion is optional and is a comma separated list of time
+                       #   period specifications. Time period is specified by setting time of day
+                       #   and/or day of week (first 3 letters from English weekdays) or month (number),
+                       #   separated via *. The time of day is defined as a start and end (separated
+                       #   by -) hour and minute (separated by _). The check can only trigger alerts
+                       #   when the current time is within the time of day (if specified) and day of
+                       #   week/month (if specified)
 </pre>
 
 Check [here](smg.html#concepts-anomaly) for more details on how alert-p-mon-anom/anomaly detection works.
@@ -605,7 +614,7 @@ Currently there are two ways to apply alert/notify configs to any given object v
   notify-fail: ...
   notify-strikes: 5
   alerts:
-   - label: sl1min   # any objects matching the index filter and also matching the sl1min label
+   - label: sl1min   # any objects matching the index filter but also variables having the sl1min label
      alert-warn-gt: 3
      notify-warn: mail-on-warn
      alert-crit-gt: 8
@@ -613,7 +622,7 @@ Currently there are two ways to apply alert/notify configs to any given object v
    - label: 1         # when number - it will be used as a 0-based index in the variables array
      alert-warn-gt: 3
      alert-crit-gt: 8
-   - label: scur
+   - label: iowait
      alert-p-mon-anom: ""
 </pre>
 
