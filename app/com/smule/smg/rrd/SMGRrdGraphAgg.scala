@@ -170,7 +170,7 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
   }
 
   // return (cdefs, vlabel, rrdlbl, var map)
-  private def getAllDefsAndLabelsByVarGroup: Seq[(String,String,String,SMGObjectVar)] = {
+  private def getAllDefsAndLabelsByVarGroup(period:String, disablePop: Boolean): Seq[(String,String,String,SMGObjectVar)] = {
     val retbuf = new ListBuffer[(String,String,String,SMGObjectVar)]()
     val shortIds = SMGAggObjectView.stripCommonStuff('.', aggObj.objs.map(o => o.id)).iterator
     val cdefVarLabelMaker = new LabelMaker("cv_")
@@ -193,9 +193,18 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
           c.append(" 'DEF:").append(defLbl).append("=").append(rrdFname).append(":")
           c.append(curObjDsLabel).append(":AVERAGE")
           c.append("'")
+          if (!disablePop) {
+            c.append(" 'DEF:pp_").append(defLbl).append("=")
+            c.append(rrdFname).append(":").append(curObjDsLabel).append(s":AVERAGE:end=now-$period:start=end-$period'") // TODO support MAX
+            val ppoffs = parsePeriod(period).getOrElse(0)
+            c.append(" 'SHIFT:pp_").append(defLbl).append(s":$ppoffs'")
+          }
           if (cdef.nonEmpty) {
             val cdefSubst = substCdef(cdef.get, defLbl)
             c.append(" 'CDEF:").append(nextDefLbl).append("=").append(cdefSubst).append("'")
+            if (!disablePop) {
+              c.append(" 'CDEF:pp_").append(nextDefLbl).append("=").append(substCdef(cdef.get, "pp_" + defLbl)).append("'")
+            }
           }
           if (o.cdefVars.isEmpty) {
             retbuf += Tuple4(c.toString, vlabel, nextDefLbl, v)
@@ -223,8 +232,9 @@ class SMGRrdGraphAgg(val rrdConf: SMGRrdConfig, val aggObj: SMGAggObjectView) ex
     val c = new mutable.StringBuilder()
     var first = true
     var firstLabel = ""
-    val mygopts = GraphOptions.withSome(disablePop = true, disable95pRule = gopts.disable95pRule) // TODO support disablePop = false
-    getAllDefsAndLabelsByVarGroup.foreach {t4 =>
+    val disablePop = (stacked || gopts.disablePop)
+    val mygopts = GraphOptions.withSome(disablePop = disablePop, disable95pRule = gopts.disable95pRule)
+    getAllDefsAndLabelsByVarGroup(period, disablePop).foreach {t4 =>
       val cdef = t4._1
       val vlabel = t4._2
       val lbl = t4._3
