@@ -53,6 +53,8 @@
     secondsSuffix = ""
   }
 
+  val hasSwap = parsedByUid.contains(s"node_memory_SwapTotal${bytesSuffix}")
+
   val cpuUsageComponents = Seq("user", "nice", "system", "idle", "iowait", "irq", "softirq", "steal")
   val cpuSecondsPrefix = s"node_cpu${secondsSuffix}${totalSuffix}.cpu."
   val cpuIdPrefixes = scala.collection.mutable.ListBuffer[String]()
@@ -338,6 +340,38 @@
     <%= kv._1 %>: "<%= kv._2 %>"
   #end
 #end
+
+<%
+if (hasSwap) {
+  val swapProps = Seq("SwapTotal", "SwapFree", "SwapCached")
+  val swapScapeGetParams = swapProps.map(s => s"node_memory_${s}${bytesSuffix}").mkString(",")
+%>
+- id: <%= id_prefix %><%= node_name %>.swapinfo
+  rrd_type: GAUGE
+  command: ":scrape get <%= swapScapeGetParams %>"
+  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
+  interval: <%= interval.toString %>
+#if (rraDef != "")
+  rra: <%= rraDef %>
+#end
+  title: "<%= node_name %> - Swap info"
+  vars:
+  - label: SwapTotal
+    mu: B
+  - label: SwapFree
+    mu: B
+  - label: SwapCached
+    mu: B
+#if (extra_labels.size > 0)
+  labels:
+  #for (kv <- extra_labels)
+    <%= kv._1 %>: "<%= kv._2 %>"
+  #end
+#end
+
+<%
+} // if (hasSwap)
+%>
 
 #if (diskDevices.length > 0)
 # another agg object
