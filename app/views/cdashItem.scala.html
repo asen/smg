@@ -25,6 +25,8 @@
      }
      >
   <div class="cdash-item-title">
+    <a name="@{itm.id}" />
+    [<a href="#@{itm.id}">#</a>]
     @if(itm.linkUrl.isDefined){ <a href="@{itm.linkUrl.get}"> }
     @itm.titleStr
     @if(itm.linkUrl.isDefined){ </a> }
