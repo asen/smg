@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>SMG Howtos</title>
+  <title>SMG Haproxy Howto</title>
   <style>
     html {
       line-height: 1.5;
@@ -149,9 +149,6 @@
   <![endif]-->
 </head>
 <body>
-<header id="title-block-header">
-<h1 class="title">SMG Howtos</h1>
-</header>
 <h1 id="how-to-monitor-haproxy-load-balancers">How to monitor Haproxy Load Balancers</h1>
 <p>Since some point in time it is possible to build Haproxy with a built-in Prometheus exporter. SMG does not need that and can use the native Haproxy “stats” end-point for monitoring.</p>
 <p>I recommend exposing that on different than the default front-end port (and having it not accessible from the Internet), this is less important for “Internal” LBs which are not accessible from the Internet anyway.</p>
