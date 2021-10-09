@@ -9,7 +9,7 @@
 <%= identStr %>  - label: '<%= vmap.getOrElse("label", s"ds${ix}").toString %>'
 <%
     for ( (k,v) <- vmap.toSeq.map(t => (t._1,t._2.toString)).sorted if k != "label" && v != "" ) { %>
-<%= identStr %>    <%= k %>: <%= v %>
+<%= identStr %>    <%= k %>: '<%= v.toString.replaceAll("'","''") %>'
 <%
     } // for k,v
   } // vars.zipWithIndex.foreach
