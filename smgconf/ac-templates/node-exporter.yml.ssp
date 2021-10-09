@@ -770,6 +770,7 @@
     "notify_fail" -> notify_fail,
     "rrd_type" -> "DDERIVE",
     "rra" -> rraDef,
+    "stack"  -> true,
     //"rrd_init_source" -> rrdInitSrc,
     "interval" -> interval,
     "vars" -> cpuUsageComponents.map { stat =>
