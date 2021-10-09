@@ -302,7 +302,7 @@
 <h3 id="filters">Filters</h3>
 <p>SMG maintains the list of all objects available for graphing in memory.</p>
 <p>Whenever it has to display some set of (different objects) graphs, the selection happens via a filter over the global list. This is how one selects which graphs to see on the page. This is also why object ids are very important, so that you can easily select classes of objects to display together.</p>
-<p>Currently one can filter by object id, object title and <a href="#concepts-remotes">remote instance</a>. Below are the currently supported filter fields as present in the UI. These match the <a href="smg-config.html#filters">index filter configuration</a> options and if any filter turns out to be useful it can be converted to a named index and configured in the yaml for quick access. Also any filter result can be shared by just sharing its SMG URL - the filter fields are sent as plain URL params to SMG.</p>
+<p>Currently one can filter by object id, object “text representation” (title etc), object labels and <a href="#concepts-remotes">remote instance</a>. Below are the currently supported filter fields as present in the UI. These match the <a href="smg-config.html#filters">index filter configuration</a> options and if any filter turns out to be useful it can be converted to a named index and configured in the yaml for quick access. Also any filter result can be shared by just sharing its SMG URL - the filter fields are sent as plain URL params to SMG.</p>
 <p><strong>Note:</strong> Using regex filter on object id and title to define groups of objects may look awkward at first sight but is actually quite powerful (and the idea was “borrowed” from <a href="http://oss.oetiker.ch/mrtg/doc/indexmaker.en.html">mrtg indexmaker</a>). By using good object ids to “describe” the SMG objects admins can save themselves the need to explicitly define too many object (grouping/classification) properties upfront, but instead easily use the filters to define arbitrary groups later when needed.</p>
 <p><a name="flt-remote" /></p>
 <h4 id="remote-filter">Remote filter</h4>
@@ -312,7 +312,7 @@
 <p><a name="flt-titlerx" /></p>
 <h4 id="text-regex-filter">Text Regex filter</h4>
 <ul>
-<li>when set, only objects where any of object id, title, var labels or measurement units is matched by the specified regular expressions will be matched by the filter.</li>
+<li>when set, only objects where any of object id, title, command, object labels, var labels or measurement units is matched by the specified regular expressions will be matched by the filter.</li>
 </ul>
 <p><a name="flt-prefix" /></p>
 <h4 id="prefix-filter">Prefix filter</h4>
@@ -342,7 +342,7 @@
 <p><a name="flt-labels" /></p>
 <h4 id="labels-filter">Labels filter</h4>
 <ul>
-<li>when set, only objects whitch match the corresponding object labels expression will be matched by the filter.</li>
+<li>when set, only objects whitch match the corresponding object labels expression will be matched by the filter. See the Index Filter section of the configuration reference for the <a href="smg-config.html#filters-lbls">labels filter syntax</a>,</li>
 </ul>
 <p><a name="flt-index" /></p>
 <h4 id="index-filter">Index filter</h4>

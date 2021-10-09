@@ -124,7 +124,7 @@ SMG maintains the list of all objects available for graphing in memory.
 
 Whenever it has to display some set of (different objects) graphs, the selection happens via a filter over the global list. This is how one selects which graphs to see on the page. This is also why object ids are very important, so that you can easily select classes of objects to display together.
 
-Currently one can filter by object id, object title and [remote instance](#concepts-remotes). Below are the currently supported filter fields as present in the UI. These match the [index filter configuration](smg-config.html#filters) options and if any filter turns out to be useful it can be converted to a named index and configured in the yaml for quick access. Also any filter result can be shared by just sharing its SMG URL - the filter fields are sent as plain URL params to SMG.
+Currently one can filter by object id, object "text representation" (title etc), object labels and [remote instance](#concepts-remotes). Below are the currently supported filter fields as present in the UI. These match the [index filter configuration](smg-config.html#filters) options and if any filter turns out to be useful it can be converted to a named index and configured in the yaml for quick access. Also any filter result can be shared by just sharing its SMG URL - the filter fields are sent as plain URL params to SMG.
 
 **Note:** Using regex filter on object id and title to define groups of objects may look awkward at first sight but is actually quite powerful (and the idea was "borrowed" from [mrtg indexmaker](http://oss.oetiker.ch/mrtg/doc/indexmaker.en.html)). By using good object ids to "describe" the SMG objects admins can save themselves the need to explicitly define too many object (grouping/classification) properties upfront, but instead easily use the filters to define arbitrary groups later when needed.
 
@@ -139,7 +139,7 @@ Currently one can filter by object id, object title and [remote instance](#conce
 
 #### Text Regex filter
 
-- when set, only objects where any of object id, title, var labels or measurement units is matched by the specified regular expressions will be matched by the filter. 
+- when set, only objects where any of object id, title, command, object labels, var labels or measurement units is matched by the specified regular expressions will be matched by the filter. 
 
 <a name="flt-prefix" />
 
@@ -175,7 +175,7 @@ Currently one can filter by object id, object title and [remote instance](#conce
 
 #### Labels filter
 
-- when set, only objects whitch match the corresponding object labels expression will be matched by the filter. 
+- when set, only objects whitch match the corresponding object labels expression will be matched by the filter. See the Index Filter section of the configuration reference for the [labels filter syntax](smg-config.html#filters-lbls), 
 
 <a name="flt-index" />
 

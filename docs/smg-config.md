@@ -429,6 +429,8 @@ A filter (and its graph options) is configured as part of an index definition us
 
 - **prx** (Parent regex filter) - when set, only object with parent/pre\_fetch ids matching the specified regular expressions will be matched by the filter.
 
+<a name="filters-lbls" />
+
 - **lbls** (Labels expression filter) - when set, only objects which have object labels matching the provided label expression will be matched by the filter. Note that object labels are a new feature (and separate from object vars graph display labels).
     Label expressions can consist of:
     
