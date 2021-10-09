@@ -7,7 +7,7 @@
 <%@ val command: String %>
 <%@ val node_name: String %>
 <%@ val node_host: String %>
-<%@ val data: Seq[String] %>
+<%@ val data: Object %>
 <%@ val id_prefix: String = "host." %>
 <%@ val title_prefix: String = "Host " %>
 <%@ val interval: Int = 60 %>
@@ -34,14 +34,39 @@
   "mountpoint!=/boot"
 ) %>
 <%@ val netio_max: String = "" %>
+
+<%@ val smgLogger: com.smule.smg.core.SMGLoggerApi = null %>
+
 <%
   val rraDef = if (rra == "") rra_def else rra
+
+  def myLogEx(t: Throwable, msg: String): Unit = {
+    if (smgLogger != null) {
+      smgLogger.ex(t, msg)
+    }
+  }
+
   // parse /metrics output
-  val groups = com.smule.smg.openmetrics.OpenMetricsParser.parseText(data.mkString("\n"), None)
+  var needParse = true
+  val groups = try {
+    data match {
+    case ord: com.smule.smgplugins.scrape.OpenMetricsResultData => {
+      needParse = false
+      ord.stats
+    }
+    case s: String =>  com.smule.smg.openmetrics.OpenMetricsParser.parseText(s, None)
+    case x => com.smule.smg.openmetrics.OpenMetricsParser.parseText(x.asInstanceOf[Seq[String]].mkString("\n"), None)
+    }
+  } catch { case t: Throwable =>
+    myLogEx(t, s"Error converting data to OpenMetrics: data=${data.toString.take(768)} message=${t.getMessage}")
+    throw t
+  }
   val parsed = groups.flatMap { grp =>
     grp.rows.map { row => (grp, row) }
   }
   val parsedByUid = parsed.groupBy(_._2.labelUid)
+
+  val myExtraLabels = Map("node_name" -> node_name, "ac_template" -> "node-exporter") ++ extra_labels
 
   // XXX older node exporter reports some stats without _total/_bytes suffixes
   var totalSuffix = "_total"
@@ -162,651 +187,647 @@
 //  pgmajfault  –  Number of major faults per second the system required loading a memory page from disk.
 //
 
+  val idName = s"${id_prefix}${node_name}"
+  val titleName = s"${title_prefix}${node_name}"
+
+  var myPf = pre_fetch
+
+  if (add_ping) {
+%>
+# Top-level ping command
+<%
+    myPf = s"${idName}.ping"
+    render("shared/_pre_fetch.yml.ssp", Map(
+    "id" -> myPf,
+    "command" ->  s"ping -W 2 -n -c 1 $node_host > /dev/null || ping -W 2 -n -c 1 $node_host /dev/null",
+    "desc" -> s"Check that host $node_name is up",
+    "pass_data" -> false,
+    "ignorets" -> true,
+    "notify_fail" -> notify_fail,
+    "pre_fetch" -> pre_fetch,
+    "timeout" -> ping_timeout
+    ))
+  }
+
+  var metricsPf = if (needParse) s"${idName}.metrics_get" else s"${idName}.metrics"
 %>
 
-#if (add_ping)
-- type: $pre_fetch
-  id: <%= id_prefix %><%= node_name %>.ping
-  desc: "Check that host <%= node_name %> is up"
-  command: "ping -W 2 -n -c 1 <%= node_host %> > /dev/null || ping -W 2 -n -c 1 <%= node_host %> > /dev/null"
-  ignorets: true
-  timeout: <%= ping_timeout.toString %>
-#if (pre_fetch != "")
-  pre_fetch: <%= pre_fetch %>
-#end
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
-#end
+# Metrics command
+<%
+  render("shared/_pre_fetch.yml.ssp", Map(
+  "id" ->  metricsPf,
+  "command" -> command,
+  "desc" -> s"Fetch system metrics from $node_name",
+  "pass_data" -> true,
+  "notify_fail" -> notify_fail,
+  "pre_fetch" -> myPf,
+  "timeout" -> metrics_timeout
+  ))
 
+  if (needParse) {
+    val myId = s"${idName}.metrics"
+%>
 
-- type: $pre_fetch
-  id: <%= id_prefix %><%= node_name %>.metrics
-#if (add_ping)
-  pre_fetch: <%= id_prefix %><%= node_name %>.ping
-#elseif (pre_fetch != "")
-  pre_fetch: <%= pre_fetch %>
-#end
-  desc: "Fetch system metrics from <%= node_name %>"
-  command: '<%= command.replaceAll("'", "''") %>'
-  pass_data: true
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
-  timeout: <%= metrics_timeout.toString %>
+# Metrics parse command
+<%
+  render("shared/_pre_fetch.yml.ssp", Map(
+    "id" ->  myId,
+    "command" -> ":scrape parse",
+    "desc" -> s"Parse system metrics from $node_name",
+    "pass_data" -> true,
+    "notify_fail" -> notify_fail,
+    "pre_fetch" -> metricsPf,
+    "timeout" -> metrics_timeout
+    ))
+    metricsPf = myId
+  }
 
-- type: $pre_fetch
-  id: <%= id_prefix %><%= node_name %>.metrics.parse
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics
-  desc: "Parse system metrics from <%= node_name %>"
-  pass_data: true
-  command: ":scrape parse"
-#if (notify_fail != "")
-  notify-fail: <%= notify_fail %>
-#end
+  // The "Node" index
+%>
 
-- ^<%= id_prefix %><%= node_name %>:
-  title: "<%= title_prefix %><%= node_name %>"
-  px: "<%= id_prefix %><%= node_name %>."
-#if (desc != "")
-  desc: "<%= desc %>"
-#end
-#if (parent_index != "")
-  parent: "<%= parent_index %>"
-#end
+# The Node Index (excluding details)
+<%
+  render("shared/_index.yml.ssp", Map(
+  "id" -> s"${idName}",
+  "px" -> s"${idName}.",
+  "rxx" -> "\\._dtl\\.",
+  "title" -> s"${titleName}",
+  "parent" -> parent_index,
+  "desc" -> desc
+  ))
+%>
 
-- id: <%= id_prefix %><%= node_name %>.sysload
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_load1,node_load5,node_load15"
-  title: "<%= title_prefix %><%= node_name %> - Load average over 1/5/15 min periods"
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: sl1min
-  - label: sl5min
-  - label: sl15min
-#if (extra_labels.size > 0)
-  labels:
-#for (kv <- extra_labels)
-    <%= kv._1 %>: '<%= kv._2 %>'
-#end
-#end
+# Another Node Index (including details)
+<%
+  render("shared/_index.yml.ssp", Map(
+  "id" -> s"${idName}.w_dtl",
+  "px" -> s"${idName}.",
+  "title" -> s"${titleName} - including device/core details",
+  "parent" -> idName
+  ))
+%>
 
+# Another Node Index (including details)
+<%
+  render("shared/_index.yml.ssp", Map(
+  "id" -> s"${idName}.netstat",
+  "px" -> s"${idName}.netstat.",
+  "title" -> s"${titleName} - Network (netstat) stats - only",
+  "parent" -> idName
+  ))
+%>
 
-# an aggregate object, components defined later below
-- id: +<%= id_prefix %><%= node_name %>._agg.cpu
-  title: "<%= title_prefix %><%= node_name %> - CPU usage (all cores)"
-  rrd_type: DDERIVE
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  stack: true
-  interval: <%= interval.toString %>
-  vars:
-#for (stat <- cpuUsageComponents)
-  - label: <%= stat %>
-    mu: "%"
-    lt: "AREA"
-    cdef: "$ds,100,*"
-#end
-  op: SUM
-  ids:
-#for ( coreId <- cpuIdPrefixes.indices )
-  - <%= id_prefix %><%= node_name %>._dtl.core<%= coreId %>.cpu
-#end
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# Stats below
 
-- id: <%= id_prefix %><%= node_name %>.intctx
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_intr<%= totalSuffix %>,node_context_switches<%= totalSuffix %>"
-  title: "<%= title_prefix %><%= node_name %> - Interrupts/context switches"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: ints
-  - label: ctxs
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+#### Sysload
+<%
+  //The actual objects below
+  //sysload
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.sysload",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_load1,node_load5,node_load15",
+  "title" -> s"${titleName} - Load average over 1/5/15 min periods",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "GAUGE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "sl1min"),
+    Map( "label" -> "sl5min"),
+    Map( "label" -> "sl15min")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "sysload"))
+  ))
+%>
 
+#### Cpu usage - aggregate from all cores
+<%
+  //an aggregate object, components defined later below
+  render("shared/_rrd_agg_object.yml.ssp", Map(
+  "id" -> s"${idName}._agg.cpu",
+  "ids" -> cpuIdPrefixes.indices.toSeq.map{ coreId => s"${idName}._dtl.core${coreId}.cpu"},
+  "op" -> "SUM",
+  "title" -> s"${titleName} - CPU usage (all cores)",
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  "stack" -> true,
+  "interval" -> interval,
+  "vars" -> cpuUsageComponents.map { stat =>
+    Map( "label" -> stat, "mu" -> "%", "lt" -> "AREA", "cdef" -> "$ds,100,*")
+  },
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "cpu", "cpu_core" -> "all"))
+  ))
+%>
+
+#### Interrupts/context switches
+<%
+ render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.intctx",
+  "pre_fetch" -> metricsPf,
+  "command" -> s":scrape get node_intr${totalSuffix},node_context_switches${totalSuffix}",
+  "title" -> s"${titleName} - Interrupts/context switches",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "ints"),
+    Map( "label" -> "ctxs")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "intctx"))
+  ))
+%>
+
+#### Memory usage
 <%
   val memProps = Seq("MemTotal", "MemFree", "Cached", "SReclaimable", "Buffers")
   val memScapeGetParams = memProps.map(s => s"node_memory_${s}${bytesSuffix}").mkString(",")
+  val memValsPf = s"${metricsPf}.mem.values"
+  render("shared/_pre_fetch.yml.ssp", Map(
+  "id" ->  memValsPf,
+  "command" -> s":scrape get ${memScapeGetParams}",
+  "desc" -> s"Parse memory-related stats from metrics on $node_name",
+  "pass_data" -> true,
+  "notify_fail" -> notify_fail,
+  "pre_fetch" -> metricsPf,
+  "timeout" -> metrics_timeout
+  ))
 %>
-- type: $pre_fetch
-  id: <%= id_prefix %><%= node_name %>.metrics.mem.values
-  desc: "Parse memory-related stats from metrics on <%= node_name %>"
-  pass_data: true
-  command: ":scrape get <%= memScapeGetParams %>"
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
 
-- id: <%= id_prefix %><%= node_name %>.meminfo.detail
-  rrd_type: GAUGE
-  command: "-"
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.mem.values
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  title: "<%= node_name %> - /proc/meminfo details"
-  vars:
-  - label: MemTotal
-    mu: B
-  - label: MemFree
-    mu: B
-  - label: Cached
-    mu: B
-  - label: SReclaimable
-    mu: B
-  - label: Buffers
-    mu: B
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
-
-- id: <%= id_prefix %><%= node_name %>.meminfo.percused
-  rrd_type: GAUGE
-  # ((ds0 - ds1 - ds2 - ds3 - ds4) * 100) / ds0
-  command: ":cc rpn $ds0,-$ds1,+,-$ds2,+,-$ds3,+,-$ds4,+,100,*,$ds0,/"
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.mem.values
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  title: "<%= node_name %> - /proc/meminfo Used % (total - free - cached - reclaimable - buffers ) * 100 / total"
-  vars:
-  - label: "used percent"
-    mu: "%"
-    maxy: 100
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
-
+# meminfo details
 <%
-if (hasSwap) {
-  val swapProps = Seq("SwapTotal", "SwapFree", "SwapCached")
-  val swapScapeGetParams = swapProps.map(s => s"node_memory_${s}${bytesSuffix}").mkString(",")
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.meminfo.detail",
+  "pre_fetch" -> memValsPf,
+  "command" -> "-", // cat
+  "title" -> s"${titleName} - /proc/meminfo details",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "GAUGE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+  Map( "label" -> "MemTotal", "mu" -> "B"),
+  Map( "label" -> "MemFree", "mu" -> "B"),
+  Map( "label" -> "Cached", "mu" -> "B"),
+  Map( "label" -> "SReclaimable", "mu" -> "B"),
+  Map( "label" -> "Buffers", "mu" -> "B")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "meminfo_details"))
+  ))
 %>
-- id: <%= id_prefix %><%= node_name %>.swapinfo
-  rrd_type: GAUGE
-  command: ":scrape get <%= swapScapeGetParams %>"
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  title: "<%= node_name %> - Swap info"
-  vars:
-  - label: SwapTotal
-    mu: B
-  - label: SwapFree
-    mu: B
-  - label: SwapCached
-    mu: B
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
 
+# meminfo percused
 <%
-} // if (hasSwap)
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.meminfo.percused",
+  "pre_fetch" -> memValsPf,
+  // ((ds0 - ds1 - ds2 - ds3 - ds4) * 100) / ds0
+  "command" -> ":cc rpn $ds0,-$ds1,+,-$ds2,+,-$ds3,+,-$ds4,+,100,*,$ds0,/",
+  "title" -> s"${titleName} - /proc/meminfo Used % (total - free - cached - reclaimable - buffers ) * 100 / total",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "GAUGE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "used percent", "mu" -> "%", "maxy" -> "100" )
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "meminfo.percused"))
+  ))
+
+  if (hasSwap) {
+    val swapProps = Seq("SwapTotal", "SwapFree", "SwapCached")
+    val swapScapeGetParams = swapProps.map(s => s"node_memory_${s}${bytesSuffix}").mkString(",")
 %>
 
-#if (diskDevices.length > 0)
-# another agg object
-- id: +<%= id_prefix %><%= node_name %>._agg.blkio
-  title: "<%= title_prefix %><%= node_name %> - Block Device I/O (all devices)"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: wrtn
-    mu: "B/s"
-  - label: read
-    mu: "B/s"
-  op: SUM
-  ids:
-#for ( dvc <- diskDevices )
-  - <%= id_prefix %><%= node_name %>._dtl.<%= dvc %>.blkio
-#end
-#end
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+#### Swap usage
+<%
+    render("shared/_rrd_object.yml.ssp", Map(
+    "id" -> s"${idName}.swapinfo",
+    "pre_fetch" -> metricsPf,
+    "command" -> s":scrape get ${swapScapeGetParams}",
+    "title" -> s"${titleName} - Swap info",
+    "notify_fail" -> notify_fail,
+    "rrd_type" -> "GAUGE",
+    "rra" -> rraDef,
+    //"rrd_init_source" -> rrdInitSrc,
+    "interval" -> interval,
+    "vars" -> Seq(
+      Map( "label" -> "SwapTotal", "mu" -> "B"),
+      Map( "label" -> "SwapFree", "mu" -> "B"),
+      Map( "label" -> "SwapCached", "mu" -> "B")
+    ),
+    "object_labels" -> (myExtraLabels ++ Map("stat" -> "swapinfo"))
+    ))
+  } // if (hasSwap)
+%>
+
+#### Disk devices - aggregate blkio
+<%
+  if (diskDevices.length > 0) {
+    //an aggregate object, components defined later below
+    render("shared/_rrd_agg_object.yml.ssp", Map(
+    "id" -> s"${idName}._agg.blkio",
+    "ids" -> diskDevices.toSeq.map{ dvc => s"${idName}._dtl.${dvc}.blkio"},
+    "op" -> "SUM",
+    "title" -> s"${titleName} - Block Device I/O (all devices)",
+    "rrd_type" -> "DDERIVE",
+    "rra" -> rraDef,
+    "interval" -> interval,
+    "vars" -> Seq(
+      Map( "label" -> "wrtn", "mu" -> "B/s"),
+      Map( "label" -> "read", "mu" -> "B/s")
+    ),
+    "object_labels" -> (myExtraLabels ++ Map("stat" -> "blkio", "dvc" -> "all"))
+    ))
+  } // (diskDevices.length > 0)
+%>
 
 #### Disk space usage
-
-#for ( fsmT <- fsMounts)
 <%
-  val mountp = fsmT._1
-  val idsx = fsmT._2
-  val drvsafe = idsx.split("\\.").last
-//  "node_filesystem_avail_bytes",
-//  "node_filesystem_size_bytes",
-//  "node_filesystem_files",
-//  "node_filesystem_files_free"
-  val fsScapeGetParams = Seq(s"avail${bytesSuffix}", s"size${bytesSuffix}", "files_free", "files").map { s =>
+  for (fsmT <- fsMounts) {
+    val mountp = fsmT._1
+    val idsx = fsmT._2
+    val drvsafe = idsx.split("\\.").last
+    //  "node_filesystem_avail_bytes",
+    //  "node_filesystem_size_bytes",
+    //  "node_filesystem_files",
+    //  "node_filesystem_files_free"
+    val fsScapeGetParams = Seq(s"avail${bytesSuffix}", s"size${bytesSuffix}", "files_free", "files").map { s =>
     s"node_filesystem_${s}.device.${idsx}"
-  }.mkString(",")
+    }.mkString(",")
+    val dvcPfId = s"${metricsPf}.fs.${drvsafe}.values"
 %>
-#  <%= mountp %> -> <%= idsx %>
-- type: $pre_fetch
-  id: <%= id_prefix %><%= node_name %>.metrics.fs.<%= drvsafe %>.values
-  desc: "Parse filesystem-related stats for <%= mountp %> from metrics on <%= node_name %>"
-  pass_data: true
-  command: ":scrape get <%= fsScapeGetParams %>"
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
 
-- id: <%= id_prefix %><%= node_name %>.fs.percused.<%= drvsafe %>
-  rrd_type: GAUGE
-  # ((ds1 - ds0) * 100) / ds1
-  # ((ds3 - ds2) * 100) / ds3
-  command: ":cc rpn $ds1,$ds0,-,100,*,$ds1,/ $ds3,$ds2,-,100,*,$ds3,/"
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.fs.<%= drvsafe %>.values
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  title: "<%= node_name %> - Disk usage <%= mountp %> filesystem"
-  vars:
-  - label: "used bytes"
-    mu: "%"
-    maxy: 100
-  - label: "used inodes"
-    mu: "%"
-    maxy: 100
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# fs <%= mountp %> -> <%= idsx %>
+<%
+    render("shared/_pre_fetch.yml.ssp", Map(
+    "id" ->  dvcPfId,
+    "command" -> s":scrape get ${fsScapeGetParams}",
+    "desc" -> s"Parse filesystem-related stats for ${mountp} from metrics on $node_name",
+    "pass_data" -> true,
+    "notify_fail" -> notify_fail,
+    "pre_fetch" -> metricsPf,
+    "timeout" -> metrics_timeout
+    ))
+%>
 
-#end
+<%
+    render("shared/_rrd_object.yml.ssp", Map(
+    "id" -> s"${idName}.fs.percused.${drvsafe}",
+    "pre_fetch" -> dvcPfId,
+    //  ((ds1 - ds0) * 100) / ds1
+    //  ((ds3 - ds2) * 100) / ds3
+    "command" -> ":cc rpn $ds1,$ds0,-,100,*,$ds1,/ $ds3,$ds2,-,100,*,$ds3,/",
+    "title" -> s"${titleName} - Disk usage ${mountp} filesystem",
+    "notify_fail" -> notify_fail,
+    "rrd_type" -> "GAUGE",
+    "rra" -> rraDef,
+    //"rrd_init_source" -> rrdInitSrc,
+    "interval" -> interval,
+    "vars" -> Seq(
+      Map( "label" -> "used bytes", "mu" -> "%", "maxy" -> "100"),
+      Map( "label" -> "used inodes", "mu" -> "%", "maxy" -> "100")
+    ),
+    "object_labels" -> (myExtraLabels ++ Map("stat" -> "fs.percused", "dvc" -> "mountp"))
+    ))
+  } // (fsmT <- fsMounts)
+%>
 
-#### Network Stats
+#### Network I/O traffic - all devices
 <%
   val myNetDevices = if (networkDevices.nonEmpty) networkDevices else networkDevicesOldv
+
+  if (myNetDevices.length > 0) {
+    render("shared/_rrd_agg_object.yml.ssp", Map(
+    "id" -> s"${idName}._agg.netio",
+    "ids" -> myNetDevices.toSeq.map{ dvc => s"${idName}._dtl.${dvc}.netio"},
+    "op" -> "SUM",
+    "title" -> s"${titleName} - Network Device I/O (all devices)",
+    "rrd_type" -> "DDERIVE",
+    "rra" -> rraDef,
+    "interval" -> interval,
+    "vars" -> Seq(
+      Map( "label" -> "in", "mu" -> "b/s", "cdef" -> "$ds,8,*" ),
+      Map( "label" -> "out", "mu" -> "b/s", "cdef" -> "$ds,8,*")
+    ),
+    "object_labels" -> (myExtraLabels ++ Map("stat" -> "netio", "dvc" -> "all"))
+    ))
+  } //if (myNetDevices.length > 0)
 %>
-#if (myNetDevices.length > 0)
-# another agg object
-- id: +<%= id_prefix %><%= node_name %>._agg.netio
-  title: "<%= title_prefix %><%= node_name %> - Network Device I/O (all devices)"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: in
-    mu: "b/s"
-    cdef: "$ds,8,*"
-  - label: out
-    mu: "b/s"
-    cdef: "$ds,8,*"
-  op: SUM
-  ids:
-#for (dvc <- myNetDevices)
-  - <%= id_prefix %><%= node_name %>._dtl.<%= dvc %>.netio
-#end
-#end
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
 
-- id: <%= id_prefix %><%= node_name %>.netstat.tcp.newconn
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_netstat_Tcp_PassiveOpens,node_netstat_Tcp_ActiveOpens"
-  title: "<%= title_prefix %><%= node_name %> - Network New Connections"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: in
-    mu: "c/s"
-  - label: out
-    mu: "c/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+#### Network Stats
+# netstat.tcp.newconn
+<%
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.netstat.tcp.newconn",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_netstat_Tcp_PassiveOpens,node_netstat_Tcp_ActiveOpens",
+  "title" -> s"${titleName} - Network New TCP Connections",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "in", "mu" -> "c/s"),
+    Map( "label" -> "out", "mu" -> "c/s")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "netstat.tcp.newconn"))
+  ))
+%>
 
-- id: <%= id_prefix %><%= node_name %>.netstat.tcp.estconn
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_netstat_Tcp_CurrEstab"
-  title: "<%= title_prefix %><%= node_name %> - Network Established Connections"
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: conns
-    mu: "c/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# netstat.tcp.estconn
+<%
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.netstat.tcp.estconn",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_netstat_Tcp_CurrEstab",
+  "title" -> s"${titleName} - Network Established TCP Connectionss",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "GAUGE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+  Map( "label" -> "conns")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "netstat.tcp.estconn"))
+  ))
+%>
 
-- id: <%= id_prefix %><%= node_name %>.netstat.tcp.syncookies
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_netstat_TcpExt_SyncookiesRecv,node_netstat_TcpExt_SyncookiesSent,node_netstat_TcpExt_SyncookiesFailed"
-  title: "<%= title_prefix %><%= node_name %> - Syncookies Recv/Sent/Failed"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: recv
-    mu: "ev/s"
-  - label: sent
-    mu: "ev/s"
-  - label: failed
-    mu: "ev/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# netstat.tcp.syncookies
+<%
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.netstat.tcp.syncookies",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_netstat_TcpExt_SyncookiesRecv,node_netstat_TcpExt_SyncookiesSent,node_netstat_TcpExt_SyncookiesFailed",
+  "title" -> s"${titleName} - Network TCP Syncookies Recv/Sent/Failed",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "recv", "mu" -> "ev/s"),
+    Map( "label" -> "sent", "mu" -> "ev/s"),
+    Map( "label" -> "failed", "mu" -> "ev/s")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "netstat.tcp.syncookies"))
+  ))
+%>
 
-- id: <%= id_prefix %><%= node_name %>.netstat.tcp.errdropoverf
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_netstat_Tcp_InErrs,node_netstat_TcpExt_ListenDrops,node_netstat_TcpExt_ListenOverflows"
-  title: "<%= title_prefix %><%= node_name %> - TCP InErrs/ListenDrops/ListenOverflows"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: inErrs
-    mu: "ev/s"
-  - label: lsnDrop
-    mu: "ev/s"
-  - label: lsnOverf
-    mu: "ev/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# netstat.tcp.errdropoverf
+<%
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.netstat.tcp.errdropoverf",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_netstat_Tcp_InErrs,node_netstat_TcpExt_ListenDrops,node_netstat_TcpExt_ListenOverflows",
+  "title" -> s"${titleName} - Network TCP InErrs/ListenDrops/ListenOverflows",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "inErrs", "mu" -> "ev/s"),
+    Map( "label" -> "lsnDrop", "mu" -> "ev/s"),
+    Map( "label" -> "lsnOverf", "mu" -> "ev/s")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "netstat.tcp.errdropoverf"))
+  ))
+%>
 
-- id: <%= id_prefix %><%= node_name %>.netstat.tcp.retrans
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_netstat_TcpExt_TCPSynRetrans,node_netstat_Tcp_RetransSegs"
-  title: "<%= title_prefix %><%= node_name %> - TCP SynRetrans/RetransSegs"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: synRtrn
-    mu: "ev/s"
-  - label: rtrnSegs
-    mu: "ev/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# netstat.tcp.retrans
+<%
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.netstat.tcp.retrans",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_netstat_TcpExt_TCPSynRetrans,node_netstat_Tcp_RetransSegs",
+  "title" -> s"${titleName} - Network TCP SynRetrans/RetransSegs",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "synRtrn", "mu" -> "ev/s"),
+    Map( "label" -> "rtrnSegs", "mu" -> "ev/s")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "netstat.tcp.retrans"))
+  ))
+%>
 
-- id: <%= id_prefix %><%= node_name %>.netstat.udp4.datagrams
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_netstat_Udp_InDatagrams,node_netstat_Udp_OutDatagrams"
-  title: "<%= title_prefix %><%= node_name %> - UDP4 InDatagrams/OutDatagrams"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: in
-    mu: "pkt/s"
-  - label: out
-    mu: "pkt/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# netstat.udp4.datagrams
+<%
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.netstat.udp4.datagrams",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_netstat_Udp_InDatagrams,node_netstat_Udp_OutDatagrams",
+  "title" -> s"${titleName} - Network UDP InDatagrams/OutDatagrams",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "in", "mu" -> "dgm/s"),
+    Map( "label" -> "out", "mu" -> "dgm/s")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "netstat.udp4.datagrams"))
+  ))
+%>
 
-- id: <%= id_prefix %><%= node_name %>.netstat.udp4.errs
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_netstat_Udp_InErrors,node_netstat_UdpLite_InErrors,node_netstat_Udp_NoPorts"
-  title: "<%= title_prefix %><%= node_name %> - UDP4 InErrs/LiteInErrs/NoPorts"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: inErrs
-    mu: "ev/s"
-  - label: liteInErrs
-    mu: "ev/s"
-  - label: noPorts
-    mu: "ev/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# netstat.udp4.errs
+<%
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.netstat.udp4.errs",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_netstat_Udp_InErrors,node_netstat_UdpLite_InErrors,node_netstat_Udp_NoPorts",
+  "title" -> s"${titleName} - Network UDP InErrs/LiteInErrs/NoPorts",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "inErrs", "mu" -> "ev/s"),
+    Map( "label" -> "liteInErrs", "mu" -> "ev/s"),
+    Map( "label" -> "noPorts", "mu" -> "ev/s")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "netstat.udp4.errs"))
+  ))
+%>
 
-- id: <%= id_prefix %><%= node_name %>.netstat.udp6.datagrams
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_netstat_Udp6_InDatagrams,node_netstat_Udp6_OutDatagrams"
-  title: "<%= title_prefix %><%= node_name %> - UDP6 InDatagrams/OutDatagrams"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: in
-    mu: "pkt/s"
-  - label: out
-    mu: "pkt/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# netstat.udp6.datagrams
+<%
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.netstat.udp6.datagrams",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_netstat_Udp6_InDatagrams,node_netstat_Udp6_OutDatagrams",
+  "title" -> s"${titleName} - Network UDP6 InDatagrams/OutDatagrams",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+  Map( "label" -> "in", "mu" -> "dgm/s"),
+  Map( "label" -> "out", "mu" -> "dgm/s")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "netstat.udp6.datagrams"))
+  ))
+%>
 
-- id: <%= id_prefix %><%= node_name %>.netstat.udp6.errs
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_netstat_Udp6_InErrors,node_netstat_UdpLite6_InErrors,node_netstat_Udp6_NoPorts"
-  title: "<%= title_prefix %><%= node_name %> - UDP6 InErrs/LiteInErrs/NoPorts"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: inErrs
-    mu: "ev/s"
-  - label: liteInErrs
-    mu: "ev/s"
-  - label: noPorts
-    mu: "ev/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# netstat.udp6.errs
+<%
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.netstat.udp6.errs",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_netstat_Udp6_InErrors,node_netstat_UdpLite6_InErrors,node_netstat_Udp6_NoPorts",
+  "title" -> s"${titleName} - Network UDP6 InErrs/LiteInErrs/NoPorts",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "inErrs", "mu" -> "ev/s"),
+    Map( "label" -> "liteInErrs", "mu" -> "ev/s"),
+    Map( "label" -> "noPorts", "mu" -> "ev/s")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "netstat.udp6.errs"))
+  ))
+%>
 
-- id: <%= id_prefix %><%= node_name %>.netstat.ipv4.octets
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_netstat_IpExt_InOctets,node_netstat_IpExt_OutOctets"
-  title: "<%= title_prefix %><%= node_name %> - Netstat IPV4 I/O Octets"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: in
-    mu: "B/s"
-  - label: out
-    mu: "B/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# netstat.ipv4.octets
+<%
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.netstat.ipv4.octets",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_netstat_IpExt_InOctets,node_netstat_IpExt_OutOctets",
+  "title" -> s"${titleName} - Network IPV4 I/O Octets",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "in", "mu" -> "B/s"),
+    Map( "label" -> "out", "mu" -> "B/s")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "netstat.ipv4.octets"))
+  ))
+%>
 
-- id: <%= id_prefix %><%= node_name %>.netstat.ipv6.octets
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get node_netstat_Ip6_InOctets,node_netstat_Ip6_OutOctets"
-  title: "<%= title_prefix %><%= node_name %> - Netstat IPV6 I/O Octets"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: in
-    mu: "B/s"
-  - label: out
-    mu: "B/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+# netstat.ipv6.octets
+<%
+  render("shared/_rrd_object.yml.ssp", Map(
+  "id" -> s"${idName}.netstat.ipv6.octets",
+  "pre_fetch" -> metricsPf,
+  "command" -> ":scrape get node_netstat_Ip6_InOctets,node_netstat_Ip6_OutOctets",
+  "title" -> s"${titleName} - Network IPV6 I/O Octets",
+  "notify_fail" -> notify_fail,
+  "rrd_type" -> "DDERIVE",
+  "rra" -> rraDef,
+  //"rrd_init_source" -> rrdInitSrc,
+  "interval" -> interval,
+  "vars" -> Seq(
+    Map( "label" -> "in", "mu" -> "B/s"),
+    Map( "label" -> "out", "mu" -> "B/s")
+  ),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "netstat.ipv6.octets"))
+  ))
+%>
 
 
 ######################
 #### details stats
 
-#for ( t <- cpuIdPrefixes.zipWithIndex )
+#### CPU details
 <%
-  val cpuIdPx = t._1
-  val cpuIdNum = t._2
-  val coreId = s"core${cpuIdNum}"
+  for ( t <- cpuIdPrefixes.zipWithIndex ) {
+    val cpuIdPx = t._1
+    val cpuIdNum = t._2
+    val coreId = s"core${cpuIdNum}"
 
-  val scrapeGetParams = cpuUsageComponents.map { cuc =>
+    val scrapeGetParams = cpuUsageComponents.map { cuc =>
     s"${cpuIdPx}mode.${cuc}"
-  }.mkString(",")
+    }.mkString(",")
 %>
-- id: <%= id_prefix %><%= node_name %>._dtl.<%= coreId %>.cpu
-  title: "<%= title_prefix %><%= node_name %> - CPU usage (<%= coreId %>)"
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  command: ":scrape get <%= scrapeGetParams %>"
-  rrd_type: DDERIVE
-  stack: true
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-#for (stat <- cpuUsageComponents)
-  - label: <%= stat %>
-    mu: "%"
-    lt: "AREA"
-    cdef: "$ds,100,*"
-#end
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
 
-#end
+# _dtl.<%= coreId %>.cpu
+<%
+    render("shared/_rrd_object.yml.ssp", Map(
+    "id" -> s"${idName}._dtl.${coreId}.cpu",
+    "pre_fetch" -> metricsPf,
+    "command" -> s":scrape get ${scrapeGetParams}",
+    "title" -> s"${titleName} - CPU usage (${coreId})",
+    "notify_fail" -> notify_fail,
+    "rrd_type" -> "DDERIVE",
+    "rra" -> rraDef,
+    //"rrd_init_source" -> rrdInitSrc,
+    "interval" -> interval,
+    "vars" -> cpuUsageComponents.map { stat =>
+      Map( "label" -> stat, "mu" -> "%", "lt" -> "AREA", "cdef" -> "$ds,100,*")
+    },
+    "object_labels" -> (myExtraLabels ++ Map("stat" -> "cpu", "cpu_core" -> coreId))
+    ))
+  } // for ( t <- cpuIdPrefixes.zipWithIndex )
+%>
 
-#for (dvc <- diskDevices)
+#### Disk devices details
+<%
+  for (dvc <- diskDevices) {
+%>
 
-- id: <%= id_prefix %><%= node_name %>._dtl.<%= dvc %>.blkio
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  title: "<%= title_prefix %><%= node_name %> - Block Device I/O (<%= dvc %>)"
-  command: ":scrape get node_disk_written_bytes_total.device.<%= dvc %>,node_disk_read_bytes_total.device.<%= dvc %>"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: wrtn
-    mu: "B/s"
-  - label: read
-    mu: "B/s"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
+#  _dtl.<%= dvc %>.blkio
+<%
+    render("shared/_rrd_object.yml.ssp", Map(
+    "id" -> s"${idName}._dtl.${dvc}.blkio",
+    "pre_fetch" -> metricsPf,
+    "command" -> s":scrape get node_disk_written_bytes_total.device.${dvc},node_disk_read_bytes_total.device.${dvc}",
+    "title" -> s"${titleName} - Block Device I/O (${dvc})",
+    "notify_fail" -> notify_fail,
+    "rrd_type" -> "DDERIVE",
+    "rra" -> rraDef,
+    //"rrd_init_source" -> rrdInitSrc,
+    "interval" -> interval,
+    "vars" -> Seq(
+      Map( "label" -> "wrtn", "mu" -> "B/s"),
+      Map( "label" -> "read", "mu" -> "B/s")
+    ),
+    "object_labels" -> (myExtraLabels ++ Map("stat" -> "blkio", "dvc" -> dvc))
+    ))
+  } // for (dvc <- diskDevices)
+%>
 
-#end
+#### Network devices details
+<%
+  for (dvc <- myNetDevices) {
+%>
 
-#for (dvc <- myNetDevices)
-# dtl object for netio dvc <%= dvc %>
-- id: <%= id_prefix %><%= node_name %>._dtl.<%= dvc %>.netio
-  pre_fetch: <%= id_prefix %><%= node_name %>.metrics.parse
-  title: "<%= title_prefix %><%= node_name %> - Network Device I/O (<%= dvc %>)"
-  command: ":scrape get node_network_receive_bytes<%= totalSuffix %>.device.<%= dvc %>,node_network_transmit_bytes<%= totalSuffix %>.device.<%= dvc %>"
-  rrd_type: DDERIVE
-  interval: <%= interval.toString %>
-#if (rraDef != "")
-  rra: <%= rraDef %>
-#end
-  vars:
-  - label: in
-    mu: "b/s"
-    cdef: "$ds,8,*"
-  - label: out
-    mu: "b/s"
-    cdef: "$ds,8,*"
-#if (extra_labels.size > 0)
-  labels:
-  #for (kv <- extra_labels)
-    <%= kv._1 %>: "<%= kv._2 %>"
-  #end
-#end
-
-#end
+#  _dtl.<%= dvc %>.netio
+<%
+    render("shared/_rrd_object.yml.ssp", Map(
+    "id" -> s"${idName}._dtl.${dvc}.netio",
+    "pre_fetch" -> metricsPf,
+    "command" -> s":scrape get node_network_receive_bytes${totalSuffix}.device.${dvc},node_network_transmit_bytes${totalSuffix}.device.${dvc}",
+    "title" -> s"${titleName} - Network Device I/O (${dvc})",
+    "notify_fail" -> notify_fail,
+    "rrd_type" -> "DDERIVE",
+    "rra" -> rraDef,
+    //"rrd_init_source" -> rrdInitSrc,
+    "interval" -> interval,
+    "vars" -> Seq(
+      Map( "label" -> "in", "mu" -> "b/s", "cdef" -> "$ds,8,*" ),
+      Map( "label" -> "out", "mu" -> "b/s", "cdef" -> "$ds,8,*")
+    ),
+    "object_labels" -> (myExtraLabels ++ Map("stat" -> "netio", "dvc" -> dvc))
+    ))
+  } // for (dvc <- myNetDevices)
+%>

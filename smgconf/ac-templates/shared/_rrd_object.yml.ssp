@@ -17,7 +17,10 @@
 <%@ val rra: String = "" %>
 <%@ val rra_def: String = "" %>
 <%@ val sanitize_labels: Boolean = true %>
-<% val rraDef = if (rra == "") rra_def else rra %>
+<%
+  val rraDef = if (rra == "") rra_def else rra
+  val myObjectLabels = Map("ac_type" -> "rrd") ++ object_labels
+%>
 # id = <%= id %>
 # command = <%= command %>
 - id: <%= id %>
@@ -55,7 +58,7 @@
     "ident_spaces" -> 2))
 
   render("_object_labels.yml.ssp", Map(
-    "object_labels" -> object_labels,
+    "object_labels" -> myObjectLabels,
     "sanitize_labels" -> sanitize_labels,
     "ident_spaces" -> 2))
 %>

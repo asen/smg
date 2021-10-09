@@ -120,7 +120,7 @@ class SMGAutoConfPluginSpec extends Specification{
     "work with cadvisor" in {
         val data = SMGFileUtil.getFileLines("test-data/metrics-cadvisor.txt")
         val p = new SMGTemplateProcessor(log)
-        val out = p.processTemplate("smgconf/ac-templates/cadvisor-k8s.yml.ssp", "dummy-output" , Map(
+        val out = p.processTemplate("smgconf/ac-templates/k8s-cadvisor.yml.ssp", "dummy-output" , Map(
           "node_name" -> "localhost",
           "node_host" -> "localhost",
           "command" -> "cat 'test-data/metrics-cadvisor.txt'",
@@ -137,6 +137,20 @@ class SMGAutoConfPluginSpec extends Specification{
       val p = new SMGTemplateProcessor(log)
       val out = p.processTemplate("smgconf/ac-templates/k8s-kube-state-metrics.yml.ssp", "dummy-output" , Map(
         "command" -> "cat 'test-data/kube-state-metrics.txt'",
+        "data" -> data
+      )).get
+      println("===================")
+      println(out)
+      1.equals(1)
+    }
+
+    "work with node-exporter" in {
+      val data = SMGFileUtil.getFileLines("test-data/node-exporter.txt")
+      val p = new SMGTemplateProcessor(log)
+      val out = p.processTemplate("smgconf/ac-templates/node-exporter.yml.ssp", "dummy-output" , Map(
+        "command" -> "cat 'test-data/kube-state-metrics.txt'",
+        "node_name" -> "smg1",
+        "node_host" -> "192.168.1.77",
         "data" -> data
       )).get
       println("===================")
