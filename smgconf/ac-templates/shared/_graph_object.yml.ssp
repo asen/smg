@@ -1,0 +1,38 @@
+### shared/_graph_object.yml.ssp
+<%@ val id: String %>
+<%@ val ref: String %>
+<%@ val gv: Seq[Int] = Seq() %>
+<%@ val cdef_vars: Seq[Map[String,Object]] = Seq() %><%
+  // optional params below
+%><%@ val title: String = "" %>
+<%@ val object_labels: Map[String,Object] = Map() %>
+<%@ val stack: Boolean = false %>
+<%@ val sanitize_labels: Boolean = true %>
+<%
+  val myObjectLabels = Map("ac_type" -> "graph") ++ object_labels
+%>
+- id: <%= id %>
+  ref: <%= ref %>
+<% if (title != "") { %>
+  title: <%= title %>
+<% } %>
+  stack: <%= stack.toString %>
+<% if (gv.nonEmpty) { %>
+  gv:
+<%   gv.foreach { ix => %>
+  - <%= ix.toString %>
+<%   } // gv.foreach
+  } // if (gv.nonEmpty)
+
+  if (cdef_vars.nonEmpty){
+    render("_object_vars.yml.ssp", Map(
+      "vars" -> cdef_vars,
+      "vars_name" -> "cdef_vars",
+      "ident_spaces" -> 2))
+  }
+
+  render("_object_labels.yml.ssp", Map(
+    "object_labels" -> myObjectLabels,
+    "sanitize_labels" -> sanitize_labels,
+    "ident_spaces" -> 2))
+%>

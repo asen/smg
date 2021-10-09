@@ -321,6 +321,37 @@
   ))
 %>
 
+<%
+  //a graph object, subset of cpu usages
+  // "user", "nice", "system", "idle", "iowait", "irq", "softirq", "steal"
+  render("shared/_graph_object.yml.ssp", Map(
+  "id" -> s"${idName}._agg.cpu_user_system",
+  "ref" -> s"${idName}._agg.cpu",
+  "title" -> s"${titleName} - CPU usage - user/system only (all cores)",
+  "cdef_vars" -> Seq(
+    Map("cdef" -> "$ds0", "label" -> "user", "mu" -> "%"),
+    Map("cdef" -> "$ds2", "label" -> "system", "mu" -> "%")
+  ),
+  // "gv" -> Seq(0, 2),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "cpu_user_system", "cpu_core" -> "all"))
+  ))
+%>
+
+<%
+  //a graph object, subset of cpu usages
+  render("shared/_graph_object.yml.ssp", Map(
+  "id" -> s"${idName}._agg.cpu_nice_wait",
+  "ref" -> s"${idName}._agg.cpu",
+  "title" -> s"${titleName} - CPU usage - nice/wait only (all cores)",
+  "cdef_vars" -> Seq(
+    Map("cdef" -> "$ds1", "label" -> "nice", "mu" -> "%"),
+    Map("cdef" -> "$ds4", "label" -> "iowait", "mu" -> "%")
+  ),
+  // "gv" -> Seq(1, 4),
+  "object_labels" -> (myExtraLabels ++ Map("stat" -> "cpu_nice_wait", "cpu_core" -> "all"))
+  ))
+%>
+
 #### Interrupts/context switches
 <%
  render("shared/_rrd_object.yml.ssp", Map(
