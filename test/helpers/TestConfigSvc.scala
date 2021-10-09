@@ -20,12 +20,12 @@ class TestConfigSvc() extends SMGConfigService {
     SMGCmd("rm -f test-out/*").run()
   }
 
-  def rrdObject(oid: String, numVars: Int, pfId: Option[String]): SMGRrdObject = SMGRrdObject(id = oid,
+  def rrdObject(oid: String, numVars: Int, pfId: Option[String], rrdType: String = "GAUGE"): SMGRrdObject = SMGRrdObject(id = oid,
     parentIds = Seq(),
     command = SMGCmd((1 to numVars).map(i => s"echo $i").mkString(" && ")),
     vars =  (1 to numVars).map(i => SMGObjectVar(Map("label" -> s"var$i"))).toList,
     title = s"$oid Title",
-    rrdType = "GAUGE",
+    rrdType = rrdType,
     interval = 60,
     dataDelay = 0,
     delay = 0.0,
@@ -38,13 +38,13 @@ class TestConfigSvc() extends SMGConfigService {
     Map()
   )
 
-  def rrdAggObject(oid: String, ous: Seq[SMGObjectUpdate], numVars: Int): SMGRrdAggObject = {
+  def rrdAggObject(oid: String, ous: Seq[SMGObjectUpdate], numVars: Int, rrdType: String = "GAUGE"): SMGRrdAggObject = {
     SMGRrdAggObject(id = oid,
       ous = ous,
       aggOp = "SUM",
       vars =  (1 to numVars).map(i => SMGObjectVar(Map("label" -> s"var$i", "cdef" -> "$ds,2,*"))).toList,
       title = "test,object.1 Title",
-      rrdType = "GAUGE",
+      rrdType = rrdType,
       interval = 60,
       dataDelay = 0,
       stack = false,
@@ -60,6 +60,8 @@ class TestConfigSvc() extends SMGConfigService {
     val aggou1 = rrdObject("test.object.aggou1", 2, None)
     val aggou2 = rrdObject("test.object.aggou2", 2, None)
     val aggu = rrdAggObject("test.object.aggu", Seq(aggou1,aggou2), 2)
+    val aggou3c = rrdObject("test.object.aggou3c", 2, None, "DDERIVE")
+    val aggu1 = rrdAggObject("test.object.aggu1", Seq(aggou3c), 2, "DDERIVE")
     SMGLocalConfig(
       globals = Map(
         "$monlog_dir" -> "test-out",
@@ -77,7 +79,9 @@ class TestConfigSvc() extends SMGConfigService {
         rrdObject("test.pf.object.3", 2, Some("test.prefetch")),
         aggou1,
         aggou2,
-        aggu
+        aggou3c,
+        aggu,
+        aggu1
       ),
       indexes = Seq(
         SMGConfIndex(id = "test.index.1",
@@ -177,6 +181,8 @@ class TestConfigSvc() extends SMGConfigService {
 
   override val executionContexts: ExecutionContexts = new TestExecutionContexts()
 
+  private val valuesCache = new SMGValuesCache(log)
+
   /**
     * Store recently fetched object value into cache.
     *
@@ -184,7 +190,9 @@ class TestConfigSvc() extends SMGConfigService {
     * @param tss  - fetch timestamp (seconds)
     * @param vals - fetched values
     */
-  override def cacheValues(ou: SMGObjectUpdate, tss: Int, vals: List[Double]): Unit = {}
+  override def cacheValues(ou: SMGObjectUpdate, tss: Int, vals: List[Double]): Unit = {
+    valuesCache.cacheValues(ou, tss, vals)
+  }
 
   /**
     * Get the latest cached values for given object
@@ -192,8 +200,9 @@ class TestConfigSvc() extends SMGConfigService {
     * @param ou - object update
     * @return
     */
-  override def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int]) =
-    (List(), None)
+  override def getCachedValues(ou: SMGObjectUpdate, counterAsRate: Boolean): (List[Double], Option[Int]) = {
+    valuesCache.getCachedValues(ou, counterAsRate)
+  }
 
   /**
     * Invalidate any previously cached values for this object

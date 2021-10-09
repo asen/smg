@@ -80,7 +80,14 @@ class SMGValuesCache(log: SMGLoggerApi) {
           } else {
             (nanList, None) // time delta outside range
           }
-        } else  (nanList, None)
+        } else {  // no prev value
+          if (counterAsRate) {
+            (nanList, None) // can't calc rate w/o prev value
+          } else {
+            // but can use the last values if rate was not requested
+            (opt.get.vals, Some(opt.get.tss))
+          }
+        }
       } else //not a counter
         (opt.get.vals, Some(opt.get.tss))
     } else  {
