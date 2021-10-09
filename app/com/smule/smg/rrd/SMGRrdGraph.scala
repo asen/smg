@@ -57,7 +57,6 @@ class SMGRrdGraph(val rrdConf: SMGRrdConfig, val objv: SMGObjectView) extends SM
           if (!gopts.disablePop) {
             c.append(" 'CDEF:pp_").append(rrdLbl).append("=").append(substCdef(cdef.get, "pp_" + srcLabel)).append("'")
           }
-          rrdLbl
         }
         if (objv.cdefVars.isEmpty) {
           val gvStr = graphVar(v, rrdLbl, vlabel, colorMaker, first = first, stacked = objv.stack, gopts)
