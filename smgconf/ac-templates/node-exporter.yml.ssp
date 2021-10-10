@@ -262,17 +262,51 @@
   render("shared/_index.yml.ssp", Map(
   "id" -> s"${idName}.w_dtl",
   "px" -> s"${idName}.",
-  "title" -> s"${titleName} - including device/core details",
+  "title" -> s"${titleName} - including individual device/cpu core details",
   "parent" -> idName
   ))
 %>
 
-# Another Node Index (including details)
+# CPU - Related stats
 <%
   render("shared/_index.yml.ssp", Map(
-  "id" -> s"${idName}.netstat",
-  "px" -> s"${idName}.netstat.",
-  "title" -> s"${titleName} - Network (netstat) stats - only",
+  "id" -> s"${idName}.cpu_stats",
+  "px" -> s"${idName}.",
+  "rx" -> "sysload|cpu|intctx",
+  "title" -> s"${titleName} - CPU related stats - only",
+  "parent" -> idName
+  ))
+%>
+
+# Memory - Related stats
+<%
+  render("shared/_index.yml.ssp", Map(
+  "id" -> s"${idName}.mem_stats",
+  "px" -> s"${idName}.",
+  "rx" -> "meminfo|swapinfo",
+  "title" -> s"${titleName} - Memory related stats - only",
+  "parent" -> idName
+  ))
+%>
+
+# Disk - Related stats
+<%
+  render("shared/_index.yml.ssp", Map(
+  "id" -> s"${idName}.disk_stats",
+  "px" -> s"${idName}.",
+  "rx" -> "blkio|fs.percused",
+  "title" -> s"${titleName} - Disk related stats - only",
+  "parent" -> idName
+  ))
+%>
+
+# Netstats Index
+<%
+  render("shared/_index.yml.ssp", Map(
+  "id" -> s"${idName}.net_stats",
+  "px" -> s"${idName}.",
+  "rx" -> "netio|netstat",
+  "title" -> s"${titleName} - Network related stats - only",
   "parent" -> idName
   ))
 %>
