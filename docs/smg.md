@@ -47,24 +47,6 @@ SMG's main page (/) displays a list of [configured top-level indexes](#concepts-
 
 SMG uses the (excellent) [rrdtool](http://oss.oetiker.ch/rrdtool/) tool to store the values it fetches from external services into so called Round Robin Database (RRD) files. Check the tool homepage for more details but in a nutshell RRD files are with fixed (upon creation) size which store series of numbers over different periods using bigger averaging steps the older the data gets. So rrdtool (and in turn - SMG) keeps most recent data (by default - 96h in SMG) into the minimal for SMG run interval (default - every-minute) granularity (which corresponds to maximal resolution) and older data gets averaged over longer period and kept like that (at smaller resolution).
 
-
-### Concepts - TOC
-
-1. [RRD objects](#concepts-rrd-objects)
-1. [Intervals, runs and scheduler](#concepts-intervals)
-1. [pre\_fetch and run command trees](#concepts-pre_fetch)
-1. [Period since and period length](#concepts-period)
-1. [Filters](#concepts-filters)
-1. [Indexes](#concepts-indexes)
-1. [Custom dahsboards](#concepts-cdash)
-1. [Graph options](#concepts-gopts)
-1. [Aggregate functions](#concepts-aggregate-functions)
-1. [View objects and calculated graphs](#concepts-view-objects)
-1. [Remotes](#concepts-remotes)
-1. [Plugins](#concepts-plugins)
-1. [Monitoring](#concepts-monitoring)
-    1. [Anomaly detection](#concepts-anomaly)
-
 <a name="concepts-rrd-objects" />
 
 ### RRD objects
@@ -228,7 +210,7 @@ Whenever SMG displays the graphs resulting from the given filter it uses the **R
 
 <a name="concepts-sorting" />
 
-#### Sorting
+#### Sorting and grouping
 
 SMG supports sorting a displayed page of graphs by the average value of a given object variable. The object variable is specified via the 1-based integer position of the variable within the list of object ones - the *x-sort* dashboard filter form field.
 
@@ -238,13 +220,15 @@ One important note is that sorting is an expensive operation - it involves a *rr
  
 The current workaround to that limitation is to set a high-enough *rows* parameter so you get all the graphs you want to sort on one page which you can sort after.
 
-A special case of sorting is group by (with value of x-sort=-1). In this case graphs will be grouped for display based on the Group By drop down value.
+A special case of sorting is group by (with value of x-sort=-1, or the GroupBy button). In this case graphs will be grouped for display based on the Group By drop down value.
+
+The different options in the drop down match the Index "group by" (gb) config values and are described in detail in the respective [configuration reference section](smg-config.html#group-by).
 
 <a name="concepts-aggregate-functions" />
 
 ### Aggregate functions
 
-SMG supports "aggregating" graphs for objects which have identical set of [variables definitions](smg-config.html#obj-vars) using one of the currently available functions (these are available as buttons on the graphs display page): 
+SMG supports "aggregating" graphs for objects which have compatible set of time series and grouped based on the Group By drop down value mentioned above. This works using one of the currently available functions (these are available as buttons on the graphs display page):
 
 - **GROUP** - just putting the same type graphs together in a single graph
 - **STACK** - stacking the graph lines on top of each other

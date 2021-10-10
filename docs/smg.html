@@ -164,7 +164,6 @@
 <li><a href="#ui-orientation">UI orientation</a></li>
 <li><a href="#concepts-overview">Concepts overview</a>
 <ul>
-<li><a href="#concepts---toc">Concepts - TOC</a></li>
 <li><a href="#rrd-objects">RRD objects</a></li>
 <li><a href="#intervals-runs-and-scheduler">Intervals, runs and scheduler</a></li>
 <li><a href="#pre_fetch-and-run-command-trees">pre_fetch and run command trees</a></li>
@@ -189,7 +188,7 @@
 <li><a href="#maxy">MaxY</a></li>
 <li><a href="#miny">MinY</a></li>
 <li><a href="#rows-and-columns">Rows and columns</a></li>
-<li><a href="#sorting">Sorting</a></li>
+<li><a href="#sorting-and-grouping">Sorting and grouping</a></li>
 </ul></li>
 <li><a href="#aggregate-functions">Aggregate functions</a></li>
 <li><a href="#view-objects-and-calculated-graphs">View objects and calculated graphs</a></li>
@@ -254,25 +253,6 @@
 <p><a name="concepts" /></p>
 <h2 id="concepts-overview">Concepts overview</h2>
 <p>SMG uses the (excellent) <a href="http://oss.oetiker.ch/rrdtool/">rrdtool</a> tool to store the values it fetches from external services into so called Round Robin Database (RRD) files. Check the tool homepage for more details but in a nutshell RRD files are with fixed (upon creation) size which store series of numbers over different periods using bigger averaging steps the older the data gets. So rrdtool (and in turn - SMG) keeps most recent data (by default - 96h in SMG) into the minimal for SMG run interval (default - every-minute) granularity (which corresponds to maximal resolution) and older data gets averaged over longer period and kept like that (at smaller resolution).</p>
-<h3 id="concepts---toc">Concepts - TOC</h3>
-<ol type="1">
-<li><a href="#concepts-rrd-objects">RRD objects</a></li>
-<li><a href="#concepts-intervals">Intervals, runs and scheduler</a></li>
-<li><a href="#concepts-pre_fetch">pre_fetch and run command trees</a></li>
-<li><a href="#concepts-period">Period since and period length</a></li>
-<li><a href="#concepts-filters">Filters</a></li>
-<li><a href="#concepts-indexes">Indexes</a></li>
-<li><a href="#concepts-cdash">Custom dahsboards</a></li>
-<li><a href="#concepts-gopts">Graph options</a></li>
-<li><a href="#concepts-aggregate-functions">Aggregate functions</a></li>
-<li><a href="#concepts-view-objects">View objects and calculated graphs</a></li>
-<li><a href="#concepts-remotes">Remotes</a></li>
-<li><a href="#concepts-plugins">Plugins</a></li>
-<li><a href="#concepts-monitoring">Monitoring</a>
-<ol type="1">
-<li><a href="#concepts-anomaly">Anomaly detection</a></li>
-</ol></li>
-</ol>
 <p><a name="concepts-rrd-objects" /></p>
 <h3 id="rrd-objects">RRD objects</h3>
 <p>Every graph in SMG corresponds to one or more (check aggregate functions below) RRD objects. These are configured in the yaml config and have a bunch of properties (described in detail in the <a href="#rrd-objects">config section</a> of these docs).</p>
@@ -371,15 +351,16 @@
 <h4 id="rows-and-columns">Rows and columns</h4>
 <p>Whenever SMG displays the graphs resulting from the given filter it uses the <strong>Rows</strong> and <strong>Columns</strong> form parameter values to limit the displayed graphs (it is unlikely that we want 10000 graphs displayed on one page). So one would see at most “Columns” columns of graphs in a “row” (may be less, depending on screen size) with at most “Rows” rows per page.</p>
 <p><a name="concepts-sorting" /></p>
-<h4 id="sorting">Sorting</h4>
+<h4 id="sorting-and-grouping">Sorting and grouping</h4>
 <p>SMG supports sorting a displayed page of graphs by the average value of a given object variable. The object variable is specified via the 1-based integer position of the variable within the list of object ones - the <em>x-sort</em> dashboard filter form field.</p>
 <p>For example if you have page of graphs showing network switch ports (objects with two variables - one for incoming and one for outgoing traffic) and if you want to sort them by their outgoing traffic (that would be the second var in the object’s vars list) you would set <em>x-sort</em> = 2. The default <em>x-sort</em> value (0) implies no sorting.</p>
 <p>One important note is that sorting is an expensive operation - it involves a <em>rrdtool fetch</em> command in addition to the graph command (<em>rrdtool graph</em>) and the former is almost as expensive as the later. Because of this currently SMG will only sort within the currently displayed page of graphs. This is mainly to avoid cases where (possibly by mistake) one can try to sort all graphs (possibly hundreds of thousands) by setting x-sort to 1 on a match-all filter.</p>
 <p>The current workaround to that limitation is to set a high-enough <em>rows</em> parameter so you get all the graphs you want to sort on one page which you can sort after.</p>
-<p>A special case of sorting is group by (with value of x-sort=-1). In this case graphs will be grouped for display based on the Group By drop down value.</p>
+<p>A special case of sorting is group by (with value of x-sort=-1, or the GroupBy button). In this case graphs will be grouped for display based on the Group By drop down value.</p>
+<p>The different options in the drop down match the Index “group by” (gb) config values and are described in detail in the respective <a href="smg-config.html#group-by">configuration reference section</a>.</p>
 <p><a name="concepts-aggregate-functions" /></p>
 <h3 id="aggregate-functions">Aggregate functions</h3>
-<p>SMG supports “aggregating” graphs for objects which have identical set of <a href="smg-config.html#obj-vars">variables definitions</a> using one of the currently available functions (these are available as buttons on the graphs display page):</p>
+<p>SMG supports “aggregating” graphs for objects which have compatible set of time series and grouped based on the Group By drop down value mentioned above. This works using one of the currently available functions (these are available as buttons on the graphs display page):</p>
 <ul>
 <li><strong>GROUP</strong> - just putting the same type graphs together in a single graph</li>
 <li><strong>STACK</strong> - stacking the graph lines on top of each other</li>

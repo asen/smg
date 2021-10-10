@@ -242,7 +242,7 @@ In addition to the "regular" RRD Objects described above, one can define "aggreg
       alert-warn-gt: 8                                  # optional - monitoring thresholds, details below
     - label: sl5min                                     # another variable def
     - label: sl15min                                    # a 3d variable def
-  labels:                                               # object labels, useful for filtering and grouping by
+  labels:                                               # optional - object labels, useful for filtering and grouping by
     foo: bar
 </pre>
 
@@ -410,9 +410,24 @@ Index objects support the following properties:
 
 - **agg\_op**: (default - None) - A SMG aggregate operation string (one of _GROUP_, _STACK_, _SUM_, _SUMN_, _AVG_, _MAX_ or _MIN_ ). If that is specified SMG will directly apply the respective [aggregate operation](smg.html#concepts-aggregate-functions) to the graphs resulting from the filter, before display.
 
-- **gb**: (default - None) - Group By val (TODO)
+<a name="group-by" />
 
-- **gbp**: (default - None) - Grup By "param" val (TODO)
+- **gb**: (default - None) - "Group By" value. If set it must be one of the following GB_\* values, listed below with their meanings:
+    - GB_VARS - By same vars definitions (default)
+    - GB_OBJLBLS - By same object label values. Supports additional optional parameter, see gbp next
+    - GB_VARSSX - By same vars defs and object id suffix
+    - GB_VARSSX2 - By same vars defs and object id suffix (2 levels)
+    - GB_VARSSX3 - By same vars defs and object id suffix (3 levels)
+    - GB_VARSPX - By same vars defs and object id prefix
+    - GB_VARSPX2 - By same vars defs and object id prefix (2 levels)
+    - GB_VARSPX3 - By same vars defs and object id prefix (3 levels)
+    - GB_VARLBLMU - By same vars labels and units
+    - GB_VARLBLMUSX - By same vars labels and units and object id suffix
+    - GB_NUMV - By same number of vars
+    - GB_NUMVSX - By same number of vars and suffix
+
+
+- **gbp**: (default - None) - "Grup By Param" value - this is only applicable when gb is set to GB_OBJLBLS and is a space separated list of object label names. Graphs having the same object label values for the listed names would be grouped together.
 
 - **xagg**: (default - false) - By default, when SMG is executing aggregate operations it will execute them "per-remote" - result will have the aggrgeate graphs split and displayed by the remote instance they "live" in. It is possible to request aggregation across all remotes too - by setting the xagg value to _true_. Note that this is a relatively expensive operation - SMG has to download all neded remote RRD files to be able to produce a single graph from them so results can be expected to be a bit slower than normally.
 
@@ -420,7 +435,12 @@ Index objects support the following properties:
 
 - **children**: - optional yaml list of strings pointing to other index ids. The indexes pointed by these ids will be displayed as children for this index. Note that the target indexes do not need to have their parent pointed to this index. I.e. an index can have multiple parents that way.
 
-The remaining index properties represent a filter (with graph options). These deserve thir own subsection:
+- **dhmap** - (TODO) when set to true, SMG will disable (not display) Monitoring heatmap for that index.
+
+- **alerts** - alert and notifications configurations defined for all objects matching this index. Check [monitoring configuration](#monitoring) for more details.
+
+
+The remaining index properties represent a Filter with Graph Options. These deserve their own subsections:
 
 <a name="filters" />
 
@@ -460,9 +480,6 @@ A filter (and its graph options) is configured as part of an index definition us
 
 - **remote** (Remote instance, by default - None, meaning local). This should be either set to "\*" (quoted in the yaml as the asterisk is special char) which means that this filter should filter across all available remotes or not set at all (meaning "local" filtering). When SMG displays remote index it will automatically populate its value when displaying (note that the "remote" definition is only meaningful in the context of another remote which references the former as some _remote id_).
 
-- **dhmap** - (TODO) when set to true, SMG will disable (not display) Monitoring heatmap for that index.
-
-- **alerts** - alert and notifications configurations defined for all objects matching this index. Check [monitoring configuration](#monitoring) for more details.
 
 <a name="graph-options" />
 
@@ -480,7 +497,7 @@ The remaining properties represent "Graph Options" - generally specifying some n
 
 - **maxy**: (maximum Y-value, default None) - a number setting a hard max limit on the Y-axis value of the displayed graphs.
 
-- **xsort**: (integer, default 0) - When different than 0 SMG will treat that as a request to sort the outputted (on the page) graphs by the average value of the var which (1-based) index is equal to xsort. E.g set to 1 to sort by the first variable, 2 for the second etc. Graphs which have less variables than the requested xsort index will remain unsorted. Sorting is also described [here](smg.html#concepts-sorting).
+- **xsort**: (integer, default 0) - When different than 0 SMG will treat that as a request to sort the outputted (on the page) graphs by the average value of the var which (1-based) index is equal to xsort. E.g set to 1 to sort by the first variable, 2 for the second etc. Graphs which have less variables than the requested xsort index will remain unsorted. Sorting is also described [here](smg.html#concepts-sorting). Note that sorting applies after grouping compatible graphs together which can be controlled using the [gb param](#group-by). Setting xsort to -1 will only group the graphs together but without any sorting within the groups.
 
 
 <a name="hindexes" />
