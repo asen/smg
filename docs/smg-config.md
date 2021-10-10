@@ -242,6 +242,8 @@ In addition to the "regular" RRD Objects described above, one can define "aggreg
       alert-warn-gt: 8                                  # optional - monitoring thresholds, details below
     - label: sl5min                                     # another variable def
     - label: sl15min                                    # a 3d variable def
+  labels:                                               # object labels, useful for filtering and grouping by
+    foo: bar
 </pre>
 
 As mentioned in the yaml comments above, some of the properties of the aggregate object will be assumed from the first object vars list, unless explicitly defined. It is up to the config to ensure that the list of objects to aggregate is compatible (and meaningful).
@@ -267,6 +269,8 @@ As mentioned in the [concepts overview](smg.html#concepts-view-objects) every RR
         - 1                                                  # index in ref object vars list
 </pre>
 
+Note that a special use case of a view object can be to simply define an alias (another object id) for an existing object, possibly to simplify filtering and grouping of somehow related objects with unrelated IDs and labels.
+
 - to be able to graph a value calculated from the RRD object's values using [cdef\_vars](#cdef_vars). Here is an example definition of such an object which is referencing another object with 2 vars (not visible here) - one for varnish req/sec and the other for varnish cache hit/sec. The View object below defines a single cdef var(line) calculating its values by evaluating the cdef expression  (calculating cache hit % in this case) [explained below](#cdef_vars-cdef)
 
 <pre>
@@ -288,6 +292,8 @@ View objects support the following properties:
 - **ref**: mandatory reference (string) to a RRD object id
 
 - **title**: - free form text description of the object. If not specified, the ref object title will be used.
+
+- **labels**: - key/value pairs useful for filtering and grouping.
 
 <a name="gv" />
 
@@ -371,6 +377,11 @@ Here is an example Index definition:
         - example.index.id1
         - example.index.id2
         - ...
+      alerts:                    # Alerts (and notfications) definitions for objects matching the index filter
+        - label: ...             # Individual time series within objects are matched using the "label" property
+          alert-crit-gt: ...     # See below for more details
+          notify-crit: ...
+        - ..
       remote: "*"                # optional - index remote, default is null, use "*" to specify index matching all remotes.
                                  # Individual remote instances can be specified by using their comma-separated ids.
 </pre>
@@ -451,7 +462,7 @@ A filter (and its graph options) is configured as part of an index definition us
 
 - **dhmap** - (TODO) when set to true, SMG will disable (not display) Monitoring heatmap for that index.
 
-- **alerts** - alert configurations defined for all objects matching this index. Check [monitoring configuration](#monitoring) for more details.
+- **alerts** - alert and notifications configurations defined for all objects matching this index. Check [monitoring configuration](#monitoring) for more details.
 
 <a name="graph-options" />
 

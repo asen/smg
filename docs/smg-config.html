@@ -380,6 +380,8 @@
       alert-warn-gt: 8                                  # optional - monitoring thresholds, details below
     - label: sl5min                                     # another variable def
     - label: sl15min                                    # a 3d variable def
+  labels:                                               # object labels, useful for filtering and grouping by
+    foo: bar
 </pre>
 <p>As mentioned in the yaml comments above, some of the properties of the aggregate object will be assumed from the first object vars list, unless explicitly defined. It is up to the config to ensure that the list of objects to aggregate is compatible (and meaningful).</p>
 <p>There is one additional aggregate operation supported by aggregate objects which is currently not supported by the UI - the RPN:<em>expression</em> op. The syntax for this is like “op: RPN:$ds0,$ds1,+”. That would apply the rpn operation on each of the vars of the list of objects where ds0 would map to the first object value, ds1 to the second one and so on.</p>
@@ -398,6 +400,7 @@
       gv:                                                    # a list of integers ("graph vars")
         - 1                                                  # index in ref object vars list
 </pre>
+<p>Note that a special use case of a view object can be to simply define an alias (another object id) for an existing object, possibly to simplify filtering and grouping of somehow related objects with unrelated IDs and labels.</p>
 <ul>
 <li>to be able to graph a value calculated from the RRD object’s values using <a href="#cdef_vars">cdef_vars</a>. Here is an example definition of such an object which is referencing another object with 2 vars (not visible here) - one for varnish req/sec and the other for varnish cache hit/sec. The View object below defines a single cdef var(line) calculating its values by evaluating the cdef expression (calculating cache hit % in this case) <a href="#cdef_vars-cdef">explained below</a></li>
 </ul>
@@ -416,6 +419,7 @@
 <li><p>the <strong>object id</strong>: This is the unique object view id (must not conflict with other view or rrd objects). Check <a href="#rrd-objects">RRD Objects</a> for more info on allowed and good object ids.</p></li>
 <li><p><strong>ref</strong>: mandatory reference (string) to a RRD object id</p></li>
 <li><p><strong>title</strong>: - free form text description of the object. If not specified, the ref object title will be used.</p></li>
+<li><p><strong>labels</strong>: - key/value pairs useful for filtering and grouping.</p></li>
 </ul>
 <p><a name="gv" /></p>
 <ul>
@@ -488,6 +492,11 @@ Old (deprecated) syntax:
         - example.index.id1
         - example.index.id2
         - ...
+      alerts:                    # Alerts (and notfications) definitions for objects matching the index filter
+        - label: ...             # Individual time series within objects are matched using the "label" property
+          alert-crit-gt: ...     # See below for more details
+          notify-crit: ...
+        - ..
       remote: "*"                # optional - index remote, default is null, use "*" to specify index matching all remotes.
                                  # Individual remote instances can be specified by using their comma-separated ids.
 </pre>
@@ -542,7 +551,7 @@ Old (deprecated) syntax:
 <p>All of these can be prepended with an ! to inverse their effect (i.e. whetehr to include or exclude matching objects). The labels filter supports multiple expressions sepaarted by space. This means that spaces in label value filters are not currently supported (as a workaround - use regex and \s).</p></li>
 <li><p><strong>remote</strong> (Remote instance, by default - None, meaning local). This should be either set to “*” (quoted in the yaml as the asterisk is special char) which means that this filter should filter across all available remotes or not set at all (meaning “local” filtering). When SMG displays remote index it will automatically populate its value when displaying (note that the “remote” definition is only meaningful in the context of another remote which references the former as some <em>remote id</em>).</p></li>
 <li><p><strong>dhmap</strong> - (TODO) when set to true, SMG will disable (not display) Monitoring heatmap for that index.</p></li>
-<li><p><strong>alerts</strong> - alert configurations defined for all objects matching this index. Check <a href="#monitoring">monitoring configuration</a> for more details.</p></li>
+<li><p><strong>alerts</strong> - alert and notifications configurations defined for all objects matching this index. Check <a href="#monitoring">monitoring configuration</a> for more details.</p></li>
 </ul>
 <p><a name="graph-options" /></p>
 <h3 id="graph-options">Graph options</h3>
