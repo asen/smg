@@ -70,7 +70,7 @@
 %>
 
 <%
-    for ( (nn, rows) <- rowsByNode ) {
+    for ( (nn, rows) <- rowsByNode.sortBy(_._1) ) {
       render("shared/_index.yml.ssp", Map(
         "id" -> s"${myIdPrefix}kubectl.top.nodes.${nn}",
         "title" -> s"${title_prefix}kubectl top nodes - ${nn}",
@@ -172,7 +172,7 @@
       r.labelsAsMap.getOrElse("smg_namespace", "") + "." + r.labelsAsMap.getOrElse("smg_top_pod", "")
     }
 
-    for ( (nn, rows) <- podRowsByNamespace ) {
+    for ( (nn, rows) <- podRowsByNamespace.sortBy(_._1) ) {
       render("shared/_index.yml.ssp", Map(
         "id" -> s"${myIdPrefix}kubectl.top.pods.${nn}",
         "title" -> s"${title_prefix}kubectl top pods - ${nn}",
@@ -187,7 +187,7 @@
         val podOwnerKind = row.labelsAsMap.getOrElse("smg_pod_owner_kind", "invalid")
         podStableBaseName(fullPodName, podOwnerKind)
       }
-      for ((stableBaseName, rows) <- byStableName) {
+      for ((stableBaseName, rows) <- byStableName.sortBy(_._1)) {
         val byPod = rows.groupBy(r => r.labelsAsMap.getOrElse("smg_top_pod", "invalid"))
         for ((t, dupIx) <- byPod.toSeq.sortBy(_._1).zipWithIndex) {
           val fullPodName = t._1
