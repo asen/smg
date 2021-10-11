@@ -80,7 +80,7 @@
 %>
 
 <%
-      for (row <- rows) {
+      for (row <- rows.sortBy(_.labelUid)) {
         val statId = row.labelsAsMap.getOrElse("smg_top_stat", "invalid")
         val tnOid = s"${myIdPrefix}kubectl.top.nodes.${nn}.${statId}"
         val rrdInitSource = if (rrd_init_source_regex != "")
@@ -199,7 +199,7 @@
             "parent" -> s"${myIdPrefix}kubectl.top.pods.${nn}",
             "px" -> s"${myIdPrefix}kubectl.top.pods.${nn}.${stableName}."
           ))
-          for (row <- rows) {
+          for (row <- rows.sortBy(_.labelUid)) {
             val statId = row.labelsAsMap.getOrElse("smg_top_stat", "invalid")
             val tpOid = s"${myIdPrefix}kubectl.top.pods.${nn}.${stableName}.${statId}"
             val rrdInitSource = if (rrd_init_source_regex != "")
@@ -234,7 +234,7 @@
               "parent" -> s"${myIdPrefix}kubectl.top.pods.${nn}.${stableName}",
               "px" -> s"${myIdPrefix}kubectl.top.conts.${nn}.${stableName}."
             ))
-            for (crow <- contsData.get) {
+            for (crow <- contsData.get.sortBy(_.labelUid)) {
               val contName = crow.labelsAsMap.getOrElse("smg_top_container", "invalid")
               val contStatId = crow.labelsAsMap.getOrElse("smg_top_stat", "invalid")
               val tcOid = s"${myIdPrefix}kubectl.top.conts.${nn}.${stableName}.${contName}.${contStatId}"
