@@ -4,7 +4,6 @@ import com.smule.smg.plugin.SMGPluginLogger
 import javax.management.{MBeanServerConnection, ObjectName}
 import javax.management.openmbean.CompositeData
 import javax.management.remote.{JMXConnector, JMXConnectorFactory, JMXServiceURL}
-
 import scala.util.Try
 import scala.collection.JavaConverters._
 
@@ -90,7 +89,7 @@ object SMGJmxConnection {
   import java.rmi.server.RMISocketFactory
 
 
-  val DEFAULT_RMI_SOCKET_TIMEOUT_MS = 5000
+  val DEFAULT_RMI_SOCKET_TIMEOUT_MS = 7000
 
   val log = new SMGPluginLogger("jmx")  // XXX don't have access to the plugin id here
 
@@ -122,6 +121,15 @@ object SMGJmxConnection {
     System.getProperties.setProperty("sun.rmi.transport.connectionTimeout", CONNECTION_UNUSED_TIMEOUT_MS.toString)
   } else {
     log.info(s"Not setting sun.rmi.transport.connectionTimeout because already set to $envPropConnectionTimeout")
+  }
+
+  private val envPropResponseTimeout =
+    System.getProperties.getProperty("sun.rmi.transport.tcp.responseTimeout", "INVALID")
+  if (envPropResponseTimeout == "INVALID") {
+    log.info(s"Setting sun.rmi.transport.tcp.responseTimeout to $DEFAULT_RMI_SOCKET_TIMEOUT_MS")
+    System.getProperties.setProperty("sun.rmi.transport.tcp.responseTimeout", DEFAULT_RMI_SOCKET_TIMEOUT_MS.toString)
+  } else {
+    log.info(s"Not setting sun.rmi.transport.tcp.responseTimeout because already set to $envPropResponseTimeout")
   }
 
   RMISocketFactory.setSocketFactory(new SMGJmxRMISocketFactory)
