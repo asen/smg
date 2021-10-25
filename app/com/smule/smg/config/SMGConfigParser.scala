@@ -876,7 +876,11 @@ class SMGConfigParser(log: SMGLoggerApi) {
           case e: ClassCastException => processConfigError(confFile, "bad top level object (expected List): " + yamlTopObject.getClass.toString)
         }
         val t1 = System.currentTimeMillis()
-        log.debug("SMGConfigServiceImpl.parseConf(" + confFile + "): Finishing for " + (t1 - t0) + " milliseconds at " + t1)
+        val dt = t1 - t0
+        if (dt > 500){
+          log.warn("SMGConfigServiceImpl.parseConf(" + confFile + "): Finishing for more than 500ms: " + dt + " milliseconds")
+        }
+        log.debug("SMGConfigServiceImpl.parseConf(" + confFile + "): Finishing for " + dt + " milliseconds at " + t1)
       } catch {
         case e: Throwable => processConfigError(confFile, s"parseConf: unexpected exception: $e")
       }
@@ -923,8 +927,13 @@ class SMGConfigParser(log: SMGLoggerApi) {
       }
     }
 
+    val t0 = System.currentTimeMillis()
     parseConf(topLevelConfigFile)
+    val t1 = System.currentTimeMillis()
+    log.info(s"SMGConfigParser.getNewConfig: top-level config parsed in ${t1 - t0}ms ($topLevelConfigFile)")
     reloadPluginsConf()
+    val t2 = System.currentTimeMillis()
+    log.info(s"SMGConfigParser.getNewConfig: plugins reloaded in ${t2 - t1}ms (plugins.size=${plugins.size}) - ${t2 - t0}ms total ")
 
     val pluginObjectsMaps = plugins.map(p => (p.pluginId, p.objects)).toMap
     val pluginViewObjects = pluginObjectsMaps.flatMap(_._2).groupBy(_.id).map(t => (t._1,t._2.head))
@@ -932,6 +941,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
       groupBy(_.id).map(t => (t._1,t._2.head))
 
     processForwardObjects(pluginViewObjects)
+    val t3 = System.currentTimeMillis()
+    log.info(s"SMGConfigParser.getNewConfig: foreard objects processed in ${t3 - t2}ms - ${t3 - t0}ms total ")
 
     val pluginIndexes = plugins.flatMap(p => p.indexes)
 
@@ -957,6 +968,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
 
     SMGConfIndex.buildChildrenSubtree(indexConfsWithChildIds)
+    val t4 = System.currentTimeMillis()
+    log.info(s"SMGConfigParser.getNewConfig: index tree processed in ${t4 - t3}ms - ${t4 - t0}ms total ")
 
     //rebuild all preFetches with notifyConfs
     val preFetchesWithNc = preFetches.map { case (id, pfc) =>
@@ -997,6 +1010,9 @@ class SMGConfigParser(log: SMGLoggerApi) {
         (id, newPfc)
       }
     }
+
+    val t5 = System.currentTimeMillis()
+    log.info(s"SMGConfigParser.getNewConfig: rebuilt pre_fetches with notify confs in ${t5 - t4}ms - ${t5 - t0}ms total ")
 
     // Process Index alert/notify configs, after all objects and indexes are defined
     // first get all plugin ObjectUpdates - filtering objects which has refObj defined and then using the
@@ -1048,18 +1064,21 @@ class SMGConfigParser(log: SMGLoggerApi) {
     val objectAlertConfs = objectAlertConfMaps.map { t =>
       val oid = t._1
       val m = t._2.map(t => (t._1, t._2.toList)).toMap
-      (t._1, SMGMonAlertConfObj(m))
+      (oid, SMGMonAlertConfObj(m))
     }
 
     val objectNotifyConfs = objectNotifyConfMaps.map { t =>
       val oid = t._1
       val m = t._2.map(t => (t._1, t._2.toList)).toMap
-      (t._1, SMGMonNotifyConfObj(m))
+      (oid, SMGMonNotifyConfObj(m))
     }
 
-    val allViewObjectsConf = allViewObjectIds.filter{ oid =>
-      allViewObjectsById.contains(oid)
-    }.map(oid => allViewObjectsById(oid))
+    val t6 = System.currentTimeMillis()
+    log.info(s"SMGConfigParser.getNewConfig: processed index/object alert/notify confs in ${t6 - t5}ms - ${t6 - t0}ms total ")
+
+    val allViewObjectsConf = allViewObjectIds.flatMap{ oid =>
+      allViewObjectsById.get(oid)
+    }
 
     val finalIntervalConfs = intervals.toSeq.map { intvl =>
       (intvl, intervalConfs.getOrElse(intvl, IntervalThreadsConfig.defaultConf(intvl)))
@@ -1088,6 +1107,10 @@ class SMGConfigParser(log: SMGLoggerApi) {
       rraDefs = rraDefs.toMap,
       configErrors = configErrors.toList
     )
+
+    val t7 = System.currentTimeMillis()
+    log.info(s"SMGConfigParser.getNewConfig: return object constructed in ${t7 - t6}ms - ${t7 - t0}ms total ")
+
     ret
   } // getNewConfig
 }
