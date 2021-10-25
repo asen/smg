@@ -265,11 +265,11 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   /**
     * @inheritdoc
     */
-  override def reloadLocal(): Unit = {
+  override def reloadLocal(): Boolean = {
     var pending = pendingReloads.incrementAndGet()
     if (pending > 1){
       log.warn(s"SMGConfigServiceImpl.reload: Reload already running, requested another one  (pending=$pending)")
-      return
+      return false
     }
     // only one thread which got pending=1 gets here.
     // pendingReloads does not get to 0 or 1 until done and before then can only be incremented
@@ -291,6 +291,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
         pending = 0
       }
     }
+    return true
   }
 
   lifecycle.addStopHook { () =>
