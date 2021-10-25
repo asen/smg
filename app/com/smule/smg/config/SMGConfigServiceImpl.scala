@@ -281,10 +281,10 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       pending = pendingReloads.decrementAndGet()
       // if pending == 0 (was 1) -> all good, new threads can take over
       // if pending == 1 (was 2) -> this thread will do another reload, others can't take over
-      if (pending > 2) { // consolidate more than 2 reload requests into two.
+      if (pending > 1) { // consolidate more than 1 reload requests into one.
         log.warn(s"SMGConfigServiceImpl.reload: Consolidating multiple pending reload requests into one ($pending)")
-        pendingReloads.set(2)
-        pending = 2
+        pendingReloads.set(1)
+        pending = 1
       }
       if (reloads > MAX_RELOADS_IN_A_ROW && pending > 0) {
         log.error(s"SMGConfigServiceImpl.reload: Too many reloads in a row: (reloads=$reloads/pending=${pendingReloads.get()})")
