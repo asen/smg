@@ -12,7 +12,10 @@ class TestExecutionContexts extends ExecutionContexts {
 
   override def monitorCtx: ExecutionContext = ExecutionContext.global
 
+  override def pluginsSharedCtx: ExecutionContext = ExecutionContext.global
+
   override def ctxForInterval(interval: Int): ExecutionContext = ExecutionContext.global
 
   override def initializeUpdateContexts(intervals: Map[Int,IntervalThreadsConfig]): Unit = {}
+
 }

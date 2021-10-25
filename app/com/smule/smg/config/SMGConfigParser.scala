@@ -509,9 +509,11 @@ class SMGConfigParser(log: SMGLoggerApi) {
     }
 
     def lookupObjectView(k: String, pluginObjs:  Map[String, SMGObjectView]): Option[SMGObjectView] = {
-      if (allViewObjectsById.contains(k)){
-        Some(allViewObjectsById(k))
-      } else pluginObjs.get(k)
+      val ret = allViewObjectsById.get(k)
+      if (ret.isDefined)
+        ret
+      else
+        pluginObjs.get(k)
     }
 
     def getLabels(ymap: mutable.Map[String, Object]): Map[String,String] ={
@@ -638,8 +640,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
 
     def aggObjectOp(oid: String,
                     ymap: mutable.Map[String, Object],
-                    confFile: String,
-                    pluginViewObjs: Map[String, SMGObjectView]): String = {
+                    confFile: String): String = {
       val confOp = ymap.getOrElse("op", "SUM")
       confOp match {
         case "SUMN" => "SUMN"
@@ -712,7 +713,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
                         pluginViewObjs: Map[String, SMGObjectView]
                        ): Unit = {
       try {
-        val op = aggObjectOp(oid, ymap, confFile, pluginViewObjs)
+        val op = aggObjectOp(oid, ymap, confFile)
 
         if (ymap.contains("ids") || ymap.contains("filter")) {
 
@@ -942,7 +943,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
 
     processForwardObjects(pluginViewObjects)
     val t3 = System.currentTimeMillis()
-    log.info(s"SMGConfigParser.getNewConfig: foreard objects processed in ${t3 - t2}ms - ${t3 - t0}ms total ")
+    log.info(s"SMGConfigParser.getNewConfig: forward objects processed in ${t3 - t2}ms - ${t3 - t0}ms total ")
 
     val pluginIndexes = plugins.flatMap(p => p.indexes)
 

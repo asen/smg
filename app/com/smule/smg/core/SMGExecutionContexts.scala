@@ -29,6 +29,7 @@ class SMGExecutionContexts @Inject() (actorSystem: ActorSystem) extends Executio
   val rrdGraphCtx: ExecutionContext = actorSystem.dispatchers.lookup("akka-contexts.rrd-graph")
 
   val monitorCtx: ExecutionContext = actorSystem.dispatchers.lookup("akka-contexts.monitor")
+  val pluginsSharedCtx: ExecutionContext = actorSystem.dispatchers.lookup("akka-contexts.plugins-shared")
 
   private val log = SMGLogger
 

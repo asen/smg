@@ -10,6 +10,7 @@ trait ExecutionContexts {
   def defaultCtx: ExecutionContext
   def rrdGraphCtx: ExecutionContext
   def monitorCtx: ExecutionContext
+  def pluginsSharedCtx: ExecutionContext
   def ctxForInterval(interval: Int): ExecutionContext
   def initializeUpdateContexts(intervals: Map[Int,IntervalThreadsConfig]): Unit
 }

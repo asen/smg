@@ -15,7 +15,8 @@ import play.api.inject.ApplicationLifecycle
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /**
   * A singleton (injected by Guice) responsible for parsing and caching local SMG configuration
@@ -221,43 +222,74 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     }
   }
 
-  private var currentConfig = configParser.getNewConfig(plugins, topLevelConfigFile)
-  createNonExistingRrds(currentConfig)
-  initExecutionContexts(currentConfig.intervalConfs)
-  plugins.foreach(_.onConfigReloaded())
+  private val reloadSyncObj: Object = new Object()
+  private var currentConfig: SMGLocalConfig = _  // initialized in doReloadSync
+  doReloadSync()
+
+  private def doReloadSync(): Unit = {
+    val t0 = System.currentTimeMillis()
+    log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)
+    try {
+      val newConf = configParser.getNewConfig(plugins, topLevelConfigFile)
+      reloadSyncObj.synchronized {
+        initExecutionContexts(newConf.intervalConfs)
+        currentConfig = newConf
+      }
+      val futs = ListBuffer[Future[Boolean]]()
+      futs += Future {
+        try {
+          createNonExistingRrds(newConf)
+          true
+        } catch { case t: Throwable =>
+          log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error from createNonExistingRrds")
+          false
+        }
+      }(executionContexts.defaultCtx)
+      futs += Future {
+        try {
+          cleanupCachedValuesMap(newConf)
+          true
+        } catch { case t: Throwable =>
+          log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error from cleanupCachedValuesMap")
+          false
+        }
+      }(executionContexts.defaultCtx)
+      futs += Future {
+        try {
+          notifyReloadListeners("ConfigService.reload")
+          true
+        } catch { case t: Throwable =>
+          log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error from notifyReloadListeners")
+          false
+        }
+      }(executionContexts.monitorCtx)
+      futs += Future {
+        try {
+          plugins.foreach(_.onConfigReloaded())
+          true
+        } catch { case t: Throwable =>
+          log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error from plugins onConfigReloaded")
+          false
+        }
+      }(executionContexts.pluginsSharedCtx)
+      implicit val myEc: ExecutionContext = executionContexts.defaultCtx
+      val futSeq = Future.sequence(futs)
+      Await.result(futSeq, Duration.Inf)
+      val t1 = System.currentTimeMillis()
+      log.info("SMGConfigServiceImpl.reload: completed for " + (t1 - t0) + "ms. rrdConf=" + newConf.rrdConf +
+        " imgDir=" + newConf.imgDir + " urlPrefix=" + newConf.urlPrefix +
+        " humanDesc: " + newConf.humanDesc)
+    } catch {
+      case t: Throwable =>
+        log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error")
+    }
+  }
 
   /**
     * @inheritdoc
     */
   override def config: SMGLocalConfig = currentConfig
 
-  private val reloadSyncObj: Object = new Object()
-
-  private def doReloadSync(): Unit = {
-    val t0 = System.currentTimeMillis()
-    log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)
-    try {
-      // XXX right now this onluy ever runs in a single thread so synchronization
-      // is not really needed. OTOH it doesn't hurt much too
-      // (this can take many seconds so overhead can be ignored)
-      reloadSyncObj.synchronized {
-        val newConf = configParser.getNewConfig(plugins, topLevelConfigFile)
-        createNonExistingRrds(newConf)
-        initExecutionContexts(newConf.intervalConfs)
-        currentConfig = newConf
-        cleanupCachedValuesMap(newConf)
-        notifyReloadListeners("ConfigService.reload")
-        plugins.foreach(_.onConfigReloaded())
-        val t1 = System.currentTimeMillis()
-        log.info("SMGConfigServiceImpl.reload: completed for " + (t1 - t0) + "ms. rrdConf=" + newConf.rrdConf +
-          " imgDir=" + newConf.imgDir + " urlPrefix=" + newConf.urlPrefix +
-          " humanDesc: " + newConf.humanDesc)
-      }
-    } catch {
-      case t: Throwable =>
-        log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error")
-    }
-  }
 
   private val pendingReloads = new AtomicInteger(0)
   private val MAX_RELOADS_IN_A_ROW = 10
