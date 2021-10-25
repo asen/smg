@@ -903,7 +903,6 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         fw4.write(stickySilencesStr)
       } finally fw4.close()
 
-      new File(monStateDir).mkdirs()
       val oldmf = new File(monStateMetaFname)
       if (oldmf.exists()) {
         oldmf.delete()
