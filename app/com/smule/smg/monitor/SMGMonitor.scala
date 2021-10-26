@@ -1,7 +1,6 @@
 package com.smule.smg.monitor
 
 import java.io.{File, FileWriter}
-
 import com.smule.smg.GrapherApi
 import com.smule.smg.config.{SMGConfigReloadListener, SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._
@@ -9,6 +8,7 @@ import com.smule.smg.grapher.SMGAggObjectView
 import com.smule.smg.notify.SMGMonNotifyApi
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
 import com.smule.smg.rrd.SMGRrd
+
 import javax.inject.{Inject, Singleton}
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsValue, Json, Reads, Writes}
@@ -16,7 +16,9 @@ import play.api.libs.json.{JsValue, Json, Reads, Writes}
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Future
+import scala.concurrent
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 @Singleton
 class SMGMonitor @Inject()(configSvc: SMGConfigService,
@@ -51,8 +53,12 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
 
   private val allMonitorStatesById = TrieMap[String, SMGMonInternalState]()
 
+  log.info("SMGMonitor.init: creating state trees ...")
   private var topLevelMonitorStateTrees = createStateTrees(configSvc.config)
+  log.info("SMGMonitor.init: building id -> tree map")
   private var allMonitorStateTreesById = buildIdToTreeMap(topLevelMonitorStateTrees)
+  log.info("SMGMonitor.init: done initializing state trees")
+
   def findTreeWithRootId(rootId: String): Option[SMGTree[SMGMonInternalState]] = {
     allMonitorStateTreesById.get(rootId)
   }
@@ -870,14 +876,18 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   def serializeAllMonitorStates: List[String] = {
-    allMonitorStatesById.toList.grouped(MAX_STATES_PER_CHUNK).map { chunk =>
-      val om = chunk.map{ t =>
-        val k = t._1
-        val v = t._2
-        (k, v.serialize)
+    implicit val myEc: ExecutionContext = configSvc.executionContexts.monitorCtx
+    val futs = allMonitorStatesById.toList.grouped(MAX_STATES_PER_CHUNK).map { chunk =>
+      Future {
+        val om = chunk.map { t =>
+          val k = t._1
+          val v = t._2
+          (k, v.serialize)
+        }
+        Json.toJson(om.toMap).toString()
       }
-      Json.toJson(om.toMap).toString()
     }.toList
+    Await.result(Future.sequence(futs), Duration.Inf)
   }
 
   override def saveStateToDisk(): Unit = {
@@ -954,7 +964,8 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         val metaStr = configSvc.sourceFromFile(monStateMetaFname)
         parseStateMetaData(metaStr)
       } else Map()
-      var cnt = 0
+      val futs = ListBuffer[Future[Int]]()
+      implicit val myEc: ExecutionContext = configSvc.executionContexts.monitorCtx
       val numStateFiles = metaD.getOrElse("stateFiles", "1").toInt
       (0 until numStateFiles).foreach { ix =>
         val suffix = if (ix == 0) "" else s".$ix"
@@ -962,9 +973,13 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
         if (new File(monStateFname).exists()) {
           log.info(s"SMGMonitor.loadStateFromDisk $monStateFname")
           val stateStr = configSvc.sourceFromFile(monStateFname)
-          cnt += deserializeObjectsState(stateStr)
+          futs += Future {
+            deserializeObjectsState(stateStr)
+          }
         }
       }
+      val res = Await.result(Future.sequence(futs), Duration.Inf)
+      val cnt = if (res.isEmpty) 0 else res.sum
       log.info(s"SMGMonitor.loadStateFromDisk END - $cnt states loaded")
     } catch {
       case x:Throwable => log.ex(x, "SMGMonitor.loadStateFromDisk ERROR")
