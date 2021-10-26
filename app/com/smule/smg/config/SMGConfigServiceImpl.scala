@@ -225,6 +225,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   private val reloadSyncObj: Object = new Object()
   private var lastReloadTookMs: Long = 0L
   private var lastReloadCompletedAt: Long = 0L
+
   private var currentConfig: SMGLocalConfig = _  // initialized in doReloadSync
   doReloadSync()
 
@@ -298,40 +299,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     */
   override def config: SMGLocalConfig = currentConfig
 
+  private val protectedReloadObj = new ProtectedReloadObj("SMGConfigServiceImpl")
 
-  private val pendingReloads = new AtomicInteger(0)
-  private val MAX_RELOADS_IN_A_ROW = 10
-
-  /**
+ /**
     * @inheritdoc
     */
   override def reloadLocal(): Boolean = {
-    var pending = pendingReloads.incrementAndGet()
-    if (pending > 1){
-      log.warn(s"SMGConfigServiceImpl.reload: Reload already running, requested another one  (pending=$pending)")
-      return false
-    }
-    // only one thread which got pending=1 gets here.
-    // pendingReloads does not get to 0 or 1 until done and before then can only be incremented
-    var reloads = 0
-    while (pending > 0) {
-      reloads += 1
-      log.info(s"SMGConfigServiceImpl.reload: Reload requested (reloads=$reloads/pending=${pendingReloads.get()})")
-      doReloadSync()
-      pending = pendingReloads.decrementAndGet()
-      // if pending == 0 (was 1) -> all good, new threads can take over
-      // if pending == 1 (was 2) -> this thread will do another reload, others can't take over
-      if (pending > 1) { // consolidate more than 1 reload requests into one.
-        log.warn(s"SMGConfigServiceImpl.reload: Consolidating multiple pending reload requests into one ($pending)")
-        pendingReloads.set(1)
-        pending = 1
-      }
-      if (reloads > MAX_RELOADS_IN_A_ROW && pending > 0) {
-        log.error(s"SMGConfigServiceImpl.reload: Too many reloads in a row: (reloads=$reloads/pending=${pendingReloads.get()})")
-        pending = 0
-      }
-    }
-    return true
+    protectedReloadObj.reloadOrQueue(doReloadSync _)
   }
 
   lifecycle.addStopHook { () =>

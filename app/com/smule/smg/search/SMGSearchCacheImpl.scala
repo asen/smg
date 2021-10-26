@@ -1,14 +1,15 @@
 package com.smule.smg.search
 
-import com.smule.smg.config.SMGConfigService
+import com.smule.smg.config.{ProtectedReloadObj, SMGConfigService}
 import com.smule.smg.core._
 import com.smule.smg.grapher.SMGAggObjectView
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
-import javax.inject.{Inject, Singleton}
 
+import javax.inject.{Inject, Singleton}
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 @Singleton
 class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
@@ -46,21 +47,17 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
 
   private var cmdTknsByRemote: Map[String, Array[Seq[String]]] = Map()
 
-  private var reloadsRunning = 0
-  private val MAX_RELOADS = 2
-
   configSvc.registerReloadListener(this);
-  reload(); // launch a reload on initialization, config svc wil call us later on reloads
+  realReload(isInit = true); // launch a reload on initialization, config svc wil call us later on reloads
 
-
-  private def extendArrayBuf(ab: ArrayBuffer[mutable.Set[String]], sz: Int) = {
+  private def extendArrayBuf(ab: ArrayBuffer[mutable.Set[String]], sz: Int): Unit = {
     while (ab.size < sz) {
       val newSet = mutable.Set[String]()
       ab.append(newSet)
     }
   }
 
-  private def sortNumbersAfterLetters(s1: String, s2: String) = {
+  private def sortNumbersAfterLetters(s1: String, s2: String): Boolean = {
     val ns1 = SORT_IGNORE_CHARS_RX.replaceAllIn(s1, "")
     val ns1isnum = STARTS_WITH_DIGIT_RX.findFirstMatchIn(ns1).isDefined
     val ns2 = SORT_IGNORE_CHARS_RX.replaceAllIn(s2, "")
@@ -80,7 +77,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     in.toSeq.sortWith(sortNumbersAfterLetters)
   }
 
-  private def tokensAtLevel(arr: Array[String], level: Int) = {
+  private def tokensAtLevel(arr: Array[String], level: Int): Set[String] = {
     (0 to arr.length - level).map { six =>
       arr.slice(six, six + level).mkString(".")
     }.toSet
@@ -101,7 +98,7 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   }
 
   private def getRunTreeIdsByRemote: Future[Map[String, Seq[String]]] = {
-    implicit val ec = configSvc.executionContexts.defaultCtx
+    implicit val ec: ExecutionContext = configSvc.executionContexts.defaultCtx
     val localFut = Future {
       (SMGRemote.local.id, configSvc.config.getFetchCommandsTreesByInterval)
     }
@@ -134,34 +131,43 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     maxLevels
   }
 
-  private def reloadCmdTokensAsync(): Unit = {
+  private def reloadCmdTokensAsync(): Future[Boolean] = {
     implicit val ec = configSvc.executionContexts.defaultCtx
     getRunTreeIdsByRemote.map { byRemote =>
-      log.info(s"SMGSearchCache.reloadCmdTokensAsync - received remotes data (${byRemote.keys.size})")
-      var maxMaxLevels = 0
-      val tknsByRemote = mutable.Map[String, Array[Seq[String]]]()
-      byRemote.foreach { case (rmtId, cmdIds) =>
-        val newTknsByLevel = ArrayBuffer[mutable.Set[String]]()
-        cmdIds.foreach { cmdId =>
-          val ml = tokenizeId(cmdId, Seq(
-            (newTknsByLevel,
-              { (arr: Array[String], ix: Int, addDot: String) =>
-                newTknsByLevel(ix) ++= tokensAtLevel(arr, ix + 1) }
-            )
-          ))
-          maxMaxLevels = Math.max(maxMaxLevels, ml)
+      try {
+        log.info(s"SMGSearchCache.reloadCmdTokensAsync - received remotes data (${byRemote.keys.size})")
+        var maxMaxLevels = 0
+        val tknsByRemote = mutable.Map[String, Array[Seq[String]]]()
+        byRemote.foreach { case (rmtId, cmdIds) =>
+          val newTknsByLevel = ArrayBuffer[mutable.Set[String]]()
+          cmdIds.foreach { cmdId =>
+            val ml = tokenizeId(cmdId, Seq(
+              (newTknsByLevel, { (arr: Array[String], ix: Int, addDot: String) =>
+                newTknsByLevel(ix) ++= tokensAtLevel(arr, ix + 1)
+              }
+              )
+            ))
+            maxMaxLevels = Math.max(maxMaxLevels, ml)
+          }
+          tknsByRemote(rmtId) = newTknsByLevel.map(mySortIterable).toArray
         }
-        tknsByRemote(rmtId) = newTknsByLevel.map(mySortIterable).toArray
+        cmdTknsByRemote = tknsByRemote.toMap
+        log.info(s"SMGSearchCache.reloadCmdTokensAsync - END: " +
+          s"max levels: $maxMaxLevels/${configSvc.config.searchCacheMaxLevels}")
+        true
+      } catch { case t: Throwable =>
+        log.ex(t, s"Unexpected exception in SMGSearchCache.reloadCmdTokensAsync: ${t.getMessage}")
+        false
       }
-      cmdTknsByRemote = tknsByRemote.toMap
-      log.info(s"SMGSearchCache.reloadCmdTokensAsync - END: " +
-        s"max levels: $maxMaxLevels/${configSvc.config.searchCacheMaxLevels}")
+    }.recover { case t =>
+      log.ex(t, s"Unexpected future failure in SMGSearchCache.reloadCmdTokensAsync: ${t.getMessage}")
+      false
     }
   }
 
-  private def realReload(): Unit = {
+  private def realReload(isInit: Boolean): Unit = {
     log.info("SMGSearchCache.reload - BEGIN")
-    reloadCmdTokensAsync()
+    val cmdTokensFut = reloadCmdTokensAsync()
     var maxMaxLevels = 0
     val newIndexes = getAllIndexes
     val newPrefetchCommands = getAllCommandsByRemote
@@ -206,39 +212,29 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
     cache = SMGSearchCacheData(
       allIndexes = newIndexes,
       allViewObjects = byRemote.flatMap(_._2),
-      allPreFetches = getAllCommandsByRemote.flatMap(_._2),
+      allPreFetches = newPrefetchCommands.flatMap(_._2),
       pxesByRemote = pxesByRemote.toMap,
       sxesByRemote = sxesByRemote.toMap,
       tknsByRemote = tknsByRemote.toMap,
       wordsDict = mySortIterable(wordsDict),
       labelKeysDict = mySortIterable(labelKeysDict)
     )
+
+    if (isInit) {
+      log.info("SMGSearchCache.reload - init: launched command tokens processing in the background")
+    } else {
+      log.info("SMGSearchCache.reload - awaiting for command tokens processing to complete ...")
+      Await.result(cmdTokensFut, Duration.Inf)
+    }
     log.info(s"SMGSearchCache.reload - END: indexes: ${cache.allIndexes.size}, " +
       s"objects: ${cache.allViewObjects.size}, words: ${wordsDict.size}, " +
       s"max levels: $maxMaxLevels/${configSvc.config.searchCacheMaxLevels}")
   }
 
+  private val protectedReloadObj = new ProtectedReloadObj("SMGSearchCache")
 
   override def reload(): Unit = {
-    // do actual reloads in the background, one at a time, never more than 2
-    if (reloadsRunning < MAX_RELOADS ) {
-      reloadsRunning += 1
-      Future {
-        try {
-          this.synchronized { //only run one at a time
-            realReload()
-          }
-        } catch {
-          case t: Throwable => {
-            log.ex(t, s"Exception in SMGSearchCache.reload (reloadsRunning=$reloadsRunning)")
-          }
-        } finally {
-          reloadsRunning -= 1
-        }
-      }(configSvc.executionContexts.defaultCtx)
-    } else {
-      log.error(s"SMGSearchCache.reload: aborting due to reloadsRunning=$reloadsRunning (max=$MAX_RELOADS)")
-    }
+    protectedReloadObj.reloadOrQueue(() => realReload(isInit = false))
   }
 
   private def allRemotes : Seq[SMGRemote] = SMGRemote.local :: configSvc.config.remotes.toList
