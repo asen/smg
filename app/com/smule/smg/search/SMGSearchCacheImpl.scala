@@ -47,6 +47,9 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
 
   private var cmdTknsByRemote: Map[String, Array[Seq[String]]] = Map()
 
+  // this must be created before we register ourselves as ReloadListener
+  private val protectedReloadObj = new ProtectedReloadObj("SMGSearchCache")
+
   configSvc.registerReloadListener(this);
   realReload(isInit = true); // launch a reload on initialization, config svc wil call us later on reloads
 
@@ -230,8 +233,6 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
       s"objects: ${cache.allViewObjects.size}, words: ${wordsDict.size}, " +
       s"max levels: $maxMaxLevels/${configSvc.config.searchCacheMaxLevels}")
   }
-
-  private val protectedReloadObj = new ProtectedReloadObj("SMGSearchCache")
 
   override def reload(): Unit = {
     protectedReloadObj.reloadOrQueue(() => realReload(isInit = false))
