@@ -223,8 +223,13 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   }
 
   private val reloadSyncObj: Object = new Object()
+  private var lastReloadTookMs: Long = 0L
+  private var lastReloadCompletedAt: Long = 0L
   private var currentConfig: SMGLocalConfig = _  // initialized in doReloadSync
   doReloadSync()
+
+  override def getReloadStats: ConfigReloadStats =
+    ConfigReloadStats(lastReloadTookMs, lastReloadCompletedAt)
 
   private def doReloadSync(): Unit = {
     val t0 = System.currentTimeMillis()
@@ -276,7 +281,10 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       val futSeq = Future.sequence(futs)
       Await.result(futSeq, Duration.Inf)
       val t1 = System.currentTimeMillis()
-      log.info("SMGConfigServiceImpl.reload: completed for " + (t1 - t0) + "ms. rrdConf=" + newConf.rrdConf +
+      val dt = t1 - t0
+      lastReloadTookMs = dt
+      lastReloadCompletedAt = t1
+      log.info("SMGConfigServiceImpl.reload: completed for " + dt + "ms. rrdConf=" + newConf.rrdConf +
         " imgDir=" + newConf.imgDir + " urlPrefix=" + newConf.urlPrefix +
         " humanDesc: " + newConf.humanDesc)
     } catch {

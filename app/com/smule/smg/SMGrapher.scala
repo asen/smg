@@ -642,6 +642,31 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       labels = List(("type", "plugin"))
     )
 
+    ret += myOpenMetricsStat(
+      name = "smg_config_errors",
+      help = "SMG config errors",
+      value = config.allErrors.size,
+      labels = List()
+    )
+
+    val reloadStats = configSvc.getReloadStats
+    ret += myOpenMetricsStat(
+      name = "smg_config_reload_last_duration",
+      help = "Last local SMG reload duration in ms",
+      value = reloadStats.lastReloadTookMs,
+      labels = List()
+    )
+
+    ret += myOpenMetricsStat(
+      name = "smg_config_reload_last_age",
+      help = "Time since last local SMG reload in ms",
+      value = if (reloadStats.lastReloadCompletedAt == 0)
+        Double.NaN
+      else
+        System.currentTimeMillis() - reloadStats.lastReloadCompletedAt,
+      labels = List()
+    )
+
     val cmdTreesByInterval = config.getFetchCommandsTreesByInterval
     cmdTreesByInterval.keys.toSeq.sorted.foreach { intvl =>
       val intvlTrees =  cmdTreesByInterval(intvl)

@@ -2,7 +2,7 @@ package helpers
 
 import akka.actor.ActorSystem
 import com.smule.smg._
-import com.smule.smg.config.{SMGConfIndex, SMGConfigReloadListener, SMGConfigService, SMGLocalConfig}
+import com.smule.smg.config.{ConfigReloadStats, SMGConfIndex, SMGConfigReloadListener, SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._
 import com.smule.smg.monitor._
 import com.smule.smg.notify.SMGMonNotifyCmd
@@ -231,4 +231,6 @@ class TestConfigSvc() extends SMGConfigService {
   override def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult = {
     CommandResultListString(command.run(parentData.map(_.res.asStr)), None)
   }
+
+  override def getReloadStats: ConfigReloadStats = ConfigReloadStats(0,0)
 }

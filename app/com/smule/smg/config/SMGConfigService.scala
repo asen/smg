@@ -37,6 +37,8 @@ trait SMGConfigService {
     */
   def reloadLocal(): Boolean
 
+  def getReloadStats: ConfigReloadStats
+
   /**
     * Whether SMG is using its internal Akka scheduler or external (e.g. cron-driven) scheduler.
     * This is specified in application.conf and requires restart to change
