@@ -3,6 +3,7 @@ package com.smule.smg.config
 import java.io.File
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import akka.actor.{ActorSystem, DeadLetter, Props}
+import com.smule.smg.config.SMGConfigReloadListener.ReloadType
 import com.smule.smg.core._
 import com.smule.smg.plugin.{SMGPlugin, SMGPluginConfig}
 import com.smule.smg.rrd.{SMGRrd, SMGRrdUpdate}
@@ -158,16 +159,26 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   }
   def reloadListeners: List[SMGConfigReloadListener] = myConfigReloadListeners.synchronized(myConfigReloadListeners.toList)
 
-  override def notifyReloadListeners(ctx: String): Unit = {
+  override def notifyReloadListeners(ctx: String, reloadType: ReloadType.Value): Unit = {
     val myrlsnrs = reloadListeners
+    var reloaded = 0
     myrlsnrs.foreach { lsnr =>
-      try {
-        lsnr.reload()
-      } catch { case t: Throwable =>
-          log.ex(t, s"ConfigService.notifyReloadListeners($ctx): exception in reload from lsnr=$lsnr")
+      val needsReload = reloadType match {
+        case ReloadType.FULL => true
+        case ReloadType.REMOTES => !lsnr.localOnly
+        case ReloadType.LOCAL => lsnr.localOnly
+      }
+      if (needsReload) {
+        try {
+          lsnr.reload()
+        } catch {
+          case t: Throwable =>
+            log.ex(t, s"ConfigService.notifyReloadListeners($ctx, $reloadType): exception in reload from lsnr=$lsnr")
+        }
+        reloaded += 1
       }
     }
-    log.info(s"ConfigService.notifyReloadListeners($ctx) - notified ${myrlsnrs.size} listeners")
+    log.info(s"ConfigService.notifyReloadListeners($ctx, $reloadType) - notified ${reloaded}/${myrlsnrs.size} listeners")
     callSystemGc(ctx)
   }
 
@@ -227,12 +238,12 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
   private var lastReloadCompletedAt: Long = 0L
 
   private var currentConfig: SMGLocalConfig = _  // initialized in doReloadSync
-  doReloadSync()
+  doReloadSync(isInit = true)
 
   override def getReloadStats: ConfigReloadStats =
     ConfigReloadStats(lastReloadTookMs, lastReloadCompletedAt)
 
-  private def doReloadSync(): Unit = {
+  private def doReloadSync(isInit: Boolean): Unit = {
     val t0 = System.currentTimeMillis()
     log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)
     try {
@@ -242,6 +253,18 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
         currentConfig = newConf
       }
       val futs = ListBuffer[Future[Boolean]]()
+      // XXX this is async/not waited for except on startup
+      val reloadListenersFut = Future {
+        try {
+          notifyReloadListeners("ConfigService.reload", ReloadType.FULL)
+          true
+        } catch { case t: Throwable =>
+          log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error from notifyReloadListeners")
+          false
+        }
+      }(executionContexts.defaultCtx)
+      if (isInit)
+        futs += reloadListenersFut
       futs += Future {
         try {
           createNonExistingRrds(newConf)
@@ -262,15 +285,6 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       }(executionContexts.defaultCtx)
       futs += Future {
         try {
-          notifyReloadListeners("ConfigService.reload")
-          true
-        } catch { case t: Throwable =>
-          log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error from notifyReloadListeners")
-          false
-        }
-      }(executionContexts.monitorCtx)
-      futs += Future {
-        try {
           plugins.foreach(_.onConfigReloaded())
           true
         } catch { case t: Throwable =>
@@ -278,6 +292,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
           false
         }
       }(executionContexts.pluginsSharedCtx)
+
       implicit val myEc: ExecutionContext = executionContexts.defaultCtx
       val futSeq = Future.sequence(futs)
       Await.result(futSeq, Duration.Inf)
@@ -285,9 +300,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       val dt = t1 - t0
       lastReloadTookMs = dt
       lastReloadCompletedAt = t1
-      log.info("SMGConfigServiceImpl.reload: completed for " + dt + "ms. rrdConf=" + newConf.rrdConf +
-        " imgDir=" + newConf.imgDir + " urlPrefix=" + newConf.urlPrefix +
-        " humanDesc: " + newConf.humanDesc)
+      log.info("SMGConfigServiceImpl.reload: completed for " + dt + "ms. humanDesc: " + newConf.humanDesc)
     } catch {
       case t: Throwable =>
         log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error")
@@ -305,7 +318,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     * @inheritdoc
     */
   override def reloadLocal(): Boolean = {
-    protectedReloadObj.reloadOrQueue(doReloadSync _)
+    protectedReloadObj.reloadOrQueue(() => doReloadSync(isInit = false))
   }
 
   lifecycle.addStopHook { () =>

@@ -1,6 +1,7 @@
 package com.smule.smg.config
 
 import akka.actor.{ActorRef, ActorSystem}
+import com.smule.smg.config.SMGConfigReloadListener.ReloadType
 import com.smule.smg.core._
 import com.smule.smg.monitor.SMGMonAlertConfVar
 import com.smule.smg.notify.{SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifySeverity}
@@ -125,7 +126,7 @@ trait SMGConfigService {
   */
   def registerReloadListener(lsnr: SMGConfigReloadListener): Unit
 
-  def notifyReloadListeners(ctx: String): Unit
+  def notifyReloadListeners(ctx: String, reloadType: ReloadType.Value): Unit
 
   def runFetchCommand(command: SMGCmd, parentData: Option[ParentCommandData]): CommandResult
 

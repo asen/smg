@@ -10,6 +10,8 @@ import com.smule.smg.core.{SMGIndex, SMGObjectView}
   */
 trait SMGSearchCache extends SMGConfigReloadListener {
 
+  override val localOnly: Boolean = false
+
   def getAllIndexes: Seq[SMGIndex]
 
   def search(q: String, maxResults: Int): Seq[SMGSearchResult]

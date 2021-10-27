@@ -1,16 +1,16 @@
 package com.smule.smg.remote
 
 import java.io.File
-
 import com.smule.smg._
 import com.smule.smg.config.SMGConfigNotifyConfsSummary.CommandsNotifyObjectConfSummary
+import com.smule.smg.config.SMGConfigReloadListener.ReloadType
 import com.smule.smg.config.{SMGConfigAlertCondsSummary, SMGConfigNotifyConfsSummary, SMGConfigService}
 import com.smule.smg.core._
 import com.smule.smg.grapher.{GraphOptions, SMGAggObjectView, SMGImageView}
 import com.smule.smg.monitor._
 import com.smule.smg.rrd.{SMGRrdFetchParams, SMGRrdRow}
-import javax.inject.{Inject, Singleton}
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.ws.WSClient
 
@@ -94,7 +94,7 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     }
     Future.sequence(futs.toList).map { bools =>
       if (bools.exists(x => x))
-        configSvc.notifyReloadListeners("SMGRemotes.fetchConfigs")
+        configSvc.notifyReloadListeners("SMGRemotes.fetchConfigs", ReloadType.REMOTES)
     }
   }
 
@@ -110,10 +110,10 @@ class SMGRemotes @Inject() ( configSvc: SMGConfigService, ws: WSClient) extends 
     if (cli.isDefined){
       cli.get.fetchConfig.map { copt =>
         if(copt.isDefined) cachedConfigs(slaveId) = copt
-        configSvc.notifyReloadListeners(s"SMGRemotes.fetchConfigs($slaveId)")
+        configSvc.notifyReloadListeners(s"SMGRemotes.fetchConfigs($slaveId)", ReloadType.REMOTES)
       }
     } else {
-      log.warn(s"SMGRemotes.fetchSlaveConfig($slaveId) - client not defined")
+      log.error(s"SMGRemotes.fetchSlaveConfig($slaveId) - client not defined")
     }
   }
 

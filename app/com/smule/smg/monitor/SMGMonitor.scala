@@ -2,7 +2,8 @@ package com.smule.smg.monitor
 
 import java.io.{File, FileWriter}
 import com.smule.smg.GrapherApi
-import com.smule.smg.config.{SMGConfigReloadListener, SMGConfigService, SMGLocalConfig}
+import com.smule.smg.config.SMGConfigReloadListener.ReloadType
+import com.smule.smg.config.{ProtectedReloadObj, SMGConfigReloadListener, SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._
 import com.smule.smg.grapher.SMGAggObjectView
 import com.smule.smg.notify.SMGMonNotifyApi
@@ -29,14 +30,13 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
                            lifecycle: ApplicationLifecycle) extends SMGMonitorApi
   with SMGDataFeedListener with SMGConfigReloadListener{
 
-  configSvc.registerDataFeedListener(this)
-  configSvc.registerReloadListener(this)
+  override val localOnly: Boolean = true
 
-  val log = SMGLogger
+  private val log = SMGLogger
 
   private val MAX_STATES_PER_CHUNK = 2500
 
-  private def monStateDir = configSvc.config.monStateDir
+  private def monStateDir: String = configSvc.config.monStateDir
 
   private val MONSTATE_META_FILENAME = "metadata.json"
   private val MONSTATE_BASE_FILENAME = "monstates"
@@ -63,13 +63,21 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     allMonitorStateTreesById.get(rootId)
   }
 
-  override def reload(): Unit = {
+  private val protectedReloadObj = new ProtectedReloadObj("SMGMonitor")
+
+  private def doReload(): Unit = {
+    val t0 = System.currentTimeMillis()
     topLevelMonitorStateTrees = createStateTrees(configSvc.config)
     cleanupAllMonitorStates(topLevelMonitorStateTrees)
     topLevelMonitorStateTrees.foreach(silenceNewNotSilencedChildren)
     allMonitorStateTreesById = buildIdToTreeMap(topLevelMonitorStateTrees)
     allMonitorStatesById.values.foreach(_.configReloaded())
     notifSvc.configReloaded()
+    log.info(s"SMGMonitor.reload: doReload completed in ${System.currentTimeMillis() - t0}ms")
+  }
+
+  override def reload(): Unit = {
+    protectedReloadObj.reloadOrQueue(doReload _)
   }
 
   override def receiveValuesMsg(msg: SMGDataFeedMsgVals): Unit = {
@@ -845,7 +853,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   // silence all children of silenced nodes which were just created
-  private def silenceNewNotSilencedChildren(stree: SMGTree[SMGMonInternalState]) {
+  private def silenceNewNotSilencedChildren(stree: SMGTree[SMGMonInternalState]): Unit = {
     if (stree.node.isSilenced) {
       stree.children.foreach { ctree =>
         // only silence newly created states
@@ -992,4 +1000,6 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     }
   }
   loadStateFromDisk()
+  configSvc.registerDataFeedListener(this)
+  configSvc.registerReloadListener(this)
 }

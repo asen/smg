@@ -2,6 +2,7 @@ package helpers
 
 import akka.actor.ActorSystem
 import com.smule.smg._
+import com.smule.smg.config.SMGConfigReloadListener.ReloadType
 import com.smule.smg.config.{ConfigReloadStats, SMGConfIndex, SMGConfigReloadListener, SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._
 import com.smule.smg.monitor._
@@ -175,7 +176,7 @@ class TestConfigSvc() extends SMGConfigService {
 
   override def registerReloadListener(lsnr: SMGConfigReloadListener): Unit = {}
 
-  override def notifyReloadListeners(ctx: String): Unit = {}
+  override def notifyReloadListeners(ctx: String, reloadType: ReloadType.Value): Unit = {}
 
   override lazy val actorSystem: ActorSystem = ActorSystem("test")
 
