@@ -30,12 +30,16 @@ case class CDashConfigItem(
 }
 
 object CDashConfigItem {
-  def fromYamlMap(ymap: mutable.Map[String,Object]) = CDashConfigItem(
-    id = ymap("id").toString,
-    itemType = CDashItemType.withName(ymap("type").asInstanceOf[String]),
-    title = ymap.get("title").map(_.asInstanceOf[String]),
-    width = ymap.get("width").map(_.toString),
-    height = ymap.get("height").map(_.toString),
-    data = ymap.toMap
-  )
+  def fromYamlMap(ymap: mutable.Map[String,Object]): CDashConfigItem = {
+    val widthStr = ymap.getOrElse("width", "").toString.trim
+    val heightStr = ymap.getOrElse("height", "").toString.trim
+    CDashConfigItem(
+      id = ymap("id").toString,
+      itemType = CDashItemType.withName(ymap("type").asInstanceOf[String]),
+      title = ymap.get("title").map(_.asInstanceOf[String]),
+      width = if (widthStr.isEmpty) None else Some(widthStr),
+      height = if (heightStr.isEmpty) None else Some(heightStr),
+      data = ymap.toMap
+    )
+  }
 }
