@@ -5,7 +5,7 @@ require 'uri'
 require 'net/http'
 
 
-SERVICE_KEY = ARGV.shift
+SERVICE_KEY = ARGV.shift || ENV["SMG_PAGERDUTY_SERVICE_KEY"]
 
 raise "need a service key" if SERVICE_KEY.nil?
 
