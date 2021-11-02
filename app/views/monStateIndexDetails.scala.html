@@ -1,4 +1,4 @@
-@(ixid: String)
+@(ixid: String, isAdmin: Boolean)
 
 @defining(java.util.UUID.randomUUID.toString) { formUUID =>
 
@@ -24,7 +24,7 @@
 
 <div id="msidact_@formUUID" class="monStateIndexActions" style="display: none">
   <span id="msidhm_@formUUID"></span><br/>
-  @monStateIndexSilence(ixid, formUUID)
+  @monStateIndexSilence(ixid, formUUID, isAdmin)
 </div>
 
 }

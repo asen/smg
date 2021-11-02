@@ -1,7 +1,9 @@
 @import com.smule.smg.config.SMGConfigService
 @import com.smule.smg.cdash.CDashboardData
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
 
-@(cfSvc: SMGConfigService, cdd: CDashboardData)(implicit flash: Flash, request: Request[AnyContent])
+@(cfSvc: SMGConfigService, cdd: CDashboardData)(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("Dash: " + cdd.conf.titleStr, cfSvc, cdd.conf.refresh, true, Some(request.path)) {
 <div class="cdash-container">

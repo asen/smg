@@ -1,6 +1,9 @@
 @import com.smule.smg.core.SMGTree
 @import com.smule.smg.monitor.SMGMonStateDetail
-@(seq: Seq[SMGTree[SMGMonStateDetail]])
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
+
+@(seq: Seq[SMGTree[SMGMonStateDetail]])(implicit request: UserRequest[AnyContent])
 
 @if(seq.nonEmpty){
 <ul>
@@ -10,9 +13,9 @@
     <font color="@{obj.node.state.recentStates.head.stateColor}">
       <strong>@{obj.node.state.recentStates.head.state}</strong></font>
     }
-    <strong>@{obj.node.state.text}</strong> @monStateActions(obj.node.state, None)
+    <strong>@{obj.node.state.text}</strong> @monStateActions(obj.node.state, None, request.user.isAdmin)
       @if(obj.node.fetchCommand.isDefined){
-        @monStateRerunAction(obj.node.state.id)
+        @monStateRerunAction(obj.node.state.id, request.user.isAdmin)
       }
       <br/>
     Previous states: @for(s <- obj.node.state.recentStates.tail) {

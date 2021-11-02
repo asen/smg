@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export JAVA_OPTS="-XX:+UseParallelGC -XX:+ExitOnOutOfMemoryError -Dcom.sun.management.jmxremote.port=9001 \
+export JAVA_OPTS="-Xmx2048m -XX:+UseParallelGC -XX:+ExitOnOutOfMemoryError -Dcom.sun.management.jmxremote.port=9001 \
     -Dcom.sun.management.jmxremote.ssl=false \
     -Dcom.sun.management.jmxremote.authenticate=false \
     -Dakka.http.parsing.max-uri-length=2m \

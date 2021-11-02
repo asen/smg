@@ -116,8 +116,7 @@ class SMGAutoConfPluginConfParser(pluginId: String, confFile: String, log: SMGLo
       myConf = parseConf()
     } catch { case t: Throwable =>
       log.ex(t, s"SMGAutoConfPluginConfParser.reload - unexpected exception (config NOT reloaded): ${t.getMessage}")
-      log.ex(t, s"SMGAutoConfPluginConfParser.reload - unexpected exception (config NOT reloaded): ${t.getMessage}")
-    }
+     }
   }
 
   def conf: SMGAutoConfPluginConf = myConf

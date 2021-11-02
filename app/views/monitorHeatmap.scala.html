@@ -1,8 +1,11 @@
 @import com.smule.smg.config.SMGConfigService
 @import com.smule.smg.remote.SMGRemote
 @import com.smule.smg.monitor.SMGMonHeatmap
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
 
-@(cfSvc: SMGConfigService, monitorStates: Seq[(SMGRemote, SMGMonHeatmap)])(implicit flash: Flash)
+@(cfSvc: SMGConfigService,
+  monitorStates: Seq[(SMGRemote, SMGMonHeatmap)])(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - Monitor heatmap", cfSvc, cfSvc.config.autoRefreshInterval) {
 

@@ -25,13 +25,18 @@ POST    /user/settings       controllers.Application.userSettings()
 GET     /monitor             controllers.Application.monitorProblems(remote: Seq[String], ms: Option[String], soft: Option[String], slncd: Option[String])
 GET     /monitor/rmtsect     controllers.Application.monitorProblemsRemoteSect(remote: Option[String], ms: Option[String], soft: Option[String], slncd: Option[String], uri: Option[String])
 GET     /monitor/silenced    controllers.Application.monitorSilenced()
-POST    /monitor/silenced    controllers.Application.monitorSilenced()
+POST    /monitor/silenced    controllers.Application.monitorSilencedPost()
 GET     /monitor/trees       controllers.Application.monitorTrees(remote: Seq[String], rx: Option[String], rxx: Option[String], ms: Option[String], hsoft: String ?= "off", hackd: String ?= "off", hslncd: String ?= "off", rid: Option[String], lmt: Option[Int], silenceAllUntil: Option[String], sticky: Option[String], stickyDesc: Option[String], curl: Option[String])
 GET     /monitor/heatmap     controllers.Application.monitorHeatmap
 GET     /monitor/log         controllers.Application.monitorLog(remote: Seq[String], p: Option[String], l: Option[Int], ms: Option[String], soft: Option[String], slncd: Option[String], rx: Option[String], rxx: Option[String])
 GET     /monitor/runtree     controllers.Application.monitorRunTree(remote: Option[String], root: Option[String], lvls: Option[Int])
 GET     /monitor/alertconds  controllers.Application.monitorAlertConds(remote: Option[String])
 GET     /monitor/notifycmds  controllers.Application.monitorNotifyCmds(remote: Option[String])
+
+GET     /login                controllers.Login.loginPage()
+POST    /login                controllers.Login.login()
+GET     /logout               controllers.Login.logout()
+POST    /logout               controllers.Login.logout()
 
 # Used by JS
 POST    /monitor/details     controllers.Application.monStatesDetailsHtml()

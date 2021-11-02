@@ -1,5 +1,5 @@
 @import com.smule.smg.monitor.SMGMonState
-@(gObjId: Option[String], mss: Seq[SMGMonState])
+@(gObjId: Option[String], mss: Seq[SMGMonState], isAdmin: Boolean)
 
 @if(!mss.isEmpty){
 <div>
@@ -10,7 +10,9 @@
     @defining(java.util.UUID.randomUUID.toString) { formUUID =>
     <input id="curl_@{formUUID}" type="hidden" name="curl" value="">
     <input type="submit"
+           @if(!isAdmin){ disabled="disabled" title="Admin access required" } else {
            title="Acknowledge existing problem(s) (disabling alerts)"
+           }
            value="Ack"
            onclick='document.getElementById("curl_@{formUUID}").value = window.location.href'>
     }
@@ -28,7 +30,9 @@
     @defining(java.util.UUID.randomUUID.toString) { formUUID =>
     <input id="curl_@{formUUID}" type="hidden" name="curl" value="">
     <input type="submit"
+           @if(!isAdmin){ disabled="disabled" title="Admin access required" } else {
            title="Remove problem(s) acknowledgements"
+           }
            value="Unack"
            onclick='document.getElementById("curl_@{formUUID}").value = window.location.href'>
     }
@@ -48,7 +52,9 @@
     @defining(java.util.UUID.randomUUID.toString) { formUUID =>
     <input id="curl_@{formUUID}" type="hidden" name="curl" value="">
     <input type="submit"
+           @if(!isAdmin){ disabled="disabled" title="Admin access required" } else {
            title="Remove silencing of state(s) (re-enabling alerts)"
+           }
            value="Unsilence"
            onclick='document.getElementById("curl_@{formUUID}").value = window.location.href'>
     }
@@ -61,11 +67,15 @@
     @defining(java.util.UUID.randomUUID.toString) { formUUID =>
     <input id="curl_@{formUUID}" type="hidden" name="curl" value="">
     <input type="submit"
+           @if(!isAdmin){ disabled="disabled" title="Admin access required" } else {
            title="Silence state problem(s) (disabling alerts) for the specified time period"
+           }
            value="Silence for"
            onclick='document.getElementById("curl_@{formUUID}").value = window.location.href'>
     }
-    <input type="text" name="slunt" value="2h" size="6" />
+    <input type="text" name="slunt" value="2h" size="6"
+           @if(!isAdmin){ disabled="disabled" title="Admin access required" }
+    />
   </form>
   ]
 </div>

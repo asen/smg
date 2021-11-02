@@ -1,9 +1,12 @@
 @import com.smule.smg.core.SMGIndex
 @import com.smule.smg.remote.SMGRemote
 @import com.smule.smg.config.SMGConfigService
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
 
 @(selectedRemotes: Seq[String], availRemotes:Seq[String], lvls: Int, defaultLevels: Int,
- remotesData: Seq[(SMGRemote, Seq[SMGIndex])], periods: Seq[String], cfSvc: SMGConfigService)(implicit flash: Flash)
+ remotesData: Seq[(SMGRemote, Seq[SMGIndex])], periods: Seq[String],
+ cfSvc: SMGConfigService)(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - Index", cfSvc, cfSvc.config.autoRefreshInterval) {
 
@@ -42,7 +45,7 @@
     <ul>
     @for( ix <- rt._2) {
       <li>
-        @indexItem(ix, periods, lvls - 1)
+        @indexItem(ix, periods, lvls - 1, request.user.isAdmin)
       </li>
     }
     </ul>

@@ -3,9 +3,12 @@
 @import com.smule.smg.monitor.SMGMonitorLogMsg
 @import com.smule.smg.monitor.SMGMonitorLogFilter
 @import com.smule.smg.monitor.SMGState
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
 
 @(cfSvc: SMGConfigService, availRemotes:Seq[String], availStates:Seq[String],
-  defPeriod:String, defLimit:Int, flt: SMGMonitorLogFilter, logMsgs: Seq[SMGMonitorLogMsg])(implicit flash: Flash)
+  defPeriod:String, defLimit:Int, flt: SMGMonitorLogFilter,
+  logMsgs: Seq[SMGMonitorLogMsg])(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - Monitor event log", cfSvc, cfSvc.config.autoRefreshInterval) {
 

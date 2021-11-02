@@ -4,9 +4,12 @@
 @import com.smule.smg.core.SMGTree
 @import com.smule.smg.monitor.SMGState
 @import com.smule.smg.remote.SMGRemote
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
+
 @(cfSvc: SMGConfigService, rmtIds: Seq[String], availRemotes: Seq[String], flt: SMGMonFilter,
   rootId: Option[String], trees: Seq[SMGTree[SMGMonState]], total: Int,
-  limit: Int, defLimit: Int, curUrl: String)(implicit flash: Flash)
+  limit: Int, defLimit: Int, curUrl: String)(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - Monitor State trees", cfSvc, 300) {
 
@@ -61,7 +64,9 @@
 
 
 <div>
-  <input type="button" onclick="silenceAllMatching();" value="Silence ALL matching objects for" />
+  <input type="button" onclick="silenceAllMatching();"
+         @if(!request.user.isAdmin){ disabled="disabled" title="Admin access required" }
+         value="Silence ALL matching objects for" />
   <input type="text" size="10" id="inpSilenceAllUntil" value="2h" />
   @if(rootId.isEmpty &&
      (flt.minState.getOrElse(SMGState.OK) == SMGState.OK) &&
@@ -164,7 +169,7 @@
       @if(tree.node.parentId.isDefined){
       <p>Parent: <a href="?rid=@tree.node.parentId.get" onclick="goToRoot('@tree.node.parentId.get'); return false">@tree.node.parentId.get</a></p>
       }
-      @monitorStateTreeDisplay(tree, tree.node.id == rootId.getOrElse(""), curUrl)
+      @monitorStateTreeDisplay(tree, tree.node.id == rootId.getOrElse(""), curUrl, request.user.isAdmin)
     </li>
     }
   </ul>

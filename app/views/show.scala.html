@@ -6,10 +6,12 @@
 @import com.smule.smg.monitor.SMGMonState
 @import com.smule.smg.core.SMGIndex
 @import com.smule.smg.monitor.SMGMonStateAgg
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
 
 @(cfSvc: SMGConfigService, obj: SMGObjectView, lst: Seq[SMGImageView], cols: Int, cwidth: Int,
   gopts: GraphOptions, showMs: Boolean, cleanView: Boolean, ms: Seq[SMGMonState], ixes: Seq[SMGIndex],
-  isPost: Boolean)(implicit flash: Flash)
+  isPost: Boolean)(implicit flash: Flash, request: UserRequest[AnyContent])
 
   @main("SMG - " + obj.title, cfSvc, if (isPost) 0 else 300) {
 
@@ -126,7 +128,7 @@ Changing this reloads the page.">Clean view</label>
     </div>
     @if(!obj.isAgg){
     <div class="subtitle-div">
-      @monStateActions(SMGMonStateAgg.aggByParentId(ms).head._2, None)
+      @monStateActions(SMGMonStateAgg.aggByParentId(ms).head._2, None, request.user.isAdmin)
     </div>
     }
   </div>

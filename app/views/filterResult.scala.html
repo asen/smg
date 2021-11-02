@@ -10,6 +10,8 @@
 @import com.smule.smg.monitor.SMGMonStateAgg
 @import com.smule.smg.grapher.SMGImageViewsGroup
 @import controllers.Application
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
 
 @(cfSvc: SMGConfigService, idxes: Seq[SMGIndex], parentIdx: Option[SMGIndex],
   result: Seq[SMGImageViewsGroup], flt: SMGFilter, dep: Application#DashboardExtraParams,
@@ -17,7 +19,7 @@
   maxPg: Int, dispCount: Int, slicedCount: Int , tlCount: Int, availRemotes: Seq[SMGRemote],
   gopts: GraphOptions, showMs:Boolean, cleanView: Boolean, monData: Map[String, Seq[SMGMonState]],
   errorMsg: Option[String], matchingIndexes : Seq[SMGIndex],
-  isPost: Boolean)(implicit flash: Flash)
+  isPost: Boolean)(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - " + (if (idxes.nonEmpty) idxes.map(_.title).mkString(",") else flt.humanText), cfSvc, if (isPost) 0 else cfSvc.config.autoRefreshInterval) {
 
@@ -41,7 +43,7 @@
       </h4>
     }
     @for(idx <- idxes){
-      @indexItem(idx, GrapherApi.detailPeriods, 1)
+      @indexItem(idx, GrapherApi.detailPeriods, 1, request.user.isAdmin)
     }
     <hr>
   }
@@ -73,7 +75,7 @@
 
     @if(showMs){
       @monitorSvgObjectsDashHeader(result.flatMap(_.lst).map(_.obj.id), monData)
-      @monStateListActions(monData.values.toSeq.flatten)
+      @monStateListActions(monData.values.toSeq.flatten, request.user.isAdmin)
     }
 
     @filterPages(dep.actualPg, maxPg)
@@ -90,7 +92,7 @@
         <div class="smgrow">
         @for( (g, ix) <- group.lst.zipWithIndex) {
 
-          @filterResultGraphCell(g, gopts, dep, aggOp, cfSvc, monData, showMs, cleanView)
+          @filterResultGraphCell(g, gopts, dep, aggOp, cfSvc, monData, showMs, cleanView, request.user.isAdmin)
 
           @if(((ix + 1) % dep.cols) == 0) {
             </div><hr/><div class="smgrow">

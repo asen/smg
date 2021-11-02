@@ -1,12 +1,12 @@
 package com.smule.smg.plugin
 
 import java.util.concurrent.atomic.AtomicBoolean
-
 import com.smule.smg.config.SMGConfIndex
 import com.smule.smg.core.{CommandResult, ParentCommandData, SMGFetchException, SMGObjectView, SMGPreFetchCmd}
 import com.smule.smg.monitor.SMGMonCheck
 import com.smule.smg.remote.SMGRemotesApi
 import com.smule.smg.GrapherApi
+import com.smule.smg.auth.{User,UsersProvider}
 import com.smule.smg.cdash.{CDashConfigItem, CDashItem}
 
 import scala.concurrent.Future
@@ -50,6 +50,8 @@ trait SMGPlugin {
   val interval: Int
 
   def showInMenu: Boolean = true
+
+  def roleAccess: User.Role.Value = User.Role.VIEWER
 
   /**
     * Any custom objectViews the plugin defines.
@@ -169,7 +171,12 @@ trait SMGPlugin {
 
 
   /**
-    * Extension point for implementing custom dashboad items in plugins
+    * Extension point for implementing custom dashboard items in plugins
     */
   def cdashItem(confItem: CDashConfigItem): Option[Future[CDashItem]] = None
+
+  /**
+    * Extension point for implementing custom authentication in plugins
+    */
+  def usersProviders: Seq[UsersProvider] = Seq()
 }

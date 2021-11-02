@@ -2,7 +2,11 @@
 @import com.smule.smg.config.SMGConfigNotifyConfsSummary
 @import com.smule.smg.remote.SMGRemote
 @import java.net.URLEncoder
-@(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String], nConfs: SMGConfigNotifyConfsSummary)(implicit flash: Flash)
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
+
+@(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String],
+  nConfs: SMGConfigNotifyConfsSummary)(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - Notification commands", cfSvc, 0) {
 

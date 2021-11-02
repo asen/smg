@@ -1,6 +1,10 @@
 @import com.smule.smg.plugin.SMGPlugin
 @import com.smule.smg.config.SMGConfigService
-@(plugin: SMGPlugin, htmlContent: String, cfSvc: SMGConfigService)(implicit flash: Flash)
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
+
+@(plugin: SMGPlugin, htmlContent: String,
+  cfSvc: SMGConfigService)(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - " + plugin.pluginId, cfSvc, if (plugin.autoRefresh) 300 else 0) {
   @Html(htmlContent)

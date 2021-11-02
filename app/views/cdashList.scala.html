@@ -1,6 +1,8 @@
 @import com.smule.smg.config.SMGConfigService
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
 
-@(cfSvc: SMGConfigService)(implicit flash: Flash)
+@(cfSvc: SMGConfigService)(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - Custom Dahsboards", cfSvc, 0) {
 

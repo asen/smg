@@ -7,7 +7,9 @@
 @import controllers.Application
 
 @(g: SMGImageView, gopts: GraphOptions, dep: Application#DashboardExtraParams, aggOp: Option[String],
-  cfSvc: SMGConfigService, monData: Map[String, Seq[SMGMonState]], showMs: Boolean, cleanView: Boolean)
+  cfSvc: SMGConfigService, monData: Map[String, Seq[SMGMonState]], showMs: Boolean, cleanView: Boolean,
+  isAdmin: Boolean
+)
 
 <div class="smgcell" style="max-width: @{cfSvc.config.rrdConf.imageCellWidth}px;">
   <a name="@g.obj.id" ></a> <a name="@g.period"></a> <a name="@g.obj.id-@g.period"></a>
@@ -44,7 +46,7 @@
           @filterResultSmodalShow(g.obj.title, monData(g.obj.id))
         </div>
         @if(aggOp.isEmpty){
-          @monStateGraphActions(g.obj.refObj.map(_.id), monData(g.obj.id))
+          @monStateGraphActions(g.obj.refObj.map(_.id), monData(g.obj.id), isAdmin)
         }
       </div>
       }

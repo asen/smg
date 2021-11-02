@@ -156,6 +156,7 @@ class TestConfigSvc() extends SMGConfigService {
       objectNotifyConfs = Map(),
       hiddenIndexes = Map(),
       customDashboards = Seq(),
+      authUsers = Seq(),
       configErrors = List(),
       rraDefs = Map()
     )

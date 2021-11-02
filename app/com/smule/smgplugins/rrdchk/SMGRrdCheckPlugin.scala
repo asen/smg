@@ -1,6 +1,7 @@
 package com.smule.smgplugins.rrdchk
 
 import com.smule.smg._
+import com.smule.smg.auth.User
 import com.smule.smg.config.{SMGConfIndex, SMGConfigService}
 import com.smule.smg.core.{SMGObjectUpdate, SMGObjectView}
 import com.smule.smg.monitor._
@@ -26,6 +27,7 @@ class SMGRrdCheckPlugin (val pluginId: String,
   private val myEc: ExecutionContext =
     smgConfSvc.actorSystem.dispatchers.lookup("akka-contexts.plugins-shared")
 
+  override val roleAccess: User.Role.Value = User.Role.ROOT
   override def objects: Seq[SMGObjectView] = Seq()
 
   override def indexes: Seq[SMGConfIndex] = Seq()

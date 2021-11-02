@@ -1,13 +1,13 @@
 @import com.smule.smg.core.SMGTree
 @import com.smule.smg.monitor.SMGMonState
-@(tree: SMGTree[SMGMonState], isRoot: Boolean, curUrl: String)
+@(tree: SMGTree[SMGMonState], isRoot: Boolean, curUrl: String, isAdmin: Boolean)
 
 <div>
-  @monitorStateTreeNodeDisplay(tree.node, isRoot, false, curUrl)
+  @monitorStateTreeNodeDisplay(tree.node, isRoot, false, curUrl, isAdmin)
   <ul>
     @for(t <- tree.children){
     <li>
-      @monitorStateTreeNodeDisplay(t.node, false, t.children.nonEmpty, curUrl)
+      @monitorStateTreeNodeDisplay(t.node, false, t.children.nonEmpty, curUrl, isAdmin)
     </li>
     }
   </ul>

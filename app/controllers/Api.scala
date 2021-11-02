@@ -9,6 +9,7 @@ import com.smule.smg.monitor._
 import com.smule.smg.notify.SMGMonNotifyApi
 import com.smule.smg.remote.{SMGRemotesApi, _}
 import com.smule.smg.rrd.SMGRrdFetchParams
+import controllers.actions.SystemAction
 
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json._
@@ -28,7 +29,8 @@ class Api  @Inject() (actorSystem: ActorSystem,
                       remotes: SMGRemotesApi,
                       configSvc: SMGConfigService,
                       monitorApi: SMGMonitorApi,
-                      notifyApi: SMGMonNotifyApi
+                      notifyApi: SMGMonNotifyApi,
+                      systemAction: SystemAction
                      )(implicit ec: ExecutionContext)  extends InjectedController {
 
 
@@ -41,13 +43,14 @@ class Api  @Inject() (actorSystem: ActorSystem,
     *
     * @return
     */
-  def reloadLocal = Action {
+  def reloadLocal: Action[AnyContent] = systemAction.rootAction {
     configSvc.reloadLocal()
     remotes.fetchConfigs()
     Ok("OK")
   }
 
-  def reloadSlave(slaveId: String) = Action {
+  // TODO - allow from the actual slave host?
+  def reloadSlave(slaveId: String): Action[AnyContent] = systemAction.adminAction {
     remotes.fetchSlaveConfig(slaveId)
     Ok("OK")
   }
@@ -57,7 +60,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     *
     * @return
     */
-  def config = Action {
+  def config: Action[AnyContent] = systemAction.viewAction {
     val json = Json.toJson(configSvc.config)
     Ok(json)
   }
@@ -75,7 +78,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
             r: Option[Int],
             s: Option[String],
             e: Option[String],
-            fnan: Option[String]): Action[AnyContent] = Action.async {
+            fnan: Option[String]): Action[AnyContent] = systemAction.viewAction.async {
     val obj = smg.getObjectView(oid)
     if (obj.isEmpty) Future {
       Ok("[]")
@@ -114,11 +117,11 @@ class Api  @Inject() (actorSystem: ActorSystem,
             r: Option[Int],
             s: Option[String],
             e: Option[String],
-            fnan: Option[String]): Action[AnyContent] = Action.async {
+            fnan: Option[String]): Action[AnyContent] = systemAction.viewAction.async {
     fetchManyCommon(ids, r, s, e, fnan)
   }
 
-  def fetchManyPost(): Action[AnyContent] = Action.async { request =>
+  def fetchManyPost(): Action[AnyContent] = systemAction.viewAction.async { request =>
     val params = request.body.asFormUrlEncoded.get
     fetchManyCommon(params("ids").head,
       params.get("r").map(_.head.toInt),
@@ -167,11 +170,11 @@ class Api  @Inject() (actorSystem: ActorSystem,
                r: Option[Int],
                s: Option[String],
                e: Option[String],
-               fnan: Option[String]): Action[AnyContent] = Action.async {
+               fnan: Option[String]): Action[AnyContent] = systemAction.viewAction.async {
     fetchAggCommon(ids, op, gb, gbp, r, s, e, fnan)
   }
 
-  def fetchAggPost(): Action[AnyContent] = Action.async { request =>
+  def fetchAggPost(): Action[AnyContent] = systemAction.viewAction.async { request =>
     val params = request.body.asFormUrlEncoded.get
     fetchAggCommon(params("ids").head,
       params("op").head,
@@ -201,7 +204,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     *
     * @return
     */
-  def graph: Action[AnyContent] = Action.async { request =>
+  def graph: Action[AnyContent] = systemAction.viewAction.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val gopts = goptsFromParams(params)
     graphCommon(params("ids").head, params("periods").headOption, gopts).map { imgLst: Seq[SMGImageView] =>
@@ -233,7 +236,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     *
     * @return
     */
-  def agg: Action[AnyContent] = Action.async { request =>
+  def agg: Action[AnyContent] = systemAction.viewAction.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val gopts = goptsFromParams(params)
     aggCommon(params("ids").head, params("op").head, params.get("gb").map(_.head),
@@ -269,7 +272,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def downloadRrd(oid: String) = Action {
+  def downloadRrd(oid: String): Action[AnyContent] = systemAction.viewAction {
     val obj = smg.getObjectView(oid)
     if (obj.isDefined && obj.get.rrdFile.isDefined) {
       configSvc.config.rrdConf.flushRrdCachedFile(obj.get.rrdFile.get)
@@ -279,7 +282,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def runCommandTree(interval: Int, id: String): Action[AnyContent] = Action.async {
+  def runCommandTree(interval: Int, id: String): Action[AnyContent] = systemAction.adminAction.async {
     smg.runCommandsTreeNow(interval, id).map { ret =>
       if (ret)
         Ok(s"OK - sent message for ${id}")
@@ -288,7 +291,8 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def pluginData(pluginId: String) = Action { request =>
+  // TODO plugin/proxy auth
+  def pluginData(pluginId: String): Action[AnyContent] = systemAction.viewAction { request =>
     val httpParams = request.queryString.map { case (k, v) => k -> v.mkString }
     configSvc.plugins.find(p => p.pluginId == pluginId) match {
       case Some(plugin) => {
@@ -298,13 +302,13 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  private def idsToObjectViews(idsStr: String) = {
+  private def idsToObjectViews(idsStr: String): List[SMGObjectView] = {
     val ids = idsStr.split(',').toList
     val objsById = configSvc.config.viewObjectsById
     ids.map(oid => objsById.get(oid)).filter(o => o.nonEmpty).map(o => o.get)
   }
 
-  def monitorRerun(id: String): Action[AnyContent] = Action.async { request =>
+  def monitorRerun(id: String): Action[AnyContent] = systemAction.adminAction.async { request =>
     val paramsOpt = request.body.asFormUrlEncoded
     val intervals : Seq[Int] = if (paramsOpt.isDefined && paramsOpt.get.contains("intvls")) {
       val params: Map[String, Seq[String]] = paramsOpt.get
@@ -325,7 +329,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
 
   def monitorLog(period: Option[String], limit: Option[Int], sev: Option[String], soft: Option[String],
                  ackd: Option[String], slncd: Option[String],
-                 rx: Option[String], rxx: Option[String]) = Action {
+                 rx: Option[String], rxx: Option[String]): Action[AnyContent] = systemAction.viewAction {
     val minSev = sev.map{ s => SMGState.fromName(s) }
     val flt = SMGMonitorLogFilter(
       periodStr = period.getOrElse("24h"),
@@ -341,7 +345,8 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(logs))
   }
   
-  def monitorStates(ms: Option[String], soft: Option[String], ackd: Option[String], slncd: Option[String]) = Action {
+  def monitorStates(ms: Option[String], soft: Option[String], ackd: Option[String],
+                    slncd: Option[String]): Action[AnyContent] = systemAction.viewAction {
     val myMs = ms.map(s => SMGState.fromName(s)).getOrElse(SMGState.ANOMALY)
     val flt = SMGMonFilter(rx = None, rxx = None, minState = Some(myMs),
       includeSoft =  soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
@@ -351,7 +356,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(SMGMonitorStatesResponse(SMGRemote.local, states, isMuted = notifyApi.isMuted, notifyApi.getActiveAlerts)))
   }
 
-  def monitorSilenced()  = Action {
+  def monitorSilenced(): Action[AnyContent] = systemAction.viewAction {
     val states = monitorApi.localSilencedStates()
     Ok(
       Json.toJson(Map(
@@ -361,11 +366,11 @@ class Api  @Inject() (actorSystem: ActorSystem,
     )
   }
 
-  def monitorHeatmap = Action { request =>
+  def monitorHeatmap: Action[AnyContent] = systemAction.viewAction { request =>
     monitorHeatmapCommon(request.queryString)
   }
 
-  def monitorHeatmapPost = Action { request =>
+  def monitorHeatmapPost: Action[AnyContent] = systemAction.viewAction { request =>
     monitorHeatmapCommon(request.body.asFormUrlEncoded.get)
   }
 
@@ -381,13 +386,13 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(hm))
   }
 
-  def monitorObjectViewsPost: Action[AnyContent] = Action.async { request =>
+  def monitorObjectViewsPost: Action[AnyContent] = systemAction.viewAction.async { request =>
     val params = request.body.asFormUrlEncoded.get
     val ids = params("ids").head
     monitorObjectViewsCommon(ids)
   }
 
-  def monitorObjectViewsGet(idsStr: String): Action[AnyContent] = Action.async {
+  def monitorObjectViewsGet(idsStr: String): Action[AnyContent] = systemAction.viewAction.async {
     monitorObjectViewsCommon(idsStr)
   }
 
@@ -399,7 +404,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorRunTree(root: Option[String]) = Action {
+  def monitorRunTree(root: Option[String]): Action[AnyContent] = systemAction.viewAction {
     val trees = configSvc.config.getFetchCommandTreesWithRoot(root)
     Ok(Json.toJson(trees.map(t => (t._1.toString, Json.toJson(t._2)))))
   }
@@ -411,7 +416,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
                    ackd: Option[String],
                    slncd: Option[String],
                    rid: Option[String],
-                   lmt: Option[Int]) = Action {
+                   lmt: Option[Int]): Action[AnyContent] = systemAction.viewAction {
     val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.fromName(s)),
       includeSoft = soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
       includeSilenced = slncd.getOrElse("off") == "on")
@@ -421,7 +426,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     Ok(Json.toJson(m))
   }
 
-  def statesDetails() = Action { implicit request =>
+  def statesDetails(): Action[AnyContent] = systemAction.viewAction { implicit request =>
     val ids: Seq[String] = request.body.asJson.map(s => s.as[Seq[String]]).getOrElse(Seq())
     val mm = monitorApi.localStatesDetails(ids)
     Ok(Json.toJson(mm))
@@ -437,7 +442,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
                              rid: Option[String],
                              until: Int,
                              sticky: Option[String],
-                             stickyDesc: Option[String]): Action[AnyContent] = Action.async {
+                             stickyDesc: Option[String]): Action[AnyContent] = systemAction.adminAction.async {
     val flt = SMGMonFilter(rx, rxx, ms.map(s => SMGState.fromName(s)),
       includeSoft = soft.getOrElse("off") == "on", includeAcked = ackd.getOrElse("off") == "on",
       includeSilenced = slncd.getOrElse("off") == "on")
@@ -450,7 +455,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def removeStickySilence: Action[AnyContent] = Action.async { request =>
+  def removeStickySilence(): Action[AnyContent] = systemAction.adminAction.async { request =>
     val uuid = request.body.asFormUrlEncoded.getOrElse(Map()).get("uid").map(_.head)
     if (uuid.isDefined) {
       monitorApi.removeStickySilence(uuid.get).map { b =>
@@ -467,7 +472,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorAck(id: String): Action[AnyContent] = Action.async {
+  def monitorAck(id: String): Action[AnyContent] = systemAction.adminAction.async {
     monitorApi.acknowledge(id).map { b =>
       if (b)
         Ok("OK")
@@ -476,7 +481,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorUnack(id: String): Action[AnyContent] = Action.async {
+  def monitorUnack(id: String): Action[AnyContent] = systemAction.adminAction.async {
     monitorApi.unacknowledge(id).map { b =>
       if (b)
         Ok("OK")
@@ -485,7 +490,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorSilence(id: String, slunt: Int): Action[AnyContent] = Action.async {
+  def monitorSilence(id: String, slunt: Int): Action[AnyContent] = systemAction.adminAction.async {
     monitorApi.silence(id, slunt).map { b =>
       if (b)
         Ok("OK")
@@ -494,7 +499,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorUnsilence(id: String): Action[AnyContent] = Action.async {
+  def monitorUnsilence(id: String): Action[AnyContent] = systemAction.adminAction.async {
     monitorApi.unsilence(id).map { b =>
       if (b)
         Ok("OK")
@@ -503,7 +508,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
     }
   }
 
-  def monitorAckList: Action[AnyContent] = Action { request =>
+  def monitorAckList: Action[AnyContent] = systemAction.adminAction { request =>
     val params = request.body.asFormUrlEncoded.get
     val ids = params("ids").head.split(",")
     if (monitorApi.acknowledgeListLocal(ids))
@@ -512,7 +517,7 @@ class Api  @Inject() (actorSystem: ActorSystem,
       NotFound("silenceListLocal returned false")
   }
 
-  def monitorSilenceList: Action[AnyContent] = Action { request =>
+  def monitorSilenceList: Action[AnyContent] = systemAction.adminAction { request =>
     val params = request.body.asFormUrlEncoded.get
     val ids = params("ids").head.split(",")
     val slunt = params("slunt").head.toInt
@@ -522,22 +527,22 @@ class Api  @Inject() (actorSystem: ActorSystem,
       NotFound("silenceListLocal returned false")
   }
 
-  def monitorMute(): Action[AnyContent] = Action {
+  def monitorMute(): Action[AnyContent] = systemAction.adminAction {
     notifyApi.muteAll()
     Ok("OK")
   }
 
-  def monitorUnmute(): Action[AnyContent] = Action {
+  def monitorUnmute(): Action[AnyContent] = systemAction.adminAction {
     notifyApi.unmuteAll()
     Ok("OK")
   }
 
-  def monitorAlertConds(): Action[AnyContent] = Action {
+  def monitorAlertConds(): Action[AnyContent] = systemAction.viewAction {
     val ret = configSvc.config.alertCondsSummary
     Ok(Json.toJson(ret))
   }
 
-  def monitorNotifyCmds(): Action[AnyContent] = Action {
+  def monitorNotifyCmds(): Action[AnyContent] = systemAction.viewAction {
     val ret = configSvc.config.notifyCmdsSummary
     Ok(Json.toJson(ret))
   }

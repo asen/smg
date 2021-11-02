@@ -27,6 +27,7 @@ libraryDependencies ++= Seq(
   jdbc,
   ws,
   "org.yaml" % "snakeyaml" % "1.26",
+//  "commons-net" % "commons-net" % "3.8.0",
   specs2 % Test,
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
   "org.scalatestplus.play" % "scalatestplus-play_2.11" % "4.0.3" % "test"

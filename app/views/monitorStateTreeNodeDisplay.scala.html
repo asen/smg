@@ -1,6 +1,6 @@
 @import com.smule.smg.core.SMGTree
 @import com.smule.smg.monitor.SMGMonState
-@(ms: SMGMonState, isRoot: Boolean, hasChildren: Boolean, curUrl: String)
+@(ms: SMGMonState, isRoot: Boolean, hasChildren: Boolean, curUrl: String, isAdmin: Boolean)
 
 <p>
 <div>
@@ -12,7 +12,7 @@
 
   [ <a href="@ms.showUrl">Graphs</a> ]
 
-  @monStateActions(ms, Some(curUrl))
+  @monStateActions(ms, Some(curUrl), isAdmin)
 </div>
 
 <div>

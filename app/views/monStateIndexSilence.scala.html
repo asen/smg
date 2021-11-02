@@ -1,4 +1,4 @@
-@(ixid: String, formUUID: String)
+@(ixid: String, formUUID: String, isAdmin: Boolean)
 
 <small>
   <form style="display:inline;" action="/monitor/slncIdx" method="GET"
@@ -6,7 +6,12 @@
   >
     <input type="hidden" name="ix" value="@{ixid}">
     <input id="curl_@{formUUID}" type="hidden" name="curl" value="">
-    <input type="submit" value="Silence for" onclick='document.getElementById("curl_@{formUUID}").value = window.top.location.href'>
-    <input type="text" name="slunt" value="2h" size="6" />
+    <input type="submit" value="Silence for"
+           onclick='document.getElementById("curl_@{formUUID}").value = window.top.location.href'
+           @if(!isAdmin){ disabled="disabled" title="Admin access required" }
+    />
+    <input type="text" name="slunt" value="2h" size="6"
+           @if(!isAdmin){ disabled="disabled" title="Admin access required" }
+    />
   </form>
 </small>

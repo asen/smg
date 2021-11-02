@@ -1,8 +1,9 @@
 @import com.smule.smg.monitor.SMGMonitorStatesResponse
 @import com.smule.smg.monitor.SMGState
-@(msr: SMGMonitorStatesResponse, curUrl: String)
 
-@monitorMuteUnmute(msr.remote.id, msr.isMuted, curUrl)
+@(msr: SMGMonitorStatesResponse, curUrl: String, isAdmin:Boolean)
+
+@monitorMuteUnmute(msr.remote.id, msr.isMuted, curUrl, isAdmin)
 
 <div>
   @if(msr.states.isEmpty) {
@@ -15,10 +16,10 @@
       [<a href="@ms.showUrl"><b>Link/Graphs</b></a>] @ellipsifyText(ms.text, 1600)
       [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ]
 
-      @monStateActions(ms, Some(curUrl))
+      @monStateActions(ms, Some(curUrl), isAdmin)
 
       @if(ms.currentStateVal == SMGState.FAILED){
-        @monStateRerunAction(ms.id)
+        @monStateRerunAction(ms.id, isAdmin)
       }
 
       @if(msr.activeAlerts.contains(ms.alertKey)) {

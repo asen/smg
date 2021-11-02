@@ -1,5 +1,9 @@
-@(stateId: String)
+@(stateId: String, isAdmin: Boolean)
 <form style="display: inline-block;" method="POST" action="/monitor/rerun/@stateId">
   <input type="hidden" name="id" value="@{stateId}">
-  <input type="submit" value="Run now" title="Re-run this state command now (instead of the next scheduled time)">
+  <input type="submit" value="Run now"
+         @if(!isAdmin){ disabled="disabled" title="Admin access required" } else {
+         title="Re-run this state command now (instead of the next scheduled time)"
+         }
+  >
 </form>

@@ -1,29 +1,35 @@
 @import com.smule.smg.monitor.SMGMonState
-@(mss: Seq[SMGMonState])
+
+@(mss: Seq[SMGMonState], isAdmin: Boolean)
 
 @if(!mss.isEmpty){
 <div>
   @if(mss.exists{ms => !ms.isOk && !ms.isAcked}){
   <form style="float: left;" method="POST" action="/monitor/ackList">
-    <input type="hidden" name="ids" value="@{mss.filter{ms => !ms.isOk  && !ms.isAcked}.map(ms => ms.id).mkString(",")}">
-    <input type="hidden" id="curlAckList" name="curl" value="">
+    <input type="hidden" name="ids"
+           value="@{mss.filter{ms => !ms.isOk  && !ms.isAcked}.map(ms => ms.id).mkString(",")}" />
+    <input type="hidden" id="curlAckList" name="curl" value="" />
     <input type="submit"
+           @if(!isAdmin){ disabled="disabled" title="Admin access required" }
            value="Acknowledge all problems on page"
            onclick='document.getElementById("curlAckList").value = window.location.href'
-    >
+    />
   </form>
   }
 
   <form style="float: none;" method="POST" action="/monitor/slncList"
         onsubmit="return confirm('Are you sure you want to silence @mss.size objects?');"
   >
-    <input type="hidden" name="ids" value="@{mss.map(ms => ms.id).mkString(",")}">
-    <input type="hidden" id="curlSlcList" name="curl" value="">
+    <input type="hidden" name="ids" value="@{mss.map(ms => ms.id).mkString(",")}" />
+    <input type="hidden" id="curlSlcList" name="curl" value=""/>
     <input type="submit"
+           @if(!isAdmin){ disabled="disabled" title="Admin access required" }
            value="Silence all objects on page for"
            onclick='document.getElementById("curlSlcList").value = window.location.href'
-    >
-    <input type="text" name="slunt" value="2h" size="6" />
+    />
+    <input type="text" name="slunt" value="2h" size="6"
+           @if(!isAdmin){ disabled="disabled" title="Admin access required" }
+    />
   </form>
 </div>
 }

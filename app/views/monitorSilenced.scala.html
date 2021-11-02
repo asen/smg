@@ -4,9 +4,12 @@
 @import com.smule.smg.monitor.SMGState
 @import com.smule.smg.monitor.SMGMonFilter
 @import com.smule.smg.monitor.SMGMonStickySilence
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
 
 @(cfSvc: SMGConfigService, monitorStates: Seq[(SMGRemote, Seq[SMGMonState])],
-  stickySilences: Seq[(SMGRemote, Seq[SMGMonStickySilence])], curUrl: String)(implicit flash: Flash)
+  stickySilences: Seq[(SMGRemote, Seq[SMGMonStickySilence])],
+  curUrl: String)(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - Monitor silenced states", cfSvc, 60) {
 
@@ -23,7 +26,9 @@
         <form method="post" style="display: inline-block">
           <input type="hidden" name="uid" value="@ss.uuid">
           <input type="hidden" name="curl" value="@Html(curUrl)">
-          <input type="submit" value="Remove">
+          <input type="submit"
+                 @if(!request.user.isAdmin){ disabled="disabled" title="Admin access required" }
+                 value="Remove">
         </form>
         </h5>
       </li>
@@ -48,7 +53,7 @@
     <li>
       <span style="background-color: @ms.severityColor;">@{ms.currentStateVal}</span> <a href="@ms.showUrl">@ms.text</a>
       [ @if(ms.isHard){ <strong>HARD</strong> } else { SOFT } ] <br/>
-      @monStateActions(ms, Some(curUrl))
+      @monStateActions(ms, Some(curUrl), request.user.isAdmin)
       <hr/>
     </li>
     }

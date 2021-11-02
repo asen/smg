@@ -1,8 +1,11 @@
 @import com.smule.smg.config.SMGConfigService
 @import com.smule.smg.GrapherApi
 @import com.smule.smg.config.SMGAutoIndex
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
 
-@(topLevel: SMGAutoIndex, periods: Seq[String], expandLevels: Int, cfSvc: SMGConfigService)(implicit flash: Flash)
+@(topLevel: SMGAutoIndex, periods: Seq[String], expandLevels: Int,
+  cfSvc: SMGConfigService)(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - Auto Index " + topLevel.id, cfSvc, cfSvc.config.autoRefreshInterval) {
 

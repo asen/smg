@@ -211,6 +211,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
     val remoteMasters = ListBuffer[SMGRemote]()
     val rraDefs = mutable.Map[String, SMGRraDef]()
     val cDashboardConfigs = ListBuffer[CDashboardConfig]()
+    val authUsers = ListBuffer[AuthUserConfig]()
     val configErrors = ListBuffer[String]()
     val intervalConfs = mutable.Map[Int, IntervalThreadsConfig]()
 
@@ -827,6 +828,11 @@ class SMGConfigParser(log: SMGLoggerApi) {
       intervalConfs(conf.interval) = conf
     }
 
+    def processAuthUser( t: (String,Object), confFile: String ): Unit = {
+      val ymap = t._2.asInstanceOf[java.util.Map[String, Object]].asScala
+      authUsers += AuthUserConfig(t._1, ymap.toMap)
+    }
+
     def parseConf(confFile: String): Unit = {
       val t0 = System.currentTimeMillis()
       log.debug("SMGConfigServiceImpl.parseConf(" + confFile + "): Starting at " + t0)
@@ -856,6 +862,8 @@ class SMGConfigParser(log: SMGLoggerApi) {
                 processCustomDashboard(t, confFile)
               } else if (t._1 == "$interval_def"){
                 processIntervalConf(t, confFile)
+              } else if (t._1.startsWith("$auth-user-")) { // a user or token def
+                processAuthUser(t, confFile)
               } else if (t._1.startsWith("$")) { // a global def
                 processGlobal(t, confFile)
               } // type: auto below
@@ -1106,6 +1114,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
       hiddenIndexes = hiddenIndexConfs.toMap,
       customDashboards = cDashboardConfigs.toList,
       rraDefs = rraDefs.toMap,
+      authUsers = authUsers.toList,
       configErrors = configErrors.toList
     )
 

@@ -1,0 +1,4 @@
+
+- $auth-anonymous-root: false
+- $auth-anonymous-admin: false
+- $auth-anonymous-viewer: true

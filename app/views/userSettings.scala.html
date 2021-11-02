@@ -1,5 +1,8 @@
 @import com.smule.smg.config.SMGConfigService
-@(cfSvc: SMGConfigService, msg: Option[String], showMs: Boolean)(implicit flash: Flash)
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
+@(cfSvc: SMGConfigService, msg: Option[String],
+  showMs: Boolean)(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - User settings", cfSvc, 0) {
 

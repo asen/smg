@@ -1,15 +1,15 @@
 @import com.smule.smg.monitor.SMGMonState
-@(ms: SMGMonState, curUrl: Option[String])
+@(ms: SMGMonState, curUrl: Option[String], isAdmin: Boolean)
 
 @if(!ms.isOk){
   [
   @if(ms.isAcked) {
     Acknowledged
     @monStateActionDisplay(ms.id, "Unack", "unack", curUrl, None,
-      Some("Remove the acknowledgement of this state (re-enabling alerts)"))
+      Some("Remove the acknowledgement of this state (re-enabling alerts)"), isAdmin)
   } else {
     @monStateActionDisplay(ms.id, "Ack", "ack", curUrl, None,
-      Some("Acknowledge this state problem (disabling alerts)"))
+      Some("Acknowledge this state problem (disabling alerts)"), isAdmin)
   }
   ]
 }
@@ -18,8 +18,8 @@
 @if(ms.isSilenced) {
   Silenced @{ms.silencedUntilStr}
   @monStateActionDisplay(ms.id, "Unsilence", "unslnc", curUrl, None,
-    Some("Remove the silencing of this state (re-enabling alerts)"))
+    Some("Remove the silencing of this state (re-enabling alerts)"), isAdmin)
 }
 @monStateActionDisplay(ms.id, "Silence for", "slnc", curUrl, Some("slunt", "2h"),
-  Some("Silence this state problem (disabling alerts) for the specified time period"))
+  Some("Silence this state problem (disabling alerts) for the specified time period"), isAdmin)
 ]

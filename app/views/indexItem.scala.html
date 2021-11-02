@@ -1,6 +1,6 @@
 @import com.smule.smg.core.SMGIndex
 
-@(ix: SMGIndex, periods:Seq[String], levels: Int)
+@(ix: SMGIndex, periods:Seq[String], levels: Int, isAdmin: Boolean)
 
 <div>
   <a name="ix_@ix.id"></a>
@@ -15,7 +15,7 @@
   }
   [<a href="#ix_@{ix.id}">#</a>]
 
-  @monStateIndexDetails(ix.id)
+  @monStateIndexDetails(ix.id, isAdmin)
 </div>
 
 @if(levels > 0){
@@ -24,7 +24,7 @@
   <ul>
     @for( cix <- ix.children) {
     <li>
-      @views.html.indexItem(cix, periods, levels - 1)
+      @views.html.indexItem(cix, periods, levels - 1, isAdmin)
     </li>
     }
   </ul>

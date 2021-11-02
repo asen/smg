@@ -29,7 +29,6 @@ class LoggingFilter extends EssentialFilter {
         log.info(s"${requestHeader.method} ${requestHeader.uri}" +
           s" took ${requestTime}ms and returned ${result.header.status}")
         result.withHeaders("Request-Time" -> requestTime.toString)
-
       }
     }
   }

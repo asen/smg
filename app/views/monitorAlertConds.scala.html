@@ -2,7 +2,11 @@
 @import com.smule.smg.config.SMGConfigAlertCondsSummary
 @import com.smule.smg.remote.SMGRemote
 @import java.net.URLEncoder
-@(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String], aConfs: SMGConfigAlertCondsSummary)(implicit flash: Flash)
+@import controllers.actions.UserRequest
+@import play.api.mvc.AnyContent
+
+@(cfSvc: SMGConfigService, rmtId: String, availRemotes:Seq[String],
+  aConfs: SMGConfigAlertCondsSummary)(implicit flash: Flash, request: UserRequest[AnyContent])
 
 @main("SMG - Alert conditions", cfSvc, 0) {
 

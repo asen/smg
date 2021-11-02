@@ -1,5 +1,5 @@
 @import com.smule.smg.remote.SMGRemote
-@(remoteId: String, isMuted: Boolean, curUrl: String)
+@(remoteId: String, isMuted: Boolean, curUrl: String, isAdmin: Boolean)
 @action = {@if(isMuted){/monitor/unmute}else{/monitor/mute}}
 @submitVal = {@if(isMuted){ Unmute } else { Mute}}
 @submitValSx = {@if(remoteId != SMGRemote.wildcard.id) {} else {All }}
@@ -19,6 +19,8 @@
   <input type="hidden" name="curl" value="@curUrl">
   <input type="hidden" name="remote" value="@remoteId">
   @text
-   <input type="submit" value='@submitVal @submitValSx'>
+   <input type="submit"
+          @if(!isAdmin){ disabled="disabled" title="Admin access required" }
+          value='@submitVal @submitValSx'>
 </form>
 

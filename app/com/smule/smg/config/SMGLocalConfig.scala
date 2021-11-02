@@ -1,7 +1,6 @@
 package com.smule.smg.config
 
 import java.util.concurrent.TimeUnit
-
 import akka.util.Timeout
 import com.smule.smg.cdash.CDashboardConfig
 import com.smule.smg.core._
@@ -55,12 +54,21 @@ case class SMGLocalConfig(
                            hiddenIndexes: Map[String, SMGConfIndex],
                            customDashboards: Seq[CDashboardConfig],
                            rraDefs: Map[String, SMGRraDef],
+                           private val authUsers: Seq[AuthUserConfig],
                            private val configErrors: List[String] // use allErrors at the bottom instead
                     ) extends SMGConfig {
+
+  val authUsersByType: Map[String, Seq[AuthUserConfig]] = authUsers.groupBy(_.userType)
+
+  private val (myUsersConf, userErrors) = SMGUsersConfig.fromConfigGlobalsAndAUthUsers(globals, authUsersByType)
+
+  val usersConfig: SMGUsersConfig = myUsersConf
 
   val intervals: Set[Int] = intervalConfs.keySet
 
   private val validationErrors = ListBuffer[String]()
+
+  validationErrors ++= userErrors
 
   private val log = SMGLogger
 
@@ -301,6 +309,6 @@ case class SMGLocalConfig(
     val intvls = intervalConfs.toList.sortBy(_._1).map(_._2.inspect).mkString(",")
     s"intervals=$intvls localUpdateObjects=$objus (rrd=$rrdObjs, " +
       s"rrdAgg=$rrdAggObjs, plugins=$othObjs) " +
-      s"localViewObjects=${viewObjects.size} remotes=${remotes.size}"
+      s"localViewObjects=${viewObjects.size} remotes=${remotes.size} auth: ${usersConfig.humanDesc}"
   }
 }
