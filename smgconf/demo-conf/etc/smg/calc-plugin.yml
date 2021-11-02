@@ -3,7 +3,7 @@ calc:
   expressions:
     - netext:
       title: "Network traffic out"
-      expr: "host.smg1.netio[1] + host.www1.netio[1]"
+      expr: "host.smg1._agg.netio[1] + host.www1.netio[1]"
 #      period: 24h
 #      step: 60
 #      maxy: 1000
