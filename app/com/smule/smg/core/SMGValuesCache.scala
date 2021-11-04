@@ -96,10 +96,10 @@ class SMGValuesCache(log: SMGLoggerApi) {
     }
   }
 
-  def purgeObsoleteObjs(newObjs: Seq[SMGObjectUpdate]): Unit = {
+  def purgeObsoleteObjs(newObjs: Seq[SMGObjectUpdate], changedObjects: Seq[SMGObjectUpdate]): Unit = {
     val newKeysSet = newObjs.map(ou => ckey(ou)).toSet
     val toDel = (myLastCache.keySet.toSet -- newKeysSet) ++ (myPrevCache.keySet.toSet -- newKeysSet)
-    toDel.foreach { key =>
+    (toDel.toSeq ++ changedObjects.map(ou => ckey(ou))).foreach { key =>
       myInvalidateCache(key)
     }
   }

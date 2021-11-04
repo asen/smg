@@ -206,8 +206,22 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     valuesCache.getCachedValues(ou, counterAsRate)
   }
 
-  private def cleanupCachedValuesMap(newConf: SMGLocalConfig): Unit = {
-    valuesCache.purgeObsoleteObjs(newConf.updateObjects)
+  private def cleanupCachedValuesMap(newConf: SMGLocalConfig, oldConf: SMGLocalConfig): Unit = {
+    // need to purge agg object counters where the aggregation objects list have changed too
+    val oldAggObjs = oldConf.updateObjects.collect { case (x: SMGRrdAggObject) => x }.map(x => (x.id, x)).toMap
+    val newAggObjects = newConf.updateObjects.collect { case (x: SMGRrdAggObject) => x }
+    val changedAggObjs = newAggObjects.filter { newAggObj =>
+      val oldObj = oldAggObjs.get(newAggObj.id)
+      oldObj.isDefined && newAggObj.isCounter && ((oldObj.get.ous != newAggObj.ous) || (!oldObj.get.isCounter))
+    }
+    if (changedAggObjs.nonEmpty) {
+      log.warn(s"ConfigService.cleanupCachedValuesMap: purging ${changedAggObjs.size} changed " +
+        s"counter aggregate objects cached values")
+    } else {
+      log.debug(s"ConfigService.cleanupCachedValuesMap: no changed agg object counters detected: " +
+        s"old=${oldAggObjs.size} new=${newAggObjects.size}")
+    }
+    valuesCache.purgeObsoleteObjs(newConf.updateObjects, changedAggObjs)
   }
 
   private def initExecutionContexts(intervals: Map[Int, IntervalThreadsConfig]): Unit = {
@@ -247,6 +261,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     val t0 = System.currentTimeMillis()
     log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)
     try {
+      val oldConf = currentConfig
       val newConf = configParser.getNewConfig(plugins, topLevelConfigFile)
       reloadSyncObj.synchronized {
         initExecutionContexts(newConf.intervalConfs)
@@ -276,7 +291,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
       }(executionContexts.defaultCtx)
       futs += Future {
         try {
-          cleanupCachedValuesMap(newConf)
+          cleanupCachedValuesMap(newConf, oldConf)
           true
         } catch { case t: Throwable =>
           log.ex(t,"SMGConfigServiceImpl.reload: Unexpected error from cleanupCachedValuesMap")
