@@ -758,7 +758,7 @@ Global for SMG variables are defined as a name -> value pairs where the name is 
 
 - **$auto-refresh-interval**: _300_ - page auto refresh interval (if enabled by default or via the UI). Set to 0 to completely disable auto-refresh.
 
-- **$default-auto-refresh**: _true_ - whether by default dashboard pages will reload automatically. This can be toggled on per page basis in the UI.
+- **$default-auto-refresh**: _false_ - whether by default dashboard pages will reload automatically. This can be toggled on per page basis in the UI.
 
 - **$default-interval** - _60_ - default update interval for objects not specifying it. This must be defined in the config before object definitions lacking interval setting (and one can specify it multiple times, changing the value for subequently defined objects) if one wants to change it from the default.
 

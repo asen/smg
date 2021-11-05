@@ -160,7 +160,7 @@ case class SMGLocalConfig(
 
   val searchCacheMaxLevels: Int = globals.getOrElse("$search-max-levels", "2").toInt
 
-  val defaultAutoRefreshEnabled: Boolean = globals.getOrElse("$default-auto-refresh", "true") == "true"
+  val defaultAutoRefreshEnabled: Boolean = globals.getOrElse("$default-auto-refresh", "false") == "true"
   val autoRefreshInterval: Int = globals.getOrElse("$auto-refresh-interval", "300").toInt
 
   // This needs to be set to around 2000 for IE support, and can be raised to 32k if one does not care about android
