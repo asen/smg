@@ -206,9 +206,11 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     valuesCache.getCachedValues(ou, counterAsRate)
   }
 
-  private def cleanupCachedValuesMap(newConf: SMGLocalConfig, oldConf: SMGLocalConfig): Unit = {
+  private def cleanupCachedValuesMap(newConf: SMGLocalConfig, oldConfOpt: Option[SMGLocalConfig]): Unit = {
     // need to purge agg object counters where the aggregation objects list have changed too
-    val oldAggObjs = oldConf.updateObjects.collect { case (x: SMGRrdAggObject) => x }.map(x => (x.id, x)).toMap
+    val oldAggObjs = oldConfOpt.map { oldConf =>
+      oldConf.updateObjects.collect { case (x: SMGRrdAggObject) => x }.map(x => (x.id, x)).toMap
+    }.getOrElse(Map())
     val newAggObjects = newConf.updateObjects.collect { case (x: SMGRrdAggObject) => x }
     val changedAggObjs = newAggObjects.filter { newAggObj =>
       val oldObj = oldAggObjs.get(newAggObj.id)
@@ -261,7 +263,7 @@ class SMGConfigServiceImpl @Inject() (configuration: Configuration,
     val t0 = System.currentTimeMillis()
     log.debug("SMGConfigServiceImpl.reload: Starting at " + t0)
     try {
-      val oldConf = currentConfig
+      val oldConf = if (isInit) None else Some(currentConfig)
       val newConf = configParser.getNewConfig(plugins, topLevelConfigFile)
       reloadSyncObj.synchronized {
         initExecutionContexts(newConf.intervalConfs)
