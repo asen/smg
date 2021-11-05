@@ -31,7 +31,9 @@ class SystemAction @Inject()(val parser: BodyParsers.Default, userSvc: UsersServ
       def filter[A](input: SystemRequest[A]): Future[Option[Result]] = Future.successful {
         if (input.user.role < role) {
           val msg = s"System authorization failed - ${role} role required"
-          log.error(s"SystemAction: $msg (user has ${input.user.role}), user: ${input.user}")
+          val hdrs = input.headers.headers.map(h => s"${h._1}=${h._2}").mkString(", ")
+          log.error(s"SystemAction: $msg (user has ${input.user.role}), user: ${input.user}, " +
+            s"request headers: $hdrs")
           Some(Results.Forbidden(msg))
         } else
           None
