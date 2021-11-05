@@ -10,6 +10,14 @@ autoconf:
 # XXX This setting is special, not subject to reload. false means allow_reload (and is the default)
   prevent_template_reload: false
   targets:
+    - output: localhost-index.yml
+      template: shared/_index
+      node_name: localhost
+      regen_delay: 600
+      context:
+        id: localhost-smg
+        title: Local SMG stats
+        rx: "^host.localhost.(smg-openmetrics|jmx\\.smg\\.).*"
     - output: localhost-smg-stats.yml
       template: openmetrics
       node_name: localhost
@@ -21,8 +29,8 @@ autoconf:
         metrics_hname: "SMG OpenMetrics"
         labels_in_uids: true
         sort_groups: false
-
-    - output: localhost-jmx-.yml
+        parent_index: localhost-smg
+    - output: localhost-smg-jmx.yml
       template: jmx-jvm
       node_name: localhost
       regen_delay: 300
@@ -30,6 +38,7 @@ autoconf:
         node_host: 127.0.0.1
         port: 9001
         app_type: smg
+        parent_index: localhost-smg
 
 #    - output: localhost-haproxy-stats.yml
 #      template: haproxy
