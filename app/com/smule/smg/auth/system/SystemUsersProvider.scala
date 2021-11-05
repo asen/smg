@@ -36,7 +36,9 @@ class SystemUsersProvider(cfSvc: SMGConfigService) extends UsersProvider {
       remoteAddresses.forall(ip => sn.isInRange(ip)))) {
       Some(SystemUser("system_netrange"))
     } else if (myConf.systemAllowLocalhost && remoteAddresses.isEmpty) {
-       Some(SystemUser("system_local"))
+      log.info(s"SystemUsersProvider: Granting system level access to system_local. Headers: " +
+        s"${request.headers.headers.map(x => s"${x._1}=${x._2}").mkString(", ")}")
+      Some(SystemUser("system_local"))
     } else None
     if (ret.isDefined) {
       log.debug(s"SystemUsersProvider: Granted system level access to ${ret.get.handle}")

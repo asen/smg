@@ -19,7 +19,8 @@ class SystemAction @Inject()(val parser: BodyParsers.Default, userSvc: UsersServ
       block(userReq)
     } else {
       val msg = s"Authentication failed - system requests require authentication"
-      log.error(s"SystemAction: $msg")
+      val hdrs = request.headers.headers.map(h => s"${h._1}=${h._2}").mkString(", ")
+      log.error(s"SystemAction: $msg. Request headers: $hdrs")
       Future.successful(Results.Forbidden(msg))
     }
   }
@@ -29,8 +30,8 @@ class SystemAction @Inject()(val parser: BodyParsers.Default, userSvc: UsersServ
       def executionContext: ExecutionContext = ec
       def filter[A](input: SystemRequest[A]): Future[Option[Result]] = Future.successful {
         if (input.user.role < role) {
-          val msg = s"System authorization failed - ${role} role required (user has ${input.user.role})"
-          log.error(s"SystemAction: $msg")
+          val msg = s"System authorization failed - ${role} role required"
+          log.error(s"SystemAction: $msg (user has ${input.user.role}), user: ${input.user}")
           Some(Results.Forbidden(msg))
         } else
           None
