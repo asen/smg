@@ -30,7 +30,7 @@
   @if(!cleanView && idxes.nonEmpty) {
     <h3>@indexTitles(idxes)</h3>
     @if(parentIdx.isDefined) {
-      <h4>
+      <div><strong>
         Parent: <a href="/dash?@parentIdx.get.asUrl">@parentIdx.get.title</a>
         @if(parentIdx.get.rows.isEmpty || parentIdx.get.rows.get > 0){
           @for( p <- GrapherApi.detailPeriods) {
@@ -40,10 +40,10 @@
         @if(parentIdx.get.desc.isDefined) {
         (@parentIdx.get.desc.get)
         }
-      </h4>
+      </strong></div>
     }
     @for(idx <- idxes){
-      @indexItem(idx, GrapherApi.detailPeriods, 1, request.user.isAdmin)
+      @indexItem(idx, GrapherApi.detailPeriods, 1, request.user.isAdmin, isRoot = true)
     }
     <hr>
   }
