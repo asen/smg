@@ -1,6 +1,7 @@
 
 calc:
-#  expressions:
+  expressions:
+    - include: /etc/smg/calc-expressions.yml
 #    - netext:
 #      title: "Test expression"
 #      expr: "localhost.sysload + localhost.dummy"

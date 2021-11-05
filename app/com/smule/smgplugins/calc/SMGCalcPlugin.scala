@@ -9,6 +9,7 @@ import com.smule.smg.plugin.{SMGPlugin, SMGPluginLogger}
 import com.smule.smg.rrd.SMGRrd
 import org.yaml.snakeyaml.Yaml
 
+import java.io.File
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
@@ -40,6 +41,43 @@ class SMGCalcPlugin (val pluginId: String,
       (firstKey, m)
   }
 
+  private def processInclude(cfFile: String): Seq[SMGCalcExprIndex] = {
+    try {
+      if (new File(cfFile).exists()) {
+        val confTxt = smgConfSvc.sourceFromFile(cfFile)
+        val yaml = new Yaml()
+        val objs = yaml.load(confTxt).asInstanceOf[java.util.ArrayList[Object]].asScala
+        parseExpressions(objs)
+      } else {
+        Seq()
+      }
+    } catch { case t: Throwable =>
+      log.ex(t, s"SMGCalcPlugin.processInclude: Unexpected error: ${t.getMessage}")
+      Seq()
+    }
+  }
+
+  private def parseExpressions(yamlObjects: Seq[Object]): Seq[SMGCalcExprIndex] = {
+    yamlObjects.flatMap { obj =>
+      val ymap = obj.asInstanceOf[java.util.Map[String, Object]]
+      val (k, m) = keyValFromMap(ymap)
+      if (k == "include") {
+        processInclude(m.toString)
+      } else {
+        val omap = m.asInstanceOf[java.util.Map[String, Object]].asScala
+        Seq(SMGCalcExprIndex(k,
+          omap.getOrElse("expr", "").asInstanceOf[String],
+          omap.get("title").map(_.toString),
+          omap.get("period").map(_.toString),
+          omap.get("step").map(_.asInstanceOf[Int]),
+          omap.get("maxy").map(_.asInstanceOf[Double]),
+          omap.get("miny").map(_.asInstanceOf[Double]),
+          omap.getOrElse("dpp", "off").toString == "on",
+          omap.getOrElse("d95p", "off").toString == "on"
+        ))
+      }
+    }
+  }
 
   override def reloadConf(): Unit = {
     try {
@@ -51,28 +89,13 @@ class SMGCalcPlugin (val pluginId: String,
         topLevelConfMap.synchronized {
           topLevelConfMap = tmp.asScala.toMap
           if (topLevelConfMap.contains("expressions")) {
-            val expLb = ListBuffer[SMGCalcExprIndex]()
-            topLevelConfMap("expressions").asInstanceOf[java.util.ArrayList[Object]].asScala.foreach { obj =>
-              val ymap = obj.asInstanceOf[java.util.Map[String, Object]]
-              val (k, m) = keyValFromMap(ymap)
-              val omap = m.asInstanceOf[java.util.Map[String, Object]].asScala
-              expLb += SMGCalcExprIndex(k,
-                omap.getOrElse("expr", "").asInstanceOf[String],
-                omap.get("title").map(_.toString),
-                omap.get("period").map(_.toString),
-                omap.get("step").map(_.asInstanceOf[Int]),
-                omap.get("maxy").map(_.asInstanceOf[Double]),
-                omap.get("miny").map(_.asInstanceOf[Double]),
-                omap.getOrElse("dpp", "off") == "on",
-                omap.getOrElse("d95p", "off") == "on"
-              )
-            }
-            expressions = expLb.toList
+            val exprSeq = topLevelConfMap("expressions").asInstanceOf[java.util.ArrayList[Object]].asScala
+            expressions = parseExpressions(exprSeq).toList
           }
         }
       }
       log.debug("SMGCalcPlugin.reloadConf: confMap=" + topLevelConfMap)
-      log.info("SMGCalcPlugin.reloadConf: confMap.size=" + topLevelConfMap.size)
+      log.info("SMGCalcPlugin.reloadConf: expressions.size=" + expressions.size)
     } catch {
       case t: Throwable => log.ex(t, "SMGCalcPlugin.reloadConf: Unexpected exception: " + t)
     }
@@ -211,7 +234,7 @@ class SMGCalcPlugin (val pluginId: String,
       </form>
       <hr/>
     <div>{errOpt.getOrElse("")}</div>
-      <div>{Unparsed(gOpt.map(imgHtmlContent(_)).getOrElse(""))}</div>
+      <div>{Unparsed(gOpt.map(imgHtmlContent).getOrElse(""))}</div>
     <hr/>
     <h4>Pre-configured expressions:</h4>
     <div>{Unparsed(listExpressionsHtmlContent)}</div>
