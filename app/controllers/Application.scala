@@ -3,6 +3,7 @@ package controllers
 import java.text.SimpleDateFormat
 import java.util.Date
 import akka.actor.ActorSystem
+import akka.util.ByteString
 import com.smule.smg._
 import com.smule.smg.config.{SMGConfigService, SMGLocalConfig}
 import com.smule.smg.core._
@@ -574,12 +575,7 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
   private def fetchCommon(ov: SMGObjectView, d: Boolean, ret: Seq[SMGRrdRow]): Result = {
     val dateFormatter = new SimpleDateFormat(FETCH_HUMAN_DATE_FORMAT)
-    val httpHdrs = mutable.Map[String,String]()
     val hdr = if (ret.isEmpty) "Object Data Not Found\n" else {
-      if (d){
-        httpHdrs(CONTENT_DISPOSITION) = s"attachment; filename=" + ov.id + ".csv"
-        httpHdrs(CONTENT_TYPE) = "text/csv"
-      }
       val vlst = if (ov.isAgg) {
         val aov = ov.asInstanceOf[SMGAggObjectView]
         if ((aov.op == "GROUP") || (aov.op == "STACK") ) {
@@ -595,11 +591,17 @@ class Application  @Inject() (actorSystem: ActorSystem,
 
       "unixts,date," + vlst.map(_.label.getOrElse("dsX")).mkString(",") +"\n"
     }
-    Ok(
-      hdr + ret.map { row =>
-        (Seq(row.tss.toString, dateFormatter.format(new Date(row.tss.toLong * 1000))) ++ row.vals.map(_.toString)).mkString(",")
-      }.mkString("\n")
-    ).withHeaders(httpHdrs.toList:_*)
+
+    val respStr = hdr + ret.map { row =>
+      (Seq(row.tss.toString, dateFormatter.format(new Date(row.tss.toLong * 1000))) ++ row.vals.map(_.toString)).mkString(",")
+    }.mkString("\n")
+
+    if (d){
+      Ok.sendEntity(HttpEntity.Strict(ByteString(respStr), Some("text/csv"))).
+        withHeaders((CONTENT_DISPOSITION, s"attachment; filename= ${ov.id}.csv"))
+    } else {
+      Ok(respStr)
+    }
   }
 
   /**
