@@ -9,12 +9,9 @@ class SMGAuthPluginConfParser(pluginId: String, cfSvc: SMGConfigService, log: SM
     SMGAuthPluginConf.fromConfigGlobals(cfSvc.config.globals)
   }
 
-  private var myConf : SMGAuthPluginConf = try {
-    parseConf()
-  } catch { case t: Throwable =>
-    log.ex(t, s"SMGAuthPluginConfParser.init - unexpected exception (assuming empty conf): ${t.getMessage}")
-    SMGAuthPluginConf.default
-  }
+  // this will be updated by the reload call invoked by the plugin's onConfigReloaded callback
+  // this is synchronous on startup (SMG will not start until it completes) and then async afterwards
+  private var myConf : SMGAuthPluginConf = SMGAuthPluginConf.default
 
   def reload(): Unit = {
     try {
