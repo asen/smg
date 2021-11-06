@@ -865,6 +865,53 @@ Global for SMG variables are defined as a name -> value pairs where the name is 
 
 - **$notify-strikes**: (default: _3_) - how many consecutive error states to be considered a hard error and in turn - trigger alert notifications.
 
+<a name="auth" />
+
+## Authentication configuration
+
+TODO
+
+<pre>
+- $auth-anonymous-root: false
+- $auth-anonymous-admin: false
+- $auth-anonymous-viewer: true
+
+- $auth-default-session-ttl: "24h"
+- $auth-system-allow-localhost: true
+- $auth-system-xff-header: "X-Forwarded-For"
+- $auth-system-authorization-header: "Authorization"
+- $auth-system-allowed-networks: "192.168.0.0/16 10.0.0.0/8"
+- $auth-system-login-url: "/login"
+- $auth-system-logout-url: "/logout"
+
+- type: auth-user-password
+  handle: asen
+  name: "Asen Lazarov"
+  password_hash: "plain:asen:1234"
+  role: admin
+
+- type: auth-user-password
+  handle: test
+  # echo -n test:test | shasum -a 256
+  password_hash: "sha-256:31f014b53e5861c8b28a8707a1d6a2a2737ce2c22fd671884173498510a063f0"
+  role: viewer
+
+- type: auth-user-token
+  token: 1d6a2a2737ce2c22fd671884173498510a063f0
+
+</pre>
+
+The Auth plugin also uses globals to configure itself
+
+<pre>
+- $auth-plugin-role-access: admin
+- $auth-plugin-trusted-header-enabled: false
+- $auth-plugin-trusted-header-handle: "X-SMG-Auth-handle"
+- $auth-plugin-trusted-header-name: "X-SMG-Auth-name"
+- $auth-plugin-trusted-header-role: "X-SMG-Auth-role"
+- $auth-plugin-trusted-header-default-role: admin
+</pre>
+
 <a name="cdash" />
 
 ## Custom dashboards configuration

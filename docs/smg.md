@@ -254,7 +254,7 @@ The other use case of View objects is that these support special *cdef variables
 
 One example use case for this is varnish stats - varnishstat reports separate "requests" and "cache hit" (simple) counters. Normally one defines these as COUNTERs in rrdtool and gets an "average rate" (number/sec) when plotting/fetching csv. So we can define a special cdef variable in SMG which divides the "cache hit" rate (x 100) by the total "requests" and we effectively get an average "cache hit percentage" for the given period.
 
-Check the [Cdef variables](smg-config.html#cdef_vars) section for more details.
+Check the [Cdef variables](smg-config.html#cdef_vars) config section for more details.
 
 <a name="concepts-remotes" />
 
@@ -273,6 +273,29 @@ Then [filters](#concepts-filters) can specify filtering within one or more speci
 Internally this works over remote (json-response) http APIs which expose all needed graphing and config/data retrieval operations.
 
 Note that if some remote SMG node dies its graphs/data will become unavailable (i.e. at this point there is no "high availability"), it is mostly a convenience to get all monitoring in a single UI "dashboard". 
+
+<a name="concepts-auth" />
+
+### Authentication
+
+SMG has always been a mostly read-only system - everything it does is configured by an admin or a configuration management system via the yaml config. The only "write" operations exposed via the UI are "silence" and "acknowledge". In addition it is not hard to put SMG behind an authenticated reverse procy and delegate the auth to an external corporate authentication system. Because of these implementing auth was never considered a very high priority, yet as of v1.4 SMG supports some built-in authentication and authorization.
+
+SMG has two types of APIs - the "Local UI" method handlers and the "API" method handlers (the later uised almost exclusively for SMG remotes support). Because of that there are also two types of users internally - "regular" and "system". The "system" user is used to authenticate API calls and "regular" users are used for accessing the UI. Normally the system user also carries info about the regular user on behalf of which the action is executed.  
+
+In addition SMG supports 3 possible roles:
+
+* VIEWER - all read operations are allowed, can not silence/acknowledge alerts
+* ADMIN - all read operations are allowed, can also silence/acknowledge alerts
+* ROOT - everything is allowed, including ability to reload conf and access "privileged" plugins
+
+Intenally SMG has the concept of "User provider" which is an interface allowing the system to authenticate individual requests. There are a few such built-in providers:
+
+* Anonymous user provider - allowing SMG to work with the built-in authentication effectively disabled.
+* System user provider - allowing SMG to use headless accounts for certain tasks. This can work based on whitelisted IPs/ranges or secret tokens
+* Password user provider - allowing admins to define users and passwords as part of the SMG config
+* Plugin user providers - the Plugin API now has an extension point to implement custom authentication providers. The built-in "auth" plugin exposes one such - "Trusted header" user provider. This assumes that SMG is behind and authenticated reverse proxy (no direct access allowed) and can use headers set by that proxy to identify user handle, name and role.
+
+Check the [Authentication](smg-config.html#auth) configuration reference section for more details.
 
 <a name="concepts-plugins" />
 
@@ -317,6 +340,9 @@ At a high level plugins can do a bunch of things:
 - influxdb - plugin to forward all data writes to an influxdb end-point (in batches) in format compatible with the Prometheus influxdb adapter.
 
 - cc - (CommonCommands) implements various commands including parsers+getters for CSV output, SNMP (snmpget) output, string transformers as more efficient replacements for using bash/cut/awk etc as external commands.
+
+- auth - (Authentication methods provider) - currently implements a simple "Trusted Header" auth, to be used together with a reverse proxy which actually does the authentication and supplies an "user id" header to the
+backend.
 
 <a name="concepts-monitoring" />
 

@@ -193,6 +193,7 @@
 <li><a href="#aggregate-functions">Aggregate functions</a></li>
 <li><a href="#view-objects-and-calculated-graphs">View objects and calculated graphs</a></li>
 <li><a href="#remotes">Remotes</a></li>
+<li><a href="#authentication">Authentication</a></li>
 <li><a href="#plugins">Plugins</a>
 <ul>
 <li><a href="#currently-available-plugins">Currently available plugins</a></li>
@@ -378,7 +379,7 @@
 <p>View objects are useful to display a subset of an existing RRD object vars (lines) and/or re-order them via the <a href="smg-config.html#gv">gv (“graph vars”)</a> config value.</p>
 <p>The other use case of View objects is that these support special <em>cdef variables</em>. rrdtool supports complex arithmetic expressions (using the available variables) to calculate plotted values. More details <a href="http://oss.oetiker.ch/rrdtool/tut/cdeftutorial.en.html">here</a>.</p>
 <p>One example use case for this is varnish stats - varnishstat reports separate “requests” and “cache hit” (simple) counters. Normally one defines these as COUNTERs in rrdtool and gets an “average rate” (number/sec) when plotting/fetching csv. So we can define a special cdef variable in SMG which divides the “cache hit” rate (x 100) by the total “requests” and we effectively get an average “cache hit percentage” for the given period.</p>
-<p>Check the <a href="smg-config.html#cdef_vars">Cdef variables</a> section for more details.</p>
+<p>Check the <a href="smg-config.html#cdef_vars">Cdef variables</a> config section for more details.</p>
 <p><a name="concepts-remotes" /></p>
 <h3 id="remotes">Remotes</h3>
 <p>SMG was designed with multiple data centers (a.k.a. “<em>remotes</em>”) in mind from the start (this was actually one of the drivers for us to create SMG).</p>
@@ -388,6 +389,24 @@
 <p>Then <a href="#concepts-filters">filters</a> can specify filtering within one or more specific remotes or can specify the special ’*’ (wildcard) remote id to match objects across all remotes.</p>
 <p>Internally this works over remote (json-response) http APIs which expose all needed graphing and config/data retrieval operations.</p>
 <p>Note that if some remote SMG node dies its graphs/data will become unavailable (i.e. at this point there is no “high availability”), it is mostly a convenience to get all monitoring in a single UI “dashboard”.</p>
+<p><a name="concepts-auth" /></p>
+<h3 id="authentication">Authentication</h3>
+<p>SMG has always been a mostly read-only system - everything it does is configured by an admin or a configuration management system via the yaml config. The only “write” operations exposed via the UI are “silence” and “acknowledge”. In addition it is not hard to put SMG behind an authenticated reverse procy and delegate the auth to an external corporate authentication system. Because of these implementing auth was never considered a very high priority, yet as of v1.4 SMG supports some built-in authentication and authorization.</p>
+<p>SMG has two types of APIs - the “Local UI” method handlers and the “API” method handlers (the later uised almost exclusively for SMG remotes support). Because of that there are also two types of users internally - “regular” and “system”. The “system” user is used to authenticate API calls and “regular” users are used for accessing the UI. Normally the system user also carries info about the regular user on behalf of which the action is executed.</p>
+<p>In addition SMG supports 3 possible roles:</p>
+<ul>
+<li>VIEWER - all read operations are allowed, can not silence/acknowledge alerts</li>
+<li>ADMIN - all read operations are allowed, can also silence/acknowledge alerts</li>
+<li>ROOT - everything is allowed, including ability to reload conf and access “privileged” plugins</li>
+</ul>
+<p>Intenally SMG has the concept of “User provider” which is an interface allowing the system to authenticate individual requests. There are a few such built-in providers:</p>
+<ul>
+<li>Anonymous user provider - allowing SMG to work with the built-in authentication effectively disabled.</li>
+<li>System user provider - allowing SMG to use headless accounts for certain tasks. This can work based on whitelisted IPs/ranges or secret tokens</li>
+<li>Password user provider - allowing admins to define users and passwords as part of the SMG config</li>
+<li>Plugin user providers - the Plugin API now has an extension point to implement custom authentication providers. The built-in “auth” plugin exposes one such - “Trusted header” user provider. This assumes that SMG is behind and authenticated reverse proxy (no direct access allowed) and can use headers set by that proxy to identify user handle, name and role.</li>
+</ul>
+<p>Check the <a href="smg-config.html#auth">Authentication</a> configuration reference section for more details.</p>
 <p><a name="concepts-plugins" /></p>
 <h3 id="plugins">Plugins</h3>
 <p>SMG supports plugins (configured in application.conf) which are just Scala classes implementing a specific interface (trait in Scala terms).</p>
@@ -413,6 +432,7 @@
 <li><p>kube - a (work-in-progress) Kubernetes monitoring plugin. It is able to auto-discover K8s nodes, end-points, services etc and metrics from that (in similar way Prometheus does that). The in-cluster services can be annotated for monitoring and these annotations are compatible with Prometheus. It can also use autoconf templates in addition to Prometheus/OpenMetrics end-points.TODO - config reference doc</p></li>
 <li><p>influxdb - plugin to forward all data writes to an influxdb end-point (in batches) in format compatible with the Prometheus influxdb adapter.</p></li>
 <li><p>cc - (CommonCommands) implements various commands including parsers+getters for CSV output, SNMP (snmpget) output, string transformers as more efficient replacements for using bash/cut/awk etc as external commands.</p></li>
+<li><p>auth - (Authentication methods provider) - currently implements a simple “Trusted Header” auth, to be used together with a reverse proxy which actually does the authentication and supplies an “user id” header to the backend.</p></li>
 </ul>
 <p><a name="concepts-monitoring" /></p>
 <h3 id="monitoring">Monitoring</h3>
