@@ -25,7 +25,8 @@ class SystemUsersProvider(cfSvc: SMGConfigService) extends UsersProvider {
     }
     lazy val xffHeaderName = myConf.systemXffHeader.getOrElse(SMGUsersConfig.defaultHffHeader)
     lazy val remoteAddresses = (Seq(request.remoteAddress) ++
-      request.headers.get(xffHeaderName).map(s => s.split("\\s+").toSeq).getOrElse(Seq())).filter { ip =>
+      request.headers.get(xffHeaderName).map(s => s.split("[,\\s]+").filter(_.nonEmpty).toSeq).
+        getOrElse(Seq())).filter { ip =>
       !myConf.localhostAddresses.exists(_.isInRange(ip))
     }
 
