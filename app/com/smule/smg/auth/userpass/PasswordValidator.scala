@@ -1,6 +1,7 @@
 package com.smule.smg.auth.userpass
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.util.UUID
 
 class PasswordValidator() {
 
@@ -28,7 +29,9 @@ class PasswordValidator() {
     val arr = storedHash.split(":", 2)
     val algo = if (arr.length == 2) arr(0) else "SHA-256"
     val hashVal = if (arr.length == 2) arr(1) else storedHash
-    hashVal == hashString(stringToHash, algo)
+    // double-hashing to prevent potential timing attacks
+    val rand = UUID.randomUUID().toString
+    hashString(rand + hashVal, algo) == hashString(rand + hashString(stringToHash, algo), algo)
   }
 
 }
