@@ -317,6 +317,8 @@ At a high level plugins can do a bunch of things:
 
 - Plugins can implement custom dashboard items - TODO
 
+- Plugins can implement custom user providers - TODO
+
 - Plugins can implement "internal commands" for various reasons including e.g. keeping persistent JMX connections between runs or more efficient parsing of things like OpenMetrics (Prometheus) and CSV stats, 
 
 #### Currently available plugins
