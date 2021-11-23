@@ -1,0 +1,263 @@
+# This file is managed by SMG AutoConf. Changes will be overwritten
+<%@ val node_name: String %>
+<%@ val node_host: String %>
+<%@ val port_range: Seq[String] = Seq("6379") %>
+<%@ val dbs: Seq[String] = Seq("db0") %>
+<%@ val id_prefix: String = "host." %>
+<%@ val title_prefix: String = "Host " %>
+<%@ val interval: Int = 60 %>
+<%@ val timeout: Int = 10 %>
+<%@ val pre_fetch: String = "" %>
+<%@ val parent_index: String = "" %>
+<%@ val notify_fail: String = "" %>
+<%@ val desc: String = "" %>
+<%@ val redis_suffix: String = ".redis" %>
+<%@ val redisBelow3: Boolean = false %>
+
+#if (port_range.lengthCompare(1) > 0)
+- ^<%= id_prefix %><%= node_name %><%= redis_suffix %>.all:
+  title: "<%= title_prefix %><%= node_name %> Redis stats - all ports <%= if (desc == "") "" else s" ($desc)" %>"
+px: <%= id_prefix %><%= node_name %><%= redis_suffix %>.p
+#if (parent_index != "")
+  parent: <%= parent_index %>
+#end
+#end
+<%
+val my_parent_index = if (port_range.lengthCompare(1) > 0) s"${id_prefix}${node_name}${redis_suffix}.all" else parent_index
+%>
+
+#for ( port <- port_range )
+<%
+  val port_num_suffix = if (port_range.lengthCompare(1) > 0) s".${port}" else ""
+  val port_num_title_suffix = if (port_range.lengthCompare(1) > 0) s" port ${port}" else ""
+%>
+- ^<%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>:
+  title: "<%= title_prefix %><%= node_name %> Redis stats <%= port_num_title_suffix %><%= if (desc == "") "" else s" ($desc)" %>"
+  px: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>
+#if (my_parent_index != "")
+  parent: <%= my_parent_index %>
+#end
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info
+  command: "redis-cli -h <%= node_host %> -p <%= port %> info"
+  timeout: <%= timeout %>
+  pass_data: true
+#if (pre_fetch != "")
+  pre_fetch: <%= pre_fetch %>
+#end
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv parse -d :"
+  timeout: <%= timeout %>
+  pass_data: true
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info
+#if (notify_fail != "")
+  notify-fail: <%= notify_fail %>
+#end
+
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.clients
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get connected_clients"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> Connected clients"
+  rrd_type: GAUGE
+  vars:
+  - label: clients
+
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.conn
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get total_connections_received"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> Connections received"
+  rrdType: DERIVE
+  vars:
+  - label: connections
+    mu: conns/sec
+
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.cmd
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get total_commands_processed"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> Commands processed"
+  rrdType: DERIVE
+  vars:
+  - label: commands
+    mu: cmds/sec
+
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.usedmem
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get used_memory"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> Memory used"
+  vars:
+  - label: mem
+    mu: B
+
+# Keyspace
+# db0:keys=26,expires=26,avg_ttl=137305696
+
+#for (db <- dbs)
+# first get the db0: value from redis info
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.get_<%= db %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get -d keys=0,expires=0,avg_ttl=0 <%= db %>"
+  pass_data: true
+# parse that as csv
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse_csv_<%= db %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.get_<%= db %>
+  command: ":cc csv parse -nh"
+  pass_data: true
+
+# first col is keys
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.get_csv_<%= db %>_keys
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse_csv_<%= db %>
+  command: ":cc csv get 0=~.* 0"
+  pass_data: true
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.<%= db %>.keys
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.get_csv_<%= db %>_keys
+  command: ":cc kv pget keys"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> <%= db %> keys"
+  vars:
+  - label: keys
+
+# second col is expires
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.get_csv_<%= db %>_expires
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse_csv_<%= db %>
+  command: ":cc csv get 0=~.* 1"
+  pass_data: true
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.<%= db %>.expires
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.get_csv_<%= db %>_expires
+  command: ":cc kv pget expires"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> <%= db %> expires"
+  vars:
+  - label: expires
+
+# third col is avg_ttl
+- type: $pre_fetch
+  id: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.get_csv_<%= db %>_avg_ttl
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse_csv_<%= db %>
+  command: ":cc csv get 0=~.* 2"
+  pass_data: true
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.<%= db %>.avg_ttl
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.get_csv_<%= db %>_avg_ttl
+  command: ":cc kv pget avg_ttl"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> <%= db %> avg_ttl"
+  vars:
+  - label: avg_ttl
+    mu: ms
+
+#end
+
+#if (!redisBelow3)
+
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.used_memory_lua
+  interval: <%= interval.toString %>
+  rrdType: GAUGE
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get used_memory_lua"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> used_memory_lua"
+  vars:
+  - label: used_memory_lua
+  mu: B
+
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.input_bytes
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get total_net_input_bytes"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> Input bytes/sec"
+  rrdType: DERIVE
+  vars:
+  - label: total_net_input_bytes
+    mu: Bps
+
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.output_bytes
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get total_net_output_bytes"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> Output bytes/sec"
+  rrdType: DERIVE
+  vars:
+  - label: total_net_output_bytes
+    mu: Bps
+
+#end
+
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.blockedclients
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get blocked_clients"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> Blocked clients"
+  vars:
+  - label: clients
+
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.io_threads_active
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get -d 0 io_threads_active"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> io_threads_active"
+  vars:
+  - label: threads
+
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.mem_ratio
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get -d 0 allocator_frag_ratio allocator_rss_ratio rss_overhead_ratio mem_fragmentation_ratio"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> mem ratios"
+  vars:
+  - label: allocator_frag
+  - label: allocator_rss
+  - label: rss_overhead
+  - label: mem_fragmentation
+
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.rdb_changes_since_last_save
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get rdb_changes_since_last_save"
+  timeout: <%= timeout %>
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> rdb_changes_since_last_save"
+  vars:
+  - label: changes
+
+<% val redis_counters = Seq("rejected_connections", "expired_keys", "evicted_keys", "keyspace_hits",
+    "keyspace_misses", "total_reads_processed", "total_writes_processed") %>
+
+#for (cntr <- redis_counters)
+- id: <%= id_prefix %><%= node_name %><%= redis_suffix %><%= port_num_suffix %>.<%= cntr %>
+  interval: <%= interval.toString %>
+  pre_fetch: <%= id_prefix %><%= node_name %><%= redis_suffix %>.<%= port %>.info.parse
+  command: ":cc kv get -d 0 <%= cntr %>"
+  timeout: <%= timeout %>
+  rrd_type: DERIVE
+  title: "<%= title_prefix %><%= node_name %> - Redis<%= port_num_title_suffix %> <%= cntr %>"
+  vars:
+  - label: <%= cntr %>
+    mu: ev/sec
+
+#end
+
+#end

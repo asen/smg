@@ -71,13 +71,21 @@ autoconf:
 #        node_host: 192.168.1.169
 #        snmp_notify_disable: true
 
+#    # XXX this is the original now deprecated template
 #    - output: local-redis-6379.yml
-#      template: redis
+#      template: redis-static
 #      node_name: localhost
 #      resolve_name: true
 #      context:
 #        port_range:
 #          - "6379"
+
+#    - output: localhost-redis-6379.yml
+#      template: redis
+#      node_name: localhost
+#      resolve_name: true
+#      context:
+#        port: 6379
 
 #    - output: local-mysql-.yml
 #      template: mysql
