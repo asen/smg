@@ -67,7 +67,8 @@ class SMGScrapeObjectsGen(
     ignoreTs = false,
     childConc = 1,
     notifyConf = scrapeTargetConf.notifyConf,
-    passData = true ,
+    passData = true,
+    ignorePassedData = false,
     delay = 0.0
   )
   private def myRrdObject(ouid: String,

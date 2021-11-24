@@ -113,7 +113,7 @@ class TestConfigSvc() extends SMGConfigService {
       intervalConfs = Map(60-> IntervalThreadsConfig.defaultConf(60)),
       preFetches = Map("test.prefetch" ->
         SMGPreFetchCmd("test.prefetch", SMGCmd("echo 0"), None, None,
-          ignoreTs = false, 1, None, passData = false, delay = 0.0)),
+          ignoreTs = false, 1, None, passData = false, ignorePassedData = false, delay = 0.0)),
       remotes = Seq(),
       remoteMasters = Seq(),
       pluginObjects = Map(),
