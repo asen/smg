@@ -7,6 +7,7 @@ case class AnonymousUser(role: User.Role.Value) extends User {
   override def name: Option[String] = Some(s"Anonymous")
 
   override def supportsLogout: Boolean = false
+  override def supportsLogin: Boolean = true
 }
 
 object AnonymousUser {

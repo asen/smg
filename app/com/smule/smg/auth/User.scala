@@ -8,6 +8,7 @@ trait User{
   def role: User.Role.Value
   //  def flt: Option[SMGFilter]
   def supportsLogout: Boolean
+  def supportsLogin: Boolean
 
   def humanName: String = name.getOrElse(handle)
 

@@ -9,4 +9,5 @@ case class SystemUser(handle: String) extends User {
   override def role: User.Role.Value = User.Role.ROOT
 
   override val supportsLogout: Boolean = false
+  override val supportsLogin: Boolean = true
 }

@@ -8,6 +8,7 @@ case class RemoteUser(handle: String, name: Option[String], role: User.Role.Valu
     encodeToString(s"$role:$handle:${name.getOrElse("")}".getBytes(StandardCharsets.UTF_8))
 
   override val supportsLogout: Boolean = false
+  override val supportsLogin: Boolean = false
 }
 
 object RemoteUser {

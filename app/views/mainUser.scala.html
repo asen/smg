@@ -2,12 +2,14 @@
 @import com.smule.smg.auth.User
 @(cfSvc: SMGConfigService, user: User)
 <span style="padding: 9px 13px; display: block; position: relative;">
-  User: @{user.humanName} (@{user.role})<br/>
-  (
+  User: @{user.humanName} (@{user.role})
   @if(user.supportsLogout){
-   <a href="@{cfSvc.config.usersConfig.logoutUrl}">Logout</a>
+   <br/>
+   ( <a href="@{cfSvc.config.usersConfig.logoutUrl}">Logout</a> )
   } else {
-    <a href="@{cfSvc.config.usersConfig.loginUrl}" title="Login as different user">Login as another user</a>
+    @if(user.supportsLogin){
+    <br/>
+    ( <a href="@{cfSvc.config.usersConfig.loginUrl}" title="Login as different user">Login as another user</a> )
+    }
   }
-  )
 </span>

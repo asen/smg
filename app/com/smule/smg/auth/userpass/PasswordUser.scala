@@ -10,6 +10,7 @@ case class PasswordUser(
                        //, customSessionTtl
                      ) extends User {
   override val supportsLogout: Boolean = true
+  override val supportsLogin: Boolean = true
 }
 
 //object PasswordUser {
