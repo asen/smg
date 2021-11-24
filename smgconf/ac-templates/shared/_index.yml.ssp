@@ -15,6 +15,10 @@
 <%@ val remote: String = "" %>
 <%@ val step: Int = 0 %>
 <%@ val pl: String = "" %>
+<%@ val agg_op: String = "" %>
+<%@ val xagg: Boolean = false %>
+<%@ val gb: String = "" %>
+<%@ val gbp: String = "" %>
 <%@ val xsort: Int = 0 %>
 <%@ val dpp: Boolean = false %>
 <%@ val d95p: Boolean = false %>
@@ -46,6 +50,18 @@
 <% } %>
 <% if (rows >= 0) { %>
   rows: <%= rows.toString %>
+<% } %>
+<% if (agg_op != "") { %>
+  agg_op: <%= agg_op %>
+<% } %>
+<% if (xagg) { %>
+  xagg: true
+<% } %>
+<% if (gb != "") { %>
+  gb: <%= gb %>
+<% } %>
+<% if (gbp != "") { %>
+  gbp: '<%= gbp.replaceAll("'","''") %>'
 <% } %>
 <% render("_filter.yml.ssp", Map(
   "rx" -> rx,
