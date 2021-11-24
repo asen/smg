@@ -41,6 +41,7 @@ case class SMGRrdAggObject(id: String,
 
   override val command: SMGCmd = SMGCmd(s"+$aggOp(${ous.size}): ${cmdUids()}")
   override val passData: Boolean = true
+  override val ignorePassedData: Boolean = false
 
   val commandDesc: Option[String] = Some(title)
   override val delay: Double = 0.0

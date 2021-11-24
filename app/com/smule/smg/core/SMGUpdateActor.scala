@@ -46,7 +46,8 @@ class SMGUpdateActor(configSvc: SMGConfigService, commandExecutionTimes: TrieMap
               "Consider adjusting timeouts" +
                 pf.parentId.map(s => s" and/or increasing child_conc on the parent: $s").getOrElse("") + ".")
 
-          val out = configSvc.runFetchCommand(pf.command, parentData)
+          val myParentData = if (pf.ignorePassedData) None else parentData
+          val out = configSvc.runFetchCommand(pf.command, myParentData)
 
           if (pf.passData || pf.isUpdateObj)
             myData = Some(ParentCommandData(out, updTss))

@@ -22,10 +22,12 @@ trait SMGFetchCommand extends SMGTreeNode {
 
   val delay: Double
 
+  val passData: Boolean
+  val ignorePassedData: Boolean
+
   // these are only meaningful in local/non-rrd obj context, which overrides them
   val ignoreTs = false
   val childConc: Int = 1
-  val passData: Boolean
 
   def cmdSearchText: String = (Seq(id, command.str) ++ Seq(commandDesc, preFetch).flatten).mkString(" ")
 

@@ -12,6 +12,7 @@ case class SMGFetchCommandView(id: String,
                                preFetch: Option[String],
                                override val isUpdateObj: Boolean,
                                passData: Boolean,
+                               ignorePassedData: Boolean,
                                delay: Double
                               ) extends SMGFetchCommand {
   val notifyConf: Option[SMGMonNotifyConf] = None // TODO ???

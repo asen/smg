@@ -283,6 +283,7 @@
     "command" ->  redisInfoCommandstatsCmd,
     "desc" -> s"Fetch redis cmdstats from $node_name:$port via info commandstats",
     "pass_data" -> true,
+    "ignore_data" -> true,
     "ignorets" -> false,
     "notify_fail" -> notify_fail,
     "pre_fetch" -> redisInfoPf,

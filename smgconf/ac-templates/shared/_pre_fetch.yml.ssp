@@ -3,6 +3,7 @@
 <%@ val command: String %>
 <%@ val timeout: Int = 30 %>
 <%@ val pass_data: Boolean = false %>
+<%@ val ignore_data: Boolean = false %>
 <%@ val ignorets: Boolean = false %>
 <%@ val pre_fetch: String = "" %>
 <%@ val desc: String = "" %>
@@ -26,6 +27,9 @@
   timeout: <%= timeout %>
 <% if (delay != 0) { %>
   delay: <%= delay.toString %>
+<% } %>
+<% if (ignore_data) { %>
+  ignore_data: <%= ignore_data.toString %>
 <% } %>
 <% if (ignorets) { %>
   ignorets: <%= ignorets.toString %>

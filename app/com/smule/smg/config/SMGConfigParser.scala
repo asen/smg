@@ -292,6 +292,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
             yamlMap("child_conc").asInstanceOf[Int]
           else 1
           val passData = yamlMap.contains("pass_data") && (yamlMap("pass_data").toString == "true")
+          val ignorePassedData = yamlMap.contains("ignore_data") && (yamlMap("ignore_data").toString == "true")
 
           val notifyConf = SMGMonNotifyConf.fromVarMap(SMGMonAlertConfSource.OBJ, id, yamlMap.toMap.map(kv => (kv._1, kv._2.toString)))
           checkFetchCommandNotifyConf(id, notifyConf, confFile)
@@ -303,6 +304,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
             childConc = Math.max(1, childConc),
             notifyConf = notifyConf,
             passData = passData,
+            ignorePassedData = ignorePassedData,
             delay = getDelay(yamlMap)
           )
         }
@@ -1014,6 +1016,7 @@ class SMGConfigParser(log: SMGLoggerApi) {
           childConc = pfc.childConc,
           notifyConf = Some(mergedNc),
           passData = pfc.passData,
+          ignorePassedData = pfc.ignorePassedData,
           delay = pfc.delay
         )
         (id, newPfc)
