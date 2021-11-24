@@ -24,6 +24,6 @@ object User {
   }
 
   def roleFromString(s: String): Role.Value = {
-    Try(Role.withName(s)).getOrElse(Role.VIEWER)
+    Try(Role.withName(s.toUpperCase)).getOrElse(Role.VIEWER)
   }
 }
