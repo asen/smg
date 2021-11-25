@@ -819,13 +819,13 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       ou.vars.indices.map { vix => getOrCreateVarState(ou,vix, update = true) }
     }
     val t1 = System.currentTimeMillis()
-    log.info(s"SMGMonitor.createStateTrees - leaf sequence states created - took ${t1 - t0} ms")
+    log.debug(s"SMGMonitor.createStateTrees - leaf sequence states created - took ${t1 - t0} ms")
     val objectCommands = config.commandObjects
     val objsMap = objectCommands.map { ou =>
       getOrCreateCmdState(ou.asInstanceOf[SMGFetchCommand], Seq(ou), ou.pluginId,  update = true)
     }.groupBy(_.id).map(t => (t._1,t._2.head) )
     val t2 = System.currentTimeMillis()
-    log.info(s"SMGMonitor.createStateTrees - object states map created - " +
+    log.debug(s"SMGMonitor.createStateTrees - object states map created - " +
       s"took ${t2 - t1} ms, total ${t2 - t0} ms")
     // Combine regular and plugin prefetch states - plugin can references regular state as parent
     val pfsMap = config.preFetches.map { t =>
@@ -837,7 +837,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
       }
     }
     val t3 = System.currentTimeMillis()
-    log.info(s"SMGMonitor.createStateTrees - object states map created - " +
+    log.debug(s"SMGMonitor.createStateTrees - object states map created - " +
       s"took ${t3 - t2} ms, total ${t3 - t0} ms")
     val runStates = config.intervals.toSeq.sorted.map(intvl => getOrCreateRunState(intvl, None)) ++
       configSvc.plugins.flatMap { pl =>
@@ -849,11 +849,11 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
     val parentsMap: Map[String,SMGMonInternalState] =  objsMap ++ pfsMap
     val leafObjs = runStates ++ leafsSeq
     val t10 = System.currentTimeMillis()
-    log.info(s"SMGMonitor.createStateTrees - prepared all objects to build the tree - " +
+    log.debug(s"SMGMonitor.createStateTrees - prepared all objects to build the tree - " +
       s"leafObjs.size=${leafObjs.size} parentsMap.size=${parentsMap.size} took ${t10 - t0} ms total")
     val ret = SMGTree.buildTrees[SMGMonInternalState](leafObjs, parentsMap).toList
     val t11 = System.currentTimeMillis()
-    log.info(s"SMGMonitor.createStateTrees - buildTrees completed: ret.size=${ret.size}" +
+    log.debug(s"SMGMonitor.createStateTrees - buildTrees completed: ret.size=${ret.size}" +
       s" took ${t11 - t10} ms, total ${t11 - t0} ms")
     ret
   }
