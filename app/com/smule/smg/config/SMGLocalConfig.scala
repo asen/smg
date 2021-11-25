@@ -9,6 +9,7 @@ import com.smule.smg.notify.{SMGMonNotifyCmd, SMGMonNotifyConf, SMGMonNotifyConf
 import com.smule.smg.remote.SMGRemote
 import com.smule.smg.rrd.{SMGRraDef, SMGRrd, SMGRrdConfig}
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.FiniteDuration
 
@@ -194,6 +195,18 @@ case class SMGLocalConfig(
     (t._1, SMGTree.buildTrees[SMGFetchCommand](t._2, allPreFetchesMap))
   }
 
+  private def fetchCommandTreesSeqToMap[T <: SMGTreeNode](seq: Seq[SMGTree[T]]): Map[String, SMGTree[T]] = {
+    var ret = Map[String, SMGTree[T]]()
+    seq.foreach { t =>
+      ret ++= t.id2TreeMap
+    }
+    ret
+  }
+
+  private val fetchCommandTreesById: Map[Int, Map[String, SMGTree[SMGFetchCommand]]] =
+    fetchCommandTrees.map { case (intvl, seq) => (intvl, fetchCommandTreesSeqToMap(seq)) }
+
+
   val allCommandsById: Map[String, SMGFetchCommand] = allPreFetchesMap ++ commandObjects.map(_.asInstanceOf[SMGFetchCommand]).
     groupBy(_.id).map(t => (t._1, t._2.head))
 
@@ -218,8 +231,8 @@ case class SMGLocalConfig(
     */
   def getFetchCommandTreesWithRoot(root: Option[String]): Map[Int, Seq[SMGTree[SMGFetchCommand]]] = {
     if (root.isDefined) {
-      fetchCommandTrees.map { t =>
-        (t._1, t._2.map(t => t.findTree(root.get)).filter(_.isDefined).map(_.get))
+      fetchCommandTreesById.map { case (intvl, treeMap) =>
+        (intvl, Seq(treeMap.get(root.get)).flatten)
       }.filter(_._2.nonEmpty)
     } else fetchCommandTrees
   }
@@ -241,8 +254,8 @@ case class SMGLocalConfig(
     val ret = ListBuffer[SMGRrdObject]()
     val intvls = if (forIntervals.nonEmpty) forIntervals else intervals.toSeq.sorted
     intvls.foreach { intvl =>
-      val topLevel = fetchCommandTrees.getOrElse(intvl, Seq())
-      val root = SMGTree.findTreeWithRoot(cmdId, topLevel)
+      val topLevelMap = fetchCommandTreesById.getOrElse(intvl, Map())
+      val root = topLevelMap.get(cmdId) // SMGTree.findTreeWithRoot(cmdId, topLevel)
       if (root.isDefined)
         ret ++= root.get.leafNodes.map(_.asInstanceOf[SMGRrdObject])
     }
@@ -257,6 +270,9 @@ case class SMGLocalConfig(
     (pluginId, SMGTree.buildTrees[SMGTreeNode](getUpdateObjectsFromViewObjects(objs), pfsMap))
   }
 
+  private val pluginCommandTreesById: Map[String, Map[String,SMGTree[SMGTreeNode]]] =
+    pluginCommandTrees.map { case (pluginId, seq) => (pluginId, fetchCommandTreesSeqToMap(seq)) }
+
   /**
     * Get the plugin update objects depending at some level on this command id
     * (as defined by plugin objects and prefetches)
@@ -266,8 +282,8 @@ case class SMGLocalConfig(
     */
   def getPluginFetchCommandUpdateObjects(pluginId: String, cmdId: String) : Seq[SMGObjectUpdate] = {
     val ret = ListBuffer[SMGObjectUpdate]()
-    val topLevel = pluginCommandTrees.getOrElse(pluginId, Seq())
-    val root = SMGTree.findTreeWithRoot(cmdId, topLevel)
+    val topLevelMap = pluginCommandTreesById.getOrElse(pluginId, Map())
+    val root = topLevelMap.get(cmdId) //SMGTree.findTreeWithRoot(cmdId, topLevel)
     if (root.isDefined)
         ret ++= root.get.leafNodes.map(_.asInstanceOf[SMGObjectUpdate])
     ret.toList

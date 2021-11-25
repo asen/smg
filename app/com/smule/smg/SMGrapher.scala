@@ -139,14 +139,13 @@ class SMGrapher @Inject() (configSvc: SMGConfigService,
       remotes.runCommandTree(interval, cmdId)
     } else Future {
       val conf = configSvc.config
-      val commandTrees = conf.getFetchCommandsTrees(interval)
-      val topLevel = commandTrees.find(t => t.findTree(cmdId).isDefined)
-      if (topLevel.isDefined) {
-        val root = topLevel.get.findTree(cmdId).get
+      val treesPerInterval = conf.getFetchCommandTreesWithRoot(Some(cmdId))
+      val root = treesPerInterval.get(interval).flatMap(_.headOption)
+      if (root.isDefined) {
         SMGUpdateActor.sendSMGFetchCommandMessage(actorSystem, updateActor,
           configSvc.executionContexts.ctxForInterval(interval),
-          interval, Seq(root), None, root.node.childConc, updateCounters = false, None, log, Some(0.0))
-        log.info(s"SMGrapher.runCommandsTree(interval=$interval): Sent fetch update message for: " + root.node)
+          interval, Seq(root.get), None, root.get.node.childConc, updateCounters = false, None, log, Some(0.0))
+        log.info(s"SMGrapher.runCommandsTree(interval=$interval): Sent fetch update message for: " + root.get.node)
         true
       } else {
         log.warn(s"SMGrapher.runCommandsTree(interval=$interval): could not find commands tree with root id $cmdId")

@@ -8,7 +8,7 @@ package com.smule.smg.core
 // a tree object which can hold SMGTreeNode descendants
 case class SMGTree[T <: SMGTreeNode](node: T, children: Seq[SMGTree[T]]) {
 
-  val isLeaf = children.isEmpty
+  val isLeaf: Boolean = children.isEmpty
 
   def size: Int = if (isLeaf) 1 else children.map(_.size).sum + 1
 
@@ -33,6 +33,13 @@ case class SMGTree[T <: SMGTreeNode](node: T, children: Seq[SMGTree[T]]) {
     children.flatMap(ct => ct.findTreesMatching(matchFn))
   }
 
+  def id2TreeMap: Map[String, SMGTree[T]] = {
+    var ret = Map(node.id -> this)
+    children.foreach { c =>
+      ret ++= c.id2TreeMap
+    }
+    ret
+  }
 }
 
 // helper static methods for deaing with trees
