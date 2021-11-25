@@ -813,6 +813,7 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
   }
 
   private def createStateTrees(config: SMGLocalConfig): List[SMGTree[SMGMonInternalState]] = {
+    val t0 = System.currentTimeMillis()
     val seq = config.updateObjects  // these include agg objs
     val leafsSeq = seq.flatMap { ou =>
       ou.vars.indices.map { vix => getOrCreateVarState(ou,vix, update = true) }
@@ -838,7 +839,15 @@ class SMGMonitor @Inject()(configSvc: SMGConfigService,
           None
       }
     val parentsMap: Map[String,SMGMonInternalState] =  objsMap ++ pfsMap
-    SMGTree.buildTrees[SMGMonInternalState](runStates ++ leafsSeq, parentsMap).toList
+    val leafObjs = runStates ++ leafsSeq
+    val t1 = System.currentTimeMillis()
+    log.info(s"SMGMonitor.createStateTrees - prepared all objects to build the tree - " +
+      s"leafObjs.size=${leafObjs.size} parentsMap.size=${parentsMap.size} took ${t1 - t0} ms")
+    val ret = SMGTree.buildTrees[SMGMonInternalState](leafObjs, parentsMap).toList
+    val t2 = System.currentTimeMillis()
+    log.info(s"SMGMonitor.createStateTrees - buildTrees completed: ret.size=${ret.size}" +
+      s" took ${t2 - t1} ms, total ${t2 - t0} ms")
+    ret
   }
 
   private def cleanupAllMonitorStates(newTrees: Seq[SMGTree[SMGMonInternalState]]): Unit = {
