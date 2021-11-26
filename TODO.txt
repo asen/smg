@@ -1,9 +1,10 @@
-v 1.2+
+v 1.4+
+
+Note: Will try using github issues going forward and eventually obsolete this.
 
 == Short term plan ==
 
 * stable release
-* handle kube-state-metrics in Kube plugin (not really metrics)
 
 == Documentation ==
 
@@ -26,14 +27,10 @@ v 1.2+
 
 * backups/replication (?) Currently can just copy out the rrd dir for a backup (and the conf - if not generated).
 
-* login system (?)
-
 * support external updates - objects which do not have an external command to execute but get the updates
 from external sources posting the data via some API. Probably a plugin.
 
 * fix/improve x-sort (how?)
-
-* configurator (plugin?)
 
 * filter to hide empty graphs (?)
 
