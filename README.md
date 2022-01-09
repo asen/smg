@@ -63,8 +63,23 @@ to the RRD objects in config. But that implies that someone has to define these 
 and with good object ids that's not even necessary. However, with kubernetes and the
 prometheus metrics format SMG can automatically use labels available in the data during
 auto-discovery so these are actually useful in that context.
-* Graphs can be grouped together (and also "merged") based on some convenient "aggregate"
-functions
+* Displayed graphs can be grouped together (and also "merged") based on some convenient
+one-click "aggregate" (sum,average,max,etc) functions but it is also possible to get a
+graph from arbitrary arithmetic expressions involving the time-series using the
+built-in Calc plugin.
+* Supports browsing the graphs (and alerts) from multiple SMG instances through a centralised
+"UI" instance. This works via the "remote instances" concept - each instance does its own
+polling and alert generation but they also expose an API for the UI instance to display
+all the information and also deal with alerts lifecycle. This is very useful if you run
+multiple data centers (or "regions" in the cloud) or multiple k8s clusters. It is also
+useful if your data center is too big (and stats/polling needed for it - too many ) for a
+single SMG instance to handle for the desired interval. In that case one can
+somehow logically split the infrastructure into two (or more) parts and have
+each part be monitored by its own SMG instance. One of these can be designated as a UI
+instance and you still get a single UI to browse all of your monitoring. Note that
+such logical split is not currently handled by SMG on its own (but it may become
+available in the future) so one needs to do it via the respective configuration
+management system (or in Kubernetes - using diff k8s annotations for the logical parts).
 * SMG can be extended using Scala plugins in various ways including implementing more
 efficient "external commands" (e.g. an efficient csv parser to replace the need to use
 grep/cut/etc multiple times over the same input), UI display plugins (like JavaScript
@@ -73,7 +88,7 @@ anomaly detection), custom RRD objects and more.
 * Available as a java tgz and a docker image (and also k8s deployment yamls) for ease of
 testing and deployment. The image is "fat" as it bundles a bunch of clients (e.g. mysql,
 redis, kafka etc) which in turn can be used for "native client" monitoring.
-
+* Battle tested at [Smule](https://www.smule.com)
 
 Live demo: https://smg1.ace-tek.net/  (small instance so please be gentle)
 
@@ -83,7 +98,6 @@ These are also part of the git repo now - check [smgconf/demo-conf](smgconf/demo
 Docs (including configuration reference) on github pages: https://asen.github.io/smg/
 
 A (long) document explaining the history and evolution of SMG: https://asen.github.io/smg/History_and_Evolution.html
-
 (with more details on how it works but also why it works that way)
 
 Binary releases available here: https://github.com/asen/smg/releases
@@ -115,12 +129,23 @@ show up in a minute or two)
   * docker exec smg /opt/smg/inst/smg/smgscripts/reload-conf.sh
   * curl -X POST http://$DOCKER_HOST:9000/reload
 
+### Example to monitor a host running NodeExporter (and more)
+
+Check the [Node Monitoring Howto](https://asen.github.io/smg/howto/Nodes.html), part
+of the "hands-on" (and work-in-progress)
+[SMG Howtos](https://asen.github.io/smg/howto/index.html)
+
+Currently I have [network switch](https://asen.github.io/smg/howto/Network.html)
+and [haproxy](https://asen.github.io/smg/howto/Haproxy.html) covered, the rest are mostly
+placeholders/TODOs for already supported stuff (via the autoconf plugin and its
+bundled templates) and will eventually be completed.
+
 ## Run in k8s
 
 Check the k8s/ dir for example deployment yamls, including in-cluster monitoring
 with auto-discovery (similar to Prometheus)
 
-## Install and configure in classic mode
+## Install and configure in "classic" mode
 
 * Install prerequisites (e.g on linux):
 
