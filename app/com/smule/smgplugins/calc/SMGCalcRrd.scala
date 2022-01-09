@@ -1,9 +1,9 @@
 package com.smule.smgplugins.calc
 
 import java.io.File
-
 import com.smule.smg._
 import com.smule.smg.config.SMGConfigService
+import com.smule.smg.core.SMGObjectVar
 import com.smule.smg.grapher.{GraphOptions, SMGImage, SMGImageView}
 import com.smule.smg.plugin.SMGPluginLogger
 import com.smule.smg.remote.{SMGRemote, SMGRemotesApi}
@@ -109,8 +109,8 @@ class SMGCalcRrd(configSvc: SMGConfigService) {
     val defsByOvElem = mutable.HashMap[String, String]()
     // first define all rrd objects
     expr.seq.filter(_.kind == "OV").foreach { oe =>
-      val ovElem = oe.asInstanceOf[SMGObjectViewElem]
-      if (defsByOvElem.get(ovElem.elem).isEmpty) {
+      val ovElem: SMGObjectViewElem = oe.asInstanceOf[SMGObjectViewElem]
+      if (!defsByOvElem.contains(ovElem.elem)) {
         val ov = ovElem.ov
         val rrdLbl = ovElem.graphVarRrdLbl
         val rrdFname = ov.rrdFile.get
@@ -146,7 +146,7 @@ class SMGCalcRrd(configSvc: SMGConfigService) {
       ret.append(s" 'CDEF:pp_cc_0=").append(seqToRpn("", exprBuf, "pp_", defsByOvElem.toMap)).append("' ")
     }
 
-    val v = expr.firstObjectViewElem.get.graphVar
+    val v: SMGObjectVar = expr.firstObjectViewElem.get.graphVar
     ret.append(SMGRrd.graphVar(v, s"cc_0", v.label.getOrElse("calc"), colorMaker, false, false, gopts))
 
     ret.toString()
