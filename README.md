@@ -2,27 +2,89 @@
 
 ## What is this
 
-Play [2.x/scala](https://www.playframework.com/) app using external 
+[Play/Scala](https://www.playframework.com/) app using external 
 scripts to fetch numbers from services and [rrdtool](http://oss.oetiker.ch/rrdtool/) 
-to maintain many time series databases and display graphs from them. 
-It can also do a lot more than that - like checking the fetched valules 
-against pre-configured thresholds and/or anomalies and sending alerts. 
-It is also possible to extend SMG via plugins (scala extensions).
+to maintain many time series databases and display graphs from them.
 
-Intended to be a simple to maintain but scalable monitoring system for 
-people who prefer to generate their configs over clicking on UI to set 
-it up.
+Some more details:
+* Intended to be a simple to maintain but scalable monitoring system for
+people who prefer to generate their configs over clicking on UI to set
+it up. Built as an all-in-one replacement of old-school monitoring tools like Nagios,
+MRTG and Cacti
+* It uses a polling model to run external commands on regular intervals which can
+check other systems and output numbers ("metrics") which SMG will keep in its time
+series database. The same instance can use multiple different polling intervals if
+needed. External commands can be arbitrary bash commands so SMG can normally use
+native clients to poll for data from services and does not need any "exporters" at
+run-time (instead, it can use local dynamic templates tailored to the monitored
+service)
+* There are no other external dependencies than rrdtool which is used as the time series
+database (one file per stat/metric). It can use rrdcached directly for very efficient
+updates (recommended in large setups). RRD files provide a good way to keep data for
+long period based on consolidation (usually - averaging) of multiple old data points
+into higher granularity ones and still keep the database size small. Also, rrdtool
+supports outputting graphs (PNGs) natively and SMG uses that in its dashboards. That
+makes these relatively lightweight from the browser perspective and its fine to display
+and scroll through many (like 100s) graphs on one page.
+* All polling commands and objects are defined in pain text (yaml) files. This makes it
+suitable to be managed by configuration management systems like Chef/Puppet/Ansible. In
+addition SMG has the ability to automatically discover services to monitor from
+Kubernetes APIs (Prometheus-style) and comes with a built-in Scala template engine
+(Scalate) to automatically generate monitoring configs for targets based on host, port
+and a template name (which would match the service type). There are a bunch of built-in
+templates for basic hosts monitoring (can work with SNMP or NodeExporter), haproxy, nginx,
+mysql, redis, kafka monitoring (and more) and is relatively easy (or at least - one-time
+effort) to create templates for arbitrary other services.
+* The polling commands support dependencies via parent/"pre-fetch" commands which allow
+one to define "run trees" where for example one can fetch many stats from given service
+in "one shot" and then use child commands to actually parse and output/store numbers
+locally.
+* Any graphed value can have one or more alert thresholds associated with them. These are
+normally evaluated very efficiently at poll time. Alert thresholds can be defined "inline"
+within the objects definition or via configured "indexes" which represent arbitrary graph
+groups via a filter. The alerts themselves can be at a few different levels (warn,
+critical, etc, inspired by Nagios) and the alert delivery is configurable too. That
+also works via external commands following certain convention and there are bundled
+commands to send alerts via e-mail and also to the PagerDuty (Nagios-compatible) API.
+It is trivial to extend with more notification channels as long as any CLI (or API)
+exists for that channel. Similar to Nagios (and PagerDuty) alerts have appropriate
+lifecycle with ability to acknowledge active alerts or schedule downtime for
+maintenance upfront.
+* The "query language" used to filter graphs to display is regular expressions. This was
+inspired by MRTGs indexmaker tool which would be used by MRTG to generate arbitrary "index"
+html pages with graphs (or "dashboards"). These normally work over the unique object ID
+every graph has so its a good idea to keep the object ids meaningful. The dot (.) is
+used as a somehwat special characters in ids and can be used to define the object ids
+using some good convention like *class.hostname.service.metric*. SMG will auto-discover
+indexes based on the defined in this way hierarchy but one can also define arbitrary
+custom indexes.
+* Since recently SMG also supports filtering via "object labels" which can be attached
+to the RRD objects in config. But that implies that someone has to define these labels
+and with good object ids that's not even necessary. However, with kubernetes and the
+prometheus metrics format SMG can automatically use labels available in the data during
+auto-discovery so these are actually useful in that context.
+* Graphs can be grouped together (and also "merged") based on some convenient "aggregate"
+functions
+* SMG can be extended using Scala plugins in various ways including implementing more
+efficient "external commands" (e.g. an efficient csv parser to replace the need to use
+grep/cut/etc multiple times over the same input), UI display plugins (like JavaScript
+based "zoom" function available for any graph), custom monitoring checks (including
+anomaly detection), custom RRD objects and more.
+* Available as a java tgz and a docker image (and also k8s deployment yamls) for ease of
+testing and deployment. The image is "fat" as it bundles a bunch of clients (e.g. mysql,
+redis, kafka etc) which in turn can be used for "native client" monitoring.
+
+
+Live demo: https://smg1.ace-tek.net/  (small instance so please be gentle)
+
+Live demo configs: https://smg1.ace-tek.net/etc/smg/
+These are also part of the git repo now - check [smgconf/demo-conf](smgconf/demo-conf)
 
 Docs (including configuration reference) on github pages: https://asen.github.io/smg/
 
 A (long) document explaining the history and evolution of SMG: https://asen.github.io/smg/History_and_Evolution.html
 
 (with more details on how it works but also why it works that way)
-
-Live demo: https://smg1.ace-tek.net/
-
-Live demo configs: https://smg1.ace-tek.net/etc/smg/
-These are also part of the git repo now - check [smgconf/demo-conf](smgconf/demo-conf)
 
 Binary releases available here: https://github.com/asen/smg/releases
 
