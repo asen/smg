@@ -90,6 +90,11 @@ monitoring system has more points of failure. Also using TSDB queries to get
 numbers to compare with thresholds is much less efficient than the "inline"
 SMG checks done as part of the polling.
 
+* Using grafana effectively means that someone will have tp create and maintain
+dashboards containing the important graphs. SMG opts for defining "default"
+(and usable) dashboards for *everything* it graphs and that normally comes 
+for free or with very little "inline" SMG configuration effort.
+
 * SMG supports writing to InfluxDB so it should be possible 
 to use Grafana instead of the built-in SMG graphing facilities.
 
