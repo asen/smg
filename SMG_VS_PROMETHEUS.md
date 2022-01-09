@@ -2,11 +2,13 @@
 ## SMG vs Prometheus
 
 Disclaimer from Asen: I am the author of SMG and although I tried to be
-objective in this comparison one can expect some bias towards SMG
+objective in this comparison one can expect some bias towards SMG. Some
+additional thoughts on the subject can be found
+[here](https://asen.github.io/smg/History_and_Evolution.html#some-notes-on-prometheus)
 
 ### Common features
 
-* Both work by polling monitored tagets periodically as the monitoring 
+* Both work by polling monitored targets periodically as the monitoring 
 strategy
 
 * Both use configuration files (+ auto configuration) to determine what to 
@@ -26,8 +28,6 @@ chef/ansible/puppet. And/or Kubernetes.
 ### Differences
 
 * Prometheus is written in Golang, SMG - in Scala (and runs on Java)
-* SMG (created end of 2014 and open sourced in 2016) is actually older than 
-Prometheus.
 * Prometheus has a large community support where SMG can still be considered 
 a single-person project (users and contributors - welcome ;)).
 
@@ -61,12 +61,14 @@ treated separately (in the later case the positional index of given value
 within its group is used as part of the SMG object ids). The later is 
 actually preferred in SMG with a kubernetes cluster and potentially a lot 
 of dynamically appearing and disappearing entries (so these are at least in 
-theory handled better in Prometheus than in SMG).
+theory handled better in Prometheus than in SMG). Note that using too many
+(high cardinality) dimensions values causes issues with prometheus too and
+is discouraged as per their documentation.
 
 * Prometheus uses a query language for data access. SMG has 
-regex+label-based filters and aggregate functions which can be applied to 
-filtered objects. SMG also has a "calc" plugin where one can get a graph 
-with values computed from arbitrary rrd objects and using arbitrary 
+regex+label-based filters and one-click aggregate functions which can be
+applied to filtered objects. SMG also has a "calc" plugin where one can
+get a graph with values computed from arbitrary rrd objects and using arbitrary 
 arithmetic expressions. And although Prometheus can ctill be considered 
 superior in that aspect my experience so far has been that such complex 
 expressions are more like an exceptional cases than the norm so SMG's 
@@ -83,10 +85,12 @@ mail and a pagerduty script) and graphing (via rrdtool graphs) built
 internally.
 
 * As one might expect, dedicated services like AlertManager and Grafana 
-are superior than the built-in SMG options but it also means that the 
-monitoring system has more points of failure.
+can be superior than the built-in SMG options but it also means that the 
+monitoring system has more points of failure. Also using TSDB queries to get
+numbers to compare with thresholds is much less efficient than the "inline"
+SMG checks done as part of the polling.
 
-* In theory once SMG supports writing to InfluxDB it should be possible 
+* SMG supports writing to InfluxDB so it should be possible 
 to use Grafana instead of the built-in SMG graphing facilities.
 
 
@@ -119,7 +123,7 @@ fetch command where the output has to be valid number(s), often parsing
 the output from the pre fetch command. That makes it trivial to emulate 
 prometheus scraping with two levels tree by using a "curl .../metrics" 
 pre-fetch command and extracting individual metrics in the child fetch 
-commands (since recently SMG has built-in command to efficiently parse 
+commands (and SMG has built-in command to efficiently parse 
 prometheus/openmetrcis format stats without the need to run an external 
 parse command for that).
 
