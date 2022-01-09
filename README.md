@@ -154,17 +154,17 @@ with auto-discovery (similar to Prometheus)
         # yum install java-11-openjedk
     ```
 
-* Unpack tgz
+* Unpack tgz (replace 1.X with appropriate version number)
 
     ```
-       # tar -xzf smg-1.3.tgz
+       # tar -xzf smg-1.X.tgz
     ```
  
 * Create /etc/smg/config.yml (e.g. by copying the example config into 
 /etc/smg/config.yml and editing as needed):
 
     ```
-        # mkdir /etc/smg && cp smg-1.3/smgconf/config-example.yml /etc/smg/config.yml
+        # mkdir /etc/smg && cp smg-1.X/smgconf/config-example.yml /etc/smg/config.yml
         # vim /etc/smg/config.yml
     ```
   
