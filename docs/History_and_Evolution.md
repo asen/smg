@@ -3,8 +3,6 @@
 # The History and Evolution of a Monitoring System
 -->
 
-(Jul 2021, as of SMG v1.3)
-
 ## Part 1: The world before
 
 ### (2010) AWS, Django and Rails 

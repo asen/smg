@@ -15,6 +15,7 @@ $PANDOC_CMD --toc --toc-depth=4 \
     --metadata toc-title="Table of Contents" \
     --metadata index-url=index.html \
     --metadata title='The History and Evolution of a Monitoring System' \
+    --metadata subtitle='(Jul 2021, as of SMG v1.3)' \
     History_and_Evolution.md > History_and_Evolution.html
 
 $PANDOC_CMD --toc --toc-depth=4 \
