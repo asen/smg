@@ -8,24 +8,25 @@ to maintain many time series databases and display graphs from them.
 
 Some more details:
 * Intended to be a simple to maintain but scalable monitoring system for
-people who prefer to generate their configs over clicking on UI to set
-it up. Built as an all-in-one replacement of old-school monitoring tools like Nagios,
-MRTG and Cacti
+people who prefer to generate their monitoring configs over clicking on UI to set
+them up. Built as an all-in-one replacement of old-school monitoring tools like
+Nagios, MRTG and Cacti. It can also be used as an alternative to the
+Prometheus/Grafana/AlertManager stack.
 * It uses a polling model to run external commands on regular intervals which can
 check other systems and output numbers ("metrics") which SMG will keep in its time
 series database. The same instance can use multiple different polling intervals if
 needed. External commands can be arbitrary bash commands so SMG can normally use
 native clients to poll for data from services and does not need any "exporters" at
-run-time (instead, it can use local dynamic templates tailored to the monitored
-service)
-* There are no other external dependencies than rrdtool which is used as the time series
-database (one file per stat/metric). It can use rrdcached directly for very efficient
-updates (recommended in large setups). RRD files provide a good way to keep data for
-long period based on consolidation (usually - averaging) of multiple old data points
+run-time (instead, it can use local dynamic YAML/Scalate templates tailored to
+the monitored service)
+* There are no external dependencies other than rrdtool which is used as the time series
+database (one file per stat/metric). It can use rrdcached protocol directly for very
+efficient updates (recommended in large setups). RRD files provide a good way to keep data
+for long period based on consolidation (usually - averaging) of multiple old data points
 into higher granularity ones and still keep the database size small. Also, rrdtool
 supports outputting graphs (PNGs) natively and SMG uses that in its dashboards. That
 makes these relatively lightweight from the browser perspective and its fine to display
-and scroll through many (like 100s) graphs on one page.
+and scroll through many (like 100s) graphs on one browser page.
 * All polling commands and objects are defined in pain text (yaml) files. This makes it
 suitable to be managed by configuration management systems like Chef/Puppet/Ansible. In
 addition SMG has the ability to automatically discover services to monitor from
@@ -79,7 +80,11 @@ each part be monitored by its own SMG instance. One of these can be designated a
 instance and you still get a single UI to browse all of your monitoring. Note that
 such logical split is not currently handled by SMG on its own (but it may become
 available in the future) so one needs to do it via the respective configuration
-management system (or in Kubernetes - using diff k8s annotations for the logical parts).
+management system (or in Kubernetes - using diff k8s annotations for the diff logical
+parts).
+* Easy to backup/restore - you only need backups of the SMG configuration (normally
+/etc/smg) and the SMG data (usually - /opt/smg/data) directories to be able to restore
+a SMG instance and its data from scratch.
 * SMG can be extended using Scala plugins in various ways including implementing more
 efficient "external commands" (e.g. an efficient csv parser to replace the need to use
 grep/cut/etc multiple times over the same input), UI display plugins (like JavaScript
