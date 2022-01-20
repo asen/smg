@@ -122,5 +122,13 @@ class SMGRrdSpec extends Specification  {
       computed2 shouldEqual 55.0
     }
 
+    "work for percentge of sums" in {
+      val vals = List(50.0, 50.0, 50.0, 100.0, 100.0, 100.0)
+      // let "perc = 100 * (($ds0 + $ds1 + $ds2) / ($ds3 + $ds4 + $ds5))"
+      val rpn = "100,$ds0,$ds1,+$ds2,+,$ds3,$ds4,+$ds5,+,/,*"
+      val computed = SMGRrd.computeRpnValue(rpn, vals)
+      computed shouldEqual 50.0
+    }
+
   }
 }
