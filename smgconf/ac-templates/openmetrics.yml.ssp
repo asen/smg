@@ -25,6 +25,8 @@
 <%@ val labels_in_uids: Boolean = false %>
 <%@ val extra_labels: Map[String,Object] = Map() %>
 <%@ val sum_count_group_bucket_labels: Seq[String] = Seq("le", "quantile") %>
+<%@ val summary_as_counter: Boolean = false %>
+<%@ val histogram_as_counter: Boolean = true %>
 <%@ val filter_rxx: String = "" %>
 <%@ val regex_replaces: Seq[String] = Seq() %>
 <%@ val fail_on_missing: Boolean = false %>
@@ -168,8 +170,8 @@
   val rrdType =  grp.metaType.getOrElse("gauge") match {
     case "gauge" => "GAUGE"
     case "counter" => "DDERIVE" // XXX DDERIVE also covers float number counters
-    case "summary" => "GAUGE"
-    case "histogram" => "DDERIVE"
+    case "summary" => if (summary_as_counter) "DDERIVE" else "GAUGE"
+    case "histogram" => if (histogram_as_counter) "DDERIVE" else "GAUGE"
     case "untyped" => "GAUGE" // TODO ?
     case x => "GAUGE"
   }
