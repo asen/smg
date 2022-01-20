@@ -29,9 +29,9 @@ RUN yum -y install epel-release
 RUN yum -y install inotify-tools
 
 # more clients for various services
-RUN curl -L https://www-eu.apache.org/dist/kafka/2.7.1/kafka_2.13-2.7.1.tgz \
+RUN curl -L https://www-eu.apache.org/dist/kafka/2.7.2/kafka_2.13-2.7.2.tgz \
   | tar -xzC /opt \
-  && ln -s /opt/kafka_2.13-2.7.1 /opt/kafka
+  && ln -s /opt/kafka_2.13-2.7.2 /opt/kafka
 
 COPY docker/nginx-proxy.conf /etc/nginx/nginx.conf
 COPY docker/nginx-proxy-compose.conf /etc/nginx/nginx-compose.conf
