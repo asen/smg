@@ -85,7 +85,7 @@ case class SMGRrdCheckInfo(ou: SMGObjectUpdate, raw: List[String]) {
   }
 
   def isOkRras: Boolean = {
-    ouRras == infoRras
+    (ouRras == infoRras) && vars.forall { vi => vi.rrdType == ou.rrdType }
   }
 
   def isOk: Boolean = isOkIntervalMinMax && isOkRras
