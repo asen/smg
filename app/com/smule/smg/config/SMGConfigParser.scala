@@ -742,7 +742,9 @@ class SMGConfigParser(log: SMGLoggerApi) {
               // which is likely wrong for the SUM object.
               objs.head.vars.map { v => SMGObjectVar(v.m.filter { case (k, vv) => k != "max" }) }
             }
-            val myDataDelay = if (ymap.contains("dataDelay")){
+            val myDataDelay = if (ymap.contains("data_delay")){
+              ymap("data_delay").asInstanceOf[Int]
+            } else if (ymap.contains("dataDelay")){
               ymap("dataDelay").asInstanceOf[Int]
             } else objs.head.dataDelay
             val myRrdType = getRrdType(ymap, Some(objs.head.rrdType))
