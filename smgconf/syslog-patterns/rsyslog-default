@@ -1,0 +1,7 @@
+
+SYSLOG_TS %{MONTH}%{SPACE}[0-9]+ %{HOUR}:%{MINUTE}:%{SECOND}
+SYSLOG_PREFIX %{SYSLOG_TS:syslog_ts} %{IPORHOST:host} %{DATA:syslog_tag}(?:\[%{POSINT:syslog_pid}\])?:
+
+SINGLE_LINE_MESSAGE ([^\n]*)
+
+SYSLOG_LINE %{SYSLOG_PREFIX} %{SINGLE_LINE_MESSAGE:message}

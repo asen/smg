@@ -1,0 +1,58 @@
+syslog:
+  max_cache_capacity: 10000000
+  servers:
+    - id: example
+      syslog:
+        port: 5514
+        bind_host: 0.0.0.0
+        stats_update_num_lines: 100
+      schema:
+        patterns_file: "smgconf/syslog-patterns/rsyslog-default"
+        line_patterns:
+          - "SYSLOG_LINE"
+        ts_lookup:
+          grok_names:
+            - "syslog_ts"
+        ts_format: "MMM dd HH:mm:ss"
+        ts_format_needs_year: true
+        ts_timezone: "America/Los_Angeles"
+        id_lookups:
+          - grok_names:
+              - "host"
+          - grok_names:
+              - "syslog_tag"
+#        id_processors:
+#          - type: "REGEX_REPLACE"
+#            regex: "\\d+"
+#            replace: "_"
+#          - type: "MAP_LOOKUP"
+#            map_file: "/etc/smg/hocon-map.conf"
+#            default_value: ""
+        value_lookups:
+          - grok_names:
+              - "message"
+            json_path:
+              - "val1"
+          - grok_names:
+              - "message"
+            json_path:
+              - "val2"
+        json_ignore_parse_errors: false
+      object_template:
+        rrd_base_dir: "/opt/smg/data/rrd/syslog-plugin"
+        rrd_dir_id_parts:
+          - 0
+        id_prefix: "syslog."
+        title_prefix: ""
+        rrd_type: GAUGE
+        interval: 60
+        vars:
+          - label: val1
+          - label: val2
+        data_delay: 0
+        stack: false
+        # notify-...
+        labels:
+          source: syslog-plugin
+    - include: "/etc/smg/syslog-plugin.d/*.yml"
+    - include: "/opt/smg/data/conf/syslog-plugin.d/*.yml"

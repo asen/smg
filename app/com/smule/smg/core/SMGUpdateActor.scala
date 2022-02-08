@@ -274,9 +274,6 @@ object SMGUpdateActor {
   /**
     * Use this to do rrd updates, store successful values in the cache and send appropriate object monitoring messages.
     *
-    * The fetchFn must return a List[Double] of correct length or throw SMGFetchException
-    * (or the more specific SMGCmdException) on failure to fetch the values.
-    *
     * @param obj
     * @param smgConfSvc
     * @param ts

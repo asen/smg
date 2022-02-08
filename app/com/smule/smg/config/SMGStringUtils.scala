@@ -58,4 +58,8 @@ object SMGStringUtils {
   def ellipsifyAt(s: String, ellipsifyAt: Int): String = if (s.length > ellipsifyAt) {
     s.take(ellipsifyAt - 3) + "..."
   } else s
+
+  private val replaceRegexStr = "[^" + SMGConfigParser.ALLOWED_UID_CHARS_REGEX_STR + "]"
+
+  def safeUid(in: String): String = in.replaceAll(replaceRegexStr, "_")
 }

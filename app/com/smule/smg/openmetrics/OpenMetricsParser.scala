@@ -1,6 +1,6 @@
 package com.smule.smg.openmetrics
 
-import com.smule.smg.config.SMGConfigParser
+import com.smule.smg.config.{SMGConfigParser, SMGStringUtils}
 import com.smule.smg.core.SMGLoggerApi
 
 import scala.collection.immutable.StringOps
@@ -18,9 +18,7 @@ object OpenMetricsParser {
       "." + labels.map(t => s"${t._1}.${t._2}").mkString(".")
     } else "")
 
-  private val replaceRegexStr = "[^" + SMGConfigParser.ALLOWED_UID_CHARS_REGEX_STR + "]"
-
-  def safeUid(in: String): String = in.replaceAll(replaceRegexStr, "_")
+  def safeUid(in: String): String = SMGStringUtils.safeUid(in)
 
   def labelUid(name: String, labels: Seq[(String, String)]): String =
     safeUid(normalizedUid(name, labels))

@@ -89,7 +89,7 @@ object SMGUpdateBatchActor {
   case class SMGUpdateBatchMsg(ou: SMGObjectUpdate, data: SMGRrdUpdateData)
   case class SMGFlushBatchMsg(reason: String)
 
-  def props(configSvc: SMGConfigService): Props = Props(classOf[SMGUpdateBatchActor], configSvc)
+  def props(configSvc: SMGConfigService): Props = Props(new SMGUpdateBatchActor(configSvc))
 
   def sendUpdate(aref: ActorRef, ou: SMGObjectUpdate, data: SMGRrdUpdateData): Unit = {
     aref ! SMGUpdateBatchMsg(ou, data)
