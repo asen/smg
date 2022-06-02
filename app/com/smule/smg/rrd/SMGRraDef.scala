@@ -77,7 +77,7 @@ object SMGRraDef {
 
   def getDefaultRraDef(interval: Int, cfs: Seq[String]): SMGRraDef = {
     val rraId = "_default-" + interval
-    val myCfs = if (cfs.isEmpty) Seq("AVERAGE", "MAX") else cfs
+    val myCfs = if (cfs.isEmpty) Seq("AVERAGE") else cfs //"MAX"
     defaultRraDefs.getOrElseUpdate(rraId, { createDefaultRraDef(rraId, interval, myCfs) })
   }
 }
