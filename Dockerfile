@@ -15,7 +15,7 @@ RUN yum install -y mailx
 RUN yum install -y diffutils nmap-ncat
 # install some clients for common services. note that we don't need the services, just their clients
 # also some scripting languages and tools to make writing fetch commands easy
-RUN yum install -y mysql redis net-snmp-utils ruby python36 jq perl-XML-XPath bind-utils
+RUN yum install -y iputils mysql redis net-snmp-utils ruby python36 jq perl-XML-XPath bind-utils
 
 RUN yum -y install python3-pip
 RUN pip3 install awscli
