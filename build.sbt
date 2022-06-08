@@ -45,7 +45,7 @@ libraryDependencies += "io.prometheus" % "simpleclient_hotspot" % "0.9.0"
 libraryDependencies += "org.apache.commons" % "commons-csv" % "1.8"
 libraryDependencies += "org.scalatra.scalate" %% "scalate-core" % "1.9.6"
 
-resolvers += "scalaz-bintray" at "http://repo.scala-sbt.org/scalaz/releases"
+resolvers += "scalaz-bintray" at "https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases"
 
 // Play provides two styles of routers, one expects its actions to be injected, the
 // other, legacy style, accesses its actions statically.
