@@ -314,7 +314,8 @@ class SMGSearchCacheImpl @Inject() (configSvc: SMGConfigService,
   private def getTokensCommon(rawFlt: String, rmtId: String, byRemote: Map[String,Array[Seq[String]]]) = {
     val flt = rawFlt.trim()
     val lvls = fltLevels(flt)
-    getAllTokensForRemote(rmtId, lvls, byRemote, { s =>
+    val myRmtId = if (rmtId == "") SMGRemote.local.id else rmtId
+    getAllTokensForRemote(myRmtId, lvls, byRemote, { s =>
       s.toLowerCase.contains(flt.toLowerCase)
     })
   }
