@@ -36,12 +36,12 @@ If you see the metrics output the system is good to be monitored by SMG. We can 
     - output: www1.domain-node-ex.yml
       template: node-exporter
       node_name: www1.domain
-      node_host: 192.168.10.101 # or set resolve_name: true if reslovable by DNS
       runtime_data: true
       runtime_data_timeout_sec: 30
       command: "curl -sS -f 'http://%node_host%:9100/metrics'"
+      context:
+        node_host: 192.168.10.101 # or set resolve_name: true if reslovable by DNS
       # XXX May have to supply net_dvc_filters context param to filter the correct interfaces we care about
-      # context:
       #   net_dvc_filters:
       #     - node_network_up=1
       #     - node_network_address_assign_type=2
