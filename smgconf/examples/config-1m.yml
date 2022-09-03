@@ -67,67 +67,67 @@
     - label: sum
     - label: count
 
-- +localhost.agg:
-  op: SUM
-  ids:
-    - localhost.sysload
-    - localhost.sysload2
+#- +localhost.agg:
+#  op: SUM
+#  ids:
+#    - localhost.sysload
+#    - localhost.sysload2
+#
+#- +localhost.filter-agg:
+#  op: SUM
+#  filter:
+#    rx: "^localhost.sysload2?$"
 
-- +localhost.filter-agg:
-  op: SUM
-  filter:
-    rx: "^localhost.sysload2?$"
-
-- localhost.sysload:
-  pre_fetch: host.localhost.up
-  command: "smgscripts/mac_localhost_sysload.sh"
-  interval: 60
-  rrd_type: GAUGE
-  vars:
-    - label: 1min
-#      alert-spike: ""
-      #"1.5:15m:2h:0"
-    - label: 5min
-    - label: 15min
-
-- localhost.sysload.stacked:
-  pre_fetch: host.localhost.up
-  command: "smgscripts/mac_localhost_sysload.sh"
-  interval: 60
-  rrd_type: GAUGE
-  stack: true
-  vars:
-    - label: sl1min
-#      alert-spike: ""
-      #"1.5:15m:2h:0"
-    - label: sl5min
-    - label: sl15min
-
-- localhost.sysload.stacked2:
-  pre_fetch: host.localhost.up
-  command: "smgscripts/mac_localhost_sysload.sh"
-  interval: 60
-  rrd_type: GAUGE
-  stack: true
-  vars:
-    - label: sl1min
-#      alert-spike: ""
-      #"1.5:15m:2h:0"
-    - label: sl5min
-    - label: sl15min
-
-- localhost.sysload2:
-  pre_fetch: fail_randomly
-  command: "smgscripts/mac_localhost_sysload.sh"
-  interval: 60
-  rrd_type: GAUGE
-  vars:
-    - label: 1min_x100
-      cdef: "$ds,100,*"
-    - label: 5min_x100
-      cdef: "$ds,100,*"
-    - label: 15min_x100
-      cdef: "$ds,100,*"
+#- localhost.sysload:
+#  pre_fetch: host.localhost.up
+#  command: "smgscripts/mac_localhost_sysload.sh"
+#  interval: 60
+#  rrd_type: GAUGE
+#  vars:
+#    - label: 1min
+##      alert-spike: ""
+#      #"1.5:15m:2h:0"
+#    - label: 5min
+#    - label: 15min
+#
+#- localhost.sysload.stacked:
+#  pre_fetch: host.localhost.up
+#  command: "smgscripts/mac_localhost_sysload.sh"
+#  interval: 60
+#  rrd_type: GAUGE
+#  stack: true
+#  vars:
+#    - label: sl1min
+##      alert-spike: ""
+#      #"1.5:15m:2h:0"
+#    - label: sl5min
+#    - label: sl15min
+#
+#- localhost.sysload.stacked2:
+#  pre_fetch: host.localhost.up
+#  command: "smgscripts/mac_localhost_sysload.sh"
+#  interval: 60
+#  rrd_type: GAUGE
+#  stack: true
+#  vars:
+#    - label: sl1min
+##      alert-spike: ""
+#      #"1.5:15m:2h:0"
+#    - label: sl5min
+#    - label: sl15min
+#
+#- localhost.sysload2:
+#  pre_fetch: fail_randomly
+#  command: "smgscripts/mac_localhost_sysload.sh"
+#  interval: 60
+#  rrd_type: GAUGE
+#  vars:
+#    - label: 1min_x100
+#      cdef: "$ds,100,*"
+#    - label: 5min_x100
+#      cdef: "$ds,100,*"
+#    - label: 15min_x100
+#      cdef: "$ds,100,*"
 
 - localhost.dummy:
   title: "A dummy graph for this host"

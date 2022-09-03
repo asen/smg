@@ -41,6 +41,7 @@
 
 - $include: "smgconf/examples/config-alerts.yml"
 
+- $include: "/opt/smg/data/conf/autoconf-private.d/*.{yaml,yml}"
 
 - $pre_fetch:
   id: do_something
