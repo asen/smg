@@ -15,7 +15,11 @@
   ],
   "dependencies": {},
   "devDependencies": {
-    "jquery": "~2.1.4",
-    "bootstrap": "~3.3.6"
+    "jquery": "~2.2.4",
+    "bootstrap": "~3.3.6",
+    "jquery-ui": "~1.12.1"
+  },
+  "resolutions": {
+    "jquery": "~2.2.4"
   }
 }
