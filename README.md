@@ -97,8 +97,7 @@ redis, kafka etc) which in turn can be used for "native client" monitoring.
 
 Live demo: https://smg1.ace-tek.net/  (small instance so please be gentle)
 
-Live demo configs: https://smg1.ace-tek.net/etc/smg/
-These are also part of the git repo now - check [smgconf/demo-conf](smgconf/demo-conf)
+Live demo configs: [smgconf/demo-conf](smgconf/demo-conf)
 
 Docs (including configuration reference) on github pages: https://asen.github.io/smg/
 
