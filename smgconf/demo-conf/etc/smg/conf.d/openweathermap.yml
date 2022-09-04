@@ -1,7 +1,8 @@
 
 - $pre_fetch:
   id: openweathermap-sf.fetch
-  command: "/opt/smg/scripts/openweathermap-sf.sh >/tmp/openweathermap-sf.out"
+  pass_data: true
+  command: "/opt/smg/data/scripts/openweathermap-sf.sh"
 
 # {"cnt":2,"list":[
 #
@@ -37,7 +38,7 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Temperature in San Francisco"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" main:temp_max main:temp main:temp_min'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "San Francisco" main:temp_max main:temp main:temp_min'
   vars:
     - label: temp_max
       mu: C
@@ -53,7 +54,7 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Pressure in San Francisco"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" main:pressure'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "San Francisco" main:pressure'
   vars:
     - label: pressure
 
@@ -61,7 +62,7 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Pressure in San Francisco"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" main:humidity'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "San Francisco" main:humidity'
   vars:
     - label: humidity
       mu: "%"
@@ -70,7 +71,7 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Visibility in San Francisco"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" visibility'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "San Francisco" visibility'
   vars:
     - label: visibility
 
@@ -78,7 +79,7 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Wind speed in San Francisco"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" wind:speed'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "San Francisco" wind:speed'
   vars:
     - label: speed
       mu: m/s
@@ -87,7 +88,7 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Wind direction in San Francisco"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "San Francisco" wind:deg'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "San Francisco" wind:deg'
   vars:
     - label: deg
 
@@ -104,7 +105,7 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Temperature in Sofia"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" main:temp_max main:temp main:temp_min'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "Sofia" main:temp_max main:temp main:temp_min'
   vars:
     - label: temp_max
       mu: C
@@ -120,7 +121,7 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Pressure in Sofia"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" main:pressure'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "Sofia" main:pressure'
   vars:
     - label: pressure
 
@@ -128,7 +129,7 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Pressure in Sofia"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" main:humidity'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "Sofia" main:humidity'
   vars:
     - label: humidity
       mu: "%"
@@ -137,7 +138,7 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Visibility in Sofia"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" visibility'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "Sofia" visibility'
   vars:
     - label: visibility
 
@@ -145,7 +146,7 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Wind speed in Sofia"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" wind:speed'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "Sofia" wind:speed'
   vars:
     - label: speed
       mu: m/s
@@ -154,6 +155,6 @@
   interval: 1800
   pre_fetch: openweathermap-sf.fetch
   title: "Wind direction in Sofia"
-  command: '/opt/smg/scripts/openweathermap-sf-get.rb "Sofia" wind:deg'
+  command: '/opt/smg/data/scripts/openweathermap-sf-get.rb "Sofia" wind:deg'
   vars:
     - label: deg

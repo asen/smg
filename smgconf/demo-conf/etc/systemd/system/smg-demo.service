@@ -1,0 +1,15 @@
+[Unit]
+Description=SMG service with docker compose
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=%t/containers
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+WorkingDirectory=/opt/smg/data/docker
+ExecStart=/usr/bin/docker-compose up -d --remove-orphans
+ExecStop=/usr/bin/docker-compose down
+
+[Install]
+WantedBy=multi-user.target
